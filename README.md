@@ -67,6 +67,14 @@ In plain words:
 2. After that, existing project-owned files belong to the host repository, not to `specFlow`.
 3. `upgrade` is allowed to update framework-owned files and managed blocks, but it must not rewrite existing project-owned files.
 
+Exception:
+
+1. `docs/specs/_check_result/README.md`
+2. `docs/specs/_plans/README.md`
+3. `docs/specs/_verify_result/README.md`
+
+These three files live under the project root, but they define the framework's process-file schema and gate semantics. Therefore they are treated as framework-owned in `manifest.tsv`, and `upgrade` should refresh them from `specflow/templates/root/`.
+
 ## Entry File Ownership
 
 `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` are host-owned files with a `specFlow` managed block.
