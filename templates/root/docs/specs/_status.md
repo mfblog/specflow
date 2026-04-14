@@ -1,8 +1,9 @@
 # Spec Status
 
-> 本文件是正式模块状态登记表，只承载当前状态事实，不承载治理规则正文。`_status.md` 的职责、字段语义、读取时机与回退规则以 `docs/agent_guidelines/spec_policy.md` 为准。
+> This file is the formal module status registry. It carries only current state facts and does not carry governance rules. The responsibilities of `_status.md`, the meaning of its fields, when it must be read, and its fallback rules are defined by `specflow/framework/docs/agent_guidelines/spec_policy.md`.
 
 ## Formal Modules
 
 | Module | Stable | Candidate | Active Layer | Next Command | Notes |
 |---|---|---|---|---|---|
+

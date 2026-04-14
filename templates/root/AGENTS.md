@@ -1,41 +1,56 @@
-## SpecFlow Rules
+## Host Instructions
 
-`specFlow` 是一套以 Spec 为真相源、用标准命令推进设计、实现、验证与提升的开发治理流程。
+Content outside the managed block below belongs to the host repository.
 
-以下内容只定义“当当前仓库采用 specFlow 时”需要额外遵守的规则。
+Keep repository-specific rules outside the managed block. `specFlow` tooling may update only the managed block.
 
-这些规则是对宿主 Agent 通用规则文件的补充，不替代宿主已有的其它规则。
+<!-- SPECFLOW:BEGIN -->
+## specFlow Addendum
 
-### 1. 请求识别
+`specFlow` is a development governance flow that treats Specs as the source of truth and uses standard commands to drive design, implementation, verification, and promotion.
 
-收到请求后，若命中以下任一对象，应按 specFlow 规则处理：
+The content below defines only the extra rules that apply when the current repository adopts `specFlow`.
 
-1. 标准命令：
-   - `{command}:{module}`
-2. 治理审查：
+These rules supplement the host agent's general instruction files. They do not replace any other existing host rules.
+
+### 1. Request Detection
+
+When a request hits any of the following, handle it with `specFlow` rules:
+
+1. Standard commands:
+   - `spec_init:{module}`
+   - `stable_verify:{module}`
+   - `spec_new:{module}`
+   - `spec_fork:{module}`
+   - `cand_check:{module}`
+   - `cand_plan:{module}`
+   - `cand_impl:{module}`
+   - `cand_verify:{module}`
+   - `cand_promote:{module}`
+2. Governance review entries:
    - `spec_flow_review`
    - `shared_extract_review`
-3. 涉及模块 Spec、状态推进、候选收口、正式提升、Shared Appendix、系统约束的请求
+3. Requests involving module Specs, state progression, candidate closure, formal promotion, Shared Appendix, or system constraints.
 
-若未命中以上对象，其余行为继续按宿主 Agent 的其它规则执行。
+If none of the above is hit, continue following the host agent's other rules.
 
-### 2. 标准命令
+### 2. Standard Commands
 
-标准命令格式：
+Standard command format:
 
 ```text
 {command}:{module}
 ```
 
-命令总规范见：
+See the command policy:
 
-- `docs/agent_guidelines/command_policy.md`
+- `specflow/framework/docs/agent_guidelines/command_policy.md`
 
-具体命令文件见：
+See the command files:
 
-- `docs/agent_guidelines/commands/`
+- `specflow/framework/docs/agent_guidelines/commands/`
 
-标准命令包括：
+The standard commands are:
 
 1. `spec_init:{module}`
 2. `stable_verify:{module}`
@@ -47,77 +62,78 @@
 8. `cand_verify:{module}`
 9. `cand_promote:{module}`
 
-治理审查入口包括：
+Governance review entries are:
 
 1. `spec_flow_review`
 2. `shared_extract_review`
 
-补充规则：
+Additional rules:
 
-1. `spec_flow_review` 与 `shared_extract_review` 不是 `{command}:{module}` 形式的标准模块命令。
-2. `shared_flow_reconcile` 不是用户直接输入的标准命令；它只用于 Shared Appendix 变更后的状态收口。
+1. `spec_flow_review` and `shared_extract_review` are not standard module commands in `{command}:{module}` form.
+2. `shared_flow_reconcile` is not a standard user-facing command. It is only used to reconcile state after Shared Appendix changes.
 
-### 3. 模块与文件判定
+### 3. How To Resolve Modules And Files
 
-`{module}` 默认指正式模块名，不是具体文件名。
+`{module}` refers to the formal module name, not a concrete file name.
 
-若用户直接说模块名，例如 `module_example`，执行前必须先读取：
+If the user says only a module name such as `module_example`, read this first:
 
 - `docs/specs/_status.md`
 
-再根据其中的 `Active Layer` 判定实际落点：
+Then resolve the actual target from `Active Layer`:
 
-1. `Active Layer=stable`
-   - 默认落到 `docs/specs/stable/s_{module}.md`
-2. `Active Layer=candidate`
-   - 默认落到 `docs/specs/candidate/c_{module}.md`
+1. If `Active Layer=stable`
+   - Default target: `docs/specs/stable/s_{module}.md`
+2. If `Active Layer=candidate`
+   - Default target: `docs/specs/candidate/c_{module}.md`
 
-若用户直接说具体文件前缀，则按文件处理：
+If the user gives a concrete file prefix, treat it as a file reference:
 
-1. `s_module_example`
-   - 指 `stable` 层主文件
-2. `c_module_example`
-   - 指 `candidate` 层主文件
+1. `s_module_xxx`
+   - Refers to the `stable` main file
+2. `c_module_xxx`
+   - Refers to the `candidate` main file
 
-### 4. 非命令请求的读取顺序
+### 4. Read Order For Non-Command Requests
 
-若请求命中了 specFlow 范围，但不是标准命令，默认按下面顺序处理：
+If a request is inside the `specFlow` scope but is not a standard command, handle it in this default order:
 
-1. 先确认它影响哪个模块或哪个治理对象。
-2. 读取 `docs/specs/_status.md`，确认目标模块当前的 `Active Layer` 与 `Next Command`。
-3. 若任务涉及模块行为真相，读取对应层的主 Spec。
-4. 若主 Spec 明确引用了 appendix 或 Shared Appendix，必须一并读取。
-5. 若任务涉及全局技术基线、共享机制或全局例外，再读取：
+1. First determine which module or governance object it affects.
+2. Read `docs/specs/_status.md` to confirm the target module's current `Active Layer` and `Next Command`.
+3. If the task touches module behavior truth, read the main Spec for the current layer.
+4. If the main Spec explicitly references appendix files or Shared Appendix files, read them too.
+5. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
    - `docs/specs/system/stable/s_system_constraints.md`
-6. 再决定当前动作是：
-   - 只解释
-   - 修改 candidate
-   - 修改 stable
-   - 执行某个标准命令
+6. Then decide whether the current action is:
+   - explanation only
+   - modifying `candidate`
+   - modifying `stable`
+   - executing a standard command
 
-### 5. 强制约束
+### 5. Mandatory Constraints
 
-1. 不得绕开 `docs/specs/` 中的真相文件直接猜测行为。
-2. 当不确定是否属于行为变化时，默认视为行为变化。
-3. 行为变化不得代码先行，必须先遵守 `docs/agent_guidelines/spec_policy.md`。
-4. 新模块首版允许先有 `candidate`，之后再由 `cand_promote` 生成第一份 `stable`。
-5. 历史模块首次纳管应先通过 `spec_init:{module}` 建立第一份 `stable`。
-6. `docs/specs/` 中除 `candidate` 层主文件及其附属展开文件外的 Spec 文件，属于行为真相源；其修改默认应纳入 git 历史。
-7. `candidate` 层主文件及其附属展开文件属于候选草案层；若本次只修改这类文件，默认不执行 `git commit`，除非用户明确要求，或命中要求提交的命令流程。
-8. `docs/agent_guidelines/*.md` 的修改默认也应在当前任务内执行 `git commit`。
-9. 遇到 Spec、命令或提交流程冲突时，不要自行猜测，回到对应 policy 或命令文件确认。
+1. Do not guess behavior by bypassing the source-of-truth files under `docs/specs/`.
+2. If you are unsure whether a change is a behavior change, treat it as a behavior change.
+3. Behavior changes must not start from code. Follow `specflow/framework/docs/agent_guidelines/spec_policy.md` first.
+4. A brand-new module may start with `candidate`; its first `stable` is created later by `cand_promote`.
+5. A historical module entering governance for the first time must begin with `spec_init:{module}` to create its first `stable`.
+6. Under `docs/specs/`, every Spec file except `candidate` main files and their supporting appendix files is a behavior source of truth and should normally enter git history.
+7. `candidate` main files and their appendix files are draft-layer artifacts. If a task modifies only those files, do not `git commit` by default unless the user asks for it or the active command flow requires it.
+8. Changes to `specflow/framework/docs/agent_guidelines/*.md` should normally be committed in the current task.
+9. When Spec, command, and git-flow rules conflict, do not guess. Go back to the relevant policy or command file.
 
-### 6. 必读文件
+### 6. Must-Know Files
 
-若当前任务命中了 specFlow 范围，至少应知道以下文件各自负责什么：
+If the task falls inside the `specFlow` scope, at minimum you should know what these files are responsible for:
 
-1. `docs/agent_guidelines/spec_policy.md`
-   - 定义 Spec 对象、层次、真相边界、读取规则
-2. `docs/agent_guidelines/command_policy.md`
-   - 定义标准命令、门禁和默认生命周期
-3. `docs/agent_guidelines/git_policy.md`
-   - 定义哪些改动默认要提交，哪些可以不提交
+1. `specflow/framework/docs/agent_guidelines/spec_policy.md`
+   - Defines Spec objects, layers, source-of-truth boundaries, and reading rules
+2. `specflow/framework/docs/agent_guidelines/command_policy.md`
+   - Defines standard commands, gates, and the default lifecycle
+3. `specflow/framework/docs/agent_guidelines/git_policy.md`
+   - Defines which changes normally require commits and which do not
 4. `docs/specs/_status.md`
-   - 记录正式模块当前状态、当前层和默认下一步命令
+   - Records each formal module's current status, active layer, and default next command
 
-执行时不要一次性盲读所有文件，只按当前任务需要读取。
+Do not blindly read everything at once. Read only what the current task actually needs.
+<!-- SPECFLOW:END -->

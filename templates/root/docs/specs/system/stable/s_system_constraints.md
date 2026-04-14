@@ -4,88 +4,88 @@ version: 0.1.0
 
 # System Constraints Spec
 
-> 版本说明：本文档描述当前正式生效的全局系统约束。它不是普通模块 Spec，不进入 `docs/specs/_status.md`，默认只允许在模块 `cand_promote` 时作为联动副产品被更新。只要正文被实际改动，必须同步递增 `frontmatter.version`；只读不改时不得变更版本号。
+> Version note: this document describes the currently effective formal global system constraints. It is not a normal module Spec, does not enter `docs/specs/_status.md`, and by default may be updated only as a linked side product of module `cand_promote`. Whenever the body is actually changed, `frontmatter.version` must be incremented in the same round. If the file is only read and not changed, do not change the version.
 
 ## 1. Context & Scope
 
-本文件只负责回答以下问题：
+This file answers only:
 
-1. 当前项目正式承认的技术栈基线是什么。
-2. 哪些共享机制已经存在，后续模块应优先复用。
-3. 遇到某类工程问题时，默认优先选择什么方案。
-4. 哪些做法被全局禁止，哪些例外必须显式登记。
+1. what the project's formally recognized technology-stack baseline is
+2. which shared mechanisms already exist and should be reused by later modules
+3. which default solution should be preferred for certain engineering problems
+4. which practices are globally forbidden and which exceptions must be explicitly recorded
 
-本文件不负责：
+It does not:
 
-1. 描述单个模块的内部状态机。
-2. 约束单个模块的函数拆分或代码风格细节。
-3. 承载模块 candidate 阶段的全局提案草稿。
+1. describe one module's internal state machine
+2. constrain function splitting or code-style details inside a single module
+3. host draft global proposals from module candidate stages
 
 ## 2. Version Semantics
 
-本文件版本号采用 `MAJOR.MINOR.PATCH`：
+This file uses `MAJOR.MINOR.PATCH`:
 
 1. `MAJOR`
-   - 全局约束出现不兼容变化
+   - incompatible global-constraint change
 2. `MINOR`
-   - 新增全局默认规则、共享机制、兼容性扩展
+   - new global default rule, shared mechanism, or compatible extension
 3. `PATCH`
-   - 只修正文案、澄清歧义且不改变正式约束语义
+   - wording-only clarification that does not change formal constraint meaning
 
-模块 candidate 在 `Global Constraint Alignment` 中引用本文件时，必须使用固定格式：
+When a module candidate references this file in `Global Constraint Alignment`, it must use:
 
 1. `system_constraints_stable_ref: s_system_constraints@<frontmatter.version>`
-2. 若模块当前层还显式绑定了共享附属展开文件，应在同一章节额外登记 `shared_appendix_refs`；该字段不替代 `system_constraints_stable_ref`
+2. if the module layer also binds Shared Appendix files, it must additionally record `shared_appendix_refs` in the same section; that field does not replace `system_constraints_stable_ref`
 
 ## 3. Tech Stack Baseline
 
-> 按目标项目实际情况填写正式基线；若模块需要提出新的全局约束变化，应写在模块自己的 candidate 中，而不是创建独立 system candidate 文件。
+> Fill this section with the target repository's real formal baseline. If a module needs to propose new global constraints, it should do so in the module's own candidate instead of creating an independent system candidate file.
 
-1. 主语言：
-2. 主框架 / 运行时：
-3. 主存储：
-4. 缓存：
-5. 队列 / 异步任务：
-6. 测试体系：
+1. Primary language:
+2. Primary framework / runtime:
+3. Primary storage:
+4. Cache:
+5. Queue / async jobs:
+6. Testing stack:
 
 ## 4. Shared Mechanisms
 
-> 记录当前项目已承认的共享基础设施或共享机制。若某类机制尚未正式承认，不应在此假装已经存在。
+> Record shared infrastructure or shared mechanisms that the project has formally recognized. If a mechanism has not yet been formally recognized, do not pretend it already exists here.
 
-1. 配置管理：
-2. 日志 / 审计：
-3. 认证 / 授权：
-4. 缓存复用：
-5. 调度 / 后台任务：
-6. 事件或消息机制：
-7. ID / 唯一标识生成：
-8. 重试 / 降级策略：
+1. Configuration management:
+2. Logging / auditing:
+3. Authentication / authorization:
+4. Cache reuse:
+5. Scheduling / background jobs:
+6. Event or messaging mechanism:
+7. ID / unique identifier generation:
+8. Retry / degradation strategy:
 
 ## 5. Default Selection Rules
 
-> 只写“默认优先怎么选”，不要把所有历史讨论都堆进来。
+> Record only the preferred default choice. Do not pile every historical discussion into this file.
 
-1. 当模块需要持久化业务数据时，默认优先：
-2. 当模块需要短期共享状态或缓存时，默认优先：
-3. 当模块需要后台异步处理时，默认优先：
-4. 当模块需要共享日志、审计或追踪时，默认优先：
-5. 当模块需要跨模块复用已有机制时，默认要求：
-6. 当模块当前需要复用尚未沉淀为正式全局基线的共享机制正文时，默认应通过 Shared Appendix 绑定，而不是挂在某个模块 appendix 下双写
+1. When a module needs persistent business data, prefer:
+2. When a module needs short-term shared state or caching, prefer:
+3. When a module needs background async processing, prefer:
+4. When a module needs shared logging, auditing, or tracing, prefer:
+5. When a module needs to reuse an existing mechanism across modules, require:
+6. When a module needs to reuse shared mechanism text that has not yet been absorbed into the formal global baseline, bind it through Shared Appendix instead of double-writing it under a module appendix
 
 ## 6. Global Prohibitions / Exceptions
 
 ### 6.1 Prohibitions
 
-1. 禁止在同一类核心能力上并行引入两套互相冲突的主方案，除非例外已登记。
-2. 禁止模块在未说明原因的情况下绕过已正式承认的共享机制，私自重造同类基础设施。
-3. 禁止把“暂时方便”的实现选择伪装成正式工程基线。
+1. Do not introduce two conflicting primary solutions in parallel for the same class of core capability unless the exception is explicitly registered.
+2. Do not let a module bypass a formally recognized shared mechanism and rebuild equivalent infrastructure without explanation.
+3. Do not disguise a "temporarily convenient" implementation choice as the formal engineering baseline.
 
 ### 6.2 Exceptions
 
-若某模块必须偏离本文件，至少要在该模块 candidate 的 `Global Constraint Alignment` 中明确：
+If a module must deviate from this file, at minimum its `Global Constraint Alignment` in candidate must state:
 
-1. 例外点是什么。
-2. 为什么现有正式约束不适用。
-3. 例外影响范围是什么。
-4. 例外是临时过渡还是准备推动全局升级。
-5. 若同时偏离了某份 Shared Appendix，也必须一并写清该共享对象的引用与例外关系。
+1. what the exception point is
+2. why the existing formal constraint does not apply
+3. what the impact scope is
+4. whether the exception is a temporary bridge or intended to drive a future global upgrade
+5. if it also deviates from a Shared Appendix, the relation to that shared object must also be stated

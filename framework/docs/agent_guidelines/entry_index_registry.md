@@ -1,19 +1,19 @@
-# 入口索引文件登记表
+# Entry Index Registry
 
 ## Purpose
 
-本文件用于登记仓库内哪些文件承担“入口索引文件”职责。
+This file registers which files in the repository serve as entry index files.
 
-这里说的“入口索引文件”，指会被执行者直接读取、并用于以下任一动作的仓库文件：
+An "entry index file" means a repository file that executors read directly and use for at least one of the following:
 
-1. 列举可用命令
-2. 解释命令如何命中
-3. 把用户请求路由到某条治理流程
+1. listing available commands
+2. explaining how commands are matched
+3. routing a user request into a governance flow
 
-本文件只回答两件事：
+This file answers only two questions:
 
-1. 默认有哪些入口索引文件属于正式登记对象
-2. 这些已登记入口文件如何保持内容一致
+1. which entry index files are formally registered by default
+2. how those registered entry files must stay aligned
 
 ---
 
@@ -23,55 +23,67 @@
 - `GEMINI.md`
 - `CLAUDE.md`
 
-补充规则：
+Additional rules:
 
-1. `spec_flow_review` 在默认范围下审查入口索引文件时，必须以本节登记结果为准，不再靠执行者按职责临时猜测。
-2. 若未来新增新的入口索引文件，必须先更新本文件，再把对应文件纳入默认审查范围。
-3. 未登记的同职责文件，在更新本文件之前，不属于 `spec_flow_review` 的默认待审入口集合。
+1. When `spec_flow_review` reviews entry index files under its default scope, it must use the registry in this section instead of guessing from file responsibilities.
+2. If a new entry index file is added later, update this file first, then include that file in the default review scope.
+3. Files with the same responsibility but not yet registered are not part of the default entry set for `spec_flow_review`.
 
 ---
 
+## Managed Block Rule
+
+All registered entry index files must contain exactly one managed block:
+
+1. start marker: `<!-- SPECFLOW:BEGIN -->`
+2. end marker: `<!-- SPECFLOW:END -->`
+
+Content outside that managed block belongs to the host repository.
+
+`specFlow` tooling may update only the managed block. Host-specific rules outside the managed block are not part of `specFlow` ownership.
+
 ## Consistency Rule
 
-已登记入口索引文件必须保持内容一致。
+All registered entry index files must keep their managed blocks consistent.
 
-固定规则如下：
+Fixed rules:
 
-1. 执行者可以直接编辑任一已登记入口文件，不要求长期绑定某一个特定工具文件作为唯一真相源。
-2. 若当前已登记入口文件内容一致，则视为当前轮无需判定同步源。
-3. 若内容不一致，但本轮改动中只有一个已登记入口文件被修改，则该文件默认作为本轮同步源。
-4. 若多个已登记入口文件都被修改，但它们当前内容最终一致，则视为执行者已手动拉齐，不再额外判定同步源。
-5. 若多个已登记入口文件都被修改，且当前内容仍不一致，则进入“显式确认源文件”场景：
-   - 不得自动按最后修改时间、文件路径顺序或其它环境元数据猜测同步源
-   - 必须由执行者显式指定本轮以哪个已登记入口文件为源，再执行同步
-6. 同步动作只负责把已登记入口文件重新拉齐，不负责裁剪待审范围，也不改写治理判定规则。
+1. Executors may edit any registered entry file directly. There is no permanent single source file requirement.
+2. Host-owned content outside the managed block may differ across registered entry files.
+3. If all managed blocks already match, no sync-source decision is needed for the current round.
+4. If managed blocks differ and only one registered entry file was modified in the current round, that file is the default sync source.
+5. If multiple registered entry files were modified but their managed blocks now match, treat them as already manually aligned.
+6. If multiple registered entry files were modified and their managed blocks still differ, the task enters an explicit source-selection case:
+   - do not guess the sync source from mtime, path order, or other environment metadata
+   - explicitly choose which registered entry file is the source for this round before syncing
+7. Syncing is only responsible for re-aligning managed blocks across registered entry files. It does not narrow review scope or rewrite governance judgment rules.
 
-这样设计的目的只有两个：
+This design has only two goals:
 
-1. 让使用不同工具的人都能直接改自己最常接触的入口文件
-2. 让默认审查范围和入口文件一致性都能稳定落地
+1. people using different tools can keep host-specific instructions where they need them
+2. the default review scope and managed-block consistency both remain stable and predictable
 
 ---
 
 ## Hook Trigger
 
-入口文件同步的默认触发时机是 Git 提交前。
+The default time to sync entry files is before `git commit`.
 
-规则：
+Rules:
 
-1. 仓库内可跟踪的 `pre-commit hook` 位于 `.githooks/pre-commit`。
-2. 该 hook 会在执行 `git commit` 前调用 `scripts/sync_entry_docs.sh`。
-3. 若脚本成功，同步后的入口文件会被重新加入暂存区，再继续提交。
-4. 若脚本发现“多个已登记入口文件同时被改，且当前内容仍不一致”这类无法自动判定源文件的情况，必须直接阻塞提交，并要求执行者显式指定同步源。
-5. 若使用者尚未启用仓库级 hook 路径，则应先执行：
+1. The tracked `pre-commit` hook lives at `.githooks/pre-commit`.
+2. That hook calls `specflow/tooling/sync_entry_docs.sh` before `git commit`.
+3. If the script succeeds, the synced managed blocks are re-added to the index and the commit continues.
+4. If the script finds a case where multiple registered entry files were modified and their managed blocks still differ, so no source can be chosen automatically, it must block the commit and require an explicit source choice.
+5. If the repository-level hook path is not enabled yet, run:
    - `git config core.hooksPath .githooks`
 
 ---
 
 ## Non-Goals
 
-本文件不负责：
+This file does not:
 
-1. 定义标准命令本身
-2. 代替 `spec_flow_review.md` 定义 findings 契约
-3. 把所有同职责草稿文件自动视为正式入口文件
+1. define standard commands themselves
+2. define the findings contract in place of `spec_flow_review.md`
+3. automatically treat every draft file with a similar responsibility as a formal entry file

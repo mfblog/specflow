@@ -1,433 +1,178 @@
-# Spec Flow 审查流程
+# Spec Flow Review
 
 ## 1. Purpose
 
-本流程用于审查本仓库的 Spec 驱动开发机制本身，而不是审查某个业务模块的 `stable`、`candidate` 或代码实现。
+This flow reviews the Spec-driven governance mechanism itself, not a business module's `stable`, `candidate`, or implementation.
 
-它只回答三件事：
+It answers three questions:
 
-1. 当前待审治理规则集合是否仍然让整套 Spec Flow 保持闭环。
-2. 当前待审治理规则集合是否会给现有流程带来副作用。
-3. 若发现问题，这些问题的严重度、阻塞性和建议修复动作分别是什么。
+1. whether the governance rules under review still keep the whole Spec Flow closed
+2. whether those rules introduce side effects into existing flows
+3. if problems exist, what their severity, blocking status, and recommended repair actions are
 
-这里的“Spec Flow”指以下对象共同组成的治理机制：
+Here, "Spec Flow" means the governance mechanism formed by these objects together:
 
-1. `docs/agent_guidelines/*.md`
-2. `docs/agent_guidelines/commands/*.md`
-3. 被上述规则直接引用、且其文件职责会影响流程门禁解释的 `docs/specs/_status.md`
-4. 直接定义过程文件 schema、有效性或消费条件的过程规则 README：
+1. `specflow/framework/docs/agent_guidelines/*.md`
+2. `specflow/framework/docs/agent_guidelines/commands/*.md`
+3. `docs/specs/_status.md` only where its file responsibility affects gate interpretation
+4. process-rule READMEs that define process-file schema, validity, or consumption conditions:
    - `docs/specs/_check_result/README.md`
    - `docs/specs/_plans/README.md`
    - `docs/specs/_verify_result/README.md`
-5. 仓库内承担命令列举、命中说明或治理流程路由职责的入口索引文件
-6. `docs/agent_guidelines/entry_index_registry.md`
+5. repository entry-index files that list commands, explain matching, or route governance flows
+6. `specflow/framework/docs/agent_guidelines/entry_index_registry.md`
 
-本流程不是普通模块命令，不属于 `docs/specs/_status.md` 管理的模块生命周期。
-
-补充说明：
-
-1. `spec_flow_review` 的调度入口可以由仓库外层入口索引文件承接。
-2. 这种“入口命中索引”不等于治理真相源；它只负责把请求路由到本流程。
-3. 一旦进入本流程，待审范围、读取对象、findings 契约与通过/阻塞判定，仍只以本文件和仓库内正式治理文件为准。
-4. 某些正式内容真相文件虽然会被治理规则读取、引用或消费，但这不等于它们的正文内容自动进入本流程默认待审范围。
-5. 对这类文件，本流程默认只审“治理规则如何引用它、何时读取它、如何消费它、如何约束它的文件职责”，不审它们承载的业务或工程内容本身。
-
----
+This flow is not a module command and is not part of the module lifecycle managed by `docs/specs/_status.md`.
 
 ## 2. Review Goal
 
-本流程的目标不是“尽量多挑问题”，而是“只找会让 Spec Flow 失真、失控或失去稳定执行语义的问题”。
+The goal is not "find as many issues as possible." The goal is "find only the issues that would make Spec Flow distorted, uncontrollable, or semantically unstable."
 
-通俗讲：
+In plain words:
 
-1. 若某个点只是不够优雅，但不影响流程正确性，不属于本流程重点。
-2. 若某个点会让执行者不知道该看哪个文件、该走哪一步、失败后该回退到哪里，这才是本流程要抓的问题。
-3. 若某个点会让旧规则被悄悄绕过、或让两个规则互相打架，这也属于本流程要抓的问题。
-4. 若某个点会让 `cand_check pass` 的语义在“只保流程可推进”与“同时要求关键内容完整”之间摇摆不定，这也属于本流程要抓的问题。
-
----
+1. if something is only inelegant but does not harm flow correctness, it is not the focus here
+2. if a rule makes executors unsure which file to read, which step to run, or where to fall back, that is a real target
+3. if a rule silently bypasses older rules or makes two rules fight each other, that is also a real target
 
 ## 3. Scope
 
-本流程默认只审查“规则系统是否仍然自洽”，不审查业务模块设计是否优秀。
+By default this flow reviews only whether the rule system is self-consistent. It does not review whether business-module design is good.
 
-默认待审对象固定为当前仓库中已经纳入 Spec Flow 的治理规则基线，也就是：
+The default scope is the repository's formal Spec Flow governance baseline:
 
-1. `docs/agent_guidelines/*.md`
-2. `docs/agent_guidelines/commands/*.md`
-3. 被上述规则直接引用、且其文件职责会影响流程门禁解释的 `docs/specs/_status.md`
-4. 直接定义过程文件 schema、有效性或消费条件的过程规则 README：
-   - `docs/specs/_check_result/README.md`
-   - `docs/specs/_plans/README.md`
-   - `docs/specs/_verify_result/README.md`
-5. 仓库内入口索引文件
-6. `docs/agent_guidelines/entry_index_registry.md`
+1. `specflow/framework/docs/agent_guidelines/*.md`
+2. `specflow/framework/docs/agent_guidelines/commands/*.md`
+3. `docs/specs/_status.md` only where its governance role affects interpretation
+4. `docs/specs/_check_result/README.md`
+5. `docs/specs/_plans/README.md`
+6. `docs/specs/_verify_result/README.md`
+7. registered entry-index files
+8. `specflow/framework/docs/agent_guidelines/entry_index_registry.md`
 
-补充说明：
+Additional rules:
 
-1. 这些过程规则 README 虽然不是业务行为真相源，但会直接影响门禁解释，因此属于本流程默认待审治理基线的一部分。
-2. 本流程默认不会因为纳入这些 README，就自动外扩到整个 `docs/specs/**`；业务模块的 `stable`、`candidate` 与过程实例文件仍不在本流程默认范围内。
-3. 对 `docs/specs/_status.md` 的默认审查对象，只包括它作为治理对象的文件职责是否被正确约束；不默认审查 `Formal Modules` 表中的当前模块登记内容是否与仓库现实一致。
-4. 入口索引文件的默认发现结果，以 `docs/agent_guidelines/entry_index_registry.md` 的登记列表为准；不再允许执行者按职责临时自由扩缩。
-5. 默认待审范围只按仓库内正式治理文件与仓库内入口登记结果定义，不按当前对话上下文、宿主加载机制或其它外部上下文载体定义。
-6. 上一条限制的是“审什么、怎么判”，不是“请求如何命中本流程”；入口索引不得反过来改写本流程的审查范围和判定规则。
-7. 被治理规则消费的正式内容真相文件，例如 `docs/specs/system/stable/s_system_constraints.md`、业务模块 `stable/candidate` 主文件及其附属展开文件，默认都不因“会影响门禁解释”而自动纳入本流程默认待审范围。
-8. 对上一条这类文件，本流程默认只允许审查治理规则对它们的读取时机、职责边界、绑定关系与消费条件是否清楚；不审查这些文件正文中的业务、产品或工程基线内容是否合理、完整或最新。
-9. 若待审治理规则中同时存在 `shared_flow_reconcile`，本流程只审查它是否把 Shared Appendix 生命周期闭环补齐；不替代它去执行 `_status.md` 修正、过程文件删除或其它状态收口动作。
+1. The process READMEs are part of the default governance baseline because they directly affect gate interpretation, even though they are not business truth files.
+2. This flow does not automatically expand into all of `docs/specs/**`.
+3. Business-module `stable`, `candidate`, and process-instance files are not in the default scope.
+4. The default entry-index set must come from `entry_index_registry.md`, not executor guesswork.
+5. Content truth files consumed by governance rules may be read only to confirm how governance binds, reads, or constrains them. Their own business or engineering content is not reviewed by default here.
+6. If `shared_flow_reconcile` exists, this flow only reviews whether it closes the Shared Appendix lifecycle. It does not replace its actual reconciliation work.
 
-除非用户显式缩小范围，否则执行者不得把 `spec_flow_review` 自动解释成“审当前工作区改动”“审本轮会话碰过的文件”或“审最近新增/删除的治理文档”。
+Do not automatically reinterpret `spec_flow_review` as "review current git diff", "review files touched in this session", or "review recently changed governance files" unless the user explicitly narrows scope that way.
 
-只有在用户明确给出以下任一信号时，才允许把待审范围改成某个子集或变更集：
+The review content is fixed into three classes:
 
-1. 明确点名文件。
-2. 明确说“只审这次改动”。
-3. 明确说“只审当前 pending 的治理规则修改”。
-4. 明确给出某个治理专题，例如“只审 Prompt 协议相关规则”。
+### 3.1 Closure Review
 
-禁止默认采用以下信号来推断待审范围：
+Check whether the reviewed governance rules still allow the flow to run from entry to stop point without orphaned responsibilities.
 
-1. 当前工作区 `git diff`
-2. 当前会话中讨论过哪些治理文件
-3. 哪些治理文件最近被创建、删除或修改
-4. 执行者主观判断“这次大概只和哪些规则有关”
-5. 当前运行环境额外注入了哪些上下文文件
+At minimum:
 
-审查内容固定分为三类：
+1. entry conditions are explicit
+2. operated objects are explicit
+3. responsibilities among truth files, process files, and index files are still clear
+4. upstream prerequisites, downstream consumers, and fallback points are written clearly
+5. no state is created without any consumer
+6. no action is required without a clear responsible command or rule
+7. no dual source of truth defines the same thing twice
 
-### 3.1 闭环审查
+### 3.2 Side-Effect Review
 
-检查当前待审治理规则集合下，流程是否仍能从入口走到停止点，中间不存在悬空责任。
+Check whether the reviewed rules break existing flows or make old rules unstable.
 
-至少要检查：
+At minimum:
 
-1. 待审规则条目，是否明确了入口条件。
-2. 待审规则条目，是否明确了操作对象。
-3. 真相文件、过程文件、索引文件之间的职责是否仍然清楚。
-4. 上游前提、下游消费方、失败回退点是否写清。
-5. 是否出现“状态被创建了，但没人消费”。
-6. 是否出现“要求执行某动作，但没有明确由哪个命令或规则负责”。
-7. 是否出现“两个文件都在定义同一件事”的双真相源。
+1. no conflict or overlap with existing command responsibilities
+2. no accidental change in the relation among `Next Command`, gate files, and git rules
+3. no new path that bypasses an old gate
+4. no regression that turns a previously explicit boundary back into executor guesswork
+5. no ambiguous command matching where one user request can hit multiple flows
 
-### 3.2 副作用审查
+### 3.3 Post-Review Handling Review
 
-检查当前待审治理规则集合是否破坏现有流程，或让旧规则失去稳定解释。
+Check whether executors know what to do after a problem is found.
 
-至少要检查：
+At minimum:
 
-1. 是否与现有命令职责冲突或重叠。
-2. 是否改变了 `Next Command`、门禁文件、Git 提交规则之间的关系。
-3. 是否让旧命令出现可绕过门禁的路径。
-4. 是否让原本明确的边界重新变得依赖执行者主观判断。
-5. 是否让命令匹配规则变得模糊，导致一句用户请求能同时命中多套流程。
-6. 是否让某个门禁的通过语义变得不稳定，导致不同执行者对“为什么能放行”得出不同结论。
-
-### 3.3 审后处理审查
-
-检查发现问题以后，执行者是否知道应该怎么处理，而不是只得到一句空泛结论。
-
-至少要检查：
-
-1. 问题是否按严重度分级。
-2. 是否明确哪些级别会阻塞当前审查通过。
-3. 是否说明问题发生的背景、触发链路和影响范围。
-4. 是否给出最小可执行修复建议。
-5. 是否明确当前审查后的下一步应该是“先修规则再重审”，还是“可记录后继续”。
-
----
+1. issues are graded by severity
+2. blocking levels are explicit
+3. the background, trigger path, and impact scope are explicit
+4. a minimal executable fix suggestion is given
+5. the next step is explicit: repair rules first and re-review, or record and continue
 
 ## 4. Preconditions
 
-执行前必须确认：
+Before execution:
 
-1. 已明确当前待审范围；若用户未显式缩小范围，则默认待审范围就是本文件第 `3` 节定义的完整 Spec Flow 治理规则基线。
-2. 已读取当前待审范围内的治理规则文件。
-3. 已补读这些规则直接引用到的上游规则文件。
-4. 若当前待审范围会影响模块命令推进或门禁解释，还必须补读 `docs/specs/_status.md`，但默认只把它当作状态索引文件来确认其职责边界，不把当前模块登记实例自动纳入 findings。
-5. 若当前待审范围未被用户缩小，还必须显式读取：
-   - `docs/specs/_check_result/README.md`
-   - `docs/specs/_plans/README.md`
-   - `docs/specs/_verify_result/README.md`
-5A. 执行本流程时，若任务属于治理审查，或本轮可能修改治理规则、入口索引文件、过程规则 README 或其它命中 Git 收口条件的对象，必须显式读取 `docs/agent_guidelines/git_policy.md`；这一要求不因用户缩小待审范围而消失。
-6. 若当前待审范围未被用户缩小，还必须显式读取 `docs/agent_guidelines/entry_index_registry.md`，并按其登记结果逐个读取默认入口索引文件。
-7. 若治理规则引用了某个正式内容真相文件，但该文件本身不在默认待审范围，执行者可以为确认“引用关系是否被正确描述”而补读其文件职责相关段落；但不得把这一步扩张为对该文件正文内容本身的默认评审。
+1. the scope must be explicit; if the user did not narrow it, use the full governance baseline from Section 3
+2. read every governance file inside the current review scope
+3. read any upstream governance files directly referenced by those files
+4. if the scope affects command progression or gate interpretation, also read `docs/specs/_status.md`, but treat it only as a state-index file unless the user explicitly asks for more
+5. if the scope is not narrowed, also read the three process-rule READMEs
+6. if the task is governance review or may modify governance rules, entry files, or process-rule READMEs, read `specflow/framework/docs/agent_guidelines/git_policy.md`
+7. if the scope is not narrowed, read `specflow/framework/docs/agent_guidelines/entry_index_registry.md` and then read each default entry-index file it registers
 
-补充说明：
-
-1. “当前待审范围”可以是本次任务显式指定的文件集合。
-2. 若用户没有给出文件集合，默认审查完整 Spec Flow 治理规则基线，不得自动缩成会话内文件集合或工作区变更集合。
-3. 默认治理基线必须能仅靠仓库内正式治理文件确定，不得依赖外部上下文载体补全。
-4. 仓库内入口索引文件可以帮助执行者把用户请求路由到 `spec_flow_review`，但不得承担待审范围裁剪、门禁解释或 findings 判定职责；默认入口集合本身以登记表为准。
-5. 若执行者认为用户可能想审“某一批改动”而不是“整套治理规则”，必须先停下来澄清，不得自行替用户选择较窄范围。
-6. 若执行者无法确定当前到底在审哪些治理文件，不得直接给出 `pass` 结论。
-7. 若某条 finding 实际落点是“某个内容真相文件写了什么”，而不是“治理规则如何定义对它的消费关系”，则该 finding 默认越界，不得在本流程中输出。
-
----
+If you cannot determine exactly which governance files are being reviewed, do not issue a `pass`.
 
 ## 5. Procedure
 
-执行步骤固定如下：
+1. locate the governance files inside the current review scope
+2. map each rule point to the rule objects it affects
+3. run closure review first
+4. run side-effect review second
+5. grade every real problem by severity and blocking status
+6. add background, trigger mechanism, impact scope, and repair suggestion to each finding
+7. give an overall conclusion and the next action for the current review scope
 
-1. 先定位当前待审范围内的治理文件。
-2. 为每个待审规则点建立“规则点 -> 受影响规则对象”的映射。
-3. 先做闭环审查，判断流程是否还能完整走通。
-4. 再做副作用审查，判断旧规则是否被破坏、绕过或稀释。
-5. 对所有发现的问题做严重度分级，并判断是否阻塞。
-6. 对每个问题补齐背景、发生方式、影响范围和建议修复。
-7. 给出当前审查范围下的总体结论，以及下一步动作。
+Fixed principle:
 
-执行时必须遵守一个固定原则：
-
-1. 先判断“是否真有问题”，再判断“问题有多严重”。
-2. 不得先凭主观偏好列一堆建议，再倒推说它们是问题。
-
----
+1. judge whether there is a real problem first
+2. judge how severe it is second
+3. do not start with personal preferences and then retroactively call them problems
 
 ## 6. Review Boundary
 
-本节用于限制审查边界，防止本流程滑向“挑刺式评审”。
+### 6.1 Allowed Findings
 
-### 6.1 允许输出的问题
+Findings are allowed only if they hit at least one of these:
 
-只有当某个问题至少命中以下一种情况时，才允许作为 findings 输出：
+1. broken closure
+2. incompatible rule conflict
+3. harmful side effect
+4. high ambiguity
+5. gate-semantic drift
 
-1. 破坏闭环
-   - 流程入口、责任归属、消费方、回退点或停止条件缺失。
-2. 引入冲突
-   - 两条规则、两个文件或两个入口对同一件事给出了不兼容定义。
-3. 引入副作用
-   - 新规则会导致旧门禁失效、旧命令被绕过、旧状态机失真。
-4. 引入高歧义
-   - 同一请求、同一状态、同一文件归属会被不同执行者读出不同动作。
-5. 引入门禁语义漂移
-   - 同一个 `pass` 结论在不同执行者那里代表不同放行标准。
+### 6.2 Findings That Should Not Be Reported By Default
 
-### 6.2 默认不应输出的问题
+Do not report the following by default:
 
-以下内容默认不得作为 findings 输出：
+1. wording preference only
+2. naming-style preference only
+3. personal taste about section organization
+4. speculative suggestions without side-effect evidence
+5. overdesigned suggestions that add rule complexity without clear risk reduction
+6. subjective nitpicks that cannot be attributed to closure, conflict, side effect, or ambiguity
 
-1. 纯措辞偏好。
-2. 命名风格偏好。
-3. 章节组织的个人审美差异。
-4. 没有明确副作用证据的“也许以后更优”建议。
-5. 只会增加规则复杂度、但不能显著降低风险的过度设计建议。
-6. 不能明确归因到“闭环问题 / 冲突问题 / 副作用问题 / 高歧义问题”的主观挑刺。
+## 7. Output Contract
 
-### 6.3 细节问题何时值得报
+The output should include:
 
-本流程不是禁止提细节，而是禁止提“无影响细节”。
+1. review scope
+2. overall conclusion
+3. findings ordered by severity and blocking priority
+4. for each finding:
+   - what the problem is
+   - why it happens
+   - what it impacts
+   - the minimal recommended fix
+5. whether the current review passes or is blocked
+6. the next action
 
-只有当细节问题满足以下至少一条时，才值得报：
+## 8. Non-Goals
 
-1. 这个细节会改变执行顺序。
-2. 这个细节会改变责任归属。
-3. 这个细节会改变门禁放行结果。
-4. 这个细节会让两个文件的解释不一致。
-5. 这个细节会让不同执行者做出不同动作。
-6. 这个细节会让同一个门禁结论被不同执行者解释成不同含义。
+This flow does not:
 
-若一个细节不影响以上任一项，则默认不报。
-
----
-
-## 7. Severity And Blocking
-
-本流程发现的问题统一分为三个优先级。
-
-### 7.1 P0
-
-定义：
-
-1. 已直接破坏 Spec Flow 的主链路闭环。
-2. 已造成明确规则冲突，执行者无法稳定决定该遵守哪一条。
-3. 已让关键门禁可被绕过，导致错误流程仍可能被放行。
-
-典型例子：
-
-1. 一个动作被要求执行，但没有任何规则定义谁负责执行。
-2. 同一状态在两个真相文件中有不同定义。
-3. 新规则让原本必须读取的门禁文件变成可跳过。
-4. 新规则或旧规则组合后，让 `cand_check pass` 可以在“关键内容未完整收口”时仍被稳定解释为通过。
-
-处理要求：
-
-1. 必须阻塞当前审查通过。
-2. 必须先修规则，再重新执行 `spec_flow_review`。
-
-### 7.2 P1
-
-定义：
-
-1. 主链路暂时还能走通，但执行语义已经明显不稳。
-2. 不同执行者很可能因为规则歧义而走出不同路径。
-3. 当前问题虽未直接绕过门禁，但很容易在下一轮修改中演化成 P0。
-
-典型例子：
-
-1. 入口存在，但命中边界模糊，容易误触发或漏触发。
-2. 回退逻辑被写得过于抽象，导致执行者无法稳定判断失败后回到哪一步。
-3. 输出要求过弱，导致同一类问题可能被不同方式记录，难以复审。
-4. 规则没有说清某个门禁到底只检查流程可推进，还是还要检查关键内容完整，导致执行者口径分裂。
-
-处理要求：
-
-1. 默认阻塞当前审查通过。
-2. 只有当问题被明确判定为“不影响当前主链路且已有人工共识兜住”时，才允许降为非阻塞观察项。
-3. 若降级，必须写清为什么当前审查可继续、风险由谁承担、下一步何时收口。
-
-### 7.3 P2
-
-定义：
-
-1. 不影响当前主链路正确性。
-2. 不会直接改变门禁和回退结果。
-3. 主要影响可读性、复审成本或未来维护成本。
-
-典型例子：
-
-1. 问题说明模板不够统一，但当前仍可稳定理解。
-2. 某些审查步骤顺序可进一步收敛，但不会改变执行结果。
-3. 某些背景说明不够友好，但还不至于造成误执行。
-
-处理要求：
-
-1. 默认不阻塞当前审查通过。
-2. 可以记录为建议项或后续优化项。
-
-### 7.4 Blocking Rule
-
-默认阻塞规则如下：
-
-1. 存在任何 `P0`，结论必须为 `blocked`。
-2. 存在任何未被明确降级的 `P1`，结论必须为 `fix_required`。
-3. 只有当不存在 `P0`，且不存在阻塞态 `P1` 时，结论才允许为 `pass`。
-4. `P2` 不得单独导致 `blocked` 或 `fix_required`。
-
----
-
-## 8. Finding Contract
-
-每个问题都必须按固定结构输出，不得只写一句抽象结论。
-
-每条 finding 至少必须包含以下字段：
-
-1. `priority`
-   - 只能是 `P0 | P1 | P2`
-2. `title`
-   - 一句话概括问题本身
-3. `background`
-   - 说明这条规则原本要解决什么问题，当前对象在流程中扮演什么角色
-4. `what_happened`
-   - 说明当前待审范围内具体哪里出现了缺口、冲突、歧义或副作用
-5. `impact`
-   - 说明它会影响哪个步骤、哪个文件、哪个门禁或哪个角色判断
-6. `why_now`
-   - 说明它是在什么审查上下文下暴露出来的，为什么不是无关紧要的小问题
-7. `recommendation`
-   - 给出推荐修复方案
-8. `why_recommendation`
-   - 说明为什么推荐这个方案，而不是更复杂或更宽泛的方案
-9. `blocking`
-   - 明确写 `true | false`
-
-补充要求：
-
-1. `background` 必须面向“不熟悉整套 Spec Flow 设计的人”也能读懂。
-2. `recommendation` 必须是最小可执行修复方案，不得给一堆开放式空话。
-3. 若问题被判定为非阻塞，也必须说明为什么当前审查范围下仍可继续。
-
-### 8.1 Markdown Rendering Contract
-
-`findings` 在 Markdown 中必须按“列表项 + 字段分行”的形式输出，不得把多个字段压成同一行或同一段落。
-
-固定写法如下：
-
-1. 每条 finding 必须是 `findings` 下的一个有序列表项，例如 `1.`、`2.`。
-2. 列表项首行只允许写 finding 的标题信息，格式固定为：`**[P1] 标题**`。
-3. 从第二行开始，所有字段都必须独立成行，使用 `字段名：字段内容` 的形式书写。
-4. 字段名使用普通文本即可，不要包成行内代码，不要写成一串 KV。
-5. `background`、`what_happened`、`impact`、`why_now`、`recommendation`、`why_recommendation` 这类长字段，必须各自单独占一行；若内容过长，可在同一字段下续行，但不得和下一个字段并到同一行。
-6. `blocking` 必须单独成行，格式固定为 `blocking：true` 或 `blocking：false`。
-7. 不得输出 `priority：P1` 这一独立字段行；优先级只放在标题前缀中，避免视觉重复。
-8. 若需要引用文件或章节，应直接写在对应字段内容中，不要把引用信息拆成额外的无名碎片行。
-
-最小示例如下：
-
-```md
-findings:
-
-1. **[P1] stable 侧命令是否必须读取 s_system_constraints.md 存在职责缺口**
-   background：当前命令体系要求模块命令先判断正式全局基线，否则执行者无法稳定理解哪些约束属于模块内、哪些约束属于全局共享约束。
-   what_happened：`command_policy.md` 只说明模块命令“应读取”全局约束，但 `spec_policy.md` 与相关命令文件没有把它补成稳定的前置读取要求，导致不同入口对同一前提解释不一致。
-   impact：执行者在做 `stable_verify` 或 `spec_init` 时，可能不知道是否必须先读取正式全局基线，从而让同一请求出现不同执行路径。
-   why_now：这个问题已经同时出现在总策略、读取顺序和命令文件三个层面，继续放任会把“是否必读”变成执行者个人理解题。
-   recommendation：统一把 `s_system_constraints.md` 补成 stable 侧相关命令的明确前置读取对象，并同步修正文档中的读取顺序。
-   why_recommendation：这是最小闭环修复，只处理职责和读取顺序，不额外扩展新的状态机或例外分支。
-   blocking：true
-```
-
-补充说明：
-
-1. 本节的目标是保证 findings 在终端、代码托管平台和聊天界面里都能稳定分块阅读。
-2. 若输出结果出现“多个字段挤成一团、靠空格硬分隔”的效果，视为未满足本契约。
-
----
-
-## 9. Output Contract
-
-输出顺序固定如下：
-
-1. `decision`
-2. `closure_summary`
-3. `side_effect_summary`
-4. `priority_summary`
-5. `findings`
-6. `recommended_fix_set`
-7. `next_action`
-
-补充要求：
-
-1. `priority_summary` 必须至少统计：
-   - `P0`
-   - `P1`
-   - `P2`
-   - `blocking_count`
-2. `findings` 必须按严重度从高到低排序，同级按主链路优先。
-3. `recommended_fix_set` 只列当前应该先做的最小修复集合，不扩展成整套重构计划。
-4. 若结论为 `pass`，必须明确说明当前审查范围内未发现闭环断点、规则冲突、阻塞性副作用。
-
----
-
-## 10. After Review
-
-审查完成后，动作规则固定如下：
-
-1. 若结论为 `blocked`
-   - 不得宣称当前待审范围已收口。
-   - 必须先修正对应规则，再重新执行 `spec_flow_review`。
-2. 若结论为 `fix_required`
-   - 默认也不得宣称当前待审范围已收口。
-   - 应先完成 `recommended_fix_set`，再重新执行 `spec_flow_review`。
-3. 若结论为 `pass`
-   - 表示当前待审范围在当前证据下未发现阻塞性闭环问题和可确认副作用。
-   - 这不等于“永远正确”，只等于“当前审查范围内允许继续推进”。
-4. 若存在 `P2`
-   - 可记录为后续优化项，但不得冒充阻塞问题。
-
-硬性要求：
-
-1. 不得只给问题，不给建议动作。
-2. 不得只给建议动作，不说明为什么这是问题。
-3. 不得把“用户最终采不采纳建议”偷换成“审查者可以不提供建议”。
-
----
-
-## 11. Non-Goals
-
-本流程不负责：
-
-1. 替代 `cand_check` 去审业务模块 candidate。
-2. 替代 `stable_verify` 或 `cand_verify` 去审代码实现。
-3. 生成或更新模块过程文件。
-4. 更新 `docs/specs/_status.md`。
-5. 因为“更优雅”或“更统一”而阻塞当前没有实质问题的规则修改。
-6. 在用户未明确要求时，把本流程降格为“当前工作区治理文件变更审查”。
+1. review business-module behavior design
+2. verify implementation alignment for a concrete module
+3. replace `cand_check`, `cand_verify`, or `stable_verify`
+4. execute reconciliation work in place of `shared_flow_reconcile`

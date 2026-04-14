@@ -1,21 +1,21 @@
 # specFlow
 
-`specFlow` 是一套以 Spec 为真相源的开发治理框架。
+`specFlow` is a spec-driven development governance framework.
 
-它解决的不是“怎么写一份文档”，而是“怎么让人和 AI 围绕同一份真相推进设计、计划、实现、验证和提升”。
+It is not about "how to write a document." It is about "how humans and AI can move design, planning, implementation, verification, and promotion forward around the same source of truth."
 
-## 目录
+## Layout
 
 - `framework/`
-  - 框架规则正文源文件。
+  - Source files for the framework rules.
 - `templates/root/`
-  - 安装到目标仓库根目录和固定路径的模板文件。
+  - Template files installed into the target repository root and fixed paths.
 - `tooling/`
-  - 初始化、升级、检查工具。
+  - Initialization, upgrade, and diagnosis tools.
 
-## 快速开始
+## Quick Start
 
-在引入 `specflow/` 后，先进入仓库根目录运行：
+After adding `specflow/` to your repository, go to the repository root and run:
 
 ```bash
 ./specflow/tooling/init.sh
@@ -27,16 +27,19 @@ Windows PowerShell:
 .\specflow\tooling\init.ps1
 ```
 
-初始化完成后，目标仓库会得到：
+After initialization, the target repository will receive:
 
 - `AGENTS.md`
 - `GEMINI.md`
 - `CLAUDE.md`
 - `.githooks/pre-commit`
-- `docs/agent_guidelines/**`
 - `docs/specs/**`
 
-后续可使用：
+The framework governance files remain inside:
+
+- `specflow/framework/docs/agent_guidelines/**`
+
+You can then use:
 
 - `./specflow/tooling/doctor.sh`
 - `./specflow/tooling/upgrade.sh`
@@ -45,3 +48,31 @@ Windows PowerShell:
 
 - `.\specflow\tooling\doctor.ps1`
 - `.\specflow\tooling\upgrade.ps1`
+
+## Template Ownership
+
+Files listed in `specflow/tooling/manifest.tsv` use two ownership modes:
+
+- `framework`
+  - owned by `specFlow`
+  - `upgrade` may refresh these files from the framework templates
+- `project`
+  - bootstrapped into the host repository by `init`
+  - once the file already exists in the host repository, `upgrade` must not overwrite it
+  - if the file is missing, `upgrade` may install the missing file from the template
+
+In plain words:
+
+1. `init` lays down the initial project-side bootstrap files.
+2. After that, existing project-owned files belong to the host repository, not to `specFlow`.
+3. `upgrade` is allowed to update framework-owned files and managed blocks, but it must not rewrite existing project-owned files.
+
+## Entry File Ownership
+
+`AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` are host-owned files with a `specFlow` managed block.
+
+- Host-specific instructions belong outside:
+  - `<!-- SPECFLOW:BEGIN -->`
+  - `<!-- SPECFLOW:END -->`
+- `init`, `upgrade`, `doctor`, and `specflow/tooling/sync_entry_docs.sh` operate only on the managed block.
+- If an existing entry file does not contain exactly one managed block, `specFlow` refuses to guess and reports the file for manual repair.

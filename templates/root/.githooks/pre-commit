@@ -3,4 +3,4 @@ set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-"${REPO_ROOT}/scripts/sync_entry_docs.sh" --stage
+"${REPO_ROOT}/specflow/tooling/sync_entry_docs.sh" --stage
