@@ -14,13 +14,9 @@ Here, "Spec Flow" means the governance mechanism formed by these objects togethe
 
 1. `specflow/framework/docs/agent_guidelines/*.md`
 2. `specflow/framework/docs/agent_guidelines/commands/*.md`
-3. `docs/specs/_status.md` only where its file responsibility affects gate interpretation
-4. process-rule READMEs that define process-file schema, validity, or consumption conditions:
-   - `docs/specs/_check_result/README.md`
-   - `docs/specs/_plans/README.md`
-   - `docs/specs/_verify_result/README.md`
-5. repository entry-index files that list commands, explain matching, or route governance flows
-6. `specflow/framework/docs/agent_guidelines/entry_index_registry.md`
+3. template-side governance baseline files under `specflow/templates/root/docs/specs/` where those files define the framework's default gate semantics
+4. template entry-index files under `specflow/templates/root/` that define the framework-owned managed block content for supported hosts
+5. `specflow/framework/docs/agent_guidelines/entry_index_registry.md` only where its rules affect project-side entry-file ownership or sync boundaries
 
 This flow is not a module command and is not part of the module lifecycle managed by `docs/specs/_status.md`.
 
@@ -42,21 +38,26 @@ The default scope is the repository's formal Spec Flow governance baseline:
 
 1. `specflow/framework/docs/agent_guidelines/*.md`
 2. `specflow/framework/docs/agent_guidelines/commands/*.md`
-3. `docs/specs/_status.md` only where its governance role affects interpretation
-4. `docs/specs/_check_result/README.md`
-5. `docs/specs/_plans/README.md`
-6. `docs/specs/_verify_result/README.md`
-7. registered entry-index files
-8. `specflow/framework/docs/agent_guidelines/entry_index_registry.md`
+3. `specflow/templates/root/docs/specs/_status.md` only where its template-side governance role affects interpretation
+4. `specflow/templates/root/docs/specs/_check_result/README.md`
+5. `specflow/templates/root/docs/specs/_plans/README.md`
+6. `specflow/templates/root/docs/specs/_verify_result/README.md`
+7. template entry-index files:
+   - `specflow/templates/root/AGENTS.md`
+   - `specflow/templates/root/GEMINI.md`
+   - `specflow/templates/root/CLAUDE.md`
+8. `specflow/framework/docs/agent_guidelines/entry_index_registry.md` only where project-side entry ownership or sync rules affect governance closure
 
 Additional rules:
 
-1. The process READMEs are part of the default governance baseline because they directly affect gate interpretation, even though they are not business truth files.
-2. This flow does not automatically expand into all of `docs/specs/**`.
-3. Business-module `stable`, `candidate`, and process-instance files are not in the default scope.
-4. The default entry-index set must come from `entry_index_registry.md`, not executor guesswork.
-5. Content truth files consumed by governance rules may be read only to confirm how governance binds, reads, or constrains them. Their own business or engineering content is not reviewed by default here.
-6. If `shared_flow_reconcile` exists, this flow only reviews whether it closes the Shared Appendix lifecycle. It does not replace its actual reconciliation work.
+1. The template process READMEs are part of the default governance baseline because they directly affect the framework's default gate interpretation, even though they are not business truth files.
+2. This flow does not automatically expand into all of `specflow/templates/root/docs/specs/**`.
+3. Installed project files under `docs/specs/**` are not in the default scope unless the user explicitly narrows the review to project-instance governance.
+4. Business-module `stable`, `candidate`, and process-instance files are not in the default scope.
+5. The default entry-index set for this flow is the template entry set under `specflow/templates/root/`, not executor guesswork and not the project-side registered-file set.
+6. `entry_index_registry.md` may still be read in this flow, but only to check whether project-side entry ownership and sync rules remain coherent with the template-side design.
+7. Content truth files consumed by governance rules may be read only to confirm how governance binds, reads, or constrains them. Their own business or engineering content is not reviewed by default here.
+8. If `shared_flow_reconcile` exists, this flow only reviews whether it closes the Shared Appendix lifecycle. It does not replace its actual reconciliation work.
 
 Do not automatically reinterpret `spec_flow_review` as "review current git diff", "review files touched in this session", or "review recently changed governance files" unless the user explicitly narrows scope that way.
 
@@ -107,10 +108,10 @@ Before execution:
 1. the scope must be explicit; if the user did not narrow it, use the full governance baseline from Section 3
 2. read every governance file inside the current review scope
 3. read any upstream governance files directly referenced by those files
-4. if the scope affects command progression or gate interpretation, also read `docs/specs/_status.md`, but treat it only as a state-index file unless the user explicitly asks for more
-5. if the scope is not narrowed, also read the three process-rule READMEs
+4. if the scope affects command progression or gate interpretation, also read `specflow/templates/root/docs/specs/_status.md`, but treat it only as a template-side state-index file unless the user explicitly asks for more
+5. if the scope is not narrowed, also read the three template process-rule READMEs under `specflow/templates/root/docs/specs/`
 6. if the task is governance review or may modify governance rules, entry files, or process-rule READMEs, read `specflow/framework/docs/agent_guidelines/git_policy.md`
-7. if the scope is not narrowed, read `specflow/framework/docs/agent_guidelines/entry_index_registry.md` and then read each default entry-index file it registers
+7. if the scope is not narrowed, read `specflow/framework/docs/agent_guidelines/entry_index_registry.md` and the three template entry-index files under `specflow/templates/root/`
 
 If you cannot determine exactly which governance files are being reviewed, do not issue a `pass`.
 

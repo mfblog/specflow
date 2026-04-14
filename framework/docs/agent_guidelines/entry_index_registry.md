@@ -15,6 +15,8 @@ This file answers only two questions:
 1. which entry index files are formally registered by default
 2. how those registered entry files must stay aligned
 
+This file does not define the template-source review scope of `spec_flow_review`.
+
 ---
 
 ## Registered Entry Index Files
@@ -25,9 +27,10 @@ This file answers only two questions:
 
 Additional rules:
 
-1. When `spec_flow_review` reviews entry index files under its default scope, it must use the registry in this section instead of guessing from file responsibilities.
-2. If a new entry index file is added later, update this file first, then include that file in the default review scope.
-3. Files with the same responsibility but not yet registered are not part of the default entry set for `spec_flow_review`.
+1. This registry defines the project-side registered entry files used for managed-block sync and commit-time consistency checks.
+2. If a new project-side entry index file is added later, update this file first so sync and commit-time checks can include it.
+3. Files with the same responsibility but not yet registered are not part of the project-side registered set.
+4. `spec_flow_review` may read this file to verify project-side ownership and sync semantics, but its default template-source scope is defined in `specflow/framework/docs/agent_guidelines/spec_flow_review.md`.
 
 ---
 
