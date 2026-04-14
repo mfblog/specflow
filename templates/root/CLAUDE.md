@@ -122,7 +122,16 @@ If a request is inside the `specFlow` scope but is not a standard command, handl
 8. Changes to `specflow/framework/docs/agent_guidelines/*.md` should normally be committed in the current task.
 9. When Spec, command, and git-flow rules conflict, do not guess. Go back to the relevant policy or command file.
 
-### 6. Must-Know Files
+### 6. Git Handling Rules
+
+Use these default git rules in `specFlow` tasks:
+
+1. If the task changes only candidate draft files, do not `git commit` by default unless the user explicitly asks for it or the active command flow requires it.
+2. If the task changes code files, formal source-of-truth files, governance files, or registered entry index files, `git commit` in the current task by default.
+3. If the task changes registered entry index files, ensure managed block consistency before commit.
+4. For exact file boundaries, exceptions, and promotion-specific rules, read `specflow/framework/docs/agent_guidelines/git_policy.md`.
+
+### 7. Must-Know Files
 
 If the task falls inside the `specFlow` scope, at minimum you should know what these files are responsible for:
 
