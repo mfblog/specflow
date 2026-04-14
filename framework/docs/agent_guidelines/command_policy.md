@@ -70,10 +70,11 @@ Additional rules:
 4. `shared appendix` is also not a legal command target. Do not write `cand_check:shared_xxx` or equivalent forms.
 5. `shared_flow_reconcile` is not a standard module command in `{command}:{module}` form. Do not write `shared_flow_reconcile:module_xxx`.
 6. `shared_extract_review` is also not a standard module command in `{command}:{module}` form.
-7. checkpoints and clarification actions are not standard commands in `{command}:{module}` form.
-8. only the standard commands listed in Section 5 advance the normal module lifecycle.
-9. Only for the first-version entry commands `spec_init:{module}` and `spec_new:{module}`, `{module}` may point to a new target that is not yet in `_status.md` but already has a clear, non-conflicting module name.
-10. Outside that exception, if a file is not yet registered as an independent formal module in `_status.md`, it must not be treated as a `{module}` target just because its file name, path, or frontmatter looks module-like.
+7. `project_standard_create` is also not a standard module command in `{command}:{module}` form.
+8. checkpoints and clarification actions are not standard commands in `{command}:{module}` form.
+9. only the standard commands listed in Section 5 advance the normal module lifecycle.
+10. Only for the first-version entry commands `spec_init:{module}` and `spec_new:{module}`, `{module}` may point to a new target that is not yet in `_status.md` but already has a clear, non-conflicting module name.
+11. Outside that exception, if a file is not yet registered as an independent formal module in `_status.md`, it must not be treated as a `{module}` target just because its file name, path, or frontmatter looks module-like.
 
 ---
 
@@ -129,6 +130,7 @@ Candidate commands move a candidate from design to implementation and then to pr
    - checks whether the candidate is sufficiently closed to stably constrain implementation
    - checks whether `system_constraints_stable_ref` aligns with the current formal global baseline
    - runs Prompt Adequacy Review for modules that hit Prompt triggers according to `docs/prompt_guidelines.md`
+   - may additionally consume registered project-local review standards according to `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
    - if it passes, writes `_check_result/{module}.md` as the pass gate for the candidate chain
 2. `cand_plan`
    - reads `_check_result/{module}.md`
@@ -191,6 +193,8 @@ The rules below are shared gates. Every command follows them by default:
 25. When a command resumes after a checkpoint, it must re-judge the required bindings and gate conditions instead of assuming the checkpoint answer already fixed them.
 26. Candidate-side fallback, blocking, and resume outputs must report the standardized `fallback_reason_code` defined by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md` before any free-form explanation.
 27. When `cand_verify` or `stable_verify` needs to judge whether `partial` or `not_checked` items may still support a narrower safe conclusion, it must use `specflow/framework/docs/agent_guidelines/downgrade_policy.md` instead of executor invention.
+28. Commands must not consume project-local standards unless those standards are registered in `docs/project_standards/_registry.md` and the command explicitly supports that consumption surface.
+29. Project-local standards may tighten or clarify framework baseline rules, but must not weaken them.
 
 ---
 

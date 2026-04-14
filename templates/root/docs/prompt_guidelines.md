@@ -301,6 +301,25 @@ Prompt Adequacy Review 不再按“若干松散维度”执行，而是固定审
 1. 该字段不新增独立快照字段，但其正文语义必须满足本节最小契约。
 2. 不允许只写“Prompt Adequacy Review passed”这类无法复审的空泛总结。
 
+### 6.5 Prompt Gate 回写契约
+
+当 `cand_check` 为当前 candidate 写回 Prompt gate 结果时，以下字段语义固定：
+
+1. `prompt_adequacy_review_required`
+   - 只有命中本文件第 2 节触发条件时，才允许写 `true`
+   - 未命中时固定写 `false`
+2. `prompt_adequacy_decision`
+   - 命中审查且通过时写 `pass`
+   - 命中审查但存在阻塞项时写 `blocked` 或 `fix_required`
+   - 未命中审查时固定写 `n/a`
+3. `prompt_adequacy_summary`
+   - 必须满足本节 `6.4` 的最小语义契约
+
+补充规则：
+
+1. 若模块命中 Prompt Adequacy Review 且结论不是 `pass`，`cand_check` 不得保留旧的放行结果，也不得写新的 pass gate。
+2. 若模块未命中 Prompt Adequacy Review，不得把 `prompt_adequacy_decision` 写成 `pass` 来伪装“已审查并通过”。
+
 ---
 
 ## 7. Blocking Rules
@@ -320,7 +339,22 @@ Prompt Adequacy Review 不再按“若干松散维度”执行，而是固定审
 
 ---
 
-## 8. Spec Mapping Requirements
+## 8. Command Consumption Rules
+
+Prompt gate 的命令消费责任固定如下：
+
+1. `cand_check` 是 Prompt Adequacy Review 的直接执行入口。
+2. `cand_check` 必须按本文件第 2、6、7 节完成：
+   - 是否命中 gate
+   - 审查哪些固定对象
+   - 哪些问题必须阻塞
+   - 如何回写 3 个 prompt 字段
+3. `cand_plan`、`cand_impl`、`cand_verify`、`cand_promote` 默认不重新执行 Prompt Adequacy Review。
+4. 下游命令只消费 `_check_result/{module}.md` 中已经写回的结果；若该放行结果失效，仍按候选链规则回退到 `cand_check`。
+
+---
+
+## 9. Spec Mapping Requirements
 
 若模块 candidate 定义了 Prompt 注入链路，Spec 至少必须写清：
 
@@ -370,7 +404,7 @@ Prompt Adequacy Review 不再按“若干松散维度”执行，而是固定审
 
 ---
 
-## 9. Review Examples
+## 10. Review Examples
 
 ### 9.1 Pass Example
 
@@ -409,9 +443,10 @@ Prompt Adequacy Review 不再按“若干松散维度”执行，而是固定审
 
 ---
 
-## 10. Relationship With Other Rules
+## 11. Relationship With Other Rules
 
-1. 本文件只定义 Prompt 编写与审查规则，不替代各模块自己的结构化输出协议正文。
+1. 本文件同时定义 Prompt 编写规则、Prompt Adequacy Review 规则、Prompt gate 回写契约，以及命令消费边界。
 2. 若某模块要求模型输出结构化结果，具体输出封装、提取步骤、解析硬规则与失败语义，必须由该模块 Spec 或其正式附属展开文件承接。
 3. 若模块命中 `cand_check`，Prompt Adequacy Review 的门禁以 `commands/cand_check.md` 为直接执行入口。
-4. 若命令级规则与本文件表述不一致，以命令文件和 `command_policy.md` 的最新联动规则为准，并应在当前任务内修正文档漂移。
+4. 命令文件可以引用本文件来承接 Prompt gate 的触发条件、阻塞规则和回写语义，但不得再创建第二份并列的 Prompt gate 真源。
+5. 若命令级规则与本文件表述不一致，以命令文件和 `command_policy.md` 的最新联动规则为准，并应在当前任务内修正文档漂移。

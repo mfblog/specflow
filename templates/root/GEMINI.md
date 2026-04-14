@@ -27,6 +27,7 @@ When a request hits any of the following, handle it with `specFlow` rules:
    - `spec_flow_review`
    - `shared_extract_review`
 3. Requests involving module Specs, state progression, candidate closure, formal promotion, Shared Appendix, or system constraints.
+4. Requests involving registered project-local standards under `docs/project_standards/`.
 
 If none of the above is hit, continue following the host agent's other rules.
 
@@ -67,6 +68,7 @@ Additional rules:
 
 1. `spec_flow_review` and `shared_extract_review` are not standard module commands in `{command}:{module}` form.
 2. `shared_flow_reconcile` is not a standard user-facing command. It is only used to reconcile state after Shared Appendix changes.
+3. `project_standard_create` is not a standard user-facing command. It is an internal flow the agent may use when the user asks to create a project-local standard.
 
 ### 3. How To Resolve Modules And Files
 

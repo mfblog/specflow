@@ -17,6 +17,7 @@ Here, "Spec Flow" means the governance mechanism formed by these objects togethe
 3. template-side governance baseline files under `specflow/templates/root/docs/specs/` where those files define the framework's default gate semantics
 4. template entry-index files under `specflow/templates/root/` that define the framework-owned managed block content for supported hosts
 5. `specflow/framework/docs/agent_guidelines/entry_index_registry.md` only where its rules affect project-side entry-file ownership or sync boundaries
+6. `specflow/framework/docs/agent_guidelines/project_standards_policy.md` where project-local standards affect governance closure
 
 This flow is not a module command and is not part of the module lifecycle managed by `docs/specs/_status.md`.
 
@@ -47,6 +48,7 @@ The default scope is the repository's formal Spec Flow governance baseline:
    - `specflow/templates/root/GEMINI.md`
    - `specflow/templates/root/CLAUDE.md`
 8. `specflow/framework/docs/agent_guidelines/entry_index_registry.md` only where project-side entry ownership or sync rules affect governance closure
+9. `specflow/templates/root/docs/project_standards/_registry.md` only where its template-side governance role affects interpretation
 
 Additional rules:
 
@@ -58,6 +60,7 @@ Additional rules:
 6. `entry_index_registry.md` may still be read in this flow, but only to check whether project-side entry ownership and sync rules remain coherent with the template-side design.
 7. Content truth files consumed by governance rules may be read only to confirm how governance binds, reads, or constrains them. Their own business or engineering content is not reviewed by default here.
 8. If `shared_flow_reconcile` exists, this flow only reviews whether it closes the Shared Appendix lifecycle. It does not replace its actual reconciliation work.
+9. If project-local standards are part of the framework baseline extension surface, this flow reviews only whether their registration and consumption rules remain closed. It does not review project-specific local standard content by default.
 
 Do not automatically reinterpret `spec_flow_review` as "review current git diff", "review files touched in this session", or "review recently changed governance files" unless the user explicitly narrows scope that way.
 
@@ -112,6 +115,7 @@ Before execution:
 5. if the scope is not narrowed, also read the three template process-rule READMEs under `specflow/templates/root/docs/specs/`
 6. if the task is governance review or may modify governance rules, entry files, or process-rule READMEs, read `specflow/framework/docs/agent_guidelines/git_policy.md`
 7. if the scope is not narrowed, read `specflow/framework/docs/agent_guidelines/entry_index_registry.md` and the three template entry-index files under `specflow/templates/root/`
+8. if the scope is not narrowed and project-local standards affect the reviewed rules, also read `specflow/framework/docs/agent_guidelines/project_standards_policy.md` and `specflow/templates/root/docs/project_standards/_registry.md`
 
 If you cannot determine exactly which governance files are being reviewed, do not issue a `pass`.
 

@@ -43,8 +43,9 @@ By default this command reviews:
 3. the module has `candidate`
 4. read explicitly referenced candidate appendix files and bound Shared Appendix files
 5. if the module may be Prompt-triggered, read `docs/prompt_guidelines.md`
-6. if `_check_result/{module}.md`, `_status.md`, candidate truth, or other commit-triggering governance files may change, read the git policy first
-7. if referenced appendix files have directory drift, fix that first and rerun the pre-check
+6. if the command surface supports project-local review standards, read `specflow/framework/docs/agent_guidelines/project_standards_policy.md`, `docs/project_standards/_registry.md`, and any registered project-local standard files consumed by `cand_check` for the current target
+7. if `_check_result/{module}.md`, `_status.md`, candidate truth, or other commit-triggering governance files may change, read the git policy first
+8. if referenced appendix files have directory drift, fix that first and rerun the pre-check
 
 ## 4. Procedure
 
@@ -63,37 +64,38 @@ By default this command reviews:
    - `Acceptance Basis Completeness`
 8. determine whether Prompt Adequacy Review is triggered according to `docs/prompt_guidelines.md`
 9. if triggered, run the fixed review objects, blocking rules, and write-back contract defined by `docs/prompt_guidelines.md`
-10. process `system_constraints_stable_ref`:
+10. if registered project-local review standards apply to the current module and command surface, consume them only according to `docs/project_standards/_registry.md` and only as tightening or clarifying inputs
+11. process `system_constraints_stable_ref`:
    - if the formal global baseline exists and the candidate is still compatible, a mechanical update to the current version is allowed
    - if incompatible, the result can only be `blocked` or `fix_required`
    - if the formal global baseline does not exist, `system_constraints_stable_ref` must be `none`
-11. process `shared_appendix_refs`:
+12. process `shared_appendix_refs`:
    - if current behavior depends on Shared Appendix truth but bindings are missing or incomplete, the result can only be `blocked` or `fix_required`
    - if bindings exist but the body does not explain which behavior chain reuses them, the result can only be `blocked` or `fix_required`
-12. process shared-candidate signals:
+13. process shared-candidate signals:
    - by default, shared-candidate hints only trigger a suggestion to run `shared_extract_review`
    - if the current required reading range already confirms a dual source of truth, report it directly as a blocking issue
-13. determine whether a blocking checkpoint is the correct stop form:
+14. determine whether a blocking checkpoint is the correct stop form:
    - use `clarification` when user intent, boundary meaning, or acceptance meaning is still missing from truth
    - use `decision` when multiple materially different directions remain and the user must choose one
-14. checkpoint rules:
+15. checkpoint rules:
    - a checkpoint is not `pass`
    - if a checkpoint conclusion changes behavior truth, it must be written back to candidate or appendix before `cand_check` may be rerun
    - do not write `_check_result/{module}.md` for checkpoint-only stops
-15. merge conclusions in this order:
+16. merge conclusions in this order:
    - `progressability`
    - `content completeness`
    - overall gate conclusion
-16. merge rules:
+17. merge rules:
    - if `progressability` fails -> only `blocked` or `fix_required`
    - if any `critical` completeness gap exists -> only `blocked` or `fix_required`
    - if only `important` or `elaboration` issues remain, `pass` is still possible
-17. if the result is `pass`, create or update `docs/specs/_check_result/{module}.md`
-18. if the result is not `pass`, do not write a failed `_check_result/{module}.md`; delete an old pass gate if it is no longer valid
-19. update `_status.md`:
+18. if the result is `pass`, create or update `docs/specs/_check_result/{module}.md`
+19. if the result is not `pass`, do not write a failed `_check_result/{module}.md`; delete an old pass gate if it is no longer valid
+20. update `_status.md`:
    - if pass -> `Next Command=cand_plan`
    - otherwise -> `Next Command=cand_check`
-20. perform git close-out if required
+21. perform git close-out if required
 
 ## 5. Stop Conditions
 

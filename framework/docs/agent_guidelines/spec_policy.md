@@ -93,6 +93,10 @@ Spec files in the repository are divided into three categories:
 2. single-module supporting expansion files
 3. shared supporting expansion files
 
+Project-local standards under `docs/project_standards/` are not a fourth kind of module Spec object.
+They are project-local governance inputs controlled by `specflow/framework/docs/agent_guidelines/project_standards_policy.md`.
+They may constrain command execution only through the registered extension surface defined there.
+
 #### 2.5.1 Formal Module Files
 
 An object counts as a formal module only when all of the following hold:
