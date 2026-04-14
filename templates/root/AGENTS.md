@@ -1,54 +1,129 @@
-## 核心原则
+# Agent Execution Rules
 
-1. 涉及实现、审查、升级时，必须先按对应命令或 policy 对齐目标模块的 Spec 与状态，不得绕开 `docs/specs/` 中的真相文件直接猜测行为。
-2. 当不确定是否属于行为变化时，默认视为行为变化；行为变化不得代码先行，必须先遵守 `docs/agent_guidelines/spec_policy.md`。
-3. 新模块首版允许先有 `candidate`，之后再由 `cand_promote` 生成第一份 `stable`。
-4. 历史模块首次纳管应先通过 `spec_init:{module}` 建立第一份 `stable`。
-5. 若本次是代码实现类修改，在确认修改有效后，必须按 `docs/agent_guidelines/git_policy.md` 的当前规则判断是否需要提交；默认应在当前任务内完成提交。
-6. `docs/specs/` 中除 `candidate` 层主文件及其附属展开文件外的 Spec 文件，属于行为真相源；其修改默认应立刻纳入 git 历史。
-7. `candidate` 层主文件及其附属展开文件属于候选草案层；若本次只修改这类文件，默认不执行 `git commit`，除非用户明确要求，或命中要求提交的命令流程。
-8. `docs/agent_guidelines/*.md` 的修改默认也应在当前任务内执行 `git commit`。
-9. 不要假设规则；遇到 Spec、命令或提交流程冲突时，回到对应 policy 或命令文件确认。
+本文件只定义 agent 在采用 specFlow 的仓库中应如何识别请求、读取真相文件和选择执行路径。
 
-## 命令入口
+## 1. 先判断请求类型
 
-- 命令总规范见：`docs/agent_guidelines/command_policy.md`
-- 具体命令放在：`docs/agent_guidelines/commands/`
-- 标准命令调用格式为：`{command}:{module}`
-- `{module}` 默认应为 `docs/specs/_status.md` 中登记的正式模块名；该状态表的职责、字段语义与读取规则以 `docs/agent_guidelines/spec_policy.md` 为准
+收到请求后，先判断它属于哪一类：
 
-### Spec 文件指代示例
+1. 标准命令请求
+   - 形如 `{command}:{module}`
+   - 或用户明确表达了某个标准命令的意图
+2. 治理审查请求
+   - `spec_flow_review`
+   - `shared_extract_review`
+3. 非命令请求
+   - 普通问答
+   - 代码实现
+   - 文档修改
+   - 审查、排查、解释
 
-- `s_module_example`：表示 `stable` 层文件
-- `c_module_example`：表示 `candidate` 层文件
-- 若用户只说 `module_example`，默认它是模块名，不是具体文件名；执行前必须先按 `docs/specs/_status.md` 的 `Active Layer` 判定实际落点
+若是标准命令请求，优先按对应命令文件执行，不自行发明流程。
 
-### 标准命令
+## 2. 标准命令入口
 
-- `spec_init:{module}`：为历史模块补建第一份 `stable`
-- `stable_verify:{module}`：核对当前代码是否仍对齐 `stable`
-- `spec_new:{module}`：为全新模块建立第一份 `candidate`
-- `spec_fork:{module}`：从已有 `stable` 派生一份新的 `candidate`
-- `cand_check:{module}`：检查 `candidate` 是否已收口到足以进入计划阶段
-- `cand_plan:{module}`：根据已收口的 `candidate` 生成当前轮 `_plans/{module}.md`
-- `cand_impl:{module}`：按 `candidate` 与升级清单推进代码实现
-- `cand_verify:{module}`：核对当前代码是否已对齐 `candidate`
-- `cand_promote:{module}`：将 `candidate` 正式提升为新的 `stable`
+标准命令格式：
 
-### 治理审查入口
+```text
+{command}:{module}
+```
 
-- `spec_flow_review`：审查当前待审范围内的 specFlow 治理机制是否仍然闭环，以及是否会给现有流程带来副作用
-- `shared_extract_review`：判断某段当前写在模块主文件或模块 appendix 中的内容，是否已经达到提取为 Shared Appendix 的标准
+命令总规范见：
+
+- `docs/agent_guidelines/command_policy.md`
+
+具体命令文件见：
+
+- `docs/agent_guidelines/commands/`
+
+标准命令包括：
+
+1. `spec_init:{module}`
+2. `stable_verify:{module}`
+3. `spec_new:{module}`
+4. `spec_fork:{module}`
+5. `cand_check:{module}`
+6. `cand_plan:{module}`
+7. `cand_impl:{module}`
+8. `cand_verify:{module}`
+9. `cand_promote:{module}`
+
+治理审查入口包括：
+
+1. `spec_flow_review`
+2. `shared_extract_review`
 
 补充规则：
 
-1. `spec_flow_review` 不是 `{command}:{module}` 形式的标准模块命令。
-2. 它不进入 `docs/specs/_status.md`，也不参与模块 `stable / candidate` 状态机。
-3. 它只审查治理规则本身，不替代 `cand_check`、`stable_verify`、`cand_verify` 等模块或实现侧审查命令。
-4. `shared_flow_reconcile` 不是标准模块命令；它不进入 `docs/specs/_status.md`，只负责 Shared Appendix 变更后的状态收口。
-5. `shared_extract_review` 也不是标准模块命令；它不进入 `docs/specs/_status.md`，只负责 shared 提取边界审查。
+1. `spec_flow_review` 与 `shared_extract_review` 不是 `{command}:{module}` 形式的标准模块命令。
+2. `shared_flow_reconcile` 不是用户直接输入的标准命令；它只用于 Shared Appendix 变更后的状态收口。
 
-## 文档要求
+## 3. 模块与文件如何判定
+
+`{module}` 默认指正式模块名，不是具体文件名。
+
+若用户直接说模块名，例如 `module_example`，执行前必须先读取：
+
+- `docs/specs/_status.md`
+
+再根据其中的 `Active Layer` 判定实际落点：
+
+1. `Active Layer=stable`
+   - 默认落到 `docs/specs/stable/s_{module}.md`
+2. `Active Layer=candidate`
+   - 默认落到 `docs/specs/candidate/c_{module}.md`
+
+若用户直接说具体文件前缀，则按文件处理：
+
+1. `s_module_example`
+   - 指 `stable` 层主文件
+2. `c_module_example`
+   - 指 `candidate` 层主文件
+
+## 4. 非命令请求的默认执行顺序
+
+若请求不是标准命令，也不是治理审查，默认按下面顺序判断：
+
+1. 先确认它影响哪个模块或哪个治理对象。
+2. 再读取 `docs/specs/_status.md`，确认目标模块当前的 `Active Layer` 与 `Next Command`。
+3. 若任务涉及模块行为真相，读取对应层的主 Spec。
+4. 若主 Spec 明确引用了 appendix 或 Shared Appendix，必须一并读取。
+5. 若任务涉及全局技术基线、共享机制或全局例外，再读取：
+   - `docs/specs/system/stable/s_system_constraints.md`
+6. 根据读取结果再决定是：
+   - 只解释
+   - 修改 candidate
+   - 修改 stable
+   - 执行某个标准命令
+
+## 5. 强制约束
+
+1. 不得绕开 `docs/specs/` 中的真相文件直接猜测行为。
+2. 当不确定是否属于行为变化时，默认视为行为变化。
+3. 行为变化不得代码先行，必须先遵守 `docs/agent_guidelines/spec_policy.md`。
+4. 新模块首版允许先有 `candidate`，之后再由 `cand_promote` 生成第一份 `stable`。
+5. 历史模块首次纳管应先通过 `spec_init:{module}` 建立第一份 `stable`。
+6. `docs/specs/` 中除 `candidate` 层主文件及其附属展开文件外的 Spec 文件，属于行为真相源；其修改默认应纳入 git 历史。
+7. `candidate` 层主文件及其附属展开文件属于候选草案层；若本次只修改这类文件，默认不执行 `git commit`，除非用户明确要求，或命中要求提交的命令流程。
+8. `docs/agent_guidelines/*.md` 的修改默认也应在当前任务内执行 `git commit`。
+9. 遇到 Spec、命令或提交流程冲突时，不要自行猜测，回到对应 policy 或命令文件确认。
+
+## 6. 必读规则文件
+
+至少应知道以下文件分别解决什么问题：
+
+1. `docs/agent_guidelines/spec_policy.md`
+   - 定义 Spec 对象、层次、真相边界、读取规则
+2. `docs/agent_guidelines/command_policy.md`
+   - 定义标准命令、门禁和默认生命周期
+3. `docs/agent_guidelines/git_policy.md`
+   - 定义哪些改动默认要提交，哪些可以不提交
+4. `docs/specs/_status.md`
+   - 记录正式模块当前状态、当前层和默认下一步命令
+
+执行时不要一次性盲读所有文件，只按当前任务需要读取。
+
+## 7. 文档要求
 
 1. 规则文档、命令文档和其它机制类文档必须写成可直接阅读的正文，不得依赖未写出的对话上下文。
 2. 文档正文不得写成补丁说明，而必须直接写规则本身。
