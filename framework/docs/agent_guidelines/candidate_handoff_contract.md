@@ -29,6 +29,7 @@ Candidate-side fallback, blocking, and resume explanations must use these standa
 7. `shared_appendix_drift`
 8. `implementation_deviation`
 9. `evidence_incomplete`
+10. `promotion_recovery`
 
 Meaning rules:
 
@@ -50,6 +51,8 @@ Meaning rules:
    - implementation no longer satisfies the current candidate even though candidate truth still stands
 9. `evidence_incomplete`
    - current verification evidence is still insufficient to close the next gate safely
+10. `promotion_recovery`
+   - `cand_promote` had already started mutating repository state and had to restore the module back to candidate semantics before the chain could continue
 
 Executors may add natural-language explanation, but the standardized code must appear first when a fallback or blocking reason is reported.
 
@@ -223,6 +226,8 @@ This handoff contract works together with:
 2. `specflow/framework/docs/agent_guidelines/command_policy.md`
 3. `specflow/framework/docs/agent_guidelines/commands/*.md`
 4. process-file READMEs under `docs/specs/` and `specflow/templates/root/docs/specs/`
+5. `specflow/framework/docs/agent_guidelines/process_snapshot_contract.md`
+6. `specflow/framework/docs/agent_guidelines/recovery_policy.md`
 
 Priority rules:
 

@@ -296,6 +296,7 @@ They remain valid only when their binding fields still match the current candida
 They must also satisfy the centralized candidate handoff contract defined in:
 
 1. `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md`
+2. `specflow/framework/docs/agent_guidelines/process_snapshot_contract.md`
 
 When those bindings drift, the process file is invalid and the module must fall back to the smallest valid next command.
 
@@ -304,6 +305,7 @@ Additional rules:
 1. process files are not checkpoints
 2. process files must not be used as a substitute for writing updated truth back into candidate or appendix files
 3. when a command reports fallback, blocking, or resume decisions about process-file invalidation, it should use the standardized `fallback_reason_code` first and only then add natural-language explanation
+4. when a process file records `spec_fingerprint`, `system_constraints_stable_fingerprint`, or `shared_appendix_snapshot`, those fields must use the fixed definitions from `process_snapshot_contract.md`
 
 ---
 

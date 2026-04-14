@@ -1,6 +1,6 @@
 ## Host Instructions
 
-If the project registers any Prompt-related project-local standard, follow the registered file declared in `docs/project_standards/_registry.md`.
+If the current command or governance flow explicitly consumes project-local standards, follow only the registered files selected by `docs/project_standards/_registry.md` for the current `surface`, `consumed_by`, and `applies_to` scope.
 
 Content outside the managed block below belongs to the host repository.
 
@@ -98,13 +98,19 @@ If the user gives a concrete file prefix, treat it as a file reference:
 
 If a request is inside the `specFlow` scope but is not a standard command, handle it in this default order:
 
-1. First determine which module or governance object it affects.
-2. Read `docs/specs/_status.md` to confirm the target module's current `Active Layer` and `Next Command`.
-3. If the task touches module behavior truth, read the main Spec for the current layer.
-4. If the main Spec explicitly references appendix files or Shared Appendix files, read them too.
-5. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
+1. First determine whether the request targets:
+   - a module behavior object
+   - or a governance object / governance flow
+2. If it targets a governance object or governance flow:
+   - read the governance file that defines that flow's scope, preconditions, and procedure first
+   - follow that file's declared read scope instead of automatically starting from `docs/specs/_status.md`
+3. If it targets a module behavior object:
+   - read `docs/specs/_status.md` to confirm the target module's current `Active Layer` and `Next Command`
+4. If the module task touches module behavior truth, read the main Spec for the current layer.
+5. If the main Spec explicitly references appendix files or Shared Appendix files, read them too.
+6. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
    - `docs/specs/system/stable/s_system_constraints.md`
-6. Then decide whether the current action is:
+7. Then decide whether the current action is:
    - explanation only
    - modifying `candidate`
    - modifying `stable`

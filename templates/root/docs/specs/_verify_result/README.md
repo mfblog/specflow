@@ -32,5 +32,6 @@ Rules:
 11. `cand_promote` must delete the corresponding `_verify_result/{module}.md`.
 12. Consumers must validate bindings, not just existence.
 13. This README is also constrained by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md`.
-14. The fixed snapshot fields above do not expand in this round.
-15. When commands explain why verification must continue, fall back to implementation, or fall back to closure, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.
+14. Snapshot fields in this file must use the fixed definitions from `specflow/framework/docs/agent_guidelines/process_snapshot_contract.md`.
+15. The fixed snapshot fields above do not expand in this round.
+16. When commands explain why verification must continue, fall back to implementation, or fall back to closure, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.

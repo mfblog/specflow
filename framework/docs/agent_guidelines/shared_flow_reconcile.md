@@ -54,7 +54,7 @@ Before execution:
 3. Build the module current-snapshot view:
    - if the module is at `candidate`, read any existing `_check_result/{module}.md`, `_plans/{module}.md`, and `_verify_result/{module}.md`
    - extract `shared_appendix_snapshot` from those files when present
-   - regenerate the normalized snapshot from current truth according to `spec_policy.md`
+   - regenerate the normalized snapshot from current truth according to `process_snapshot_contract.md`
 4. For each module, judge whether its Shared Appendix binding is still valid:
    - skip modules already marked as directly closed in this round
    - if `shared_appendix_refs=none` and the module is not in a changed-binding case, leave it unchanged

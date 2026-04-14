@@ -36,6 +36,7 @@ Rules:
 12. `cand_promote` must delete the corresponding `_check_result/{module}.md`.
 13. Consumers must validate bindings, not just existence.
 14. This README is also constrained by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md`.
-15. `_check_result/{module}.md` carries only the current pass-gate snapshot. It does not carry failed fallback records.
-16. When commands explain why this pass gate cannot be consumed or why the module must fall back, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.
-17. If the current project has an active registered Prompt review standard for the current target, the semantics of `prompt_adequacy_review_required`, `prompt_adequacy_decision`, and `prompt_adequacy_summary` are additionally constrained by that registered project-local standard.
+15. Snapshot fields in this file must use the fixed definitions from `specflow/framework/docs/agent_guidelines/process_snapshot_contract.md`.
+16. `_check_result/{module}.md` carries only the current pass-gate snapshot. It does not carry failed fallback records.
+17. When commands explain why this pass gate cannot be consumed or why the module must fall back, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.
+18. If the current project has an active registered Prompt review standard for the current target, the semantics of `prompt_adequacy_review_required`, `prompt_adequacy_decision`, and `prompt_adequacy_summary` are additionally constrained by that registered project-local standard.
