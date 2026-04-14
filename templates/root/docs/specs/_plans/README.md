@@ -27,4 +27,6 @@ Rules:
 12. `spec_fork` must delete the previous round's `_plans/{module}.md`.
 13. `cand_promote` must delete the corresponding `_plans/{module}.md`.
 14. When `Candidate=no`, `_plans/{module}.md` should not remain.
-
+15. This README is also constrained by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md`.
+16. The fixed snapshot fields above do not expand in this round.
+17. When plan progress, blockers, or verification focus need to express a fallback, invalidation, or resume reason, they should use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.

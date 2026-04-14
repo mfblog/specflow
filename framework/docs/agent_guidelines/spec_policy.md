@@ -244,6 +244,14 @@ For `cand_check`, missing items should be understood in three layers:
 
 If progressability fails or any critical completeness gap remains, the candidate must not pass.
 
+If the missing blocker is user intent, boundary selection, or acceptance meaning rather than executor-side implementation detail, the command may pause through the checkpoint protocol instead of pretending the missing truth already exists.
+
+Rules:
+
+1. that pause is a structured checkpoint, not a new lifecycle stage
+2. if the missing truth affects behavior, protocol, boundary, or acceptance semantics, the answer must be written back into candidate truth before the candidate may pass
+3. chat-only clarification is never sufficient as the durable truth basis for downstream planning or implementation
+
 ---
 
 ## 6. Global Constraint Alignment
@@ -281,7 +289,17 @@ The main process files are:
 Their validity never depends on file existence alone.
 They remain valid only when their binding fields still match the current candidate, the current global baseline state, and the current Shared Appendix snapshot when applicable.
 
+They must also satisfy the centralized candidate handoff contract defined in:
+
+1. `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md`
+
 When those bindings drift, the process file is invalid and the module must fall back to the smallest valid next command.
+
+Additional rules:
+
+1. process files are not checkpoints
+2. process files must not be used as a substitute for writing updated truth back into candidate or appendix files
+3. when a command reports fallback, blocking, or resume decisions about process-file invalidation, it should use the standardized `fallback_reason_code` first and only then add natural-language explanation
 
 ---
 
@@ -311,6 +329,12 @@ The default closure logic is:
 4. Shared Appendix changes may invalidate many modules at once and must be reconciled explicitly
 5. formal promotion must clean the round's candidate files and process artifacts
 
+Checkpoint relationship rules:
+
+1. a checkpoint is a structured communication stop inside a command, not a second lifecycle
+2. a checkpoint does not count as command success
+3. when a checkpoint answer changes current truth, candidate or appendix writeback must happen before lifecycle resume
+
 Do not invent a second lifecycle outside these rules.
 
 ---
@@ -324,3 +348,5 @@ Executors must follow these defaults:
 3. do not let code go first on behavior changes
 4. read only the files required by the current task, but do read all files that the current rule makes mandatory
 5. do not silently narrow review scope or command scope without user authorization or an explicit rule
+6. when a command blocks, falls back, or resumes with a standardized reason, report the `fallback_reason_code` before the free-form explanation
+7. if clarification affects behavior truth, write it back to the current candidate or appendix instead of leaving it in chat

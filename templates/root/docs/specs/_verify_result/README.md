@@ -31,4 +31,6 @@ Rules:
 10. `spec_fork` must delete the previous round's `_verify_result/{module}.md`.
 11. `cand_promote` must delete the corresponding `_verify_result/{module}.md`.
 12. Consumers must validate bindings, not just existence.
-
+13. This README is also constrained by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md`.
+14. The fixed snapshot fields above do not expand in this round.
+15. When commands explain why verification must continue, fall back to implementation, or fall back to closure, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.

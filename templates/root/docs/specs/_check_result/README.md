@@ -35,4 +35,6 @@ Rules:
 11. `spec_fork` must delete the previous round's `_check_result/{module}.md`.
 12. `cand_promote` must delete the corresponding `_check_result/{module}.md`.
 13. Consumers must validate bindings, not just existence.
-
+14. This README is also constrained by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md`.
+15. `_check_result/{module}.md` carries only the current pass-gate snapshot. It does not carry failed fallback records.
+16. When commands explain why this pass gate cannot be consumed or why the module must fall back, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.

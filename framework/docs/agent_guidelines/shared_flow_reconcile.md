@@ -96,7 +96,14 @@ The output must include at least:
 4. the fallback result for each affected module
 5. the list of deleted process files
 6. any mismatch between `bound_modules` and the real binding set
-7. the git close-out result
+7. the standardized `fallback_reason_code` for each affected module
+8. the git close-out result
+
+Allowed `fallback_reason_code` values:
+
+1. `shared_appendix_drift`
+2. `binding_drift`
+3. `truth_drift`
 
 ## 7. Non-Goals
 

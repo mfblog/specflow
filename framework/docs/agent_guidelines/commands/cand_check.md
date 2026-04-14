@@ -28,6 +28,7 @@ By default this command reviews:
 5. whether `system_constraints_stable_ref` matches the current formal global baseline state
 6. whether Prompt Adequacy is sufficient when Prompt triggers are hit
 7. whether shared-candidate signals require suggesting `shared_extract_review` or directly reporting a dual-source-of-truth conflict
+8. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
 
 `cand_check` is not a "minimum can-move-forward review."
 `cand_check pass` always means:
@@ -75,20 +76,27 @@ By default this command reviews:
 12. process shared-candidate signals:
    - by default, shared-candidate hints only trigger a suggestion to run `shared_extract_review`
    - if the current required reading range already confirms a dual source of truth, report it directly as a blocking issue
-13. merge conclusions in this order:
+13. determine whether a blocking checkpoint is the correct stop form:
+   - use `clarification` when user intent, boundary meaning, or acceptance meaning is still missing from truth
+   - use `decision` when multiple materially different directions remain and the user must choose one
+14. checkpoint rules:
+   - a checkpoint is not `pass`
+   - if a checkpoint conclusion changes behavior truth, it must be written back to candidate or appendix before `cand_check` may be rerun
+   - do not write `_check_result/{module}.md` for checkpoint-only stops
+15. merge conclusions in this order:
    - `progressability`
    - `content completeness`
    - overall gate conclusion
-14. merge rules:
+16. merge rules:
    - if `progressability` fails -> only `blocked` or `fix_required`
    - if any `critical` completeness gap exists -> only `blocked` or `fix_required`
    - if only `important` or `elaboration` issues remain, `pass` is still possible
-15. if the result is `pass`, create or update `docs/specs/_check_result/{module}.md`
-16. if the result is not `pass`, do not write a failed `_check_result/{module}.md`; delete an old pass gate if it is no longer valid
-17. update `_status.md`:
+17. if the result is `pass`, create or update `docs/specs/_check_result/{module}.md`
+18. if the result is not `pass`, do not write a failed `_check_result/{module}.md`; delete an old pass gate if it is no longer valid
+19. update `_status.md`:
    - if pass -> `Next Command=cand_plan`
    - otherwise -> `Next Command=cand_check`
-18. perform git close-out if required
+20. perform git close-out if required
 
 ## 5. Stop Conditions
 
@@ -135,10 +143,24 @@ The output should include:
    - `content completeness`
    - overall gate conclusion
 6. whether `Check Result Snapshot` was written back or an old gate was cleaned up
-7. structured findings when blocked
-8. next-step suggestion
-9. git close-out result
-10. `_status.md` update result
+7. `checkpoint result` when a checkpoint stop was raised
+8. `fallback_reason_code` for blocked, fix-required, or checkpoint stops
+9. structured findings when blocked
+10. next-step suggestion
+11. git close-out result
+12. `_status.md` update result
+
+Allowed checkpoint types:
+
+1. `clarification`
+2. `decision`
+
+Allowed `fallback_reason_code` values:
+
+1. `truth_incomplete`
+2. `prompt_inadequate`
+3. `baseline_drift`
+4. `shared_appendix_drift`
 
 ## 8. Non-Goals
 

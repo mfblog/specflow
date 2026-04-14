@@ -12,6 +12,7 @@ By default it handles:
 2. updating state files
 3. cleaning this round's candidate and process files
 4. updating `s_system_constraints.md` when needed
+5. consuming the `cand_verify -> cand_promote` handoff only when verification still covers the current round
 
 ## 3. Preconditions
 
@@ -27,7 +28,7 @@ By default it handles:
 
 1. read and re-check the latest `_verify_result/{module}.md`
 2. read `docs/specs/candidate/c_{module}.md` and all required appendix files
-3. validate the full binding relation of `_verify_result/{module}.md`
+3. validate the full binding relation of `_verify_result/{module}.md` according to the candidate handoff contract
 4. if `_verify_result/{module}.md` is invalid, identify the reason and stop immediately:
    - if code changed after verification -> fall back to `cand_verify`
    - if implementation drift against candidate exists -> fall back to `cand_impl`
@@ -72,10 +73,25 @@ By default it handles:
 3. file and state update result
 4. `system_constraints` linked-promotion result
 5. cleanup result
-6. fallback reason if verification became invalid
-7. recovery-state explanation if incomplete promotion occurred
-8. git close-out result
-9. follow-up state explanation
+6. `handoff validation result`
+7. `fallback_reason_code` if verification became invalid
+8. fallback reason if verification became invalid
+9. recovery-state explanation if incomplete promotion occurred
+10. git close-out result
+11. follow-up state explanation
+
+Allowed checkpoint types:
+
+1. none
+
+Allowed `fallback_reason_code` values:
+
+1. `truth_drift`
+2. `binding_drift`
+3. `baseline_drift`
+4. `shared_appendix_drift`
+5. `implementation_deviation`
+6. `evidence_incomplete`
 
 ## 7. Non-Goals
 

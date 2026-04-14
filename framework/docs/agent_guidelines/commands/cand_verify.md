@@ -12,6 +12,7 @@ By default it handles:
 2. structured verification evidence generation
 3. writing `_verify_result/{module}.md`
 4. deciding whether the module may enter `cand_promote`
+5. stopping at a `human_verify` checkpoint only when automation is still insufficient to close confidence
 
 ## 3. Preconditions
 
@@ -31,18 +32,22 @@ By default it handles:
 4. verify current code against key protocols, main flow, error handling, and acceptance criteria
 5. produce a structured verification evidence matrix
 6. output `Coverage Summary`
-7. classify deviations with the shared `P1 / P2 / P3` semantics
-8. conclude:
+7. determine whether a `human_verify` checkpoint is required:
+   - use it only when automated verification is insufficient but a small amount of human effect judgment can close the remaining uncertainty
+   - if human verification confirms implementation deviation while candidate truth still stands, fall back to `cand_impl`
+   - if human verification shows acceptance truth itself is still incomplete, fall back to `cand_check`
+8. classify deviations with the shared `P1 / P2 / P3` semantics
+9. conclude:
    - if `fail` exists, do not enter `cand_promote`
    - if `partial` or `not_checked` exists, promotion is allowed only if the downgrade rules are satisfied
    - if key deviations are cleared and evidence is complete, promotion may proceed
-9. write or update `docs/specs/_verify_result/{module}.md`
-10. update `_status.md`:
+10. write or update `docs/specs/_verify_result/{module}.md`
+11. update `_status.md`:
    - if ready to promote -> `Next Command=cand_promote`
    - if implementation has deviations but candidate truth still stands -> `Next Command=cand_impl`
    - if candidate truth or formal global baseline must be re-closed -> `Next Command=cand_check`
    - if verification evidence is still incomplete but no upstream truth drift exists -> `Next Command=cand_verify`
-11. perform git close-out if required
+12. perform git close-out if required
 
 ## 5. Stop Conditions
 
@@ -57,11 +62,27 @@ By default it handles:
 2. structured verification evidence matrix
 3. `Coverage Summary`
 4. verify-result write-back result
-5. deviation list
-6. fallback reason if pass gate or plan was invalid
-7. next-step suggestion
-8. git close-out result
-9. `_status.md` update result
+5. `checkpoint result` when a checkpoint stop was raised
+6. `fallback_reason_code` for fallback or checkpoint stops
+7. deviation list
+8. fallback reason if pass gate or plan was invalid
+9. next-step suggestion
+10. git close-out result
+11. `_status.md` update result
+
+Allowed checkpoint types:
+
+1. `human_verify`
+
+Allowed `fallback_reason_code` values:
+
+1. `gate_missing`
+2. `truth_drift`
+3. `binding_drift`
+4. `baseline_drift`
+5. `shared_appendix_drift`
+6. `implementation_deviation`
+7. `evidence_incomplete`
 
 ## 7. Non-Goals
 

@@ -11,6 +11,7 @@ By default it handles:
 1. implementing according to plan
 2. adding necessary tests or verification actions
 3. writing progress back into `_plans/{module}.md`
+4. consuming the `cand_plan -> cand_impl` handoff only when gate and plan bindings both still hold
 
 ## 3. Preconditions
 
@@ -28,7 +29,7 @@ By default it handles:
 2. read `s_system_constraints.md` if it exists
 3. read the current `_check_result/{module}.md`
 4. read the current `_plans/{module}.md`
-5. validate all required bindings of the pass gate and plan file
+5. validate all required bindings of the pass gate and plan file according to the candidate handoff contract
 6. if any binding is invalid, stop immediately and fall back `_status.md` to `cand_check`
 7. if `system_constraints_stable_ref` no longer matches the current formal global baseline state, stop immediately and fall back to `cand_check`
 8. only when both pass gate and plan are still valid may implementation continue
@@ -53,9 +54,23 @@ By default it handles:
 1. implementation progress result
 2. tests or verification run, or explicit gaps
 3. plan write-back result
-4. fallback reason if the pass gate or plan was invalid
-5. git close-out result
-6. `_status.md` update result
+4. `handoff validation result`
+5. `fallback_reason_code` when the pass gate or plan was invalid
+6. fallback reason if the pass gate or plan was invalid
+7. git close-out result
+8. `_status.md` update result
+
+Allowed checkpoint types:
+
+1. none
+
+Allowed `fallback_reason_code` values:
+
+1. `gate_missing`
+2. `truth_drift`
+3. `binding_drift`
+4. `baseline_drift`
+5. `shared_appendix_drift`
 
 ## 7. Non-Goals
 

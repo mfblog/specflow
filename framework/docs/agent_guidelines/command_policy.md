@@ -70,8 +70,10 @@ Additional rules:
 4. `shared appendix` is also not a legal command target. Do not write `cand_check:shared_xxx` or equivalent forms.
 5. `shared_flow_reconcile` is not a standard module command in `{command}:{module}` form. Do not write `shared_flow_reconcile:module_xxx`.
 6. `shared_extract_review` is also not a standard module command in `{command}:{module}` form.
-7. Only for the first-version entry commands `spec_init:{module}` and `spec_new:{module}`, `{module}` may point to a new target that is not yet in `_status.md` but already has a clear, non-conflicting module name.
-8. Outside that exception, if a file is not yet registered as an independent formal module in `_status.md`, it must not be treated as a `{module}` target just because its file name, path, or frontmatter looks module-like.
+7. checkpoints and clarification actions are not standard commands in `{command}:{module}` form.
+8. only the standard commands listed in Section 5 advance the normal module lifecycle.
+9. Only for the first-version entry commands `spec_init:{module}` and `spec_new:{module}`, `{module}` may point to a new target that is not yet in `_status.md` but already has a clear, non-conflicting module name.
+10. Outside that exception, if a file is not yet registered as an independent formal module in `_status.md`, it must not be treated as a `{module}` target just because its file name, path, or frontmatter looks module-like.
 
 ---
 
@@ -185,6 +187,9 @@ The rules below are shared gates. Every command follows them by default:
 21. `Prompt Adequacy Review` may return `n/a` only when Prompt triggers were not hit.
 22. When `cand_check` does not pass, it must not write a failed `_check_result/{module}.md`. If an old pass gate is no longer valid, delete it and keep or fall back `Next Command` to `cand_check`.
 23. `cand_check` does not directly rewrite candidate truth by default. The only allowed automatic correction is a mechanical update of `system_constraints_stable_ref` when the candidate is still compatible with the current formal global baseline, or correction to `none` when no formal global baseline exists yet.
+24. A blocking checkpoint is not a pass result and must not be treated as permission to continue to the next command.
+25. When a command resumes after a checkpoint, it must re-judge the required bindings and gate conditions instead of assuming the checkpoint answer already fixed them.
+26. Candidate-side fallback, blocking, and resume outputs must report the standardized `fallback_reason_code` defined by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md` before any free-form explanation.
 
 ---
 
@@ -217,3 +222,5 @@ Additional requirements:
    - the priority between KV-cache-friendly ordering and semantic clarity
 9. If the command file writes back Prompt review results, it must define the minimum snapshot contract instead of leaving field meanings to executor invention.
 10. If the command requires mandatory close-out work such as a git-history decision, it must explicitly reference the relevant governance rule instead of leaving that step to executor memory.
+11. If the command may raise a checkpoint, it must define the allowed checkpoint types, trigger conditions, and resume rules.
+12. If the command may fall back or block, it must define which standardized `fallback_reason_code` values it may emit instead of leaving fallback wording to executor invention.

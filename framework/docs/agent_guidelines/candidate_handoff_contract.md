@@ -1,0 +1,243 @@
+# Candidate Handoff Contract
+
+## 1. Purpose
+
+This file defines the shared handoff contract for the candidate-side command chain.
+
+It answers five questions:
+
+1. what each downstream step minimally requires from the upstream step
+2. which bindings must be re-validated before consuming that handoff
+3. which fallback step is the smallest valid recovery point when the handoff is invalid
+4. which standardized `fallback_reason_code` must be used
+5. how this contract relates to process-file READMEs and command files
+
+This file is a centralized contract document. It does not replace command-specific procedure text.
+
+---
+
+## 2. Standard Reason Taxonomy
+
+Candidate-side fallback, blocking, and resume explanations must use these standard `fallback_reason_code` values:
+
+1. `truth_incomplete`
+2. `prompt_inadequate`
+3. `gate_missing`
+4. `truth_drift`
+5. `binding_drift`
+6. `baseline_drift`
+7. `shared_appendix_drift`
+8. `implementation_deviation`
+9. `evidence_incomplete`
+
+Meaning rules:
+
+1. `truth_incomplete`
+   - the current candidate truth is still missing user-intent, boundary, protocol, or acceptance content needed for stable downstream work
+2. `prompt_inadequate`
+   - Prompt-triggered candidate truth is not adequate to stably constrain model behavior
+3. `gate_missing`
+   - a required upstream pass gate or plan file does not exist or no longer qualifies as a current valid gate
+4. `truth_drift`
+   - the candidate truth changed and the old downstream artifact no longer matches it
+5. `binding_drift`
+   - a process file still exists but its required bindings no longer match the current truth
+6. `baseline_drift`
+   - the formal global baseline relation no longer matches the current round
+7. `shared_appendix_drift`
+   - Shared Appendix truth, layer, version, body, or binding changed enough to invalidate the handoff
+8. `implementation_deviation`
+   - implementation no longer satisfies the current candidate even though candidate truth still stands
+9. `evidence_incomplete`
+   - current verification evidence is still insufficient to close the next gate safely
+
+Executors may add natural-language explanation, but the standardized code must appear first when a fallback or blocking reason is reported.
+
+---
+
+## 3. Handoff: `cand_check -> cand_plan`
+
+### 3.1 Minimum Upstream Artifact
+
+`cand_plan` minimally requires a current valid `_check_result/{module}.md`.
+
+### 3.2 Required Re-Validation
+
+Before consumption, `cand_plan` must re-validate:
+
+1. `decision=pass`
+2. `allow_next=true`
+3. `next_command=cand_plan`
+4. current candidate file path, version ref, and fingerprint
+5. current `system_constraints` binding fields
+6. current `shared_appendix_snapshot`
+7. Prompt Adequacy fields when Prompt review was required
+
+### 3.3 Allowed Entry Condition
+
+`cand_plan` may continue only when the pass gate still covers the current candidate round exactly.
+
+### 3.4 Smallest Fallback
+
+If the handoff is invalid, the smallest fallback is `cand_check`.
+
+### 3.5 Allowed Reason Codes
+
+Use only:
+
+1. `truth_incomplete`
+2. `prompt_inadequate`
+3. `gate_missing`
+4. `truth_drift`
+5. `binding_drift`
+6. `baseline_drift`
+7. `shared_appendix_drift`
+
+---
+
+## 4. Handoff: `cand_plan -> cand_impl`
+
+### 4.1 Minimum Upstream Artifacts
+
+`cand_impl` minimally requires both:
+
+1. a current valid `_check_result/{module}.md`
+2. a current valid `_plans/{module}.md`
+
+### 4.2 Required Re-Validation
+
+Before consumption, `cand_impl` must re-validate:
+
+1. all required `_check_result` bindings from Section 3
+2. current plan file path and existence
+3. plan-bound candidate file path, version ref, and fingerprint
+4. plan-bound `system_constraints` fields
+5. plan-bound `shared_appendix_snapshot`
+
+### 4.3 Allowed Entry Condition
+
+`cand_impl` may continue only when both the pass gate and the plan still cover the same current candidate round.
+
+### 4.4 Smallest Fallback
+
+If either artifact is missing or invalid, the smallest fallback is `cand_check`.
+
+### 4.5 Allowed Reason Codes
+
+Use only:
+
+1. `gate_missing`
+2. `truth_drift`
+3. `binding_drift`
+4. `baseline_drift`
+5. `shared_appendix_drift`
+
+---
+
+## 5. Handoff: `cand_impl -> cand_verify`
+
+### 5.1 Minimum Upstream Artifacts
+
+`cand_verify` minimally requires both:
+
+1. a current valid `_check_result/{module}.md`
+2. a current valid `_plans/{module}.md`
+
+### 5.2 Required Re-Validation
+
+Before consumption, `cand_verify` must re-validate:
+
+1. all required gate bindings
+2. all required plan bindings
+3. that the implementation state still matches the coverage scope claimed by the current round's plan progress
+
+### 5.3 Allowed Entry Condition
+
+`cand_verify` may continue only when verification still targets the same candidate truth round that implementation used.
+
+### 5.4 Smallest Fallback
+
+If bindings drift, the smallest fallback is `cand_check`.
+If candidate truth still stands but implementation diverged, the fallback is `cand_impl`.
+
+### 5.5 Allowed Reason Codes
+
+Use only:
+
+1. `gate_missing`
+2. `truth_drift`
+3. `binding_drift`
+4. `baseline_drift`
+5. `shared_appendix_drift`
+6. `implementation_deviation`
+7. `evidence_incomplete`
+
+---
+
+## 6. Handoff: `cand_verify -> cand_promote`
+
+### 6.1 Minimum Upstream Artifact
+
+`cand_promote` minimally requires a current valid `_verify_result/{module}.md`.
+
+### 6.2 Required Re-Validation
+
+Before consumption, `cand_promote` must re-validate:
+
+1. `decision=pass`
+2. `allow_next=true`
+3. `next_command=cand_promote`
+4. current candidate file path, version ref, and fingerprint
+5. current implementation still covered by `verification_scope_ref`
+6. current `system_constraints` binding fields
+7. current `shared_appendix_snapshot`
+
+### 6.3 Allowed Entry Condition
+
+`cand_promote` may continue only when the verify result still covers current candidate truth, current implementation, and current baseline state together.
+
+### 6.4 Smallest Fallback
+
+If verification evidence is outdated or incomplete but candidate truth still stands, the smallest fallback is `cand_verify`.
+If implementation no longer aligns with the candidate, the fallback is `cand_impl`.
+If candidate truth or upstream bindings drifted, the fallback is `cand_check`.
+
+### 6.5 Allowed Reason Codes
+
+Use only:
+
+1. `truth_drift`
+2. `binding_drift`
+3. `baseline_drift`
+4. `shared_appendix_drift`
+5. `implementation_deviation`
+6. `evidence_incomplete`
+
+---
+
+## 7. Relationship To Other Files
+
+This handoff contract works together with:
+
+1. `specflow/framework/docs/agent_guidelines/spec_policy.md`
+2. `specflow/framework/docs/agent_guidelines/command_policy.md`
+3. `specflow/framework/docs/agent_guidelines/commands/*.md`
+4. process-file READMEs under `docs/specs/` and `specflow/templates/root/docs/specs/`
+
+Priority rules:
+
+1. policy files define the top-level governance rules
+2. this file defines the centralized candidate-chain handoff contract
+3. command files define command-local procedure and output details consistent with this contract
+4. process-file READMEs define file-specific consumption and invalidation semantics consistent with this contract
+
+---
+
+## 8. Non-Goals
+
+This file does not:
+
+1. define new commands
+2. redefine module behavior truth
+3. replace command-specific stop conditions
+4. expand process-file fixed snapshot fields by itself
