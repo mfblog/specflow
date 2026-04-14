@@ -1,5 +1,6 @@
 templates/root/AGENTS.md	AGENTS.md	framework
 templates/root/GEMINI.md	GEMINI.md	framework
+templates/root/CLAUDE.md	CLAUDE.md	framework
 templates/root/.githooks/pre-commit	.githooks/pre-commit	framework
 templates/root/scripts/sync_entry_docs.sh	scripts/sync_entry_docs.sh	framework
 templates/root/docs/agent_guidelines/chart_syntax_compatibility.md	docs/agent_guidelines/chart_syntax_compatibility.md	framework

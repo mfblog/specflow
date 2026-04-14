@@ -31,6 +31,7 @@ Windows PowerShell:
 
 - `AGENTS.md`
 - `GEMINI.md`
+- `CLAUDE.md`
 - `.githooks/pre-commit`
 - `docs/agent_guidelines/**`
 - `docs/specs/**`

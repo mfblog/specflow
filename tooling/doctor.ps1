@@ -16,13 +16,17 @@ Get-Content $Manifest | ForEach-Object {
 }
 
 $Agents = Join-Path $TargetRoot "AGENTS.md"
-$Gemini = Join-Path $TargetRoot "GEMINI.md"
-if ((Test-Path $Agents) -and (Test-Path $Gemini)) {
+if (Test-Path $Agents) {
   $a = Get-FileHash $Agents
-  $g = Get-FileHash $Gemini
-  if ($a.Hash -ne $g.Hash) {
-    Write-Host "DIFF AGENTS.md and GEMINI.md are inconsistent"
-    $Failures++
+  foreach ($peerName in @("GEMINI.md", "CLAUDE.md")) {
+    $peer = Join-Path $TargetRoot $peerName
+    if (Test-Path $peer) {
+      $p = Get-FileHash $peer
+      if ($a.Hash -ne $p.Hash) {
+        Write-Host "DIFF AGENTS.md and $peerName are inconsistent"
+        $Failures++
+      }
+    }
   }
 }
 

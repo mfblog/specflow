@@ -15,11 +15,13 @@ while IFS=$'\t' read -r _ dest_rel _; do
   fi
 done < "${MANIFEST}"
 
-if [[ -f "${TARGET_ROOT}/AGENTS.md" && -f "${TARGET_ROOT}/GEMINI.md" ]]; then
-  if ! cmp -s "${TARGET_ROOT}/AGENTS.md" "${TARGET_ROOT}/GEMINI.md"; then
-    echo "DIFF AGENTS.md and GEMINI.md are inconsistent"
-    failures=$((failures + 1))
-  fi
+if [[ -f "${TARGET_ROOT}/AGENTS.md" ]]; then
+  for peer in GEMINI.md CLAUDE.md; do
+    if [[ -f "${TARGET_ROOT}/${peer}" ]] && ! cmp -s "${TARGET_ROOT}/AGENTS.md" "${TARGET_ROOT}/${peer}"; then
+      echo "DIFF AGENTS.md and ${peer} are inconsistent"
+      failures=$((failures + 1))
+    fi
+  done
 fi
 
 if command -v git >/dev/null 2>&1; then
