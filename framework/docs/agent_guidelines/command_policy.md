@@ -128,7 +128,7 @@ Candidate commands move a candidate from design to implementation and then to pr
 1. `cand_check`
    - checks whether the candidate is sufficiently closed to stably constrain implementation
    - checks whether `system_constraints_stable_ref` aligns with the current formal global baseline
-   - runs Prompt Adequacy Review for modules that hit Prompt triggers according to `specflow/framework/docs/agent_guidelines/prompt_gate_contract.md`
+   - runs Prompt Adequacy Review for modules that hit Prompt triggers according to `docs/prompt_guidelines.md`
    - if it passes, writes `_check_result/{module}.md` as the pass gate for the candidate chain
 2. `cand_plan`
    - reads `_check_result/{module}.md`
