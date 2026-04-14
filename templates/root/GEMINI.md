@@ -9,10 +9,6 @@ Keep repository-specific rules outside the managed block. `specFlow` tooling may
 
 `specFlow` is a development governance flow that treats Specs as the source of truth and uses standard commands to drive design, implementation, verification, and promotion.
 
-The content below defines only the extra rules that apply when the current repository adopts `specFlow`.
-
-These rules supplement the host agent's general instruction files. They do not replace any other existing host rules.
-
 ### 1. Request Detection
 
 When a request hits any of the following, handle it with `specFlow` rules:
