@@ -13,17 +13,18 @@
 
 ## Active Standards
 
-| standard_id | type | file | consumed_by | applies_to | effect | conflict_rule | notes |
-|---|---|---|---|---|---|---|---|
+| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule | notes |
+|---|---|---|---|---|---|---|---|---|
 
 ## Rules
 
 1. `type` 只允许使用框架已定义的支持类型。
-2. `file` 必须位于 `docs/project_standards/` 下。
-3. `consumed_by` 必须显式写出命令名或内部流程名，不得写成 `all`。
-4. `effect` 只允许：
+2. `surface` 必须使用框架允许的稳定命名；若用于 `cand_check` 的 Prompt 审查，固定写 `prompt_review`。
+3. `file` 必须位于 `docs/project_standards/` 下。
+4. `consumed_by` 必须显式写出命令名或内部流程名，不得写成 `all`。
+5. `effect` 只允许：
    - `clarify`
    - `tighten`
-5. `conflict_rule` 固定写 `framework_wins`。
-6. 未登记的标准文件，即使存在，也不得影响命令执行。
-7. 项目级标准可以补充或收紧框架规则，但不得削弱框架底线。
+6. `conflict_rule` 固定写 `framework_wins`。
+7. 未登记的标准文件，即使存在，也不得影响命令执行。
+8. 项目级标准可以补充或收紧框架规则，但不得削弱框架底线。

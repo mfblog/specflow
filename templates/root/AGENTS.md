@@ -1,5 +1,7 @@
 ## Host Instructions
 
+If the project registers any Prompt-related project-local standard, follow the registered file declared in `docs/project_standards/_registry.md`.
+
 Content outside the managed block below belongs to the host repository.
 
 Keep repository-specific rules outside the managed block. `specFlow` tooling may update only the managed block.

@@ -40,8 +40,9 @@ Before execution:
 1. read `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
 2. read `docs/project_standards/_registry.md` if it exists
 3. identify the target standard type, consumed command, and application scope
-4. confirm that the requested standard does not conflict with the framework baseline
-5. if the task will create or modify governance files, read the git policy first
+4. identify the target `surface`
+5. confirm that the requested standard does not conflict with the framework baseline
+6. if the task will create or modify governance files, read the git policy first
 
 ---
 
@@ -52,13 +53,14 @@ Before execution:
    - `review_standard`
    - `output_standard`
    - `decision_standard`
-3. choose the target command or internal flow that must consume it
-4. choose a stable `standard_id`
-5. create one project-local standard file under `docs/project_standards/`
-6. write the standard as direct rules, not as patch notes
-7. update `docs/project_standards/_registry.md`
-8. if the created standard is intended to tighten an existing command gate, ensure the relevant command documentation already allows consumption of project-local standards; if not, update that governance rule in the same task
-9. perform git close-out if required
+3. choose the target `surface`
+4. choose the target command or internal flow that must consume it
+5. choose a stable `standard_id`
+6. create one project-local standard file under `docs/project_standards/`
+7. write the standard as direct rules, not as patch notes
+8. update `docs/project_standards/_registry.md`
+9. if the created standard is intended to tighten an existing command gate, ensure the relevant command documentation already allows consumption of project-local standards; if not, update that governance rule in the same task
+10. perform git close-out if required
 
 ---
 
@@ -69,10 +71,11 @@ The output must include:
 1. the created or updated standard file path
 2. the chosen `standard_id`
 3. the chosen `type`
-4. the chosen `consumed_by`
-5. the chosen `applies_to`
-6. the registry update result
-7. the git close-out result
+4. the chosen `surface`
+5. the chosen `consumed_by`
+6. the chosen `applies_to`
+7. the registry update result
+8. the git close-out result
 
 ---
 

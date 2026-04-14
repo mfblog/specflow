@@ -83,11 +83,12 @@ Each active entry in `docs/project_standards/_registry.md` must record at least:
 
 1. `standard_id`
 2. `type`
-3. `file`
-4. `consumed_by`
-5. `applies_to`
-6. `effect`
-7. `conflict_rule`
+3. `surface`
+4. `file`
+5. `consumed_by`
+6. `applies_to`
+7. `effect`
+8. `conflict_rule`
 
 Field meanings:
 
@@ -95,15 +96,17 @@ Field meanings:
    - stable project-local identifier
 2. `type`
    - one supported type from Section 4
-3. `file`
+3. `surface`
+   - the command-local review or output surface this standard extends
+4. `file`
    - the project-local standard file path under `docs/project_standards/`
-4. `consumed_by`
+5. `consumed_by`
    - which command or internal flow must read it
-5. `applies_to`
+6. `applies_to`
    - which modules, flows, or review scenarios it applies to
-6. `effect`
+7. `effect`
    - `tighten` or `clarify`
-7. `conflict_rule`
+8. `conflict_rule`
    - fixed value `framework_wins`
 
 Additional rules:
@@ -111,6 +114,7 @@ Additional rules:
 1. `effect=clarify` may explain how the project applies an existing baseline rule more concretely
 2. `effect=tighten` may add a stricter project-local requirement
 3. project-local standards must not use an effect meaning such as `override`, `relax`, or `disable`
+4. framework-consumable surfaces must use stable names; for Prompt review consumed by `cand_check`, use `surface=prompt_review`
 
 ---
 

@@ -129,7 +129,7 @@ Candidate commands move a candidate from design to implementation and then to pr
 1. `cand_check`
    - checks whether the candidate is sufficiently closed to stably constrain implementation
    - checks whether `system_constraints_stable_ref` aligns with the current formal global baseline
-   - runs Prompt Adequacy Review for modules that hit Prompt triggers according to `docs/prompt_guidelines.md`
+   - runs Prompt Adequacy Review only when the current project has a registered `review_standard` with `surface=prompt_review` consumed by `cand_check`
    - may additionally consume registered project-local review standards according to `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
    - if it passes, writes `_check_result/{module}.md` as the pass gate for the candidate chain
 2. `cand_plan`
@@ -185,8 +185,8 @@ The rules below are shared gates. Every command follows them by default:
 17. `cand_promote` must absorb closed global-constraint proposals into `docs/specs/system/stable/s_system_constraints.md` when promotion confirms those proposals are ready.
 18. When `cand_plan`, `cand_impl`, or `cand_verify` reads `_check_result/{module}.md`, it must confirm both the required bindings and `decision=pass` plus `allow_next=true`.
 19. When `cand_promote` reads `_verify_result/{module}.md`, it must confirm both the required bindings and `decision=pass`, `allow_next=true`, and `next_command=cand_promote`.
-20. If a Prompt-triggered candidate fails Prompt Adequacy Review, it must not enter `cand_plan` and must not keep using an old pass gate.
-21. `Prompt Adequacy Review` may return `n/a` only when Prompt triggers were not hit.
+20. If the current project has an active registered Prompt review standard for the current target and the candidate fails Prompt Adequacy Review, it must not enter `cand_plan` and must not keep using an old pass gate.
+21. `Prompt Adequacy Review` may return `n/a` when Prompt triggers were not hit, or when the current project has no active registered Prompt review standard for the current target.
 22. When `cand_check` does not pass, it must not write a failed `_check_result/{module}.md`. If an old pass gate is no longer valid, delete it and keep or fall back `Next Command` to `cand_check`.
 23. `cand_check` does not directly rewrite candidate truth by default. The only allowed automatic correction is a mechanical update of `system_constraints_stable_ref` when the candidate is still compatible with the current formal global baseline, or correction to `none` when no formal global baseline exists yet.
 24. A blocking checkpoint is not a pass result and must not be treated as permission to continue to the next command.

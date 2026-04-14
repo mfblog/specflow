@@ -42,8 +42,7 @@ By default this command reviews:
 2. `_status.md` says `Next Command=cand_check`
 3. the module has `candidate`
 4. read explicitly referenced candidate appendix files and bound Shared Appendix files
-5. if the module may be Prompt-triggered, read `docs/prompt_guidelines.md`
-6. if the command surface supports project-local review standards, read `specflow/framework/docs/agent_guidelines/project_standards_policy.md`, `docs/project_standards/_registry.md`, and any registered project-local standard files consumed by `cand_check` for the current target
+5. read `specflow/framework/docs/agent_guidelines/project_standards_policy.md`, `docs/project_standards/_registry.md`, and any registered project-local standard files consumed by `cand_check` for the current target
 7. if `_check_result/{module}.md`, `_status.md`, candidate truth, or other commit-triggering governance files may change, read the git policy first
 8. if referenced appendix files have directory drift, fix that first and rerun the pre-check
 
@@ -62,8 +61,11 @@ By default this command reviews:
    - `Behavior Basis Completeness`
    - `Decision Surface Completeness`
    - `Acceptance Basis Completeness`
-8. determine whether Prompt Adequacy Review is triggered according to `docs/prompt_guidelines.md`
-9. if triggered, run the fixed review objects, blocking rules, and write-back contract defined by `docs/prompt_guidelines.md`
+8. determine whether the current project has an active registered Prompt review standard for the current target:
+   - it must be a registered `review_standard`
+   - it must use `surface=prompt_review`
+   - it must be consumed by `cand_check`
+9. if such a standard is active and the module hits that standard's trigger conditions, run Prompt Adequacy Review according to that registered project-local standard
 10. if registered project-local review standards apply to the current module and command surface, consume them only according to `docs/project_standards/_registry.md` and only as tightening or clarifying inputs
 11. process `system_constraints_stable_ref`:
    - if the formal global baseline exists and the candidate is still compatible, a mechanical update to the current version is allowed
