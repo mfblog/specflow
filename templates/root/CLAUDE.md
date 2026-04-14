@@ -1,8 +1,3 @@
-## specFlow 入口说明
-
-本文件只负责把用户请求路由到 specFlow 的正式流程。
-它不是业务规则正文，也不承载项目成员的个人偏好。
-
 ## 核心原则
 
 1. 涉及实现、审查、升级时，必须先按对应命令或 policy 对齐目标模块的 Spec 与状态，不得绕开 `docs/specs/` 中的真相文件直接猜测行为。
@@ -53,11 +48,8 @@
 4. `shared_flow_reconcile` 不是标准模块命令；它不进入 `docs/specs/_status.md`，只负责 Shared Appendix 变更后的状态收口。
 5. `shared_extract_review` 也不是标准模块命令；它不进入 `docs/specs/_status.md`，只负责 shared 提取边界审查。
 
-## 文档与图表要求
+## 文档要求
 
 1. 规则文档、命令文档和其它机制类文档必须写成可直接阅读的正文，不得依赖未写出的对话上下文。
 2. 文档正文不得写成补丁说明，而必须直接写规则本身。
-3. 只要涉及复杂流程、状态机、版本关系、边界判定，优先补最小可理解的 Mermaid 图帮助对齐。
-4. 只要涉及图表生成或渲染兼容问题，遵守 `docs/agent_guidelines/chart_syntax_compatibility.md`。
-5. 只要涉及 Prompt 的设计、编写或修改，遵守 `docs/agent_guidelines/prompt_guidelines.md`。
-6. 只要 Prompt 约定“用 tag 包裹 JSON 输出”，实现侧解析流程与错误处理必须按正式绑定的 Shared Appendix 或模块当前 `Global Constraint Alignment` 执行。
+3. 若项目后续自行引入图表、Prompt 或结构化输出等扩展约束，应以项目自己的正式规则文件为准；它们不属于 specFlow 默认框架的一部分。

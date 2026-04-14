@@ -3,11 +3,9 @@ templates/root/GEMINI.md	GEMINI.md	framework
 templates/root/CLAUDE.md	CLAUDE.md	framework
 templates/root/.githooks/pre-commit	.githooks/pre-commit	framework
 templates/root/scripts/sync_entry_docs.sh	scripts/sync_entry_docs.sh	framework
-templates/root/docs/agent_guidelines/chart_syntax_compatibility.md	docs/agent_guidelines/chart_syntax_compatibility.md	framework
 templates/root/docs/agent_guidelines/command_policy.md	docs/agent_guidelines/command_policy.md	framework
 templates/root/docs/agent_guidelines/entry_index_registry.md	docs/agent_guidelines/entry_index_registry.md	framework
 templates/root/docs/agent_guidelines/git_policy.md	docs/agent_guidelines/git_policy.md	framework
-templates/root/docs/agent_guidelines/prompt_guidelines.md	docs/agent_guidelines/prompt_guidelines.md	framework
 templates/root/docs/agent_guidelines/shared_extract_review.md	docs/agent_guidelines/shared_extract_review.md	framework
 templates/root/docs/agent_guidelines/shared_flow_reconcile.md	docs/agent_guidelines/shared_flow_reconcile.md	framework
 templates/root/docs/agent_guidelines/spec_flow_review.md	docs/agent_guidelines/spec_flow_review.md	framework

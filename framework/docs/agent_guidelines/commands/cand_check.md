@@ -64,7 +64,7 @@
 2. `_status.md` 中该模块的 `Next Command=cand_check`。
 3. 该模块存在 `candidate`。
 4. 若 `c_{module}.md` 正文明确引用了 candidate 层附属展开文件，或 `Global Constraint Alignment.shared_appendix_refs` 显式绑定了共享附属展开文件，执行前必须一并读取这些文件。
-5. 若模块涉及 Prompt 设计、Prompt 组装或上下文注入链路，执行前必须同时读取 `docs/agent_guidelines/prompt_guidelines.md`。
+5. 若项目另行定义了 Prompt 审查规则，且当前模块命中了对应触发条件，执行前必须同时读取该项目自己的正式 Prompt 规则文件。
 6. 若本轮会修改 `_check_result/{module}.md`、`_status.md`、candidate 或其它命中审查 / 治理文件提交触发条件的对象，执行前必须按 `docs/agent_guidelines/command_policy.md` 第 `10` 节读取 Git 收口规则文件，确认本轮是否要求提交以及应按哪类提交收口。
 7. 若前置自检或读取过程中发现被引用的附属展开文件发生目录漂移，当前命令必须先完成迁移并重新执行前置自检，再继续审查。
 
@@ -108,7 +108,7 @@
    - 定义了 system prompt、role prompt、output prompt、system base 或等价层
    - 行为正确性高度依赖模型理解角色、状态、上下文或术语
 9. 若命中 Prompt Adequacy Review：
-   - 按 `docs/agent_guidelines/prompt_guidelines.md` 逐项检查三个固定审查对象：
+   - 按项目自己的正式 Prompt 规则文件，逐项检查该项目定义的固定审查对象：
      - `基础充分性审查`
      - `结构化输出审查`
      - `排序审查`
