@@ -27,7 +27,7 @@ By default this command reviews:
 5. whether `system_constraints_stable_ref` matches the current formal global baseline state
 6. whether shared-candidate signals require suggesting `shared_extract_review` or directly reporting a dual-source-of-truth conflict
 7. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
-8. whether any registered project-local review standard applies on a `cand_check`-owned review surface and tightens the closure decision for the current candidate
+8. whether any registered project-local review standard applies on a `cand_check`-owned generic review extension surface and tightens the closure decision for the current candidate
 
 `cand_check` is not a "minimum can-move-forward review."
 `cand_check pass` always means:
@@ -46,31 +46,40 @@ Result semantics for non-pass conclusions are fixed:
    - no extra user choice is needed before that repair work starts
    - after the repair, the module reruns `cand_check` instead of skipping forward
 
-Project-local review surface contract:
+Project-local review extension contract:
 
-1. `cand_check` supports project-local `review_standard` entries only on review surfaces formally defined in this file.
+1. `cand_check` supports project-local `review_standard` entries only on generic review extension surfaces formally defined in this file.
 2. `cand_check` currently supports:
-   - `prompt_review`
-3. `prompt_review` means:
-   - a project-local Prompt adequacy review surface used when the current candidate defines Prompt structure, Prompt assembly order, Prompt blocks, Prompt output protocol, Prompt role layers, or equivalent model-input constraints
-4. `prompt_review` may tighten only:
+   - `candidate_closure_review`
+3. `candidate_closure_review` means:
+   - a command-owned generic extension surface used after framework-baseline closure checks for project-local review standards that may tighten closure judgment for the current candidate
+4. A registered standard consumed on `candidate_closure_review` must define in its own file:
+   - the concrete project review focus it owns
+   - the applicability contract that decides when that standard applies to the current target inside this generic surface
+   - the blocking and non-blocking rules it adds for that focus
+   - the summary semantics of any allowed project-side write-back it requires
+5. `candidate_closure_review` may tighten only:
    - `progressability`
    - `content completeness`
    - structured findings written by `cand_check`
-5. `prompt_review` must not:
+6. `candidate_closure_review` must not:
    - redefine `cand_check`'s lifecycle position
    - create a new command-level result type
    - bypass `_check_result/{module}.md` pass-gate rules
-6. `cand_check` may allow project-side extension write-back only where this file explicitly says so.
-7. The currently allowed `_check_result` project extension fields for `prompt_review` are:
-   - `prompt_adequacy_review_required`
-   - `prompt_adequacy_decision`
-   - `prompt_adequacy_summary`
-8. Those fields are project extension fields, not framework fixed fields.
-9. They may be written only when:
+7. `cand_check` may allow project-side extension write-back only where this file explicitly says so.
+8. The currently allowed `_check_result` project extension write-back container for `candidate_closure_review` is:
+   - `project_review_extensions`
+9. `project_review_extensions` is a project extension field, not a framework fixed field.
+10. When `project_review_extensions` is written, each consumed standard's item must record at least:
+   - `standard_id`
+   - `applied`
+   - `decision`
+   - `summary`
+11. `project_review_extensions` items may be written only when:
    - `cand_check` is already writing a pass gate for the current round
-   - a registered `prompt_review` standard consumed by `cand_check` applies to the current target
-10. If `prompt_review` does not apply, `cand_check` may still write the non-hit semantics required by the active registered project standard, but it must not create a failed-state `_check_result/{module}.md`.
+   - a registered `candidate_closure_review` standard consumed by `cand_check` either applies to the current target or explicitly requires non-hit semantics for pass-gate write-back
+12. If no consumed registered standard requires project-side write-back, `cand_check` may omit `project_review_extensions`.
+13. If a consumed standard does not apply, `cand_check` may still write that standard's non-hit semantics only inside the same pass gate write-back. It must not create a standalone or failed-state `_check_result/{module}.md`.
 
 ## 3. Preconditions
 
@@ -79,7 +88,7 @@ Project-local review surface contract:
 3. the module has `candidate`
 4. read explicitly referenced candidate appendix files and bound Shared Appendix files
 5. read `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
-6. if `docs/project_standards/_registry.md` exists, read it and only the registered project-local standard files that match a `cand_check`-defined supported review surface for the current target
+6. if `docs/project_standards/_registry.md` exists, read it and only the registered project-local standard files enabled for a `cand_check`-defined supported generic review extension surface
 7. if `docs/project_standards/_registry.md` is missing, stop and report governance drift according to `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
 8. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 9. if `_check_result/{module}.md`, `_status.md`, candidate truth, or other commit-triggering governance files may change, read the git policy first
@@ -101,9 +110,10 @@ Project-local review surface contract:
    - `Decision Surface Completeness`
    - `Acceptance Basis Completeness`
 8. complete the framework-baseline closure checks owned by `cand_check`, including the fixed completeness review objects plus the baseline, shared-appendix, and shared-truth checks below, before finalizing any project-local review merge
-9. for each `cand_check`-owned supported review surface:
+9. for each `cand_check`-owned supported generic review extension surface:
    - resolve matching registered `review_standard` entries from `docs/project_standards/_registry.md`
-   - if the current target hits that surface's trigger condition, execute the project-local review rules defined by those registered files
+   - let each registered standard's own applicability contract decide whether it applies to the current target inside that surface
+   - execute only the standards whose applicability contract applies to the current target
    - merge the result only as tightening or clarifying input into `progressability`, `content completeness`, and structured findings
    - do not let project-local review bypass framework-baseline closure checks
 10. process `system_constraints_stable_ref`:
@@ -132,7 +142,7 @@ Project-local review surface contract:
    - if any `critical` completeness gap exists -> only `blocked` or `fix_required`
    - if only `important` or `elaboration` issues remain, `pass` is still possible
 17. if the result is `pass`, create or update `docs/specs/_check_result/{module}.md`
-   - when a supported project-local review surface was consumed and this file allows project-side extension write-back for that surface, write the corresponding project extension fields together with the pass gate
+   - when a supported project-local review extension surface was consumed and this file allows project-side extension write-back for that surface, write the corresponding `project_review_extensions` items together with the pass gate
 18. if the result is not `pass`, do not write a failed `_check_result/{module}.md`; delete an old pass gate if it is no longer valid
 19. update `_status.md`:
    - if pass -> `Next Command=cand_plan`
@@ -145,7 +155,7 @@ Project-local review surface contract:
 2. if the round passes, `_check_result/{module}.md` holds the pass gate
 3. if the round does not pass, no invalid old pass gate remains
 4. `_status.md` is updated
-5. if a supported project-local review surface was consumed and the round passes, its allowed project extension write-back is clear
+5. if a supported project-local review extension surface was consumed and the round passes, its allowed project extension write-back is clear
 
 ## 6. Output Contract
 
@@ -166,7 +176,7 @@ The output should include:
 9. next-step suggestion
 10. git close-out result
 11. `_status.md` update result
-12. when a project-local review surface was consumed:
+12. when a project-local review extension surface was consumed:
    - which `surface` matched
    - which registered project-local standard file was used
    - how that surface affected `progressability`, `content completeness`, or structured findings

@@ -19,7 +19,7 @@
 ## Rules
 
 1. `type` 只允许使用框架已定义的支持类型。
-2. `surface` 必须使用框架允许的稳定命名；若用于 `cand_check` 的 Prompt 审查，固定写 `prompt_review`。
+2. `surface` 必须使用框架允许的稳定命名；若用于 `cand_check` 的通用候选收口扩展，固定写 `candidate_closure_review`。
 3. `file` 必须位于 `docs/project_standards/` 下。
 4. `consumed_by` 必须显式写出命令名或内部流程名，不得写成 `all`。
 5. `effect` 只允许：
