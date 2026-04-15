@@ -21,40 +21,37 @@ This file is a centralized contract document. It does not replace command-specif
 Candidate-side fallback, blocking, and resume explanations must use these standard `fallback_reason_code` values:
 
 1. `truth_incomplete`
-2. `prompt_inadequate`
-3. `gate_missing`
-4. `truth_drift`
-5. `binding_drift`
-6. `baseline_drift`
-7. `shared_appendix_drift`
-8. `shared_truth_conflict`
-9. `implementation_deviation`
-10. `evidence_incomplete`
-11. `promotion_recovery`
+2. `gate_missing`
+3. `truth_drift`
+4. `binding_drift`
+5. `baseline_drift`
+6. `shared_appendix_drift`
+7. `shared_truth_conflict`
+8. `implementation_deviation`
+9. `evidence_incomplete`
+10. `promotion_recovery`
 
 Meaning rules:
 
 1. `truth_incomplete`
    - the current candidate truth is still missing user-intent, boundary, protocol, or acceptance content needed for stable downstream work
-2. `prompt_inadequate`
-   - Prompt-triggered candidate truth is not adequate to stably constrain model behavior
-3. `gate_missing`
+2. `gate_missing`
    - a required upstream pass gate or plan file does not exist or no longer qualifies as a current valid gate
-4. `truth_drift`
+3. `truth_drift`
    - the candidate truth changed and the old downstream artifact no longer matches it
-5. `binding_drift`
+4. `binding_drift`
    - a process file still exists but its required bindings no longer match the current truth
-6. `baseline_drift`
+5. `baseline_drift`
    - the formal global baseline relation no longer matches the current round
-7. `shared_appendix_drift`
+6. `shared_appendix_drift`
    - Shared Appendix truth, layer, version, body, or binding changed enough to invalidate the handoff
-8. `shared_truth_conflict`
+7. `shared_truth_conflict`
    - the current required reading range already confirms that the same formal behavior truth is defined twice and shared closure must happen before downstream work may continue
-9. `implementation_deviation`
+8. `implementation_deviation`
    - implementation no longer satisfies the current candidate even though candidate truth still stands
-10. `evidence_incomplete`
+9. `evidence_incomplete`
    - current verification evidence is still insufficient to close the next gate safely
-11. `promotion_recovery`
+10. `promotion_recovery`
    - `cand_promote` had already started mutating repository state and had to restore the module back to candidate semantics before the chain could continue
 
 Executors may add natural-language explanation, but the standardized code must appear first when a fallback or blocking reason is reported.
@@ -77,7 +74,6 @@ Before consumption, `cand_plan` must re-validate:
 4. current candidate file path, version ref, and fingerprint
 5. current `system_constraints` binding fields
 6. current `shared_appendix_snapshot`
-7. Prompt Adequacy fields when Prompt review was required
 
 ### 3.3 Allowed Entry Condition
 
@@ -92,12 +88,11 @@ If the handoff is invalid, the smallest fallback is `cand_check`.
 Use only:
 
 1. `truth_incomplete`
-2. `prompt_inadequate`
-3. `gate_missing`
-4. `truth_drift`
-5. `binding_drift`
-6. `baseline_drift`
-7. `shared_appendix_drift`
+2. `gate_missing`
+3. `truth_drift`
+4. `binding_drift`
+5. `baseline_drift`
+6. `shared_appendix_drift`
 
 ---
 

@@ -116,7 +116,7 @@ Additional rules:
 1. `effect=clarify` may explain how the project applies an existing baseline rule more concretely
 2. `effect=tighten` may add a stricter project-local requirement
 3. project-local standards must not use an effect meaning such as `override`, `relax`, or `disable`
-4. framework-consumable surfaces must use stable names; for Prompt review consumed by `cand_check`, use `surface=prompt_review`
+4. framework-consumable surfaces must use stable names defined by the consuming command or internal flow instead of executor invention
 
 ---
 

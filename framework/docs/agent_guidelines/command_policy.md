@@ -129,7 +129,6 @@ Candidate commands move a candidate from design to implementation and then to pr
 1. `cand_check`
    - checks whether the candidate is sufficiently closed to stably constrain implementation
    - checks whether `system_constraints_stable_ref` aligns with the current formal global baseline
-   - runs Prompt Adequacy Review only when the current project has a registered `review_standard` with `surface=prompt_review` consumed by `cand_check`
    - may additionally consume registered project-local review standards according to `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
    - if it passes, writes `_check_result/{module}.md` as the pass gate for the candidate chain
 2. `cand_plan`
@@ -186,16 +185,14 @@ The rules below are shared gates. Every command follows them by default:
 18. `cand_promote` must absorb closed global-constraint proposals into `docs/specs/system/stable/s_system_constraints.md` when promotion confirms those proposals are ready.
 19. When `cand_plan`, `cand_impl`, or `cand_verify` reads `_check_result/{module}.md`, it must confirm both the required bindings and `decision=pass` plus `allow_next=true`.
 20. When `cand_promote` reads `_verify_result/{module}.md`, it must confirm both the required bindings and `decision=pass`, `allow_next=true`, and `next_command=cand_promote`.
-21. If the current project has an active registered Prompt review standard for the current target and the candidate fails Prompt Adequacy Review, it must not enter `cand_plan` and must not keep using an old pass gate.
-22. `Prompt Adequacy Review` may return `n/a` when Prompt triggers were not hit, or when the current project has no active registered Prompt review standard for the current target.
-23. When `cand_check` does not pass, it must not write a failed `_check_result/{module}.md`. If an old pass gate is no longer valid, delete it and keep or fall back `Next Command` to `cand_check`.
-24. `cand_check` does not directly rewrite candidate truth by default. The only allowed automatic correction is a mechanical update of `system_constraints_stable_ref` when the candidate is still compatible with the current formal global baseline, or correction to `none` when no formal global baseline exists yet.
-25. A blocking checkpoint is not a pass result and must not be treated as permission to continue to the next command.
-26. When a command resumes after a checkpoint, it must re-judge the required bindings and gate conditions instead of assuming the checkpoint answer already fixed them.
-27. Candidate-side fallback, blocking, and resume outputs must report the standardized `fallback_reason_code` defined by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md` before any free-form explanation.
-28. When `cand_verify` or `stable_verify` needs to judge whether `partial` or `not_checked` items may still support a narrower safe conclusion, it must use `specflow/framework/docs/agent_guidelines/downgrade_policy.md` instead of executor invention.
-29. Commands must not consume project-local standards unless those standards are registered in `docs/project_standards/_registry.md` and the command explicitly supports that consumption surface.
-30. Project-local standards may tighten or clarify framework baseline rules, but must not weaken them.
+21. When `cand_check` does not pass, it must not write a failed `_check_result/{module}.md`. If an old pass gate is no longer valid, delete it and keep or fall back `Next Command` to `cand_check`.
+22. `cand_check` does not directly rewrite candidate truth by default. The only allowed automatic correction is a mechanical update of `system_constraints_stable_ref` when the candidate is still compatible with the current formal global baseline, or correction to `none` when no formal global baseline exists yet.
+23. A blocking checkpoint is not a pass result and must not be treated as permission to continue to the next command.
+24. When a command resumes after a checkpoint, it must re-judge the required bindings and gate conditions instead of assuming the checkpoint answer already fixed them.
+25. Candidate-side fallback, blocking, and resume outputs must report the standardized `fallback_reason_code` defined by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md` before any free-form explanation.
+26. When `cand_verify` or `stable_verify` needs to judge whether `partial` or `not_checked` items may still support a narrower safe conclusion, it must use `specflow/framework/docs/agent_guidelines/downgrade_policy.md` instead of executor invention.
+27. Commands must not consume project-local standards unless those standards are registered in `docs/project_standards/_registry.md` and the command explicitly supports that consumption surface.
+28. Project-local standards may tighten or clarify framework baseline rules, but must not weaken them.
 
 ---
 
@@ -221,14 +218,12 @@ Additional requirements:
 5. If the command consumes `system_constraints`, it must state that those are upstream constraints, not the command's primary output.
 6. If the command consumes Shared Appendix files, it must state that they are shared truth objects bound in by a module, not independent command targets.
 7. If the command file involves lifecycle closure, fallback, or cleanup, it must not invent an alternative set of top-level rules.
-8. If the command file involves Prompt gates, it must clearly define:
-   - trigger conditions
-   - review dimensions
-   - blocking standards
-   - the priority between KV-cache-friendly ordering and semantic clarity
-   - either directly in the command file or through one explicitly referenced centralized contract
-9. If the command file writes back Prompt review results, it must define the minimum snapshot contract, either directly or through one explicitly referenced centralized contract, instead of leaving field meanings to executor invention.
-10. If the command requires mandatory close-out work such as a git-history decision, it must explicitly reference the relevant governance rule instead of leaving that step to executor memory.
-11. If the command may raise a checkpoint, it must define the allowed checkpoint types, trigger conditions, and resume rules.
-12. If the command may fall back or block, it must define which standardized `fallback_reason_code` values it may emit instead of leaving fallback wording to executor invention.
-13. If the command grades findings or deviations by severity, it must use one explicitly referenced centralized severity contract instead of redefining severity meanings locally.
+8. If the command consumes project-local standards, it must clearly define:
+   - that consumption is optional and depends on registered active entries
+   - which registered entry shapes it may consume
+   - which part of the command decision surface those standards may tighten or clarify
+   - whether those standards affect pass, fallback, or output write-back
+9. If the command requires mandatory close-out work such as a git-history decision, it must explicitly reference the relevant governance rule instead of leaving that step to executor memory.
+10. If the command may raise a checkpoint, it must define the allowed checkpoint types, trigger conditions, and resume rules.
+11. If the command may fall back or block, it must define which standardized `fallback_reason_code` values it may emit instead of leaving fallback wording to executor invention.
+12. If the command grades findings or deviations by severity, it must use one explicitly referenced centralized severity contract instead of redefining severity meanings locally.
