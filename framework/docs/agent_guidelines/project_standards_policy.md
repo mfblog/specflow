@@ -125,10 +125,25 @@ Field meanings:
    - which command or internal flow must read it
 6. `applies_to`
    - which modules, flows, or review scenarios it applies to
+   - it must use one of the fixed selector forms below instead of project-invented prose
 7. `effect`
    - `tighten` or `clarify`
 8. `conflict_rule`
    - fixed value `framework_wins`
+
+Fixed `applies_to` selector forms:
+
+1. `all_targets_on_surface`
+   - applies to every current target that already hit the consuming command's declared `surface`
+2. `module:<formal_module_name>`
+   - applies only to one formal module, such as `module:module_ai`
+3. `module_set:<formal_module_name>,<formal_module_name>,...`
+   - applies only to the listed formal modules
+   - module names must use formal module names from `docs/specs/_status.md`
+   - no spaces are allowed inside the comma-separated list
+4. `review_scenario:<stable_name>`
+   - applies only to one command-defined review scenario name
+   - the consuming command or internal flow must already define that scenario name formally before a registry entry may use it
 
 Additional rules:
 
@@ -141,11 +156,15 @@ Additional rules:
 7. `consumed_by` may reference only a command or internal flow that already declares support for that `type` and `surface`
 8. project-local standards may define project extension fields only when the consuming command explicitly allows those fields as project-side write-back
 9. project extension fields are not framework fixed fields
+10. `applies_to` is not a free-form note field
+11. if a registry entry uses an undefined selector form or an undefined scenario name, that entry is invalid governance input
 
 Applicable shape rule:
 
 1. a command consumes only the registered entry shapes that its own governance document explicitly allows
 2. a registry entry that fits the table shape but points to an undefined `surface` is still invalid
+3. a command must evaluate `applies_to` only after confirming that the current target already hit the command-defined `surface`
+4. `all_targets_on_surface` never widens a command's surface trigger; it only says "apply to every target that already matched that surface"
 
 ---
 
