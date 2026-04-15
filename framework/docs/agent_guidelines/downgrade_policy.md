@@ -136,7 +136,8 @@ If downgrade does not hold:
 
 1. use `implementation_deviation` when checked evidence shows drift from `stable`
 2. use `evidence_incomplete` when alignment cannot be claimed safely because the remaining uncertainty is still too large
-3. use `shared_appendix_drift` when a bound stable Shared Appendix changed enough that stable alignment can no longer be claimed safely
+3. use `truth_drift` when the current stable main file or an explicitly referenced stable appendix changed enough that stable alignment must be re-judged first
+4. use `shared_appendix_drift` when a bound stable Shared Appendix changed enough that stable alignment can no longer be claimed safely
 
 ---
 

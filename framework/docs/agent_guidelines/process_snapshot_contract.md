@@ -4,13 +4,14 @@
 
 This file defines the fixed snapshot contract used by Spec Flow process files.
 
-It answers five questions:
+It answers six questions:
 
 1. what `spec_fingerprint` means
-2. what `system_constraints_stable_fingerprint` means
-3. what `shared_appendix_snapshot` means
-4. how these values must be normalized before comparison
-5. which files must use this contract
+2. what `module_appendix_snapshot` means
+3. what `system_constraints_stable_fingerprint` means
+4. what `shared_appendix_snapshot` means
+5. how these values must be normalized before comparison
+6. which files must use this contract
 
 This is a centralized governance contract. Executors must not invent alternative snapshot shapes or hashing inputs per command.
 
@@ -47,7 +48,44 @@ Rules:
 3. it must not hash only the body while skipping frontmatter
 4. it must not hash only selected sections
 
-### 3.2 `system_constraints_stable_fingerprint`
+### 3.2 `module_appendix_snapshot`
+
+`module_appendix_snapshot` records the exact module-local appendix set explicitly referenced by the current-layer main Spec file.
+
+It has only two legal forms:
+
+1. literal `none`
+2. a normalized ordered list where each item contains:
+   - `file_ref`
+   - `appendix_ref`
+   - `fingerprint`
+
+Rules:
+
+1. include only current-layer module-local supporting files explicitly referenced by the current-layer main Spec file
+2. do not include the main Spec file itself
+3. do not include Shared Appendix files from `shared_appendix_refs`
+4. if no module-local appendix file is explicitly referenced by the current-layer main Spec file, use literal `none`
+5. do not use an empty list, `null`, omitted field, or natural-language placeholder text
+
+Item meanings:
+
+1. `file_ref`
+   - the exact repository path of the bound module-local appendix file
+2. `appendix_ref`
+   - `<appendix_file_prefix>@<frontmatter.spec_version_ref>` when that frontmatter exists
+   - otherwise `<appendix_file_prefix>@unversioned`
+3. `fingerprint`
+   - the Section 3 hash of that exact appendix file
+
+Ordering rules:
+
+1. sort by `file_ref`
+2. then by `appendix_ref`
+
+Executors must compare the normalized ordered form.
+
+### 3.3 `system_constraints_stable_fingerprint`
 
 `system_constraints_stable_fingerprint` is the fingerprint of `docs/specs/system/stable/s_system_constraints.md` when that file exists and is formally bound by the current round.
 
@@ -59,7 +97,7 @@ Rules:
    - `system_constraints_stable_version_ref=none`
    - `system_constraints_stable_fingerprint=none`
 
-### 3.3 Hash Algorithm
+### 3.4 Hash Algorithm
 
 The hash algorithm is fixed:
 
@@ -167,9 +205,10 @@ Treat a `bound_modules`-only delta as governance drift to be reported and repair
 When a command or governance flow re-validates a process file, it must:
 
 1. rebuild `spec_fingerprint` from the current bound main Spec file
-2. rebuild `system_constraints_stable_fingerprint` from the current bound stable system-constraints file, or `none`
-3. rebuild `shared_appendix_snapshot` from the module's current-layer bound Shared Appendix set using Section 5
-4. compare the rebuilt values against the process file snapshot fields exactly
+2. rebuild `module_appendix_snapshot` from the current-layer main Spec file's explicitly referenced module-local appendix set, or `none`
+3. rebuild `system_constraints_stable_fingerprint` from the current bound stable system-constraints file, or `none`
+4. rebuild `shared_appendix_snapshot` from the module's current-layer bound Shared Appendix set using Section 5
+5. compare the rebuilt values against the process file snapshot fields exactly
 
 Shared Appendix exception:
 

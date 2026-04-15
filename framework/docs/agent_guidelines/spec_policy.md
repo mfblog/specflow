@@ -177,11 +177,12 @@ Shared reading, invalidation, and cleanup rules:
 
 1. if `shared_appendix_refs` is not empty, executors must read the bound Shared Appendix files together with the module's current-layer truth
 2. `cand_check`, `cand_plan`, `cand_impl`, `cand_verify`, `stable_verify`, and `spec_fork` must not skip bound Shared Appendix files
-3. if a bound Shared Appendix's body, version reference, or binding relation changes, all module candidate-side process files still carrying the old snapshot become invalid and fall back to `cand_check`
-4. if a stable Shared Appendix changes, any claim that a module still aligns with `stable` must be re-read and re-judged
-5. Shared Appendix files are not cleaned up merely because one module finished promotion; they may be cleaned only when no module still binds them, when they are replaced by newer shared files, or when their stable conclusions have been fully absorbed into the formal global baseline
-6. if `bound_modules` diverges from the real set implied by module `shared_appendix_refs`, that is governance drift and must be repaired by the command responsible for the binding change
-7. any task that changes `docs/specs/shared/**` or any module's `shared_appendix_refs` must complete Shared Appendix state reconciliation before claiming the state is closed
+3. if a bound Shared Appendix's effective truth changes, all module candidate-side process files still carrying the old snapshot become invalid and fall back to `cand_check`
+4. if the only delta is `bound_modules`, do not invalidate candidate-side process files on that basis alone; report governance drift instead
+5. if a stable Shared Appendix changes, any claim that a module still aligns with `stable` must be re-read and re-judged
+6. Shared Appendix files are not cleaned up merely because one module finished promotion; they may be cleaned only when no module still binds them, when they are replaced by newer shared files, or when their stable conclusions have been fully absorbed into the formal global baseline
+7. if `bound_modules` diverges from the real set implied by module `shared_appendix_refs`, that is governance drift and must be repaired by the command responsible for the binding change
+8. any task that changes `docs/specs/shared/**` or any module's `shared_appendix_refs` must complete Shared Appendix state reconciliation before claiming the state is closed
 
 Shared frontmatter should include at least:
 
@@ -292,7 +293,7 @@ The main process files are:
 3. `_verify_result/{module}.md`
 
 Their validity never depends on file existence alone.
-They remain valid only when their binding fields still match the current candidate, the current global baseline state, and the current Shared Appendix snapshot when applicable.
+They remain valid only when their binding fields still match the current candidate main file, the current-layer module appendix snapshot when applicable, the current global baseline state, and the current Shared Appendix snapshot when applicable.
 
 They must also satisfy the centralized candidate handoff contract defined in:
 
@@ -306,7 +307,7 @@ Additional rules:
 1. process files are not checkpoints
 2. process files must not be used as a substitute for writing updated truth back into candidate or appendix files
 3. when a command reports fallback, blocking, or resume decisions about process-file invalidation, it should use the standardized `fallback_reason_code` first and only then add natural-language explanation
-4. when a process file records `spec_fingerprint`, `system_constraints_stable_fingerprint`, or `shared_appendix_snapshot`, those fields must use the fixed definitions from `process_snapshot_contract.md`
+4. when a process file records `spec_fingerprint`, `module_appendix_snapshot`, `system_constraints_stable_fingerprint`, or `shared_appendix_snapshot`, those fields must use the fixed definitions from `process_snapshot_contract.md`
 
 ---
 

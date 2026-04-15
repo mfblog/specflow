@@ -178,25 +178,28 @@ The rules below are shared gates. Every command follows them by default:
 11. If a module depends on Shared Appendix files at the current layer, it must also explicitly record `shared_appendix_refs`.
 12. If `s_system_constraints.md` exists and the module candidate's `system_constraints_stable_ref` does not equal the current stable system-constraint version, the module's candidate-side process files become invalid and fall back to `cand_check`.
 13. If `s_system_constraints.md` does not exist and the module candidate's `system_constraints_stable_ref` is not `none`, the module's candidate-side process files become invalid and fall back to `cand_check`.
-14. If the Shared Appendix versions, bodies, or bindings referenced by `shared_appendix_refs` change, the module's candidate-side process files become invalid and fall back to `cand_check`.
-15. If a stable-layer module's bound stable Shared Appendix changed, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.
-16. If a stable-layer module's current stable truth explicitly records `system_constraints_stable_ref` and that recorded reference no longer matches the current formal global baseline state, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.
-17. `cand_verify` does not manage an independent `system_constraints` state machine. It only verifies implementation against the current candidate system.
-18. `cand_promote` must absorb closed global-constraint proposals into `docs/specs/system/stable/s_system_constraints.md` when promotion confirms those proposals are ready.
-19. When `cand_plan`, `cand_impl`, or `cand_verify` reads `_check_result/{module}.md`, it must confirm both the required bindings and `decision=pass` plus `allow_next=true`.
-20. When `cand_promote` reads `_verify_result/{module}.md`, it must confirm both the required bindings and `decision=pass`, `allow_next=true`, and `next_command=cand_promote`.
-21. When `cand_check` does not pass, it must not write a failed `_check_result/{module}.md`. If an old pass gate is no longer valid, delete it and keep or fall back `Next Command` to `cand_check`.
-22. `cand_check` does not directly rewrite candidate truth by default. The only allowed automatic correction is a mechanical update of `system_constraints_stable_ref` when the candidate is still compatible with the current formal global baseline, or correction to `none` when no formal global baseline exists yet.
-23. A blocking checkpoint is not a pass result and must not be treated as permission to continue to the next command.
-24. When a command resumes after a checkpoint, it must re-judge the required bindings and gate conditions instead of assuming the checkpoint answer already fixed them.
-25. Candidate-side fallback, blocking, and resume outputs must report the standardized `fallback_reason_code` defined by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md` before any free-form explanation.
-26. When `cand_verify` or `stable_verify` needs to judge whether `partial` or `not_checked` items may still support a narrower safe conclusion, it must use `specflow/framework/docs/agent_guidelines/downgrade_policy.md` instead of executor invention.
-27. Commands must not consume project-local standards unless those standards are registered in `docs/project_standards/_registry.md` and the command explicitly supports that consumption surface.
-28. Project-local standards may tighten or clarify framework baseline rules, but must not weaken them.
-29. A command must not treat the presence of a project-local standard as permission to skip its framework-baseline review.
-30. When a command consumes project-local standards, it must first complete the framework-baseline judgment and then merge project-local results only on the command-defined supported `surface`.
-31. The final command conclusion must still stay inside the framework-defined result set of that command.
-32. A downstream command must not consume a project-side extension field unless that downstream command explicitly declares that consumption contract.
+14. If the effective module-local appendix truth explicitly referenced by the current-layer main Spec changes, the module's candidate-side process files become invalid and fall back to `cand_check`.
+15. If the effective Shared Appendix truth referenced by `shared_appendix_refs` changes, the module's candidate-side process files become invalid and fall back to `cand_check`.
+16. A `bound_modules`-only delta does not by itself invalidate candidate-side process files, because `bound_modules` is declarative metadata rather than the module's formal binding source. Report governance drift instead.
+17. If a stable-layer module's explicitly referenced stable appendix truth changes, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.
+18. If a stable-layer module's bound stable Shared Appendix changed, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.
+19. If a stable-layer module's current stable truth explicitly records `system_constraints_stable_ref` and that recorded reference no longer matches the current formal global baseline state, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.
+20. `cand_verify` does not manage an independent `system_constraints` state machine. It only verifies implementation against the current candidate system.
+21. `cand_promote` must absorb closed global-constraint proposals into `docs/specs/system/stable/s_system_constraints.md` when promotion confirms those proposals are ready.
+22. When `cand_plan`, `cand_impl`, or `cand_verify` reads `_check_result/{module}.md`, it must confirm both the required bindings and `decision=pass` plus `allow_next=true`.
+23. When `cand_promote` reads `_verify_result/{module}.md`, it must confirm both the required bindings and `decision=pass`, `allow_next=true`, and `next_command=cand_promote`.
+24. When `cand_check` does not pass, it must not write a failed `_check_result/{module}.md`. If an old pass gate is no longer valid, delete it and keep or fall back `Next Command` to `cand_check`.
+25. `cand_check` does not directly rewrite candidate truth by default. The only allowed automatic correction is a mechanical update of `system_constraints_stable_ref` when the candidate is still compatible with the current formal global baseline, or correction to `none` when no formal global baseline exists yet.
+26. A blocking checkpoint is not a pass result and must not be treated as permission to continue to the next command.
+27. When a command resumes after a checkpoint, it must re-judge the required bindings and gate conditions instead of assuming the checkpoint answer already fixed them.
+28. Candidate-side fallback, blocking, and resume outputs must report the standardized `fallback_reason_code` defined by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md` before any free-form explanation.
+29. When `cand_verify` or `stable_verify` needs to judge whether `partial` or `not_checked` items may still support a narrower safe conclusion, it must use `specflow/framework/docs/agent_guidelines/downgrade_policy.md` instead of executor invention.
+30. Commands must not consume project-local standards unless those standards are registered in `docs/project_standards/_registry.md` and the command explicitly supports that consumption surface.
+31. Project-local standards may tighten or clarify framework baseline rules, but must not weaken them.
+32. A command must not treat the presence of a project-local standard as permission to skip its framework-baseline review.
+33. When a command consumes project-local standards, it must first complete the framework-baseline judgment and then merge project-local results only on the command-defined supported `surface`.
+34. The final command conclusion must still stay inside the framework-defined result set of that command.
+35. A downstream command must not consume a project-side extension field unless that downstream command explicitly declares that consumption contract.
 
 ---
 

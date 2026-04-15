@@ -75,8 +75,9 @@ Before consumption, `cand_plan` must re-validate:
 2. `allow_next=true`
 3. `next_command=cand_plan`
 4. current candidate file path, version ref, and fingerprint
-5. current `system_constraints` binding fields
-6. current `shared_appendix_snapshot`
+5. current `module_appendix_snapshot`
+6. current `system_constraints` binding fields
+7. current `shared_appendix_snapshot`
 
 ### 3.3 Allowed Entry Condition
 
@@ -115,8 +116,9 @@ Before consumption, `cand_impl` must re-validate:
 1. all required `_check_result` bindings from Section 3
 2. current plan file path and existence
 3. plan-bound candidate file path, version ref, and fingerprint
-4. plan-bound `system_constraints` fields
-5. plan-bound `shared_appendix_snapshot`
+4. plan-bound `module_appendix_snapshot`
+5. plan-bound `system_constraints` fields
+6. plan-bound `shared_appendix_snapshot`
 
 ### 4.3 Allowed Entry Condition
 
@@ -193,9 +195,10 @@ Before consumption, `cand_promote` must re-validate:
 2. `allow_next=true`
 3. `next_command=cand_promote`
 4. current candidate file path, version ref, and fingerprint
-5. current implementation still covered by `verification_scope_ref`
-6. current `system_constraints` binding fields
-7. current `shared_appendix_snapshot`
+5. current `module_appendix_snapshot`
+6. current implementation still covered by `verification_scope_ref`
+7. current `system_constraints` binding fields
+8. current `shared_appendix_snapshot`
 
 ### 6.3 Allowed Entry Condition
 

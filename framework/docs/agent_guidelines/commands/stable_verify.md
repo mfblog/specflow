@@ -58,12 +58,14 @@ It does not:
 8. add risk notes to every `partial` and `not_checked` item
 9. classify deviations with the shared severity meanings defined by `specflow/framework/docs/agent_guidelines/severity_policy.md`
 10. conclude:
+   - if explicitly referenced stable appendix truth changed enough that the current stable-alignment claim must be re-judged, the result can only be "stable truth drift exists; rerun stable verification against the current stable truth"
    - if the recorded `system_constraints_stable_ref` no longer matches the current formal global baseline state, the result can only be "global-baseline drift exists; rerun stable verification against the current formal baseline"
    - if any `fail` exists, the result can only be "drift exists; return to stable first"
    - `partial` and `not_checked` are non-blocking only when `specflow/framework/docs/agent_guidelines/downgrade_policy.md` allows downgrade for the current evidence state
    - if key deviations are cleared and evidence is complete, the result is "still aligned with stable"
 11. if code or formal global baseline has drifted from the currently claimed stable state, the next action can only be:
    - return code to `stable` semantics
+   - or rerun stable-layer verification when the drift is stable-truth-side rather than code-side
    - or refresh the stable-layer verification conclusion against the current formal global baseline when the drift is baseline-side rather than code-side
    - rerun `stable_verify:{module}` after the required repair or re-judgment work
    - do not open `spec_fork:{module}` while the current implementation still fails `stable_verify`
@@ -95,10 +97,11 @@ It does not:
 
 Allowed `fallback_reason_code` values:
 
-1. `implementation_deviation`
-2. `evidence_incomplete`
-3. `shared_appendix_drift`
-4. `baseline_drift`
+1. `truth_drift`
+2. `implementation_deviation`
+3. `evidence_incomplete`
+4. `shared_appendix_drift`
+5. `baseline_drift`
 
 ## 7. Non-Goals
 

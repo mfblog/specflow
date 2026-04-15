@@ -13,6 +13,7 @@ Rules:
    - `spec_file_ref`
    - `spec_version_ref`
    - `spec_fingerprint`
+   - `module_appendix_snapshot`
    - `system_constraints_stable_file_ref`
    - `system_constraints_stable_version_ref`
    - `system_constraints_stable_fingerprint`
