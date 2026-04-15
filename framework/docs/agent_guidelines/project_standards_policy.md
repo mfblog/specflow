@@ -116,7 +116,7 @@ Field meanings:
 1. `standard_id`
    - stable project-local identifier
 2. `type`
-   - one supported type from Section 4
+   - one supported type from Section 5
 3. `surface`
    - a stable consumption surface already defined by the consuming command or internal flow
 4. `file`
@@ -224,7 +224,7 @@ Direct governance-drift cases include at least:
 If a command supports project-local standards and `docs/project_standards/_registry.md` is missing:
 
 1. do not guess that no project-local standards exist
-2. use the formal claim signal from Section 3 instead of executor judgment
+2. use the formal claim signal from Section 4 instead of executor judgment
 3. for repositories using this framework baseline, the required registry path means the extension surface is claimed
 4. therefore a missing `docs/project_standards/_registry.md` is governance drift and must be reported directly
 5. do not silently downgrade that case into "no active project-local standards"
