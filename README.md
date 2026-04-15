@@ -1,10 +1,25 @@
-# specFlow
+![specFlow hero](./assets/hero1_min.png)
 
-`specFlow` is a spec-driven development paradigm for teams that build with both humans and AI.
+![SpecFlow title block](./assets/specflow-title-block.svg)
 
-Short version:
+<p>
+  <img alt="spec-driven" src="https://img.shields.io/badge/spec-driven-111111?style=for-the-badge&labelColor=111111&color=2F855A">
+  <img alt="module-oriented" src="https://img.shields.io/badge/module-oriented-111111?style=for-the-badge&labelColor=111111&color=1F6FEB">
+  <img alt="agent-runtime-ready" src="https://img.shields.io/badge/agent-runtime%20ready-111111?style=for-the-badge&labelColor=111111&color=C2410C">
+  <img alt="human-and-ai" src="https://img.shields.io/badge/human%20%2B%20AI-collaboration-111111?style=for-the-badge&labelColor=111111&color=7C3AED">
+</p>
 
-Write the behavior down first. Change the code after. Verify before promotion.
+
+
+**English** · [简体中文](./README.zh-CN.md)
+
+
+
+[Add To Your Repository](#add-specflow-to-your-repository) · [Quick Start](#quick-start) · [3-Minute Flow](#the-3-minute-flow) · [Shared Truth](#appendix-and-cross-module-sharing) · [Project Standards](#project-specific-standards) · [Advanced Usage](#advanced-usage)
+
+---
+
+`specFlow` is a module-oriented, spec-driven development paradigm for teams that build with both humans and AI through agentic runtimes.
 
 You can understand it in one sentence:
 
@@ -14,6 +29,8 @@ This repository is not trying to force every project into one fixed shape.
 It gives you a usable starting point, and expects you to change the project-side rules to fit your own domain.
 
 ## What Problem It Solves
+
+> When the code moves fast, truth has to move slower.
 
 Many AI-assisted projects eventually hit the same problems:
 
@@ -28,25 +45,159 @@ Many AI-assisted projects eventually hit the same problems:
 
 Then it adds a small command set around that truth, so design, planning, implementation, verification, and promotion do not drift apart.
 
+## How specFlow Is Used
+
+> Runtime-driven. Module-shaped. Spec-first.
+
+`specFlow` is not a standalone runtime.
+
+It is a governance layer that works together with an agentic runtime, such as:
+
+- `Codex`
+- `Gemini CLI`
+- `Claude Code`
+
+In plain language:
+
+- `specFlow` provides the working rules
+- the runtime reads those rules and executes the work
+
+`specFlow` is also module-oriented.
+
+That means:
+
+- the basic working target is a formal `module`
+- commands are written in forms such as `{command}:{module}`
+- Specs, planning, implementation, verification, and promotion are normally organized per module
+
+So when you use `specFlow`, you are usually doing two things together:
+
+1. running your work through an agentic runtime
+2. letting that runtime follow a module-based governance flow
+
 ## Start Here
+
+> Learn the shortest path first. Expand later.
 
 If you are new, do not try to understand the whole system first.
 
 Read in this order:
 
-1. `Quick Start`
-2. `The Core Model`
-3. `The 3-Minute Flow`
-4. `The First Commands`
-5. `Command Order And Project State`
+1. `Add specFlow To Your Repository`
+2. `Quick Start`
+3. `The Core Model`
+4. `The 3-Minute Flow`
+5. `The First Commands`
+6. `Command Order And Project State`
 
 That is enough to start using `specFlow`.
 
 If later you want to understand how to customize the rules or use the deeper governance features, jump to `Advanced Usage`.
 
+## Add specFlow To Your Repository
+
+> First place `specflow/` in your repository. Then run `init`.
+
+There are two practical ways to adopt `specFlow`.
+
+```mermaid
+flowchart TD
+    A["Want specFlow in your repository"] --> B["Simplest path"]
+    A --> C["Want upstream tracking in git"]
+    B --> D["Clone this repository separately"]
+    D --> E["Copy only specflow/ into your project root"]
+    C --> F["Add this repository as a subtree under vendor/"]
+    F --> G["Sync vendor copy into root specflow/"]
+```
+
+How to read this:
+
+- if you want the shortest setup, clone this repository somewhere else and copy only the `specflow/` directory into your project root
+- if you want to keep an explicit upstream source in your git history, keep this repository as a subtree under a vendor directory, then sync its `specflow/` directory into your root `specflow/`
+
+### Option 1: Clone Separately And Copy `specflow/`
+
+This is the recommended path for most teams.
+
+Why this is the default recommendation:
+
+- it keeps the host repository shape simple
+- it matches how the tooling is documented, because the installed path is `./specflow/...`
+- it does not require users to learn `git subtree` before they can get started
+
+Shell example:
+
+```bash
+git clone https://github.com/Bingordinary/SpecFlow.git /tmp/SpecFlow
+cp -R /tmp/SpecFlow/specflow ./specflow
+```
+
+Windows PowerShell example:
+
+```powershell
+git clone https://github.com/Bingordinary/SpecFlow.git $env:TEMP\SpecFlow
+Copy-Item -Recurse -Force $env:TEMP\SpecFlow\specflow .\specflow
+```
+
+After that, go to `Quick Start` below and run:
+
+```bash
+./specflow/tooling/init.sh
+```
+
+### Option 2: Track The Upstream With `git subtree`
+
+Use this when you want the upstream repository to stay visible in your git history and you want a repeatable update path.
+
+Important:
+
+- in this repository, the installable payload lives under the `specflow/` subdirectory
+- because of that, adding this repository directly as `--prefix=specflow` would create `specflow/specflow/...`
+- the safe subtree workflow is to keep the upstream repository under a vendor directory, then sync its `specflow/` folder into your root `specflow/`
+
+Initial setup:
+
+```bash
+git remote add specflow-upstream https://github.com/Bingordinary/SpecFlow.git
+git subtree add --prefix=vendor/specflow-upstream specflow-upstream main --squash
+rsync -a vendor/specflow-upstream/specflow/ ./specflow/
+```
+
+Windows PowerShell equivalent:
+
+```powershell
+git remote add specflow-upstream https://github.com/Bingordinary/SpecFlow.git
+git subtree add --prefix=vendor/specflow-upstream specflow-upstream main --squash
+Copy-Item -Recurse -Force .\vendor\specflow-upstream\specflow\* .\specflow\
+```
+
+Then run:
+
+```bash
+./specflow/tooling/init.sh
+```
+
+Later, when you want to update:
+
+```bash
+git fetch specflow-upstream
+git subtree pull --prefix=vendor/specflow-upstream specflow-upstream main --squash
+rsync -a --delete vendor/specflow-upstream/specflow/ ./specflow/
+./specflow/tooling/upgrade.sh
+```
+
+What each step is doing:
+
+1. `git subtree add` stores the upstream repository under `vendor/specflow-upstream`
+2. `rsync` copies the installable `specflow/` payload into the location your project will actually use
+3. `git subtree pull` refreshes the vendor copy later
+4. `upgrade` reapplies newer framework-managed files and managed blocks after you sync a newer upstream version
+
 ## Quick Start
 
-Put `specflow/` into your repository, then run this from the repository root:
+> Bootstrap the files, then let the runtime follow the flow.
+
+After the `specflow/` directory is in your repository, run this from the repository root:
 
 ```bash
 ./specflow/tooling/init.sh
@@ -62,6 +213,7 @@ This installs the basic structure you need:
 
 - `AGENTS.md`, `GEMINI.md`, `CLAUDE.md`
 - `docs/specs/`
+  - including module Specs, appendix files, and process-state files
 - `.githooks/pre-commit`
 - supporting files used by the workflow
 
@@ -81,6 +233,8 @@ git config core.hooksPath .githooks
 After initialization, a beginner can start directly with the basic command flow below.
 
 ## The Core Model
+
+> One accepted truth. One next truth.
 
 There are only two core states a beginner needs first:
 
@@ -103,6 +257,8 @@ How to read this:
 - when the candidate is ready and verified, it is promoted and becomes the new stable version.
 
 ## The 3-Minute Flow
+
+> This is the shortest path from idea to governed change.
 
 Suppose you want to add a new module called `module_search`.
 
@@ -187,22 +343,30 @@ Shortest examples:
 
 ### What The Action Words Mean
 
-After the prefix, the action word tells you what kind of step you are doing:
+After the prefix, the action word tells you what kind of step you are doing.
+
+A beginner-friendly way to read them is:
 
 - `new`
-  - create from zero
+  - create a new Spec from zero
 - `fork`
-  - open the next version from an existing stable version
+  - open the next Spec version from an existing stable version
 - `check`
-  - decide whether the current candidate is clear enough
+  - decide whether the current candidate Spec is clear enough to guide work
 - `plan`
-  - write the implementation plan
+  - turn the candidate Spec into an implementation plan
 - `impl`
-  - implement
+  - implement the code according to the candidate Spec and plan
 - `verify`
-  - verify
+  - check whether the implemented code really matches the Spec
 - `promote`
-  - make the candidate become the new stable version
+  - make the verified candidate become the new stable version
+
+One important clarification:
+
+- before `cand_impl`, you are mainly shaping and checking the Spec
+- at `cand_impl`, the work moves from Spec files into code changes
+- at `cand_verify`, the code is checked against the Spec again before promotion
 
 So:
 
@@ -234,28 +398,31 @@ Start with these:
 - `stable_verify:{module}`
   - verify whether current code still matches `stable`
 
-## Should I Use `spec_new` Or `spec_fork`?
+## Should I Use `spec_init`, `spec_new`, Or `spec_fork`?
 
 Use this quick rule:
 
-- use `spec_new:{module}` when this module does not have a real governed version yet
+- use `spec_init:{module}` when the module already exists in the project, but has never entered formal `specFlow` governance before
+- use `spec_new:{module}` when this is a brand-new module and you want to create its first governed version as `candidate`
 - use `spec_fork:{module}` when this module already has a `stable` version and you want to change it
 
 Shortest comparison:
 
 | You are trying to do | Use this command |
 | --- | --- |
+| Bring an existing historical module into governance for the first time | `spec_init:{module}` |
 | Start governance for a brand-new module | `spec_new:{module}` |
 | Make a next version from an existing stable module | `spec_fork:{module}` |
 
 If you only remember one sentence, remember this:
 
-- `spec_new` starts from zero
-- `spec_fork` starts from the current stable truth
+- `spec_init` gives an already-existing module its first governed `stable`
+- `spec_new` starts a brand-new module from zero
+- `spec_fork` starts the next change from the current stable truth
 
 ## Command Order And Project State
 
-If you only want the shortest mental model, remember these two common paths.
+If you only want the shortest mental model, remember these three common paths.
 
 Important:
 
@@ -283,7 +450,22 @@ How to read this:
 - if you are dealing with many modules, `_status.md` is the first place to look
 - the key fields are `Active Layer` and `Next Command`
 
-### Path 1: A Brand-New Module
+### Path 1: A Historical Module Enters Governance For The First Time
+
+```mermaid
+flowchart LR
+    A["spec_init"] --> B["first stable created"]
+    B --> C["spec_fork when you want the next change"]
+```
+
+Plain explanation:
+
+- the module already exists in the project
+- you first capture its already-effective behavior as the first `stable`
+- this is governance onboarding, not future design work
+- when you later want to change that module, you open a `candidate` with `spec_fork`
+
+### Path 2: A Brand-New Module
 
 ```mermaid
 flowchart LR
@@ -303,7 +485,7 @@ Plain explanation:
 - verify
 - promote
 
-### Path 2: An Existing Stable Module Needs Change
+### Path 3: An Existing Stable Module Needs Change
 
 ```mermaid
 flowchart LR
@@ -322,6 +504,24 @@ Plain explanation:
 - implement
 - verify
 - promote
+
+### Stable-Side Maintenance
+
+There is also one important stable-side maintenance path:
+
+```mermaid
+flowchart LR
+    A["stable module"] --> B["code changed or alignment is in doubt"]
+    B --> C["stable_verify"]
+    C --> D["still aligned"]
+    C --> E["drift exists and must be repaired first"]
+```
+
+Plain explanation:
+
+- `stable_verify` is not the normal way to start a new design round
+- it is used when a module is currently on `stable`, but you need to check whether the code still matches that `stable`
+- only after stable alignment is clear should the module move on to the next controlled upgrade round
 
 ### One Important Clarification
 
@@ -344,6 +544,83 @@ That means it gives you:
 - a way to separate current truth from next truth
 - a way to move work with explicit commands
 - a way to verify before calling something done
+
+## Appendix And Cross-Module Sharing
+
+The basic command flow above is enough for normal module work.
+
+But there is one extra mechanism you should know exists:
+
+- module appendix
+- cross-module shared truth
+
+You do not need to learn the internal governance details on day one.
+You mainly need one simple picture of how these pieces relate.
+
+```mermaid
+flowchart LR
+    A["module main spec"] --> B["module appendix"]
+    B --> C["another module needs the same formal truth"]
+    C --> D["shared_extract_review"]
+    D --> E["keep it in the module for now"]
+    D --> F["extract into shared appendix"]
+```
+
+How to read this:
+
+- keep the module main Spec focused on the module's core behavior
+- if some formal details are too long or too specific for the main file, keep them in that module's appendix
+- if that truth still belongs to only one module, it stays in the module main file or module appendix
+- only when another formal module needs the same formal truth does shared-boundary review begin
+
+Use this simple rule:
+
+- first appearance stays in the current module
+- do not extract something into shared just because it may be reused later
+- when a second formal module needs the same formal truth, review whether the repository should keep only one formal definition
+
+In plain language:
+
+- `appendix` is still module-owned truth
+- `shared appendix` is truth that multiple formal modules depend on
+- shared exists to prevent dual source of truth, not to collect vaguely similar ideas
+
+### How To Use `shared_extract_review`
+
+`shared_extract_review` is not a normal `{command}:{module}` command.
+
+You use it when you want a boundary decision such as:
+
+- this truth currently lives in one module, but another module now seems to need the same formal definition
+- you want to know whether the content should stay inside the current module
+- or whether it should now be extracted into shared appendix
+
+In normal module work, you usually do not need to trigger this flow manually.
+If the boundary needs an explicit decision, you can ask for it in plain language or invoke `shared_extract_review` directly.
+
+To trigger it clearly, describe three things:
+
+1. where the current content lives
+2. which other module now seems to need the same truth
+3. that you want a shared-boundary decision
+
+Examples:
+
+- "The fallback protocol currently written in `module_a` is now also needed by `module_b`. Review whether it should be extracted into shared."
+- "Check whether the output schema defined in `module_search` should become shared across `module_search` and `module_recall`."
+- "`shared_extract_review` for the retry semantics currently defined in the `module_agent` appendix and now reused by `module_trace`."
+
+What happens next:
+
+- the flow reviews whether this is really one shared formal truth
+- it tells you whether the content should stay in the current module for now
+- or whether it should be extracted into shared appendix
+- if a dual source of truth already exists, it tells you that shared closure should happen first
+
+One important boundary:
+
+- `shared_extract_review` decides the boundary
+- it does not automatically rewrite module files or complete the full extraction by itself
 
 ## Advanced Usage
 
@@ -415,6 +692,61 @@ In plain language:
 - if you want to adapt `specFlow` to your project, edit the installed project-side files
 - if you want to redesign how `specFlow` itself works, edit the framework rules
 
+### Project-Specific Standards
+
+`specFlow` allows a project to add its own local standards on top of the framework baseline.
+
+These standards live in:
+
+- `docs/project_standards/`
+- `docs/project_standards/_registry.md`
+
+One important rule:
+
+- a standard file is not active just because it exists
+- it becomes active only after it is registered in `_registry.md`
+
+In normal use, you usually do not need to build these files by hand.
+The simplest path is to ask the agent in plain language, for example:
+
+- "Create a project-specific review standard for Prompt quality and let `cand_check` use it."
+- "Add a project-local output standard for this project."
+- "Create a local decision rule for escalation in this repository."
+
+What the agent should do next:
+
+1. create one standard file under `docs/project_standards/`
+2. add one registry entry to `docs/project_standards/_registry.md`
+3. make sure the target command or flow already supports the chosen consumption surface
+
+In mechanism terms, this is handled by an internal flow named `project_standard_create`.
+You do not need to invoke that internal name directly.
+The normal user-facing way is to express the rule you want in plain language.
+
+A project standard normally has two parts:
+
+- the rule file
+- the registry entry that activates it
+
+Example registry entry:
+
+| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `project_prompt_guidelines` | `review_standard` | `candidate_closure_review` | `docs/project_standards/prompt_guidelines.md` | `cand_check` | `all_targets_on_surface` | `tighten` | `framework_wins` |
+
+How to read this:
+
+- `type` says what kind of project standard this is
+- `surface` says which command-defined extension point it plugs into
+- `file` points to the actual rule document
+- `consumed_by` says which command or internal flow must read it
+- `effect` can tighten or clarify the framework baseline, but must not weaken it
+
+One important boundary:
+
+- project-specific standards may tighten or clarify the framework
+- they must not weaken, bypass, or replace the framework baseline
+
 ### What You Normally Keep
 
 Most projects should keep these core mechanics:
@@ -465,18 +797,6 @@ Plain meaning:
 This is not for reviewing one business module.
 It is for reviewing the mechanism.
 
-#### `shared_extract_review`
-
-Use `shared_extract_review` when you think some content may need to become shared truth across modules.
-
-Plain meaning:
-
-- decide whether something should stay inside one module
-- or be extracted into a shared appendix because multiple modules now depend on the same formal truth
-
-This is not a normal `{command}:{module}` command.
-It is a boundary-review flow.
-
 ### Internal Flows That Exist But Are Not Normal User Entry Points
 
 There are also internal or non-primary flows such as:
@@ -489,7 +809,8 @@ But they are not the normal first things users should call directly.
 
 In plain language:
 
-- `spec_flow_review` and `shared_extract_review` are advanced user-facing flows
+- `spec_flow_review` is an advanced user-facing review flow
+- `shared_extract_review` was introduced earlier because cross-module sharing is a normal boundary users may need to understand
 - some other flows exist mainly to keep the mechanism closed behind the scenes
 
 ### How To Invoke Advanced Flows
@@ -502,12 +823,10 @@ There are two normal ways to invoke an advanced flow.
 Examples of plain-language intent:
 
 - "Review whether the framework rules are still consistent."
-- "Should this module content be extracted into shared?"
 
 Examples of direct invocation:
 
 - `spec_flow_review`
-- `shared_extract_review`
 
 This matters because intent recognition is convenient, but it is not magic.
 If the agent does not recognize your intent correctly, saying the exact flow name is the clean fallback.
@@ -538,15 +857,6 @@ If you want to deeply understand or redesign the system, read in this order:
 This matters because `specFlow` is meant to be adapted, not to control the entire repository forever.
 
 Files like `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` use a managed block model, so the host project can keep its own instructions outside the `specFlow` block.
-
-## Repository Layout
-
-- `framework/`
-  - baseline governance rules
-- `templates/root/`
-  - bootstrap files installed into the host repository
-- `tooling/`
-  - install, doctor, upgrade, and sync scripts
 
 ## When Not To Use It
 

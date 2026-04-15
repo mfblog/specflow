@@ -1,0 +1,76 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">specFlow hero</title>
+  <desc id="desc">specFlow wordmark with module-oriented governance visual</desc>
+  <defs>
+    <linearGradient id="bg" x1="80" y1="40" x2="1120" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1220"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="lineA" x1="174" y1="96" x2="1030" y2="282" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2F855A"/>
+      <stop offset="0.5" stop-color="#1F6FEB"/>
+      <stop offset="1" stop-color="#C2410C"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="210" y1="64" x2="270" y2="124" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399"/>
+      <stop offset="1" stop-color="#60A5FA"/>
+    </linearGradient>
+    <filter id="soft" x="0" y="0" width="1200" height="360" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+  </defs>
+
+  <rect x="20" y="20" width="1160" height="320" rx="28" fill="url(#bg)"/>
+  <g opacity="0.18" filter="url(#soft)">
+    <circle cx="192" cy="88" r="36" fill="#34D399"/>
+    <circle cx="1024" cy="276" r="46" fill="#1F6FEB"/>
+    <circle cx="935" cy="96" r="34" fill="#F97316"/>
+  </g>
+
+  <g opacity="0.22">
+    <path d="M78 280H1122" stroke="#E5E7EB" stroke-opacity="0.25"/>
+    <path d="M78 224H1122" stroke="#E5E7EB" stroke-opacity="0.12"/>
+    <path d="M78 168H1122" stroke="#E5E7EB" stroke-opacity="0.12"/>
+    <path d="M78 112H1122" stroke="#E5E7EB" stroke-opacity="0.12"/>
+  </g>
+
+  <g>
+    <path d="M210 94H356" stroke="url(#lineA)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M356 94H500" stroke="url(#lineA)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M500 94H650" stroke="url(#lineA)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M650 94H806" stroke="url(#lineA)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M806 94H950" stroke="url(#lineA)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M950 94H1030" stroke="url(#lineA)" stroke-width="6" stroke-linecap="round"/>
+
+    <rect x="146" y="70" width="128" height="48" rx="14" fill="#0F172A" stroke="#34D399" stroke-width="2"/>
+    <text x="210" y="100" text-anchor="middle" fill="#D1FAE5" font-size="18" font-family="Segoe UI, Arial, sans-serif" font-weight="700">design</text>
+
+    <rect x="292" y="70" width="128" height="48" rx="14" fill="#0F172A" stroke="#60A5FA" stroke-width="2"/>
+    <text x="356" y="100" text-anchor="middle" fill="#DBEAFE" font-size="18" font-family="Segoe UI, Arial, sans-serif" font-weight="700">module</text>
+
+    <rect x="436" y="70" width="128" height="48" rx="14" fill="#0F172A" stroke="#60A5FA" stroke-width="2"/>
+    <text x="500" y="100" text-anchor="middle" fill="#DBEAFE" font-size="18" font-family="Segoe UI, Arial, sans-serif" font-weight="700">candidate</text>
+
+    <rect x="586" y="70" width="128" height="48" rx="14" fill="#0F172A" stroke="#F59E0B" stroke-width="2"/>
+    <text x="650" y="100" text-anchor="middle" fill="#FEF3C7" font-size="18" font-family="Segoe UI, Arial, sans-serif" font-weight="700">impl</text>
+
+    <rect x="742" y="70" width="128" height="48" rx="14" fill="#0F172A" stroke="#F97316" stroke-width="2"/>
+    <text x="806" y="100" text-anchor="middle" fill="#FFEDD5" font-size="18" font-family="Segoe UI, Arial, sans-serif" font-weight="700">verify</text>
+
+    <rect x="886" y="70" width="128" height="48" rx="14" fill="#0F172A" stroke="#A78BFA" stroke-width="2"/>
+    <text x="950" y="100" text-anchor="middle" fill="#EDE9FE" font-size="18" font-family="Segoe UI, Arial, sans-serif" font-weight="700">stable</text>
+  </g>
+
+  <g>
+    <rect x="112" y="150" width="64" height="64" rx="18" fill="#0F172A" stroke="url(#accent)" stroke-width="3"/>
+    <path d="M130 177C130 166.507 138.507 158 149 158H150C160.493 158 169 166.507 169 177V180C169 190.493 160.493 199 150 199H130V177Z" fill="url(#accent)"/>
+    <path d="M145 199H158C168.493 199 177 207.507 177 218V218C177 228.493 168.493 237 158 237H140" stroke="#D1FAE5" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <text x="206" y="194" fill="white" font-size="64" font-family="Segoe UI, Arial, sans-serif" font-weight="800" letter-spacing="-1.5">specFlow</text>
+    <text x="206" y="230" fill="#93C5FD" font-size="20" font-family="Segoe UI, Arial, sans-serif" font-weight="700">Code is cheap, show me your design.</text>
+    <text x="206" y="266" fill="#D1D5DB" font-size="22" font-family="Segoe UI, Arial, sans-serif">Module-oriented governance for AI-assisted shipping.</text>
+    <text x="206" y="298" fill="#9CA3AF" font-size="17" font-family="Segoe UI, Arial, sans-serif">Design first. Code second. Verify before promotion.</text>
+  </g>
+</svg>
