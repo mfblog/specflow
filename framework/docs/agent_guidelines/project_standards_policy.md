@@ -55,6 +55,8 @@ Rules:
 1. commands must not scan `docs/project_standards/` blindly
 2. a file under `docs/project_standards/` is not active merely because it exists
 3. only standards explicitly registered in `_registry.md` may affect command execution
+4. the formal registry path is also the only framework-defined claim signal that the current project supports the project-local standards extension surface
+5. for repositories using this framework baseline, `docs/project_standards/_registry.md` is therefore required even when the active table is empty
 
 ---
 
@@ -156,8 +158,10 @@ If a conflict is found:
 If a command supports project-local standards and `docs/project_standards/_registry.md` is missing:
 
 1. do not guess that no project-local standards exist
-2. treat the project as having no active project-local standards only when the current project template does not claim to use them
-3. if the current project claims to use project-local standards but the registry is missing, report governance drift
+2. use the formal claim signal from Section 3 instead of executor judgment
+3. for repositories using this framework baseline, the required registry path means the extension surface is claimed
+4. therefore a missing `docs/project_standards/_registry.md` is governance drift and must be reported directly
+5. do not silently downgrade that case into "no active project-local standards"
 
 If the registry exists but one entry is invalid:
 

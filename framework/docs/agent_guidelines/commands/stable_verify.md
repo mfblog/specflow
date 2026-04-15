@@ -7,7 +7,7 @@ This command checks whether current code still aligns with a module's `stable` S
 Goals:
 
 1. decide whether current implementation still satisfies the formal truth
-2. if drift exists, decide whether code must return to `stable` or enter controlled upgrade
+2. if drift exists, decide whether code must first return to `stable` semantics before any controlled upgrade round may begin
 
 ## 2. Scope
 
@@ -57,12 +57,13 @@ It does not:
 7. add risk notes to every `partial` and `not_checked` item
 8. classify deviations with the shared severity meanings defined by `specflow/framework/docs/agent_guidelines/severity_policy.md`
 9. conclude:
-   - if any `fail` exists, the result can only be "drift exists; return to stable or enter spec_fork"
+   - if any `fail` exists, the result can only be "drift exists; return to stable first"
    - `partial` and `not_checked` are non-blocking only when `specflow/framework/docs/agent_guidelines/downgrade_policy.md` allows downgrade for the current evidence state
    - if key deviations are cleared and evidence is complete, the result is "still aligned with stable"
 10. if code has drifted from `stable`, the next action can only be:
    - return code to `stable` semantics
-   - or open `spec_fork:{module}`
+   - rerun `stable_verify:{module}` after that implementation repair
+   - do not open `spec_fork:{module}` while the current implementation still fails `stable_verify`
 11. update `_status.md`:
    - if still aligned -> `Next Command=spec_fork`
    - if drift exists -> keep `Next Command=stable_verify`
@@ -83,6 +84,8 @@ It does not:
 5. deviation list
 6. `fallback_reason_code` when stable alignment cannot be claimed safely
 7. next-step recommendation
+   - if drift exists, the immediate next step must remain `stable_verify`
+   - `spec_fork:{module}` may be suggested only as a later follow-up after stable alignment has been restored
 8. git close-out result
 9. `_status.md` update result
 

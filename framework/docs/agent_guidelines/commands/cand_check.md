@@ -53,10 +53,12 @@ Result semantics for non-pass conclusions are fixed:
 2. `_status.md` says `Next Command=cand_check`
 3. the module has `candidate`
 4. read explicitly referenced candidate appendix files and bound Shared Appendix files
-5. read `specflow/framework/docs/agent_guidelines/project_standards_policy.md`, `docs/project_standards/_registry.md`, and any registered project-local standard files consumed by `cand_check` for the current target
-6. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
-7. if `_check_result/{module}.md`, `_status.md`, candidate truth, or other commit-triggering governance files may change, read the git policy first
-8. if referenced appendix files have directory drift, fix that first and rerun the pre-check
+5. read `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
+6. if `docs/project_standards/_registry.md` exists, read it and any registered project-local standard files consumed by `cand_check` for the current target
+7. if `docs/project_standards/_registry.md` is missing, stop and report governance drift according to `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
+8. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
+9. if `_check_result/{module}.md`, `_status.md`, candidate truth, or other commit-triggering governance files may change, read the git policy first
+10. if referenced appendix files have directory drift, fix that first and rerun the pre-check
 
 ## 4. Procedure
 
