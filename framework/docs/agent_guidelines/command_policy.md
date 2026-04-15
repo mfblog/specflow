@@ -193,6 +193,10 @@ The rules below are shared gates. Every command follows them by default:
 26. When `cand_verify` or `stable_verify` needs to judge whether `partial` or `not_checked` items may still support a narrower safe conclusion, it must use `specflow/framework/docs/agent_guidelines/downgrade_policy.md` instead of executor invention.
 27. Commands must not consume project-local standards unless those standards are registered in `docs/project_standards/_registry.md` and the command explicitly supports that consumption surface.
 28. Project-local standards may tighten or clarify framework baseline rules, but must not weaken them.
+29. A command must not treat the presence of a project-local standard as permission to skip its framework-baseline review.
+30. When a command consumes project-local standards, it must first complete the framework-baseline judgment and then merge project-local results only on the command-defined supported `surface`.
+31. The final command conclusion must still stay inside the framework-defined result set of that command.
+32. A downstream command must not consume a project-side extension field unless that downstream command explicitly declares that consumption contract.
 
 ---
 
@@ -219,10 +223,14 @@ Additional requirements:
 6. If the command consumes Shared Appendix files, it must state that they are shared truth objects bound in by a module, not independent command targets.
 7. If the command file involves lifecycle closure, fallback, or cleanup, it must not invent an alternative set of top-level rules.
 8. If the command consumes project-local standards, it must clearly define:
+   - the supported `surface` names owned by that command
+   - the meaning and trigger condition of each supported `surface`
    - that consumption is optional and depends on registered active entries
    - which registered entry shapes it may consume
    - which part of the command decision surface those standards may tighten or clarify
    - whether those standards affect pass, fallback, or output write-back
+   - how those project-local results merge into the command's framework-baseline conclusion
+   - which project-side extension fields, if any, are allowed and what their boundary is against framework fixed fields
 9. If the command requires mandatory close-out work such as a git-history decision, it must explicitly reference the relevant governance rule instead of leaving that step to executor memory.
 10. If the command may raise a checkpoint, it must define the allowed checkpoint types, trigger conditions, and resume rules.
 11. If the command may fall back or block, it must define which standardized `fallback_reason_code` values it may emit instead of leaving fallback wording to executor invention.

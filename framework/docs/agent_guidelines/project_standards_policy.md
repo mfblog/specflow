@@ -2,45 +2,64 @@
 
 ## 1. Purpose
 
-This file defines how a project may register and consume project-local review standards on top of the fixed Spec Flow governance baseline.
+This file defines the extension mechanism for project-local standards on top of the fixed Spec Flow governance baseline.
 
 It answers six questions:
 
 1. where project-local standards live
 2. which file is the formal registration entry
-3. which standard types are supported
-4. how commands decide which project-local standards they must read
+3. which side owns the extension interface
+4. how commands decide which project-local standards they may read
 5. how project-local standards relate to framework baseline rules
 6. what kinds of conflicts are forbidden
 
 This policy does not replace the framework baseline.
-It defines a controlled extension surface for project-local standards.
+It defines a controlled extension interface for project-local standards.
 
 ---
 
 ## 2. Core Principle
 
-Spec Flow has two layers of review standards:
+Spec Flow has two governance layers here:
 
 1. framework baseline
-   - the fixed minimum rules shipped by Spec Flow
+   - the fixed minimum rules and extension interfaces shipped by Spec Flow
 2. project-local standards
-   - additional standards explicitly registered by the current project
+   - project-owned concrete rules explicitly registered by the current project
 
 The fixed rule is:
 
 1. project-local standards may add detail, narrow choices, or tighten review gates
 2. project-local standards must not weaken, bypass, or delete a framework baseline rule
+3. project-local standards must not invent framework interfaces owned by the framework or by a command
 
 In plain words:
 
 1. the framework defines the floor
-2. the project may raise the bar
-3. the project may not lower the floor
+2. the framework and command documents define the legal plug-in points
+3. the project may raise the bar only through those plug-in points
+4. the project may not lower the floor
 
 ---
 
-## 3. Formal Location
+## 3. Interface Ownership
+
+The ownership boundary is fixed:
+
+1. framework policy files define the extension mechanism and shared limits
+2. command or internal-flow documents define the consumption contract of a concrete `surface`
+3. project-local standard files define the project's concrete review, output, or decision rules
+4. `docs/project_standards/_registry.md` defines only which registered project-local standards are enabled for the current project
+
+Therefore:
+
+1. the project must not create a new framework consumption interface by writing a registry entry
+2. the project must not redefine a command's lifecycle responsibility, command result set, or framework fixed fields
+3. the registry is an enablement object, not an interface-definition object
+
+---
+
+## 4. Formal Location
 
 Project-local standards live under:
 
@@ -60,7 +79,7 @@ Rules:
 
 ---
 
-## 4. Supported Standard Types
+## 5. Supported Standard Types
 
 The supported project-local standard types are:
 
@@ -79,7 +98,7 @@ Rules:
 
 ---
 
-## 5. Registry Contract
+## 6. Registry Contract
 
 Each active entry in `docs/project_standards/_registry.md` must record at least:
 
@@ -99,7 +118,7 @@ Field meanings:
 2. `type`
    - one supported type from Section 4
 3. `surface`
-   - the command-local review or output surface this standard extends
+   - a stable consumption surface already defined by the consuming command or internal flow
 4. `file`
    - the project-local standard file path under `docs/project_standards/`
 5. `consumed_by`
@@ -116,34 +135,55 @@ Additional rules:
 1. `effect=clarify` may explain how the project applies an existing baseline rule more concretely
 2. `effect=tighten` may add a stricter project-local requirement
 3. project-local standards must not use an effect meaning such as `override`, `relax`, or `disable`
-4. framework-consumable surfaces must use stable names defined by the consuming command or internal flow instead of executor invention
+4. `surface` is not a free project-defined name
+5. a registry entry may reference a `surface` only after the consuming command or internal flow has formally defined that `surface`
+6. the registry must not create a new `surface`, widen a command's consumption scope, or add a new write-back contract by registration alone
+7. `consumed_by` may reference only a command or internal flow that already declares support for that `type` and `surface`
+8. project-local standards may define project extension fields only when the consuming command explicitly allows those fields as project-side write-back
+9. project extension fields are not framework fixed fields
+
+Applicable shape rule:
+
+1. a command consumes only the registered entry shapes that its own governance document explicitly allows
+2. a registry entry that fits the table shape but points to an undefined `surface` is still invalid
 
 ---
 
-## 6. Consumption Order
+## 7. Consumption Order
 
 When a command or internal flow supports project-local standards, it must read in this order:
 
 1. framework baseline governance files
-2. `docs/project_standards/_registry.md`
-3. only the registered project-local standard files relevant to the current command and target
+2. the consuming command or internal-flow document that defines the target `surface`
+3. `docs/project_standards/_registry.md`
+4. only the registered project-local standard files relevant to the current command, current target, and supported `surface`
 
 Commands must not:
 
 1. read unregistered files from `docs/project_standards/`
 2. guess that a similarly named file is active
 3. expand into unrelated project-local standards not consumed by the current command
+4. consume a registered file through a `surface` that the command has not formally defined
+5. treat the existence of a project-local standard as permission to skip framework-baseline review
+
+Merging rule:
+
+1. the consuming command must first finish its framework-baseline judgment
+2. it may then consume project-local standards only on its declared `surface`
+3. project-local results enter the command only as `tighten` or `clarify` inputs
+4. the final command result must still stay inside the framework-defined command result set
 
 ---
 
-## 7. Conflict Rules
+## 8. Conflict Rules
 
 The conflict rules are fixed:
 
 1. framework baseline wins over project-local standards
 2. project-local standards may tighten but not weaken the baseline
-3. if a project-local standard conflicts with the baseline, report governance drift
-4. do not silently merge conflicting rules into an invented middle meaning
+3. command interface ownership wins over project-local standards and registry wording
+4. if a project-local standard or registry entry conflicts with the baseline or with a command-defined `surface`, report governance drift
+5. do not silently merge conflicting rules into an invented middle meaning
 
 If a conflict is found:
 
@@ -151,9 +191,16 @@ If a conflict is found:
 2. keep using the framework baseline
 3. report which project-local standard file must be repaired
 
+Direct governance-drift cases include at least:
+
+1. a registry entry references a `surface` not formally defined by the consuming command or internal flow
+2. a project-local standard attempts to define a command interface, command lifecycle duty, or framework fixed field
+3. a project-local standard attempts to weaken a framework gate
+4. a registry entry points to a command or internal flow that does not declare support for that standard type or `surface`
+
 ---
 
-## 8. Missing Or Invalid Registry Cases
+## 9. Missing Or Invalid Registry Cases
 
 If a command supports project-local standards and `docs/project_standards/_registry.md` is missing:
 
@@ -168,25 +215,29 @@ If the registry exists but one entry is invalid:
 1. ignore that invalid entry for command execution
 2. report governance drift explicitly
 3. do not let the invalid entry silently modify command behavior
+4. do not infer a replacement `surface` or replacement command by executor judgment
 
 ---
 
-## 9. Relationship To Commands
+## 10. Relationship To Commands
 
 This policy does not automatically force every command to read project-local standards.
 
 Each command or internal flow that consumes project-local standards must explicitly say:
 
 1. that it reads `docs/project_standards/_registry.md`
-2. which entry shapes it may consume
-3. which part of its decision surface those project-local standards may tighten or clarify
+2. which `surface` names it defines and supports
+3. which entry shapes it may consume
+4. which part of its decision surface those project-local standards may tighten or clarify
+5. whether those standards may affect pass, fallback, or output write-back
+6. which project-side extension fields, if any, are allowed
 
 `spec_flow_review` is one such governance flow.
 When it runs in the current project instance, it should read the active project-local standards resolved from `docs/project_standards/_registry.md` and review them as governance inputs rather than ignoring their content.
 
 ---
 
-## 10. Non-Goals
+## 11. Non-Goals
 
 This policy does not:
 
@@ -194,3 +245,4 @@ This policy does not:
 2. allow arbitrary code hooks
 3. allow project-local standards to weaken framework gates
 4. replace module Specs as behavior truth
+5. let the registry define new command surfaces
