@@ -162,6 +162,7 @@ Allowed `fallback_reason_code` values:
 2. `baseline_drift`
 3. `shared_appendix_drift`
 4. `shared_truth_conflict`
+5. `governance_drift`
 
 ## 8. Non-Goals
 

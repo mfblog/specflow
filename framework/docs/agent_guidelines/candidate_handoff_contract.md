@@ -27,9 +27,10 @@ Candidate-side fallback, blocking, and resume explanations must use these standa
 5. `baseline_drift`
 6. `shared_appendix_drift`
 7. `shared_truth_conflict`
-8. `implementation_deviation`
-9. `evidence_incomplete`
-10. `promotion_recovery`
+8. `governance_drift`
+9. `implementation_deviation`
+10. `evidence_incomplete`
+11. `promotion_recovery`
 
 Meaning rules:
 
@@ -47,11 +48,13 @@ Meaning rules:
    - Shared Appendix truth, layer, version, body, or binding changed enough to invalidate the handoff
 7. `shared_truth_conflict`
    - the current required reading range already confirms that the same formal behavior truth is defined twice and shared closure must happen before downstream work may continue
-8. `implementation_deviation`
+8. `governance_drift`
+   - a required governance surface, registry, or framework-owned execution rule is missing, invalid, or contradictory enough that the current command cannot safely continue under the formal mechanism
+9. `implementation_deviation`
    - implementation no longer satisfies the current candidate even though candidate truth still stands
-9. `evidence_incomplete`
+10. `evidence_incomplete`
    - current verification evidence is still insufficient to close the next gate safely
-10. `promotion_recovery`
+11. `promotion_recovery`
    - `cand_promote` had already started mutating repository state and had to restore the module back to candidate semantics before the chain could continue
 
 Executors may add natural-language explanation, but the standardized code must appear first when a fallback or blocking reason is reported.
@@ -172,6 +175,7 @@ Use only:
 5. `shared_appendix_drift`
 6. `implementation_deviation`
 7. `evidence_incomplete`
+8. `truth_incomplete`
 
 ---
 

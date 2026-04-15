@@ -34,8 +34,12 @@ By default it handles:
    - only use it when key implementation direction is still not locked
    - if the unresolved decision changes behavior truth, boundary truth, or acceptance truth, the resume path must go back to `cand_check` after writeback
    - do not treat the checkpoint as permission to continue without that writeback
-7. create or update `docs/specs/_plans/{module}.md`
-8. ensure the plan records:
+7. if a `decision` checkpoint is raised:
+   - do not create or update `docs/specs/_plans/{module}.md`
+   - keep `_status.md` at `cand_plan` when the unresolved decision is implementation-direction only
+   - use `resume_next_step=cand_check` only when the checkpoint answer must first be written back into candidate truth or appendix truth
+8. create or update `docs/specs/_plans/{module}.md` only when no checkpoint blocks planning
+9. ensure the plan records:
    - implementation tasks
    - progress, blockers, and verification focus for this round
    - `spec_file_ref`
@@ -45,20 +49,21 @@ By default it handles:
    - `system_constraints_stable_version_ref`
    - `system_constraints_stable_fingerprint`
    - `shared_appendix_snapshot`
-9. update `_status.md`:
+10. update `_status.md`:
    - if the candidate is now ready for implementation -> `Next Command=cand_impl`
    - if candidate truth drift was discovered -> `Next Command=cand_check`
-10. perform git close-out if required
+   - if a `decision` checkpoint stopped planning and no truth writeback is pending -> keep `Next Command=cand_plan`
+11. perform git close-out if required
 
 ## 5. Stop Conditions
 
-1. the plan file exists and is bound to the current candidate truth
+1. either a valid plan file exists for the current candidate truth, or a checkpoint stop left no consumable plan artifact behind
 2. `_status.md` points to the real next step
 
 ## 6. Output Contract
 
 1. planning conclusion
-2. plan file path
+2. whether a plan file was written, updated, or intentionally not created because planning stopped at a checkpoint
 3. plan binding result
 4. `handoff validation result`
 5. `checkpoint result` when a checkpoint stop was raised

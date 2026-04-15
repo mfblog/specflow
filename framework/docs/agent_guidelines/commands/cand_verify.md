@@ -86,6 +86,7 @@ Allowed `fallback_reason_code` values:
 5. `shared_appendix_drift`
 6. `implementation_deviation`
 7. `evidence_incomplete`
+8. `truth_incomplete`
 
 ## 7. Non-Goals
 
