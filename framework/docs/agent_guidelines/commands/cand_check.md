@@ -43,6 +43,7 @@ By default this command reviews:
 3. the module has `candidate`
 4. read explicitly referenced candidate appendix files and bound Shared Appendix files
 5. read `specflow/framework/docs/agent_guidelines/project_standards_policy.md`, `docs/project_standards/_registry.md`, and any registered project-local standard files consumed by `cand_check` for the current target
+6. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 7. if `_check_result/{module}.md`, `_status.md`, candidate truth, or other commit-triggering governance files may change, read the git policy first
 8. if referenced appendix files have directory drift, fix that first and rerun the pre-check
 
@@ -66,7 +67,7 @@ By default this command reviews:
    - it must use `surface=prompt_review`
    - it must be consumed by `cand_check`
 9. if such a standard is active and the module hits that standard's trigger conditions, run Prompt Adequacy Review according to one explicit project-local contract source instead of executor interpretation:
-   - in this project, use `docs/project_standards/prompt_guidelines.md` as the canonical Prompt review contract
+   - resolve that contract from the active registry entry's `file` field instead of hardcoding a repository path
    - consume its trigger rules, fixed review objects, blocking rules, and prompt-gate writeback contract together
    - do not split those semantics across multiple unregistered notes or executor memory
 10. if registered project-local review standards apply to the current module and command surface, consume them only according to `docs/project_standards/_registry.md` and only as tightening or clarifying inputs
@@ -141,6 +142,7 @@ The output should include:
    - overall gate conclusion
 6. whether `Check Result Snapshot` was written back or an old gate was cleaned up
 7. `checkpoint result` when a checkpoint stop was raised
+   - when present, it must satisfy the fixed checkpoint fields defined by `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 8. `fallback_reason_code` for blocked, fix-required, or checkpoint stops
 9. structured findings when `blocked` or `fix_required`
 10. next-step suggestion

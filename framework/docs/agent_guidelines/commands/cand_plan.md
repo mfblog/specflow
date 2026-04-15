@@ -20,7 +20,8 @@ By default it handles:
 3. a current valid `docs/specs/_check_result/{module}.md` exists
 4. the current candidate still aligns with the current formal global baseline state
 5. read any explicitly referenced candidate appendix files and bound Shared Appendix files
-6. read the git policy if commit-triggering files may change
+6. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
+7. read the git policy if commit-triggering files may change
 
 ## 4. Procedure
 
@@ -61,6 +62,7 @@ By default it handles:
 3. plan binding result
 4. `handoff validation result`
 5. `checkpoint result` when a checkpoint stop was raised
+   - when present, it must satisfy the fixed checkpoint fields defined by `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 6. `fallback_reason_code` for fallback or checkpoint stops
 7. any fallback reason if the pass gate was invalid
 8. git close-out result

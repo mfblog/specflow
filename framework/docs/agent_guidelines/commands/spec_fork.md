@@ -41,9 +41,8 @@ By default it handles:
 6. set candidate `frontmatter.version` to that target version
 7. write `system_constraints_stable_ref`
 8. re-check `shared_appendix_refs`:
-   - if the formal global baseline exists, bind to the current version
-   - otherwise write `none`
-   - if the stable layer depended on stable shared files and the candidate still depends on them, create corresponding candidate shared files first and bind to those candidate-layer versions
+   - judge Shared Appendix bindings independently from whether `s_system_constraints.md` exists
+   - if the stable layer depended on stable shared files and the candidate still depends on the same shared truth, create corresponding candidate shared files first and bind to those candidate-layer versions
    - if the current round no longer reuses shared appendix truth, or candidate-layer shared truth is not ready yet, write `shared_appendix_refs=none`
 9. update Shared Appendix `bound_modules` if bindings changed
 10. delete old `_check_result/{module}.md`, `_verify_result/{module}.md`, `_plans/{module}.md`, and previous-round candidate appendix files

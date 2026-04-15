@@ -22,7 +22,8 @@ By default it handles:
 4. a current valid `_plans/{module}.md` exists
 5. the candidate still aligns with the current formal global baseline state
 6. read required candidate appendix files and bound Shared Appendix files
-7. read the git policy if commit-triggering files may change
+7. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
+8. read the git policy if commit-triggering files may change
 
 ## 4. Procedure
 
@@ -64,6 +65,7 @@ By default it handles:
 4. downgrade decision when `partial` or `not_checked` exists
 5. verify-result write-back result
 6. `checkpoint result` when a checkpoint stop was raised
+   - when present, it must satisfy the fixed checkpoint fields defined by `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 7. `fallback_reason_code` for fallback or checkpoint stops
 8. deviation list
 9. fallback reason if pass gate or plan was invalid
