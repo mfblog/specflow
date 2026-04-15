@@ -65,7 +65,10 @@ By default this command reviews:
    - it must be a registered `review_standard`
    - it must use `surface=prompt_review`
    - it must be consumed by `cand_check`
-9. if such a standard is active and the module hits that standard's trigger conditions, run Prompt Adequacy Review according to that registered project-local standard
+9. if such a standard is active and the module hits that standard's trigger conditions, run Prompt Adequacy Review according to one explicit project-local contract source instead of executor interpretation:
+   - in this project, use `docs/project_standards/prompt_guidelines.md` as the canonical Prompt review contract
+   - consume its trigger rules, fixed review objects, blocking rules, and prompt-gate writeback contract together
+   - do not split those semantics across multiple unregistered notes or executor memory
 10. if registered project-local review standards apply to the current module and command surface, consume them only according to `docs/project_standards/_registry.md` and only as tightening or clarifying inputs
 11. process `system_constraints_stable_ref`:
    - if the formal global baseline exists and the candidate is still compatible, a mechanical update to the current version is allowed
@@ -146,7 +149,7 @@ The output should include:
 6. whether `Check Result Snapshot` was written back or an old gate was cleaned up
 7. `checkpoint result` when a checkpoint stop was raised
 8. `fallback_reason_code` for blocked, fix-required, or checkpoint stops
-9. structured findings when blocked
+9. structured findings when `blocked` or `fix_required`
 10. next-step suggestion
 11. git close-out result
 12. `_status.md` update result
@@ -169,3 +172,9 @@ Allowed `fallback_reason_code` values:
 2. directly entering code implementation
 3. creating, updating, or deleting an independent `system_constraints` candidate file
 4. forcing Prompt design on every module regardless of trigger conditions
+
+## 9. Examples
+
+```md
+cand_check:module_ai
+```
