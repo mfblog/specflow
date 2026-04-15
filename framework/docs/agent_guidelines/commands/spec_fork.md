@@ -21,13 +21,12 @@ By default it handles:
 ## 3. Preconditions
 
 1. complete required pre-checks
-2. complete `stable drift reconciliation`
-3. `_status.md` says `Next Command=spec_fork`
-4. the module already has `stable`
-5. read any stable appendix files explicitly referenced by `s_{module}.md`
-6. read bound stable Shared Appendix files if `shared_appendix_refs` is not empty
-7. read the git policy if commit-triggering files may change
-8. if Shared Appendix bindings will change or `docs/specs/shared/**` will change, read `shared_flow_reconcile.md`
+2. `_status.md` says `Next Command=spec_fork`
+3. the module already has `stable`
+4. read any stable appendix files explicitly referenced by `s_{module}.md`
+5. read bound stable Shared Appendix files if `shared_appendix_refs` is not empty
+6. read the git policy if commit-triggering files may change
+7. if Shared Appendix bindings will change or `docs/specs/shared/**` will change, read `shared_flow_reconcile.md`
 
 ## 4. Procedure
 

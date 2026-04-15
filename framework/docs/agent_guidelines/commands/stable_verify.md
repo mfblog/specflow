@@ -29,13 +29,12 @@ It does not:
 1. complete required pre-checks
 2. the module's current `Active Layer=stable`
 3. `_status.md` says `Next Command=stable_verify`
-4. complete `stable drift reconciliation`
-5. the target module is explicit
-6. the module has valid `stable`
-7. there is actual implementation context that must be checked
-8. read any explicitly referenced stable appendix files or bound stable Shared Appendix files
-9. read `s_system_constraints.md` if the verification scenario requires global-baseline or shared-mechanism judgment
-10. read the git policy if commit-triggering files may change
+4. the target module is explicit
+5. the module has valid `stable`
+6. there is actual implementation context that must be checked
+7. read any explicitly referenced stable appendix files or bound stable Shared Appendix files
+8. read `s_system_constraints.md` if the verification scenario requires global-baseline or shared-mechanism judgment
+9. read the git policy if commit-triggering files may change
 
 ## 4. Procedure
 
@@ -56,7 +55,7 @@ It does not:
    - `Partial`
    - `Not Checked`
 7. add risk notes to every `partial` and `not_checked` item
-8. classify deviations with the shared `P1 / P2 / P3` semantics from `spec_policy.md`
+8. classify deviations with the shared severity meanings defined by `specflow/framework/docs/agent_guidelines/severity_policy.md`
 9. conclude:
    - if any `fail` exists, the result can only be "drift exists; return to stable or enter spec_fork"
    - `partial` and `not_checked` are non-blocking only when `specflow/framework/docs/agent_guidelines/downgrade_policy.md` allows downgrade for the current evidence state

@@ -113,16 +113,9 @@ By default this command reviews:
 
 When the result is `blocked` or `fix_required`, findings must be structured and must not be reduced to vague summaries.
 
-Severity levels:
+Severity must use the shared meanings defined in:
 
-1. `P0`
-   - main-chain break, truth conflict, or key gate distortion
-2. `P1`
-   - implementation meaning is already unstable enough to block downstream planning
-3. `P2`
-   - does not block `cand_plan`, but harms review stability, readability, or maintenance
-4. `P3`
-   - minor elaboration issue
+1. `specflow/framework/docs/agent_guidelines/severity_policy.md`
 
 Each finding must explain:
 

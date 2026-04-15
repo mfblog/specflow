@@ -129,6 +129,10 @@ If you cannot determine exactly which governance files are being reviewed, do no
 6. add background, trigger mechanism, impact scope, and repair suggestion to each finding
 7. give an overall conclusion and the next action for the current review scope
 
+Severity must use the shared meanings defined in:
+
+1. `specflow/framework/docs/agent_guidelines/severity_policy.md`
+
 Fixed principle:
 
 1. judge whether there is a real problem first

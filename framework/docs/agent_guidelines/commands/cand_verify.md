@@ -36,7 +36,7 @@ By default it handles:
    - use it only when automated verification is insufficient but a small amount of human effect judgment can close the remaining uncertainty
    - if human verification confirms implementation deviation while candidate truth still stands, fall back to `cand_impl`
    - if human verification shows acceptance truth itself is still incomplete, fall back to `cand_check`
-8. classify deviations with the shared `P1 / P2 / P3` semantics
+8. classify deviations with the shared severity meanings defined by `specflow/framework/docs/agent_guidelines/severity_policy.md`
 9. conclude:
    - if `fail` exists, do not enter `cand_promote`
    - if `partial` or `not_checked` exists, promotion is allowed only if `specflow/framework/docs/agent_guidelines/downgrade_policy.md` allows downgrade for the current evidence state

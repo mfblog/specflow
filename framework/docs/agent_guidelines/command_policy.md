@@ -172,7 +172,7 @@ The rules below are shared gates. Every command follows them by default:
 4. If there is no valid `_plans/{module}.md`, do not enter `cand_impl` or `cand_verify`.
 5. Do not execute `cand_promote` before `cand_verify` is complete and all blocking items are cleared.
 6. When `Active Layer=stable`, if implementation changed but `stable_verify` has not been done, do not claim the code is still aligned with `stable`.
-7. For modules with `Active Layer=stable`, `stable drift reconciliation` must be completed before `stable_verify`, `spec_fork`, or any work that claims the module still aligns with `stable`.
+7. For modules with `Active Layer=stable`, do not claim the code still aligns with `stable` until `stable_verify` has confirmed that conclusion for the current implementation state.
 8. `Next Command` is the default next permitted action. Do not skip past it unless an explicit rule allows it.
 9. Process files are not valid just because they exist. Their bound Spec layer, Spec file, version references, fingerprints, and command-required fields must also match.
 10. Every module candidate must explicitly record `system_constraints_stable_ref`.
@@ -200,7 +200,7 @@ The rules below are shared gates. Every command follows them by default:
 
 ## 9. Command File Contract
 
-Every command file must contain these sections by default:
+Every command file must contain these core sections by default:
 
 1. `Purpose`
 2. `Scope`
@@ -209,7 +209,7 @@ Every command file must contain these sections by default:
 5. `Stop Conditions`
 6. `Output Contract`
 7. `Non-Goals`
-8. `Examples`
+An `Examples` section is optional and should be included only when it reduces command-entry ambiguity or clarifies a non-obvious boundary.
 
 Additional requirements:
 
@@ -230,3 +230,4 @@ Additional requirements:
 10. If the command requires mandatory close-out work such as a git-history decision, it must explicitly reference the relevant governance rule instead of leaving that step to executor memory.
 11. If the command may raise a checkpoint, it must define the allowed checkpoint types, trigger conditions, and resume rules.
 12. If the command may fall back or block, it must define which standardized `fallback_reason_code` values it may emit instead of leaving fallback wording to executor invention.
+13. If the command grades findings or deviations by severity, it must use one explicitly referenced centralized severity contract instead of redefining severity meanings locally.
