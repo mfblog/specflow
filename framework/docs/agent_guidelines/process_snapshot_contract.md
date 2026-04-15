@@ -156,7 +156,9 @@ It must not duplicate:
 2. `bound_modules`
 3. unrelated shared files not formally bound by the module
 
-If a Shared Appendix file's `bound_modules` field changes, the file fingerprint changes, so the snapshot still detects that drift through `fingerprint`.
+If a Shared Appendix file's `bound_modules` field changes, the file fingerprint may also change.
+That change does not by itself invalidate downstream process files, because `bound_modules` is declarative metadata rather than the module's formal binding source.
+Treat a `bound_modules`-only delta as governance drift to be reported and repaired separately.
 
 ---
 
@@ -168,6 +170,11 @@ When a command or governance flow re-validates a process file, it must:
 2. rebuild `system_constraints_stable_fingerprint` from the current bound stable system-constraints file, or `none`
 3. rebuild `shared_appendix_snapshot` from the module's current-layer bound Shared Appendix set using Section 5
 4. compare the rebuilt values against the process file snapshot fields exactly
+
+Shared Appendix exception:
+
+1. if a rebuilt Shared Appendix snapshot differs only because a bound Shared Appendix file changed `bound_modules`, do not invalidate the process file on that basis alone
+2. in that case, report governance drift instead and keep using the module's formal binding source from `shared_appendix_refs`
 
 If any one of those values differs, the process file is invalid for downstream consumption.
 

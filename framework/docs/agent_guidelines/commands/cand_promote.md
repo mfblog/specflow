@@ -41,7 +41,7 @@ By default it handles:
 9. if `shared_appendix_refs` is not empty, make a forced decision for each bound shared item:
    - migrate to `docs/specs/shared/stable/s_shared_xxx.md`
    - absorb the stable conclusion into `s_system_constraints.md`
-   - absorb the stable conclusion into module `stable` and delete the shared appendix file
+   - absorb the stable conclusion into module `stable` and delete the shared appendix file only when no other module still binds that shared truth after this round
    - if none of those can be completed now, stop promotion
 10. generate or update `docs/specs/stable/s_{module}.md`
 11. if current-round candidate appendix files exist, in the same promotion round either:

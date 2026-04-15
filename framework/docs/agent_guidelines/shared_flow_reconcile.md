@@ -59,7 +59,7 @@ Before execution:
    - skip modules already marked as directly closed in this round
    - if `shared_appendix_refs=none` and the module is not in a changed-binding case, leave it unchanged
    - treat the binding as invalid if the referenced Shared Appendix file is missing, the layer mismatches, the version reference mismatches, or the module-to-shared binding relation changed
-   - for `candidate` modules, also treat it as invalid if any existing process file's `shared_appendix_snapshot` differs from the freshly normalized snapshot
+   - for `candidate` modules, also treat it as invalid if any existing process file's `shared_appendix_snapshot` differs from the freshly normalized snapshot, except when the delta comes only from `bound_modules`
    - for `stable` modules, also treat it as invalid if the stable Shared Appendix truth changed enough that "still aligned with stable" can no longer be claimed safely
 5. For invalid `candidate` modules:
    - delete `docs/specs/_check_result/{module}.md`
@@ -76,6 +76,7 @@ Before execution:
    - state which binding-change command should fix it
    - do not directly rewrite Shared Appendix body content here
    - do not change module state based only on this drift
+   - do not treat a `bound_modules`-only fingerprint delta as candidate-process invalidation
 8. If `_status.md` currently points to a step later than the real smallest actionable step, correct it.
 9. If the task hits git-closure trigger conditions, finish git close-out according to the policy.
 

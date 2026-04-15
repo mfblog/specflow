@@ -57,12 +57,12 @@ Before execution:
    - `proposed_system_constraints_updates`
    - `promotion_to_system_stable`
 6. if Shared Appendix bindings changed, update the affected Shared Appendix `bound_modules`
-7. if other modules were affected but not directly closed in this command, run `shared_flow_reconcile`
-8. update `docs/specs/_status.md`:
+7. update `docs/specs/_status.md`:
    - `Stable=yes`
    - `Candidate=no`
    - `Active Layer=stable`
    - `Next Command=spec_fork`
+8. if other modules were affected but not directly closed in this command, run `shared_flow_reconcile`
 9. perform git close-out if required by policy
 
 ## 5. Stop Conditions

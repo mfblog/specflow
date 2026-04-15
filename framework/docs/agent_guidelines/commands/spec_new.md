@@ -43,12 +43,12 @@ By default this command handles:
    - `proposed_system_constraints_updates`
    - `promotion_to_system_stable`
 7. if Shared Appendix bindings changed, update the corresponding `bound_modules`
-8. if other modules were affected but not directly closed in this command, run `shared_flow_reconcile`
-9. update `_status.md`:
+8. update `_status.md`:
    - `Stable=no`
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=cand_check`
+9. if other modules were affected but not directly closed in this command, run `shared_flow_reconcile`
 10. perform git close-out if required
 
 ## 5. Stop Conditions
