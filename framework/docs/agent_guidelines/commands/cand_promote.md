@@ -33,6 +33,7 @@ By default it handles:
 4. if `_verify_result/{module}.md` is invalid, identify the reason and stop immediately:
    - if code changed after verification -> fall back to `cand_verify`
    - if implementation drift against candidate exists -> fall back to `cand_impl`
+   - if bound Shared Appendix truth, layer, version, or snapshot drifted -> use `fallback_reason_code=shared_appendix_drift` and fall back to `cand_check`
    - if candidate truth or formal global baseline changed -> fall back to `cand_check`
 5. continue only when bindings, coverage, and gate fields all remain valid
 6. before the first file mutation, capture the recovery baseline required by `recovery_policy.md`
