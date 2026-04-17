@@ -560,10 +560,10 @@ You mainly need one simple picture of how these pieces relate.
 ```mermaid
 flowchart LR
     A["module main spec"] --> B["module appendix"]
-    B --> C["another module needs the same formal truth"]
-    C --> D["shared_extract_review"]
-    D --> E["keep it in the module for now"]
-    D --> F["extract into shared appendix"]
+    B --> C["shared natural-language intent"]
+    C --> D["shared_ops:request"]
+    D --> E["route into a standard shared flow"]
+    D --> F["complex case enters checkpoint"]
 ```
 
 How to read this:
@@ -571,56 +571,57 @@ How to read this:
 - keep the module main Spec focused on the module's core behavior
 - if some formal details are too long or too specific for the main file, keep them in that module's appendix
 - if that truth still belongs to only one module, it stays in the module main file or module appendix
-- only when another formal module needs the same formal truth does shared-boundary review begin
+- once you need to work on cross-module shared truth, enter through `shared_ops:{natural-language request}`
 
 Use this simple rule:
 
 - first appearance stays in the current module
 - do not extract something into shared just because it may be reused later
-- when a second formal module needs the same formal truth, review whether the repository should keep only one formal definition
+- when shared work begins, describe the intent directly instead of picking an internal shared flow name
 
 In plain language:
 
 - `appendix` is still module-owned truth
-- `shared appendix` is truth that multiple formal modules depend on
+- `shared contract` is truth that multiple formal modules depend on
 - shared exists to prevent dual source of truth, not to collect vaguely similar ideas
 
-### How To Use `shared_extract_review`
+### How To Use `shared_ops`
 
-`shared_extract_review` is not a normal `{command}:{module}` command.
+`shared_ops:{natural-language request}` is the only user-facing entry for shared governance.
 
-You use it when you want a boundary decision such as:
+Use it when you want to do things such as:
 
-- this truth currently lives in one module, but another module now seems to need the same formal definition
-- you want to know whether the content should stay inside the current module
-- or whether it should now be extracted into shared appendix
+- design shared truth from the start
+- extract already-written module truth into a shared contract
+- bind a module to an existing shared contract
+- check which modules are affected after a shared-contract change
 
-In normal module work, you usually do not need to trigger this flow manually.
-If the boundary needs an explicit decision, you can ask for it in plain language or invoke `shared_extract_review` directly.
+The key rule is:
 
-To trigger it clearly, describe three things:
-
-1. where the current content lives
-2. which other module now seems to need the same truth
-3. that you want a shared-boundary decision
+- you do not need to choose `shared_new`, `shared_extract`, `shared_bind`, or `shared_sync` yourself
+- you describe the intent
+- the agent routes it according to the shared-governance rules
+- if the request cannot be safely routed, the agent must stop at a checkpoint rather than guess
 
 Examples:
 
-- "The fallback protocol currently written in `module_a` is now also needed by `module_b`. Review whether it should be extracted into shared."
-- "Check whether the output schema defined in `module_search` should become shared across `module_search` and `module_recall`."
-- "`shared_extract_review` for the retry semantics currently defined in the `module_agent` appendix and now reused by `module_trace`."
+- `shared_ops:I want to design a shared structured-output fallback contract for both agent and assistant from the start`
+- `shared_ops:Extract the app config topology currently duplicated in module_ai and module_memory into a shared contract`
+- `shared_ops:module_skill needs to reuse shared_app_config_topology`
+- `shared_ops:I changed structured_output_fallback; tell me which modules need fallback`
 
 What happens next:
 
-- the flow reviews whether this is really one shared formal truth
-- it tells you whether the content should stay in the current module for now
-- or whether it should be extracted into shared appendix
-- if a dual source of truth already exists, it tells you that shared closure should happen first
+- the agent first classifies the request into a shared-governance intent
+- if the route is stable, it enters the matching internal shared flow
+- if one request mixes multiple actions and the order would change formal truth, it must stop at a checkpoint
+- that checkpoint should explain the complex intent, why automatic continuation is unsafe, and the recommended action sequence
 
 One important boundary:
 
-- `shared_extract_review` decides the boundary
-- it does not automatically rewrite module files or complete the full extraction by itself
+- `shared_ops` handles only cross-module shared-truth governance
+- it should not replace module lifecycle commands for single-module closure
+- it should not replace module-side `system_constraints_change_proposal` when the real task becomes global-default-rule promotion
 
 ## Advanced Usage
 
@@ -630,8 +631,8 @@ The advanced part is about four things:
 
 - understanding the document structure
 - knowing which files you should customize
-- knowing which advanced flows exist beyond the standard module commands
-- knowing how to call those flows directly when intent recognition is not enough
+- knowing which governance flows exist beyond the standard module commands
+- knowing when the system should stop at a checkpoint instead of guessing
 
 ### The Project Structure
 
@@ -796,12 +797,14 @@ Plain meaning:
 
 This is not for reviewing one business module.
 It is for reviewing the mechanism.
+By default it also reviews the shared-governance rule files inside the governance baseline, not only the main command chain.
+But it reviews whether those shared rules stay coherent; it does not replace `shared_ops` for handling a concrete shared request instance.
 
 ### Internal Flows That Exist But Are Not Normal User Entry Points
 
 There are also internal or non-primary flows such as:
 
-- `shared_flow_reconcile`
+- `shared_sync`
 - `project_standard_create`
 
 You should know they exist, because they are part of the full mechanism.
@@ -810,8 +813,9 @@ But they are not the normal first things users should call directly.
 In plain language:
 
 - `spec_flow_review` is an advanced user-facing review flow
-- `shared_extract_review` was introduced earlier because cross-module sharing is a normal boundary users may need to understand
-- some other flows exist mainly to keep the mechanism closed behind the scenes
+- the default review covers shared-governance rules, not only the main command chain
+- `shared_ops:{natural-language request}` is the only user-facing entry for cross-module shared governance
+- flows such as `shared_sync` exist mainly to keep the mechanism closed behind the scenes
 
 ### How To Invoke Advanced Flows
 
@@ -839,9 +843,10 @@ If you want to deeply understand or redesign the system, read in this order:
 2. `framework/docs/agent_guidelines/command_policy.md`
 3. `framework/docs/agent_guidelines/git_policy.md`
 4. `framework/docs/agent_guidelines/spec_flow_review.md`
-5. `framework/docs/agent_guidelines/shared_extract_review.md`
-6. the command docs under `framework/docs/agent_guidelines/commands/`
-7. the installed project-side files under `docs/`
+5. `framework/docs/agent_guidelines/shared_ops.md`
+6. `framework/docs/agent_guidelines/shared_sync.md`
+7. the command docs under `framework/docs/agent_guidelines/commands/`
+8. the installed project-side files under `docs/`
 
 ## File Ownership
 

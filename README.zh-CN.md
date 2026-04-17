@@ -557,10 +557,10 @@ flowchart LR
 ```mermaid
 flowchart LR
     A["模块主 Spec"] --> B["模块 appendix"]
-    B --> C["另一个模块也需要同一份正式真相"]
-    C --> D["shared_extract_review"]
-    D --> E["暂时留在当前模块"]
-    D --> F["提取到 shared appendix"]
+    B --> C["共享相关自然语言意图"]
+    C --> D["shared_ops:需求描述"]
+    D --> E["进入标准共享链路"]
+    D --> F["复杂场景进入 checkpoint"]
 ```
 
 这张图怎么读：
@@ -568,55 +568,57 @@ flowchart LR
 - 模块主 Spec 只放这个模块最核心的行为定义
 - 如果有些正式内容太长、太细、但仍只属于该模块，就放到这个模块自己的 appendix
 - 只要这份真相还只属于一个模块，它就应该留在模块主文件或模块 appendix 中
-- 只有当另一个正式模块也需要同一份正式真相时，才进入 shared 边界判断
+- 当你开始处理跨模块共享真相时，统一从 `shared_ops:{自然语言需求}` 进入
 
 最简单的规则是：
 
 - 第一次出现时，先留在当前模块
 - 不要因为“将来可能复用”就提前抽成 shared
-- 当第二个正式模块也需要同一份正式真相时，再判断仓库里是否应该只保留一份正式定义
+- 当你确认要处理共享真相时，不需要先记内部链路名，直接描述你的意图
 
 用大白话说：
 
 - `appendix` 仍然是模块自己的真相
-- `shared appendix` 是多个正式模块共同依赖的一份真相
+- `shared contract` 是多个正式模块共同依赖的一份真相
 - shared 的目的，是避免双份真相，不是收集“看起来有点像”的内容
 
-### 如何使用 `shared_extract_review`
+### 如何使用 `shared_ops`
 
-`shared_extract_review` 不是 `{command}:{module}` 这种普通命令。
+`shared_ops:{自然语言需求}` 是 shared 相关治理的唯一用户入口。
 
-你会在下面这些场景下用它来做边界判断：
+你会在下面这些场景下使用它：
 
-- 这份内容现在写在某个模块里，但另一个模块看起来也需要同一份正式定义
-- 你想判断这份内容是否应该继续留在当前模块
-- 或者它是否已经到了应该提取成 shared appendix 的边界
+- 你一开始就想把某部分设计成共享真相
+- 你想把已经写在模块里的某段真相抽成 shared contract
+- 某个模块现在要复用已有 shared contract
+- 你改了 shared contract，想知道会影响哪些模块
 
-在普通模块工作里，你通常不需要手动触发这个 flow。
-如果你需要一个明确的边界判断，可以用自然语言提出来，也可以直接写 `shared_extract_review`。
+最重要的规则是：
 
-为了让触发更清楚，请至少说明三件事：
+- 你不用自己挑 `shared_new`、`shared_extract`、`shared_bind`、`shared_sync`
+- 你只需要把需求说出来
+- agent 会按 shared 规则自动归类
+- 如果无法稳定归类，agent 必须停在 checkpoint，而不是硬猜
 
-1. 当前内容写在哪里
-2. 哪个其他模块现在也需要这份真相
-3. 你想做的是一个 shared 边界判断
+典型写法：
 
-例子：
-
-- “`module_a` 里的 fallback protocol 现在 `module_b` 也要用，帮我判断要不要提取成 shared。”
-- “检查 `module_search` 和 `module_recall` 之间的 output schema 是否应该共享。”
-- “`shared_extract_review`：审查当前写在 `module_agent` appendix 里的 retry semantics，现在 `module_trace` 也要复用。”
+- `shared_ops:我一开始就要设计一个给 agent 和 assistant 共用的结构化输出 fallback 共享契约`
+- `shared_ops:把 module_ai 和 module_memory 里共用的 app config topology 抽成 shared contract`
+- `shared_ops:module_skill 需要复用 shared_app_config_topology`
+- `shared_ops:我刚改了 structured_output_fallback，帮我检查影响哪些模块`
 
 执行后会发生什么：
 
-- 这个 flow 会先判断这是不是同一份 shared formal truth
-- 它会告诉你：现在应该继续留在当前模块，还是应该提取到 shared appendix
-- 如果已经形成双份正式真相风险，它会告诉你应先做 shared 收敛
+- agent 会先判断这次意图属于哪类 shared 操作
+- 如果能稳定归类，它会进入对应的内部共享链路
+- 如果同一句需求里混了多个动作，且顺序会改变正式真相，它必须停在 checkpoint
+- checkpoint 会告诉你：当前识别到的复杂意图、为什么不能自动继续、以及推荐的拆分动作序列
 
 有一个边界必须明确：
 
-- `shared_extract_review` 负责做边界判断
-- 它不会默认自动帮你改模块文件，也不会独自完成完整提取
+- `shared_ops` 只处理跨模块共享真相治理
+- 如果你的任务本质上还是单模块 candidate 收口，它不应替代 module 命令链
+- 如果你的任务已经变成推动全局默认规则，它也不应替代模块内的 `system_constraints_change_proposal`
 
 ## 进阶用法
 
@@ -627,7 +629,7 @@ flowchart LR
 - 理解文档结构
 - 知道哪些文件可以由你来自定义
 - 知道标准模块命令之外还有哪些治理 flow
-- 知道当意图识别不够准确时，怎样显式触发这些 flow
+- 知道当意图识别不够准确时，系统会如何进入 checkpoint
 
 ### 项目结构
 
@@ -792,12 +794,14 @@ Windows PowerShell：
 
 这不是用来审查某个业务模块的。
 它审的是机制本身。
+默认情况下，它会审治理基线里的 shared-governance 规则文件，不只是模块命令链。
+但它审的是这些 shared 规则是否自洽，不是代替 `shared_ops` 去处理具体 shared 请求实例。
 
 ### 存在但不是普通用户入口的内部 flow
 
 还有一些内部或非主要入口 flow，例如：
 
-- `shared_flow_reconcile`
+- `shared_sync`
 - `project_standard_create`
 
 你最好知道它们存在，因为它们是完整机制的一部分。
@@ -806,8 +810,9 @@ Windows PowerShell：
 用大白话说：
 
 - `spec_flow_review` 是一个面向用户的进阶审查 flow
-- `shared_extract_review` 之所以前面单独介绍，是因为跨模块共享是日常边界问题
-- 其他一些 flow 主要是为了让机制内部保持闭环
+- 默认审查会覆盖 shared-governance 规则，不只是主命令链
+- `shared_ops:{自然语言需求}` 是跨模块共享治理的唯一对外入口
+- 像 `shared_sync` 这样的 flow 主要是为了让机制内部保持闭环
 
 ### 如何触发进阶 flow
 
@@ -838,9 +843,10 @@ Windows PowerShell：
 2. `framework/docs/agent_guidelines/command_policy.md`
 3. `framework/docs/agent_guidelines/git_policy.md`
 4. `framework/docs/agent_guidelines/spec_flow_review.md`
-5. `framework/docs/agent_guidelines/shared_extract_review.md`
-6. `framework/docs/agent_guidelines/commands/` 下的命令文档
-7. 项目里安装后的 `docs/` 文件
+5. `framework/docs/agent_guidelines/shared_ops.md`
+6. `framework/docs/agent_guidelines/shared_sync.md`
+7. `framework/docs/agent_guidelines/commands/` 下的命令文档
+8. 项目里安装后的 `docs/` 文件
 
 ## 文件所有权
 

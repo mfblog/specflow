@@ -61,12 +61,13 @@ Additional rules:
 4. Business-module `stable`, `candidate`, and process-instance files are not in the default scope.
 5. The default entry-index set for this flow is the template entry set under `specflow/templates/root/`, not executor guesswork and not the project-side registered-file set.
 6. `entry_index_registry.md` may still be read in this flow, but only to check whether project-side entry ownership and sync rules remain coherent with the template-side design.
-7. Content truth files consumed by governance rules may be read only to confirm how governance binds, reads, or constrains them. Their own business or engineering content is not reviewed by default here.
-8. If `shared_flow_reconcile` exists, this flow only reviews whether it closes the Shared Appendix lifecycle. It does not replace its actual reconciliation work.
-9. If project-local standards are part of the framework baseline extension surface, this flow reviews both:
+7. The default governance baseline explicitly includes shared-governance rule files under `specflow/framework/docs/agent_guidelines/`, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_sync.md`, and `shared_escape.md`.
+8. Content truth files consumed by governance rules may be read only to confirm how governance binds, reads, or constrains them. Their own business or engineering content is not reviewed by default here.
+9. If `shared_sync` exists, this flow only reviews whether it closes the Shared Contract lifecycle. It does not replace its actual reconciliation work.
+10. If project-local standards are part of the framework baseline extension surface, this flow reviews both:
    - whether their registration and consumption rules remain closed
    - whether the current project's registered project-local standard content introduces governance conflict, ambiguity, or gate-semantic drift against the framework baseline
-10. Unregistered files under `docs/project_standards/` are not in the default review scope because they are not formal governance inputs.
+11. Unregistered files under `docs/project_standards/` are not in the default review scope because they are not formal governance inputs.
 
 Do not automatically reinterpret `spec_flow_review` as "review current git diff", "review files touched in this session", or "review recently changed governance files" unless the user explicitly narrows scope that way.
 
@@ -85,6 +86,7 @@ At minimum:
 5. no state is created without any consumer
 6. no action is required without a clear responsible command or rule
 7. no dual source of truth defines the same thing twice
+8. shared-governance routing, closure, and stop responsibility are explicitly covered rather than left implicit under a wildcard scope
 
 ### 3.2 Side-Effect Review
 
@@ -97,6 +99,7 @@ At minimum:
 3. no new path that bypasses an old gate
 4. no regression that turns a previously explicit boundary back into executor guesswork
 5. no ambiguous command matching where one user request can hit multiple flows
+6. no conflict or drift between shared-governance routing rules and the main command system, checkpoint rules, or `system_constraints_change_proposal` boundary
 
 ### 3.3 Post-Review Handling Review
 
@@ -127,19 +130,23 @@ Before execution:
    - `docs/project_standards/_registry.md`
 9. after reading `docs/project_standards/_registry.md`, read only the project-local standard files actively registered there and relevant to governance consumption
 10. if the repository claims the project-local standards extension surface but `docs/project_standards/_registry.md` is missing or invalid, report governance drift instead of silently treating that case as "no project-local standards"
+11. if the scope is the default governance baseline, explicitly confirm that the shared-governance rule set has been read, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_sync.md`, and `shared_escape.md`
+12. do not treat reading only `command_policy.md`, `commands/*.md`, or other main command-chain files as sufficient for a default-scope review when shared-governance rules were not also covered
 
 If you cannot determine exactly which governance files are being reviewed, do not issue a `pass`.
+If a default-scope review did not cover the shared-governance rule set, do not issue a `pass`.
 
 ## 5. Procedure
 
 1. locate the governance files inside the current review scope
 2. if project-local standards are claimed, resolve the active project-local review set from `docs/project_standards/_registry.md` instead of scanning `docs/project_standards/` blindly
 3. map each rule point to the rule objects it affects
-4. run closure review first
-5. run side-effect review second
-6. grade every real problem by severity and blocking status
-7. add background, trigger mechanism, impact scope, and repair suggestion to each finding
-8. give an overall conclusion and the next action for the current review scope
+4. explicitly review whether shared-governance routing, closure, boundary, and stop/checkpoint rules remain coherent with the main command system
+5. run closure review first
+6. run side-effect review second
+7. grade every real problem by severity and blocking status
+8. add background, trigger mechanism, impact scope, and repair suggestion to each finding
+9. give an overall conclusion and the next action for the current review scope
 
 Severity must use the shared meanings defined in:
 
@@ -162,6 +169,7 @@ Findings are allowed only if they hit at least one of these:
 3. harmful side effect
 4. high ambiguity
 5. gate-semantic drift
+6. missing default-scope coverage of required shared-governance rule files
 
 ### 6.2 Findings That Should Not Be Reported By Default
 
@@ -196,5 +204,5 @@ This flow does not:
 1. review business-module behavior design
 2. verify implementation alignment for a concrete module
 3. replace `cand_check`, `cand_verify`, or `stable_verify`
-4. execute reconciliation work in place of `shared_flow_reconcile`
+4. execute reconciliation work in place of `shared_sync`
 5. treat unregistered files under `docs/project_standards/` as active governance inputs
