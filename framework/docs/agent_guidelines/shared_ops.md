@@ -77,13 +77,14 @@ Before routing a `shared_ops` request:
 
 1. read `specflow/framework/docs/agent_guidelines/spec_policy.md`
 2. read `specflow/framework/docs/agent_guidelines/command_policy.md`
-3. read `docs/specs/_status.md` when the request names existing formal modules
-4. resolve each named existing module's current layer from `_status.md` before reading its main Spec
-5. read the current relevant module candidate or stable files after current-layer resolution
-6. read any explicitly referenced appendix truth needed to judge whether the real source truth is module-private, shared, or still boundary-unstable
-7. if the request names modules that do not yet have current-layer Spec files, do not block on that absence before routing
-8. read the relevant `shared_contract` files if the request names shared truth directly
-9. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross the boundary into global-default-rule promotion
+3. read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md` because `shared_ops` may stop through a structured checkpoint
+4. read `docs/specs/_status.md` when the request names existing formal modules
+5. resolve each named existing module's current layer from `_status.md` before reading its main Spec
+6. read the current relevant module candidate or stable files after current-layer resolution
+7. read any explicitly referenced appendix truth needed to judge whether the real source truth is module-private, shared, or still boundary-unstable
+8. if the request names modules that do not yet have current-layer Spec files, do not block on that absence before routing
+9. read the relevant `shared_contract` files if the request names shared truth directly
+10. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross the boundary into global-default-rule promotion
 
 The executor must not route by keyword alone when the named files already show a different formal situation.
 

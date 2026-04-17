@@ -47,6 +47,7 @@ Before execution:
 5. read any current-layer module main files already involved in the request
 6. read any relevant existing `shared_contract` files if the request names or overlaps them
 7. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
+8. if the round may create, update, or delete any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 
 If the request names modules that do not yet have current-layer Spec files and the user intent is explicitly "design shared truth first", do not block on that absence.
 
