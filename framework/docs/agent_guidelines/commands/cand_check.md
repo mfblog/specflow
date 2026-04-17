@@ -23,11 +23,12 @@ By default this command reviews:
 1. whether `progressability` holds
 2. whether `content completeness` holds
 3. whether `Global Constraint Alignment` is explicit and internally consistent
-4. whether bound Shared Appendix relations and body dependencies are consistent
+4. whether bound Shared Contract relations and body dependencies are consistent
 5. whether `system_constraints_stable_ref` matches the current formal global baseline state
-6. whether shared-candidate signals require suggesting `shared_extract_review` or directly reporting a dual-source-of-truth conflict
-7. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
-8. whether any registered project-local review standard applies on a `cand_check`-owned generic review extension surface and tightens the closure decision for the current candidate
+6. whether `system_constraints_change_proposal`, if present, is explicit enough to be implemented and verified in the current round
+7. whether shared-candidate signals require routing into `shared_ops` or directly reporting a dual-source-of-truth conflict
+8. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
+9. whether any registered project-local review standard applies on a `cand_check`-owned generic review extension surface and tightens the closure decision for the current candidate
 
 `cand_check` is not a "minimum can-move-forward review."
 `cand_check pass` always means:
@@ -86,7 +87,7 @@ Project-local review extension contract:
 1. complete required pre-checks
 2. `_status.md` says `Next Command=cand_check`
 3. the module has `candidate`
-4. read explicitly referenced candidate appendix files and bound Shared Appendix files
+4. read explicitly referenced candidate appendix files and bound Shared Contract files
 5. read `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
 6. if `docs/project_standards/_registry.md` exists, read it and only the registered project-local standard files enabled for a `cand_check`-defined supported generic review extension surface
 7. if `docs/project_standards/_registry.md` is missing, stop and report governance drift according to `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
@@ -96,7 +97,7 @@ Project-local review extension contract:
 
 ## 4. Procedure
 
-1. read `docs/specs/candidate/c_{module}.md` plus all required appendix and Shared Appendix files
+1. read `docs/specs/candidate/c_{module}.md` plus all required appendix and Shared Contract files
 2. if `stable` exists, also read `docs/specs/stable/s_{module}.md` plus required stable appendix files
 3. read `docs/specs/system/stable/s_system_constraints.md` if it exists; otherwise continue with the "no formal global baseline yet" state
 4. judge `progressability`
@@ -109,7 +110,7 @@ Project-local review extension contract:
    - `Behavior Basis Completeness`
    - `Decision Surface Completeness`
    - `Acceptance Basis Completeness`
-8. complete the framework-baseline closure checks owned by `cand_check`, including the fixed completeness review objects plus the baseline, shared-appendix, and shared-truth checks below, before finalizing any project-local review merge
+8. complete the framework-baseline closure checks owned by `cand_check`, including the fixed completeness review objects plus the baseline, shared-contract, and shared-truth checks below, before finalizing any project-local review merge
 9. for each `cand_check`-owned supported generic review extension surface:
    - resolve matching registered `review_standard` entries from `docs/project_standards/_registry.md`
    - let each registered standard's own applicability contract decide whether it applies to the current target inside that surface
@@ -120,34 +121,37 @@ Project-local review extension contract:
    - if the formal global baseline exists and the candidate is still compatible, a mechanical update to the current version is allowed
    - if incompatible, the result can only be `blocked` or `fix_required`
    - if the formal global baseline does not exist, `system_constraints_stable_ref` must be `none`
-11. process `shared_appendix_refs`:
-   - if current behavior depends on Shared Appendix truth but bindings are missing or incomplete, the result can only be `blocked` or `fix_required`
+11. process `system_constraints_change_proposal`:
+   - if present, it must clearly state the proposed global rule delta, the reason the current baseline is insufficient, the module-local implementation/verification impact, and the affected modules or shared contracts
+   - if those fields are unclear, the result can only be `blocked` or `fix_required`
+12. process `shared_contract_refs`:
+   - if current behavior depends on Shared Contract truth but bindings are missing or incomplete, the result can only be `blocked` or `fix_required`
    - if bindings exist but the body does not explain which behavior chain reuses them, the result can only be `blocked` or `fix_required`
-12. process shared-candidate signals:
-   - by default, shared-candidate hints only trigger a suggestion to run `shared_extract_review`
+13. process shared-candidate signals:
+   - by default, shared-candidate hints only trigger a suggestion to enter `shared_ops:{natural-language request}`
    - if the current required reading range already confirms a dual source of truth, report it directly as a blocking issue with `fallback_reason_code=shared_truth_conflict`
-13. determine whether a blocking checkpoint is the correct stop form:
+14. determine whether a blocking checkpoint is the correct stop form:
    - use `clarification` when user intent, boundary meaning, or acceptance meaning is still missing from truth
    - use `decision` when multiple materially different directions remain and the user must choose one
-14. checkpoint rules:
+15. checkpoint rules:
    - a checkpoint is not `pass`
    - if a checkpoint conclusion changes behavior truth, it must be written back to candidate or appendix before `cand_check` may be rerun
    - do not write `_check_result/{module}.md` for checkpoint-only stops
-15. merge conclusions in this order:
+16. merge conclusions in this order:
    - `progressability`
    - `content completeness`
    - overall gate conclusion
-16. merge rules:
+17. merge rules:
    - if `progressability` fails -> only `blocked` or `fix_required`
    - if any `critical` completeness gap exists -> only `blocked` or `fix_required`
    - if only `important` or `elaboration` issues remain, `pass` is still possible
-17. if the result is `pass`, create or update `docs/specs/_check_result/{module}.md`
+18. if the result is `pass`, create or update `docs/specs/_check_result/{module}.md`
    - when a supported project-local review extension surface was consumed and this file allows project-side extension write-back for that surface, write the corresponding `project_review_extensions` items together with the pass gate
-18. if the result is not `pass`, do not write a failed `_check_result/{module}.md`; delete an old pass gate if it is no longer valid
-19. update `_status.md`:
+19. if the result is not `pass`, do not write a failed `_check_result/{module}.md`; delete an old pass gate if it is no longer valid
+20. update `_status.md`:
    - if pass -> `Next Command=cand_plan`
    - otherwise -> `Next Command=cand_check`
-20. perform git close-out if required
+21. perform git close-out if required
 
 ## 5. Stop Conditions
 
@@ -206,7 +210,7 @@ Allowed `fallback_reason_code` values:
 
 1. `truth_incomplete`
 2. `baseline_drift`
-3. `shared_appendix_drift`
+3. `shared_contract_drift`
 4. `shared_truth_conflict`
 5. `governance_drift`
 

@@ -23,13 +23,13 @@ Rules:
    - `system_constraints_stable_file_ref`
    - `system_constraints_stable_version_ref`
    - `system_constraints_stable_fingerprint`
-   - `shared_appendix_snapshot`
+   - `shared_contract_snapshot`
 5. `gate` is always `cand_check`.
 6. `next_command` is always `cand_plan`.
 7. `cand_check` creates or overwrites this file only when the result is `pass`.
 8. When `cand_check` does not pass, it must not write a failed-state file; if an old pass gate is no longer valid, delete it.
 9. As soon as candidate truth changes, `_check_result/{module}.md` becomes outdated.
-10. It also becomes outdated when the formal global baseline binding or Shared Appendix snapshot no longer matches current truth.
+10. It also becomes outdated when the formal global baseline binding or Shared Contract snapshot no longer matches current truth.
 11. `spec_fork` must delete the previous round's `_check_result/{module}.md`.
 12. `cand_promote` must delete the corresponding `_check_result/{module}.md`.
 13. Consumers must validate bindings, not just existence.

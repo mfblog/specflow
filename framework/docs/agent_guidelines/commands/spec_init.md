@@ -33,9 +33,9 @@ Before execution:
 3. the module is not yet in `docs/specs/_status.md`
 4. the goal is to capture current truth, not define future design
 5. if the task also touches global baseline, shared mechanisms, or exceptions, read `docs/specs/system/stable/s_system_constraints.md`
-6. if the module involves technical choices, shared infrastructure, cross-module reuse, global exceptions, or system-level proposals, the first `stable` must include `Global Constraint Alignment` or an equivalent section
+6. if the module involves technical choices, shared infrastructure, cross-module reuse, global exceptions, or system-level constraint relationships, the first `stable` must include `Global Constraint Alignment` or an equivalent section
 7. if the task changes `stable`, `_status.md`, or other commit-triggering governance files, read the git policy first
-8. if the task creates or updates `shared_appendix_refs` or `docs/specs/shared/**`, read `specflow/framework/docs/agent_guidelines/shared_flow_reconcile.md` first
+8. if the round creates, updates, or deletes any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 
 ## 4. Procedure
 
@@ -51,25 +51,24 @@ Before execution:
    - `Testability / Acceptance Criteria`
 5. if needed, add `Global Constraint Alignment` with at least:
    - `system_constraints_stable_ref`
-   - `shared_appendix_refs`
+   - `shared_contract_refs`
    - `shared_mechanism_reuse_summary`
    - `global_constraint_exceptions`
-   - `proposed_system_constraints_updates`
-   - `promotion_to_system_stable`
-6. if Shared Appendix bindings changed, update the affected Shared Appendix `bound_modules`
-7. update `docs/specs/_status.md`:
+6. do not introduce `system_constraints_change_proposal` into the first `stable`; that field belongs only to module `candidate`
+7. if the round changed Shared Contract bindings or shared files, update the affected Shared Contract `bound_modules`
+8. update `docs/specs/_status.md`:
    - `Stable=yes`
    - `Candidate=no`
    - `Active Layer=stable`
    - `Next Command=spec_fork`
-8. if other modules were affected but not directly closed in this command, run `shared_flow_reconcile`
-9. perform git close-out if required by policy
+9. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` after `_status.md` has been updated, even when no additional affected module is known yet
+10. perform git close-out if required by policy
 
 ## 5. Stop Conditions
 
 1. the first `stable` exists
 2. `_status.md` registration is complete
-3. Shared Appendix side effects, if any, are closed
+3. Shared Contract side effects, if any, are closed
 4. the command does not automatically open a candidate round
 
 ## 6. Output Contract
@@ -78,8 +77,9 @@ Before execution:
 2. created file path
 3. whether `Global Constraint Alignment` was required and why
 4. `_status.md` update result
-5. git close-out result
-6. next-step suggestion
+5. Shared Contract reconciliation result when the round changed shared truth or bindings
+6. git close-out result
+7. next-step suggestion
 
 ## 7. Non-Goals
 

@@ -11,7 +11,7 @@ By default it handles:
 1. promoting the candidate version into the formal version
 2. updating state files
 3. cleaning this round's candidate and process files
-4. updating `s_system_constraints.md` when needed
+4. updating `s_system_constraints.md` when a closed module-carried global proposal is ready
 5. consuming the `cand_verify -> cand_promote` handoff only when verification still covers the current round
 
 ## 3. Preconditions
@@ -21,9 +21,10 @@ By default it handles:
 3. a latest valid `_verify_result/{module}.md` still covers the current candidate, current implementation, and current formal global baseline state
 4. implementation alignment is complete and no blocking verification issue remains
 5. the candidate's `system_constraints_stable_ref` matches the current formal global baseline state
-6. read required candidate appendix files and bound Shared Appendix files, and decide how each one will be handled after promotion
+6. read required candidate appendix files and bound Shared Contract files, and decide how each one will be handled after promotion
 7. read `specflow/framework/docs/agent_guidelines/recovery_policy.md` before promotion
-8. read the git policy before promotion
+8. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` before promotion
+9. read the git policy before promotion
 
 ## 4. Procedure
 
@@ -33,17 +34,18 @@ By default it handles:
 4. if `_verify_result/{module}.md` is invalid, identify the reason and stop immediately:
    - if code changed after verification -> fall back to `cand_verify`
    - if implementation drift against candidate exists -> fall back to `cand_impl`
-   - if bound Shared Appendix truth, layer, version, or snapshot drifted -> use `fallback_reason_code=shared_appendix_drift` and fall back to `cand_check`
+   - if bound Shared Contract truth, layer, version, or snapshot drifted -> use `fallback_reason_code=shared_contract_drift` and fall back to `cand_check`
    - if candidate truth or formal global baseline changed -> fall back to `cand_check`
 5. continue only when bindings, coverage, and gate fields all remain valid
 6. before the first file mutation, capture the recovery baseline required by `recovery_policy.md`
 7. confirm that candidate `frontmatter.version` is the new `stable` version for this round
-8. if `promotion_to_system_stable=with_module`, absorb `proposed_system_constraints_updates` into `docs/specs/system/stable/s_system_constraints.md`
-9. if `shared_appendix_refs` is not empty, make a forced decision for each bound shared item:
-   - migrate to `docs/specs/shared/stable/s_shared_xxx.md`
-   - absorb the stable conclusion into `s_system_constraints.md`
-   - absorb the stable conclusion into module `stable` and delete the shared appendix file only when no other module still binds that shared truth after this round
-   - if none of those can be completed now, stop promotion
+8. if the module candidate contains a closed `system_constraints_change_proposal` that this round has implemented and verified, absorb the promoted conclusion into `docs/specs/system/stable/s_system_constraints.md`
+9. if `shared_contract_refs` is not empty, decide for each bound shared item:
+   - if it should remain an independent cross-module truth after promotion, promote it into `docs/specs/shared_contracts/stable/`
+   - if part of its conclusion has become a project-wide default rule, also absorb that specific conclusion into `s_system_constraints.md`
+   - do not absorb a Shared Contract into module `stable` merely because promotion happened
+   - do not treat promotion itself as a reason to delete a still-needed Shared Contract
+   - if the required post-promotion truth shape is still unclear, stop promotion
 10. generate or update `docs/specs/stable/s_{module}.md`
 11. if current-round candidate appendix files exist, in the same promotion round either:
    - migrate retained content to `docs/specs/stable/appendix/` or an equivalent dedicated subdirectory
@@ -62,7 +64,7 @@ By default it handles:
    - `_plans/{module}.md`
    - `_verify_result/{module}.md`
 15. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
-16. if other modules were affected by Shared Appendix changes but not directly closed here, run `shared_flow_reconcile`
+16. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer, even when no additional affected module is known yet
 17. perform git close-out if required
 
 ## 5. Stop Conditions
@@ -83,14 +85,15 @@ By default it handles:
 2. formal version confirmation result
 3. file and state update result
 4. `system_constraints` linked-promotion result
-5. cleanup result
-6. `handoff validation result`
-7. `fallback_reason_code` if verification became invalid
-8. fallback reason if verification became invalid
-9. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
-10. recovery-state explanation if incomplete promotion occurred
-11. git close-out result
-12. follow-up state explanation
+5. Shared Contract reconciliation result when the round changed shared truth or bindings
+6. cleanup result
+7. `handoff validation result`
+8. `fallback_reason_code` if verification became invalid
+9. fallback reason if verification became invalid
+10. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
+11. recovery-state explanation if incomplete promotion occurred
+12. git close-out result
+13. follow-up state explanation
    - when promotion succeeds, the follow-up state must explicitly confirm:
      - `Stable=yes`
      - `Candidate=no`
@@ -106,7 +109,7 @@ Allowed `fallback_reason_code` values:
 1. `truth_drift`
 2. `binding_drift`
 3. `baseline_drift`
-4. `shared_appendix_drift`
+4. `shared_contract_drift`
 5. `implementation_deviation`
 6. `evidence_incomplete`
 7. `promotion_recovery`

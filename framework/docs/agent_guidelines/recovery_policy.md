@@ -91,7 +91,7 @@ Before `cand_promote` makes its first file mutation, it must capture a recovery 
 6. current-round `_verify_result/{module}.md`
 7. `docs/specs/stable/s_{module}.md` if it already existed before promotion
 8. `docs/specs/system/stable/s_system_constraints.md` if the round may mutate it
-9. any Shared Appendix files the round may mutate, promote, absorb, or delete
+9. any Shared Contract files the round may mutate, promote, absorb, or delete
 
 Rules:
 
@@ -125,7 +125,7 @@ When incomplete promotion recovery is triggered, the command must:
    - `Active Layer=candidate`
    - `Next Command=cand_check`
 5. keep `Stable=yes|no` consistent with the pre-round module state from the recovery baseline
-6. if the round touched Shared Appendix files or `s_system_constraints.md`, restore those files before claiming recovery complete
+6. if the round touched Shared Contract files or `s_system_constraints.md`, restore those files before claiming recovery complete
 7. after repository restoration, treat existing candidate-side process files as no longer safe for reuse and delete:
    - `_check_result/{module}.md`
    - `_plans/{module}.md`

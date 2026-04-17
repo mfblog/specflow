@@ -14,6 +14,7 @@ By default it handles:
 4. writing `_verify_result/{module}.md`
 5. deciding whether the module may enter `cand_promote`
 6. stopping at a `human_verify` checkpoint only when automation is still insufficient to close confidence
+7. confirming that any `system_constraints_change_proposal` claimed by the current candidate is actually reflected in implementation evidence
 
 ## 3. Preconditions
 
@@ -22,16 +23,16 @@ By default it handles:
 3. a current valid `_check_result/{module}.md` exists
 4. a current valid `_plans/{module}.md` exists
 5. the candidate still aligns with the current formal global baseline state
-6. read required candidate appendix files and bound Shared Appendix files
+6. read required candidate appendix files and bound Shared Contract files
 7. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 8. read the git policy if commit-triggering files may change
 
 ## 4. Procedure
 
-1. read the candidate Spec, required appendix files, Shared Appendix files, pass gate, and plan
+1. read the candidate Spec, required appendix files, Shared Contract files, pass gate, and plan
 2. validate all required bindings
 3. if the pass gate or plan is invalid, stop immediately and fall back `_status.md` to `cand_check`
-4. verify current code against key protocols, main flow, error handling, and acceptance criteria
+4. verify current code against key protocols, main flow, error handling, acceptance criteria, and any explicit `system_constraints_change_proposal`
 5. perform goal-backward verification for each key acceptance claim instead of stopping at artifact existence
 6. for each key claim, judge at minimum:
    - `existence`: the required artifact, path, handler, test, or integration point exists
@@ -92,7 +93,7 @@ Allowed `fallback_reason_code` values:
 2. `truth_drift`
 3. `binding_drift`
 4. `baseline_drift`
-5. `shared_appendix_drift`
+5. `shared_contract_drift`
 6. `implementation_deviation`
 7. `evidence_incomplete`
 8. `truth_incomplete`

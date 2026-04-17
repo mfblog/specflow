@@ -20,12 +20,12 @@ By default it handles:
 3. a current valid `docs/specs/_check_result/{module}.md` exists
 4. a current valid `docs/specs/_plans/{module}.md` exists
 5. the candidate still aligns with the current formal global baseline state
-6. read required candidate appendix files and bound Shared Appendix files
+6. read required candidate appendix files and bound Shared Contract files
 7. read the git policy before implementation work
 
 ## 4. Procedure
 
-1. read the candidate Spec and all required appendix or Shared Appendix files
+1. read the candidate Spec and all required appendix or Shared Contract files
 2. read `s_system_constraints.md` if it exists
 3. read the current `_check_result/{module}.md`
 4. read the current `_plans/{module}.md`
@@ -74,7 +74,7 @@ Allowed `fallback_reason_code` values:
 2. `truth_drift`
 3. `binding_drift`
 4. `baseline_drift`
-5. `shared_appendix_drift`
+5. `shared_contract_drift`
 
 ## 7. Non-Goals
 

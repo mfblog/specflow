@@ -252,7 +252,11 @@ Each command or internal flow that consumes project-local standards must explici
 6. which project-side extension fields, if any, are allowed
 
 `spec_flow_review` is one such governance flow.
-When it runs in the current project instance, it should read the active project-local standards resolved from `docs/project_standards/_registry.md` and review them as governance inputs rather than ignoring their content.
+When it runs in the current project instance, it should:
+
+1. read the active registered project-local standard files resolved from `docs/project_standards/_registry.md` as governance inputs instead of ignoring their content
+2. review those active registered files for governance conflict against the framework baseline
+3. if `spec_flow_review` also defines a project-local overlay surface for tightening or clarifying its own result, resolve that overlay separately under `spec_flow_review.md` rather than using the overlay selector to narrow the governance-input read set
 
 ---
 

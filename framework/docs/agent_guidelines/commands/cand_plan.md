@@ -11,7 +11,7 @@ By default it handles:
 1. reading the current valid candidate pass gate
 2. optionally running research preflight when implementation-critical unknowns still block a stable plan
 3. generating or updating `_plans/{module}.md`
-4. keeping plan bindings aligned with the current candidate, current formal global baseline state, and current Shared Appendix snapshot
+4. keeping plan bindings aligned with the current candidate, current formal global baseline state, and current Shared Contract snapshot
 5. stopping at a structured decision checkpoint only when key implementation direction is still not locked
 
 ## 3. Preconditions
@@ -20,13 +20,13 @@ By default it handles:
 2. `_status.md` says `Next Command=cand_plan`
 3. a current valid `docs/specs/_check_result/{module}.md` exists
 4. the current candidate still aligns with the current formal global baseline state
-5. read any explicitly referenced candidate appendix files and bound Shared Appendix files
+5. read any explicitly referenced candidate appendix files and bound Shared Contract files
 6. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 7. read the git policy if commit-triggering files may change
 
 ## 4. Procedure
 
-1. read the candidate Spec and all required appendix or Shared Appendix files
+1. read the candidate Spec and all required appendix or Shared Contract files
 2. read `s_system_constraints.md` if it exists
 3. read `docs/specs/_check_result/{module}.md`
 4. verify the pass gate bindings are still valid
@@ -64,6 +64,7 @@ By default it handles:
    - set the result shape to `decision-checkpoint`
    - do not create or update `docs/specs/_plans/{module}.md`
    - keep `_status.md` at `cand_plan` when the unresolved decision is implementation-direction only
+   - report `fallback_reason_code=direction_unresolved`
    - use `resume_next_step=cand_check` only when the checkpoint answer must first be written back into candidate truth or appendix truth
 14. create or update `docs/specs/_plans/{module}.md` only when no checkpoint blocks planning and the result is `plan-ready`
 15. ensure the plan records:
@@ -77,7 +78,7 @@ By default it handles:
    - `system_constraints_stable_file_ref`
    - `system_constraints_stable_version_ref`
    - `system_constraints_stable_fingerprint`
-   - `shared_appendix_snapshot`
+   - `shared_contract_snapshot`
 16. update `_status.md`:
    - if the candidate is now ready for implementation -> `Next Command=cand_impl`
    - if candidate truth drift was discovered -> `Next Command=cand_check`
@@ -116,9 +117,10 @@ Allowed `fallback_reason_code` values:
 2. `truth_drift`
 3. `binding_drift`
 4. `baseline_drift`
-5. `shared_appendix_drift`
+5. `shared_contract_drift`
 6. `truth_incomplete`
 7. `implementation_unknown`
+8. `direction_unresolved`
 
 ## 7. Non-Goals
 

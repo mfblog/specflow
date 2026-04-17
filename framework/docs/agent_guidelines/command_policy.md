@@ -41,17 +41,18 @@ Additional notes:
 
 1. Here, `status` always means `docs/specs/_status.md`. It is a state index file, not a behavior source of truth, but every standard command must maintain it according to the rules.
 2. `system_constraints` is the unique global system-constraint object. It is not one of the six ordinary command-process objects.
-3. `shared appendix` is a shared supporting-truth object. It is not one of the six ordinary command-process objects and it is not an independent command target.
+3. `shared contract` is a shared supporting-truth object. It is not one of the six ordinary command-process objects and it is not an independent `{command}:{module}` target.
 4. When a module command needs to judge the formal technical baseline, shared mechanisms, or global exceptions, and `docs/specs/system/stable/s_system_constraints.md` exists, that file must be read as an upstream constraint input.
 5. `system_constraints` does not enter `docs/specs/_status.md` and does not produce its own `_check_result`, `_plans`, or `_verify_result`.
 6. If a module needs to propose a new global constraint change, that proposal can only be written in the module's own `candidate`.
 7. `s_system_constraints.md` may be created or updated only as a linked side product of module `cand_promote`.
+8. That proposal should be recorded as `system_constraints_change_proposal` inside the module candidate rather than as an independent system candidate file.
 
 ---
 
 ## 4. Command Format
 
-The standard command format is:
+The standard module command format is:
 
 ```text
 {command}:{module}
@@ -67,14 +68,29 @@ Additional rules:
 1. `{module}` must use the formal module name, not a file prefix.
 2. `system_constraints` is not a legal command target. Do not write forms such as `spec_new:system_constraints` or `cand_check:system_constraints`.
 3. `{module}` points only to objects formally recognized as modules by the mechanism. Appendix files, topic-expansion files, Prompt source templates, and similar supporting files are not legal command targets.
-4. `shared appendix` is also not a legal command target. Do not write `cand_check:shared_xxx` or equivalent forms.
-5. `shared_flow_reconcile` is not a standard module command in `{command}:{module}` form. Do not write `shared_flow_reconcile:module_xxx`.
-6. `shared_extract_review` is also not a standard module command in `{command}:{module}` form.
+4. `shared contract` is also not a legal module command target. Do not write `cand_check:shared_xxx` or equivalent forms.
+5. `shared_ops:{natural-language request}` is a user-facing shared-governance command entry, but it is not a `{command}:{module}` command.
+6. `shared_new`, `shared_extract`, `shared_bind`, `shared_sync`, and `shared_escape` are internal shared-governance flow names, not direct user-facing commands.
 7. `project_standard_create` is also not a standard module command in `{command}:{module}` form.
 8. checkpoints and clarification actions are not standard commands in `{command}:{module}` form.
 9. only the standard commands listed in Section 5 advance the normal module lifecycle.
 10. Only for the first-version entry commands `spec_init:{module}` and `spec_new:{module}`, `{module}` may point to a new target that is not yet in `_status.md` but already has a clear, non-conflicting module name.
 11. Outside that exception, if a file is not yet registered as an independent formal module in `_status.md`, it must not be treated as a `{module}` target just because its file name, path, or frontmatter looks module-like.
+
+### 4.1 Shared Governance Entry
+
+The user-facing shared-governance entry is:
+
+```text
+shared_ops:{natural-language request}
+```
+
+Rules:
+
+1. `shared_ops` is the only preferred user-facing entry for shared-truth governance
+2. it is intent-driven rather than object-name-driven
+3. it routes into internal shared flows according to `specflow/framework/docs/agent_guidelines/shared_ops.md`
+4. if routing cannot be stabilized safely, it must enter `shared_escape` and then checkpoint when required
 
 ---
 
@@ -100,6 +116,7 @@ Additional requirements:
 1. Any command index document for executors must list all standard commands above, including non-candidate-side commands such as `stable_verify`.
 2. If a command index conflicts with this section, this section and the corresponding command file take precedence, and the drifted index should be corrected in the current task.
 3. The default registry of entry-index documents is defined by `specflow/framework/docs/agent_guidelines/entry_index_registry.md`.
+4. Shared governance is user-entered through `shared_ops:{natural-language request}` rather than being added as a second module-command chain.
 
 ---
 
@@ -175,14 +192,14 @@ The rules below are shared gates. Every command follows them by default:
 8. `Next Command` is the default next permitted action. Do not skip past it unless an explicit rule allows it.
 9. Process files are not valid just because they exist. Their bound Spec layer, Spec file, version references, fingerprints, and command-required fields must also match.
 10. Every module candidate must explicitly record `system_constraints_stable_ref`.
-11. If a module depends on Shared Appendix files at the current layer, it must also explicitly record `shared_appendix_refs`.
+11. If a module depends on Shared Contract files at the current layer, it must also explicitly record `shared_contract_refs`.
 12. If `s_system_constraints.md` exists and the module candidate's `system_constraints_stable_ref` does not equal the current stable system-constraint version, the module's candidate-side process files become invalid and fall back to `cand_check`.
 13. If `s_system_constraints.md` does not exist and the module candidate's `system_constraints_stable_ref` is not `none`, the module's candidate-side process files become invalid and fall back to `cand_check`.
 14. If the effective module-local appendix truth explicitly referenced by the current-layer main Spec changes, the module's candidate-side process files become invalid and fall back to `cand_check`.
-15. If the effective Shared Appendix truth referenced by `shared_appendix_refs` changes, the module's candidate-side process files become invalid and fall back to `cand_check`.
+15. If the effective Shared Contract truth referenced by `shared_contract_refs` changes, the module's candidate-side process files become invalid and fall back to `cand_check`.
 16. A `bound_modules`-only delta does not by itself invalidate candidate-side process files, because `bound_modules` is declarative metadata rather than the module's formal binding source. Report governance drift instead.
 17. If a stable-layer module's explicitly referenced stable appendix truth changes, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.
-18. If a stable-layer module's bound stable Shared Appendix changed, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.
+18. If a stable-layer module's bound stable Shared Contract changed, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.
 19. If a stable-layer module's current stable truth explicitly records `system_constraints_stable_ref` and that recorded reference no longer matches the current formal global baseline state, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.
 20. `cand_verify` does not manage an independent `system_constraints` state machine. It only verifies implementation against the current candidate system.
 21. `cand_promote` must absorb closed global-constraint proposals into `docs/specs/system/stable/s_system_constraints.md` when promotion confirms those proposals are ready.
@@ -200,6 +217,7 @@ The rules below are shared gates. Every command follows them by default:
 33. When a command consumes project-local standards, it must first complete the framework-baseline judgment and then merge project-local results only on the command-defined supported `surface`.
 34. The final command conclusion must still stay inside the framework-defined result set of that command.
 35. A downstream command must not consume a project-side extension field unless that downstream command explicitly declares that consumption contract.
+36. Shared-governance requests must enter through `shared_ops:{natural-language request}` rather than by asking the user to pre-select an internal shared flow.
 
 ---
 
@@ -223,7 +241,7 @@ Additional requirements:
 3. The command file must clearly state its stop conditions.
 4. It must not collapse the responsibilities of candidate truth, `_plans`, `_check_result`, and `_verify_result` into one object.
 5. If the command consumes `system_constraints`, it must state that those are upstream constraints, not the command's primary output.
-6. If the command consumes Shared Appendix files, it must state that they are shared truth objects bound in by a module, not independent command targets.
+6. If the command consumes Shared Contract files, it must state that they are shared truth objects bound in by a module, not independent command targets.
 7. If the command file involves lifecycle closure, fallback, or cleanup, it must not invent an alternative set of top-level rules.
 8. If the command consumes project-local standards, it must clearly define:
    - the supported `surface` names owned by that command

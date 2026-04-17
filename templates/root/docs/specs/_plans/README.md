@@ -17,13 +17,13 @@ Rules:
    - `system_constraints_stable_file_ref`
    - `system_constraints_stable_version_ref`
    - `system_constraints_stable_fingerprint`
-   - `shared_appendix_snapshot`
+   - `shared_contract_snapshot`
 5. `_plans/{module}.md` does not carry the gate decision of `cand_check` or the promotion decision of `cand_verify`.
 6. `cand_plan` creates the file if it does not exist and writes current truth bindings.
 7. `cand_impl` may keep writing progress, blockers, and verification notes, but must not rewrite binding fields.
 8. `cand_verify` still requires a current valid `_plans/{module}.md`.
 9. If candidate truth changes, the plan becomes outdated.
-10. It also becomes outdated when formal global baseline bindings or Shared Appendix bindings drift.
+10. It also becomes outdated when formal global baseline bindings or Shared Contract bindings drift.
 11. Once outdated, the flow must go back to `cand_check` first and then re-run `cand_plan`.
 12. `spec_fork` must delete the previous round's `_plans/{module}.md`.
 13. `cand_promote` must delete the corresponding `_plans/{module}.md`.

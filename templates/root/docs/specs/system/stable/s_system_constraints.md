@@ -35,7 +35,8 @@ This file uses `MAJOR.MINOR.PATCH`:
 When a module candidate references this file in `Global Constraint Alignment`, it must use:
 
 1. `system_constraints_stable_ref: s_system_constraints@<frontmatter.version>`
-2. if the module layer also binds Shared Appendix files, it must additionally record `shared_appendix_refs` in the same section; that field does not replace `system_constraints_stable_ref`
+2. if the module layer also binds Shared Contract files, it must additionally record `shared_contract_refs` in the same section; that field does not replace `system_constraints_stable_ref`
+3. if the module round proposes a global default-rule change, record it in `system_constraints_change_proposal` inside the module candidate rather than creating an independent system candidate file
 
 ## 3. Tech Stack Baseline
 
@@ -70,7 +71,8 @@ When a module candidate references this file in `Global Constraint Alignment`, i
 3. When a module needs background async processing, prefer:
 4. When a module needs shared logging, auditing, or tracing, prefer:
 5. When a module needs to reuse an existing mechanism across modules, require:
-6. When a module needs to reuse shared mechanism text that has not yet been absorbed into the formal global baseline, bind it through Shared Appendix instead of double-writing it under a module appendix
+6. When a module needs to reuse shared mechanism text that has not yet been absorbed into the formal global baseline, bind it through Shared Contract instead of double-writing it under a module appendix
+7. Multiple modules reusing one Shared Contract does not by itself mean that truth has become a global default rule
 
 ## 6. Global Prohibitions / Exceptions
 
@@ -88,4 +90,4 @@ If a module must deviate from this file, at minimum its `Global Constraint Align
 2. why the existing formal constraint does not apply
 3. what the impact scope is
 4. whether the exception is a temporary bridge or intended to drive a future global upgrade
-5. if it also deviates from a Shared Appendix, the relation to that shared object must also be stated
+5. if it also deviates from a Shared Contract, the relation to that shared object must also be stated

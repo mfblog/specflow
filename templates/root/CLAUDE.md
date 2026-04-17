@@ -6,6 +6,11 @@ Content outside the managed block below belongs to the host repository.
 
 Keep repository-specific rules outside the managed block. `specFlow` tooling may update only the managed block.
 
+## Mermaid Communication Rules
+
+- When explaining a Mermaid diagram, refer to nodes by the exact visible text shown in the diagram. Do not refer to nodes only as hidden IDs such as `A`, `B`, or `C`.
+- If short node identifiers are needed for repeated references, include the identifier in the visible node label as well, for example `B["B. Module Main Spec"]`, and use that same visible name in the prose.
+
 <!-- SPECFLOW:BEGIN -->
 ## specFlow Addendum
 
@@ -27,8 +32,8 @@ When a request hits any of the following, handle it with `specFlow` rules:
    - `cand_promote:{module}`
 2. Governance review entries:
    - `spec_flow_review`
-   - `shared_extract_review`
-3. Requests involving module Specs, state progression, candidate closure, formal promotion, Shared Appendix, or system constraints.
+   - `shared_ops:{natural-language request}`
+3. Requests involving module Specs, state progression, candidate closure, formal promotion, Shared Contract, shared_ops routing, or system constraints.
 4. Requests involving registered project-local standards under `docs/project_standards/`.
 5. Requests to create, register, or tighten a project-local standard for the current project.
 
@@ -65,13 +70,16 @@ The standard commands are:
 Governance review entries are:
 
 1. `spec_flow_review`
-2. `shared_extract_review`
+2. `shared_ops:{natural-language request}`
 
 Additional rules:
 
-1. `spec_flow_review` and `shared_extract_review` are not standard module commands in `{command}:{module}` form.
-2. `shared_flow_reconcile` is not a standard user-facing command. It is only used to reconcile state after Shared Appendix changes.
+1. `spec_flow_review` and `shared_ops:{natural-language request}` are not standard module commands in `{command}:{module}` form.
+2. `shared_sync` is an internal shared flow used after Shared Contract changes; users should enter shared work through `shared_ops`.
 3. `project_standard_create` is not a standard user-facing command. It is an internal flow the agent may use when the user asks to create a project-local standard.
+4. plain `spec_flow_review` means the default governance-baseline review defined in `specflow/framework/docs/agent_guidelines/spec_flow_review.md` unless the user explicitly narrows the scope.
+5. that default `spec_flow_review` must cover the shared-governance rule set, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_sync.md`, and `shared_escape.md`, even when the user did not mention shared governance explicitly.
+6. if the review output does not explicitly report shared-governance coverage and result, the `spec_flow_review` is not complete and must not be treated as a `pass`.
 
 ### 3. How To Resolve Modules And Files
 
@@ -105,10 +113,12 @@ If a request is inside the `specFlow` scope but is not a standard command, handl
 2. If it targets a governance object or governance flow:
    - read the governance file that defines that flow's scope, preconditions, and procedure first
    - follow that file's declared read scope instead of automatically starting from `docs/specs/_status.md`
+   - if the flow is plain `spec_flow_review`, do not narrow it to main command-chain files, recent edits, or non-shared rules only unless the user explicitly narrows it that way
+   - before issuing any `pass` conclusion for plain `spec_flow_review`, confirm that the shared-governance rule set required by `spec_flow_review.md` has been read and is explicitly reported in the review output
 3. If it targets a module behavior object:
    - read `docs/specs/_status.md` to confirm the target module's current `Active Layer` and `Next Command`
 4. If the module task touches module behavior truth, read the main Spec for the current layer.
-5. If the main Spec explicitly references appendix files or Shared Appendix files, read them too.
+5. If the main Spec explicitly references appendix files or Shared Contract files, read them too.
 6. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
    - `docs/specs/system/stable/s_system_constraints.md`
 7. Then decide whether the current action is:
@@ -124,8 +134,8 @@ If a request is inside the `specFlow` scope but is not a standard command, handl
 3. Behavior changes must not start from code. Follow `specflow/framework/docs/agent_guidelines/spec_policy.md` first.
 4. A brand-new module may start with `candidate`; its first `stable` is created later by `cand_promote`.
 5. A historical module entering governance for the first time must begin with `spec_init:{module}` to create its first `stable`.
-6. Under `docs/specs/`, every Spec file except `candidate` main files, candidate appendix files, and `docs/specs/shared/candidate/*.md` is a behavior source of truth and should normally enter git history.
-7. `candidate` main files, candidate appendix files, and `docs/specs/shared/candidate/*.md` are draft-layer artifacts. If a task modifies only those files, do not `git commit` by default unless the user asks for it or the active command flow requires it.
+6. Under `docs/specs/`, every Spec file except `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` is a behavior source of truth and should normally enter git history.
+7. `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` are draft-layer artifacts. If a task modifies only those files, do not `git commit` by default unless the user asks for it or the active command flow requires it.
 8. Changes to `specflow/framework/docs/agent_guidelines/*.md` should normally be committed in the current task.
 9. When Spec, command, and git-flow rules conflict, do not guess. Go back to the relevant policy or command file.
 

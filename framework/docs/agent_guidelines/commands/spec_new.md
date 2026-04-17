@@ -17,7 +17,7 @@ By default this command handles:
 1. first-time project initiation for a new module
 2. modules that do not yet have any formally effective version
 3. creation of the first `candidate`
-4. initialization of `system_constraints_stable_ref` and `shared_appendix_refs`
+4. initialization of `system_constraints_stable_ref` and `shared_contract_refs`
 
 ## 3. Preconditions
 
@@ -25,7 +25,7 @@ By default this command handles:
 2. the target module name is explicit
 3. the module is not yet in `_status.md`
 4. the goal is future design first, not capturing current truth first
-5. if Shared Appendix bindings will change, read `shared_flow_reconcile.md`
+5. if the round will create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `shared_sync.md`
 6. if `_status.md` or other commit-triggering governance files will change, read the git policy first
 
 ## 4. Procedure
@@ -37,25 +37,24 @@ By default this command handles:
 5. ensure the file covers the core sections of a formal Spec
 6. initialize `Global Constraint Alignment`:
    - `system_constraints_stable_ref=s_system_constraints@<current_version>` if the formal global baseline exists, otherwise `none`
-   - `shared_appendix_refs=none`
+   - `shared_contract_refs=none`
    - `shared_mechanism_reuse_summary`
    - `global_constraint_exceptions`
-   - `proposed_system_constraints_updates`
-   - `promotion_to_system_stable`
-7. if Shared Appendix bindings changed, update the corresponding `bound_modules`
+   - `system_constraints_change_proposal`
+7. if the round changed Shared Contract bindings or shared files, update the corresponding `bound_modules`
 8. update `_status.md`:
    - `Stable=no`
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=cand_check`
-9. if other modules were affected but not directly closed in this command, run `shared_flow_reconcile`
+9. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` after `_status.md` has been updated, even when no additional affected module is known yet
 10. perform git close-out if required
 
 ## 5. Stop Conditions
 
 1. the first `candidate` exists
 2. `_status.md` registration is complete
-3. Shared Appendix side effects, if any, are closed
+3. Shared Contract side effects, if any, are closed
 4. the command does not automatically continue into implementation
 
 ## 6. Output Contract
@@ -65,8 +64,9 @@ By default this command handles:
 3. initialized candidate version
 4. initialized formal global baseline reference or `none`
 5. `_status.md` update result
-6. git close-out result
-7. remaining closure items
+6. Shared Contract reconciliation result when the round changed shared truth or bindings
+7. git close-out result
+8. remaining closure items
 
 ## 7. Non-Goals
 

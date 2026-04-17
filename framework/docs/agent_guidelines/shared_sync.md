@@ -49,6 +49,7 @@ Before execution:
 7. if a shared file changed or a shared target was named, read every current-layer module main file needed to derive the real binding set from `shared_contract_refs`
 8. read each affected module's current-layer main file according to `_status.md`
 9. if the task may modify `_status.md`, process files, or other commit-triggering governance files, read the Git closure rules first
+10. if the current task changed which layer now carries a directly affected module's formal binding source, `_status.md` must already be updated before this flow builds the current-layer module set
 
 ---
 
@@ -57,7 +58,7 @@ Before execution:
 1. build the current `shared_contract` view:
    - read the files that currently exist under `docs/specs/shared_contracts/candidate/` and `docs/specs/shared_contracts/stable/`
    - record each object's `shared_contract_id`, `layer`, `shared_version`, current body fingerprint, and `bound_modules`
-2. build the repository-wide module current-layer binding index:
+2. build the repository-wide module current-layer binding index from the already-updated `_status.md`:
    - enumerate formal modules from `_status.md`
    - read `Global Constraint Alignment.shared_contract_refs` from each module's current-layer main file needed for binding resolution
    - treat module `shared_contract_refs` as the only formal source of which modules currently bind which shared truth

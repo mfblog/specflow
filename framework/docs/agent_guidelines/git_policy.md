@@ -11,6 +11,7 @@
 7. Changes to registered entry index files are also governance changes and should normally be committed in the current task after entry-file sync is complete.
 8. When `Active Layer=stable` and code changes introduce new formal-layer implementation drift, the module's `Next Command` should normally fall back to `stable_verify`.
 9. `docs/specs/system/stable/s_system_constraints.md` is treated by default as a formal side product of module `cand_promote`.
+10. `docs/specs/shared_contracts/candidate/*.md` are draft-layer shared truth files and follow candidate-layer commit rules by default.
 
 ---
 
@@ -40,9 +41,9 @@ Applicable case:
 Rules:
 
 1. The commit must update or create the corresponding `stable`.
-2. The commit must delete the round's `docs/specs/candidate/c_{module}.md` and that module's round-specific candidate appendix files under `docs/specs/candidate/appendix/` or an equivalent dedicated subdirectory. If the round also handled Shared Appendix files, it must also resolve the corresponding `docs/specs/shared/candidate/*.md` or `docs/specs/shared/stable/*.md`.
+2. The commit must delete the round's `docs/specs/candidate/c_{module}.md` and that module's round-specific candidate appendix files under `docs/specs/candidate/appendix/` or an equivalent dedicated subdirectory. If the round also handled Shared Contract files, it must also resolve the corresponding `docs/specs/shared_contracts/candidate/*.md` or `docs/specs/shared_contracts/stable/*.md`.
 3. If `_check_result/{module}.md`, `_verify_result/{module}.md`, or `_plans/{module}.md` exist for the round, they must be deleted in the same commit.
-4. If the module candidate has `promotion_to_system_stable=with_module`, the same commit must also update `docs/specs/system/stable/s_system_constraints.md`.
+4. If the module candidate contains a closed `system_constraints_change_proposal` that is promoted in the same round, the same commit must also update `docs/specs/system/stable/s_system_constraints.md`.
 
 ---
 
@@ -79,9 +80,11 @@ Notes:
 
 Rules:
 
-1. The default closure scope of `cand_promote` includes only the round's module `stable`, any linked update to `s_system_constraints.md`, any Shared Appendix handled in the round, and cleanup of the round's candidate main file, candidate appendix files, and candidate-side process files.
-2. This repository does not currently require maintaining a root `VERSION` file during `cand_promote`.
-3. This repository does not currently require creating a Git tag during `cand_promote`.
+1. The default closure scope of `cand_promote` includes only the round's module `stable`, any linked update to `s_system_constraints.md`, any Shared Contract handled in the round, and cleanup of the round's candidate main file, candidate appendix files, and candidate-side process files.
+2. Promotion does not by itself force a Shared Contract to be absorbed into `s_system_constraints.md` or module `stable`.
+3. A Shared Contract may remain an independent stable shared truth after promotion.
+4. This repository does not currently require maintaining a root `VERSION` file during `cand_promote`.
+5. This repository does not currently require creating a Git tag during `cand_promote`.
 
 ---
 
@@ -91,8 +94,8 @@ Rules:
 
 If the task changes only `docs/specs/*.md`:
 
-1. If it changes `docs/specs/candidate/c_{module}.md`, candidate appendix files under `docs/specs/candidate/appendix/` or an equivalent dedicated subdirectory, or `docs/specs/shared/candidate/*.md`, do not commit by default unless the user explicitly asks for it or the active command flow requires it.
-2. If it changes `docs/specs/stable/*.md`, stable appendix files under `docs/specs/stable/appendix/*.md` or an equivalent dedicated subdirectory, `docs/specs/shared/stable/*.md`, `docs/specs/system/stable/*.md`, `docs/specs/_status.md`, `docs/specs/_check_result/*.md`, `docs/specs/_verify_result/*.md`, or `docs/specs/_plans/*.md`, it should normally be committed in the current task.
+1. If it changes `docs/specs/candidate/c_{module}.md`, candidate appendix files under `docs/specs/candidate/appendix/` or an equivalent dedicated subdirectory, or `docs/specs/shared_contracts/candidate/*.md`, do not commit by default unless the user explicitly asks for it or the active command flow requires it.
+2. If it changes `docs/specs/stable/*.md`, stable appendix files under `docs/specs/stable/appendix/*.md` or an equivalent dedicated subdirectory, `docs/specs/shared_contracts/stable/*.md`, `docs/specs/system/stable/*.md`, `docs/specs/_status.md`, `docs/specs/_check_result/*.md`, `docs/specs/_verify_result/*.md`, or `docs/specs/_plans/*.md`, it should normally be committed in the current task.
 3. If `stable` changes, treat it as a formal contract change. If the task hits `cand_promote`, follow the promotion-commit rules.
 4. If a `candidate` change belongs to the same command flow as the corresponding code implementation, plan file, or promotion commit, it may be committed together with that flow.
 

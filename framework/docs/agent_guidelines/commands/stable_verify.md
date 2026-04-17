@@ -32,13 +32,13 @@ It does not:
 4. the target module is explicit
 5. the module has valid `stable`
 6. there is actual implementation context that must be checked
-7. read any explicitly referenced stable appendix files or bound stable Shared Appendix files
+7. read any explicitly referenced stable appendix files or bound stable Shared Contract files
 8. read `s_system_constraints.md` if the stable truth explicitly records `system_constraints_stable_ref`, or if the verification scenario otherwise requires global-baseline or shared-mechanism judgment
 9. read the git policy if commit-triggering files may change
 
 ## 4. Procedure
 
-1. read `docs/specs/stable/s_{module}.md` and any required appendix or Shared Appendix files
+1. read `docs/specs/stable/s_{module}.md` and any required appendix or Shared Contract files
 2. if the stable truth explicitly records `system_constraints_stable_ref`, or if the verification scenario otherwise requires global-baseline or shared-mechanism judgment, read `s_system_constraints.md`
 3. if the stable truth explicitly records `system_constraints_stable_ref`, judge whether that recorded reference still matches the current formal global baseline state
 4. verify current code against key protocols, main flow, error handling, and acceptance criteria in `stable`
@@ -100,7 +100,7 @@ Allowed `fallback_reason_code` values:
 1. `truth_drift`
 2. `implementation_deviation`
 3. `evidence_incomplete`
-4. `shared_appendix_drift`
+4. `shared_contract_drift`
 5. `baseline_drift`
 
 ## 7. Non-Goals

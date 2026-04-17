@@ -25,13 +25,14 @@ Candidate-side fallback, blocking, and resume explanations must use these standa
 3. `truth_drift`
 4. `binding_drift`
 5. `baseline_drift`
-6. `shared_appendix_drift`
+6. `shared_contract_drift`
 7. `shared_truth_conflict`
 8. `governance_drift`
 9. `implementation_deviation`
 10. `evidence_incomplete`
 11. `implementation_unknown`
-12. `promotion_recovery`
+12. `direction_unresolved`
+13. `promotion_recovery`
 
 Meaning rules:
 
@@ -45,8 +46,8 @@ Meaning rules:
    - a process file still exists but its required bindings no longer match the current truth
 5. `baseline_drift`
    - the formal global baseline relation no longer matches the current round
-6. `shared_appendix_drift`
-   - Shared Appendix truth, layer, version, body, or binding changed enough to invalidate the handoff
+6. `shared_contract_drift`
+   - a bound `shared_contract` truth, layer, version, body, or binding changed enough to invalidate the handoff
 7. `shared_truth_conflict`
    - the current required reading range already confirms that the same formal behavior truth is defined twice and shared closure must happen before downstream work may continue
 8. `governance_drift`
@@ -57,7 +58,9 @@ Meaning rules:
    - current verification evidence is still insufficient to close the next gate safely
 11. `implementation_unknown`
    - candidate truth still stands, but bounded implementation-critical unknowns, external conditions, or missing implementation facts still prevent a stable plan from being written
-12. `promotion_recovery`
+12. `direction_unresolved`
+   - candidate truth still stands, but more than one materially different implementation direction remains viable and a user decision is required before a stable plan may be written
+13. `promotion_recovery`
    - `cand_promote` had already started mutating repository state and had to restore the module back to candidate semantics before the chain could continue
 
 Executors may add natural-language explanation, but the standardized code must appear first when a fallback or blocking reason is reported.
@@ -80,7 +83,7 @@ Before consumption, `cand_plan` must re-validate:
 4. current candidate file path, version ref, and fingerprint
 5. current `module_appendix_snapshot`
 6. current `system_constraints` binding fields
-7. current `shared_appendix_snapshot`
+7. current `shared_contract_snapshot`
 
 ### 3.3 Allowed Entry Condition
 
@@ -99,8 +102,9 @@ Use only:
 3. `truth_drift`
 4. `binding_drift`
 5. `baseline_drift`
-6. `shared_appendix_drift`
+6. `shared_contract_drift`
 7. `implementation_unknown`
+8. `direction_unresolved`
 
 ---
 
@@ -122,7 +126,7 @@ Before consumption, `cand_impl` must re-validate:
 3. plan-bound candidate file path, version ref, and fingerprint
 4. plan-bound `module_appendix_snapshot`
 5. plan-bound `system_constraints` fields
-6. plan-bound `shared_appendix_snapshot`
+6. plan-bound `shared_contract_snapshot`
 
 ### 4.3 Allowed Entry Condition
 
@@ -140,7 +144,7 @@ Use only:
 2. `truth_drift`
 3. `binding_drift`
 4. `baseline_drift`
-5. `shared_appendix_drift`
+5. `shared_contract_drift`
 
 ---
 
@@ -178,7 +182,7 @@ Use only:
 2. `truth_drift`
 3. `binding_drift`
 4. `baseline_drift`
-5. `shared_appendix_drift`
+5. `shared_contract_drift`
 6. `implementation_deviation`
 7. `evidence_incomplete`
 8. `truth_incomplete`
@@ -202,7 +206,7 @@ Before consumption, `cand_promote` must re-validate:
 5. current `module_appendix_snapshot`
 6. current implementation still covered by `verification_scope_ref`
 7. current `system_constraints` binding fields
-8. current `shared_appendix_snapshot`
+8. current `shared_contract_snapshot`
 
 ### 6.3 Allowed Entry Condition
 
@@ -221,7 +225,7 @@ Use only:
 1. `truth_drift`
 2. `binding_drift`
 3. `baseline_drift`
-4. `shared_appendix_drift`
+4. `shared_contract_drift`
 5. `implementation_deviation`
 6. `evidence_incomplete`
 

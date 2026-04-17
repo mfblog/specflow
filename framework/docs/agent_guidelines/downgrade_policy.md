@@ -98,7 +98,7 @@ Downgrade is forbidden when any of the following hold:
 2. any unchecked or partially checked item covers a key acceptance point with no other direct evidence
 3. the missing evidence could hide a protocol break, state-machine break, persistence break, or externally visible behavior break
 4. the current round cannot explain why the remaining uncertainty is low-risk
-5. the missing evidence was caused by truth drift, binding drift, shared-appendix drift, or baseline drift
+5. the missing evidence was caused by truth drift, binding drift, shared-contract drift, or baseline drift
 
 When downgrade is forbidden:
 
@@ -122,7 +122,7 @@ If downgrade does not hold:
 
 1. use `implementation_deviation` when checked evidence shows the code does not satisfy the candidate
 2. use `evidence_incomplete` when the code may still be correct but the remaining uncertainty is not bounded tightly enough
-3. use `truth_drift`, `binding_drift`, `baseline_drift`, or `shared_appendix_drift` when the upstream truth relation changed
+3. use `truth_drift`, `binding_drift`, `baseline_drift`, or `shared_contract_drift` when the upstream truth relation changed
 
 ### 6.2 `stable_verify`
 
@@ -137,7 +137,7 @@ If downgrade does not hold:
 1. use `implementation_deviation` when checked evidence shows drift from `stable`
 2. use `evidence_incomplete` when alignment cannot be claimed safely because the remaining uncertainty is still too large
 3. use `truth_drift` when the current stable main file or an explicitly referenced stable appendix changed enough that stable alignment must be re-judged first
-4. use `shared_appendix_drift` when a bound stable Shared Appendix changed enough that stable alignment can no longer be claimed safely
+4. use `shared_contract_drift` when a bound stable Shared Contract changed enough that stable alignment can no longer be claimed safely
 
 ---
 

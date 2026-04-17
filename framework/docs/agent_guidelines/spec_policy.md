@@ -87,11 +87,12 @@ A formal Spec file must cover at least:
 
 ### 2.5 Formal Module vs Supporting File
 
-Spec files in the repository are divided into three categories:
+Spec files in the repository are divided into four governance objects:
 
 1. formal module files
 2. single-module supporting expansion files
-3. shared supporting expansion files
+3. shared-contract files
+4. `system_constraints`
 
 Project-local standards under `docs/project_standards/` are not a fourth kind of module Spec object.
 They are project-local governance inputs controlled by `specflow/framework/docs/agent_guidelines/project_standards_policy.md`.
@@ -136,9 +137,10 @@ Frontmatter rules:
 3. use `spec_version_ref: s_{module}@... | c_{module}@...`
 4. do not use `id: module_xxx` because that is too easily misread as an independent formal module identifier
 
-#### 2.5.3 Shared Supporting Expansion Files
+#### 2.5.3 Shared Contract Files
 
-Shared Appendix files are not formal modules. They are shared truth objects reused by multiple formal modules.
+`shared_contract` files are not formal modules.
+They are independent shared truth objects reused by multiple formal modules.
 
 Examples include:
 
@@ -152,45 +154,61 @@ Rules:
 
 1. they are not legal `{command}:{module}` targets
 2. they may exist at both `candidate` and `stable`
-3. they enter a module's truth-reading surface only when explicitly bound in that module's current-layer `Global Constraint Alignment.shared_appendix_refs`
+3. they enter a module's truth-reading surface only when explicitly bound in that module's current-layer `Global Constraint Alignment.shared_contract_refs`
 4. their lifecycle depends on the command chains of modules that bind them
 5. `bound_modules` is only a declaration of which modules the current text is expected to serve; it does not replace formal binding semantics
+6. they are not module appendices, because they do not belong to one module
+7. they do not become `system_constraints` automatically during promotion
 
 Shared-boundary rules:
 
-1. `shared` does not mean "might be reused later"; it means "multiple formal modules depend on one truth that should have exactly one formal definition"
-2. the first appearance of content should stay in the current module body or appendix by default
-3. only when a second formal module needs the same formal truth does the content become a shared candidate
-4. if content is only thematically similar or structurally similar, it is not shared
-5. use one shared object per shared file
-6. do not permanently stuff unrelated shared topics into one umbrella shared file
-7. use `specflow/framework/docs/agent_guidelines/shared_extract_review.md` for formal shared-boundary review
+1. `shared_contract` does not mean "might be reused later"; it means "one formal truth should exist independently because multiple formal modules depend on it now or that cross-module dependency is already architecturally explicit from the start"
+2. the default path is still to keep the first appearance of content in the current module body or appendix
+3. when a second formal module clearly needs the same formal truth, that truth should become a shared candidate instead of remaining duplicated in module-local truth
+4. when the shared truth is already architecturally explicit from the start, a candidate-layer `shared_contract` may be created before any consumer module candidate exists
+5. in that architecture-first case, the shared file is still valid candidate shared truth, but formal binding still begins only when a module current-layer `shared_contract_refs` points to it
+6. if content is only thematically similar or structurally similar, it is not shared
+7. use one shared object per shared file
+8. do not permanently stuff unrelated shared topics into one umbrella shared file
+9. use `specflow/framework/docs/agent_guidelines/shared_ops.md` for shared-governance routing and formal shared-boundary review
+
+Boundary against `system_constraints`:
+
+1. `shared_contract` answers "which shared truth multiple modules currently reuse"
+2. `system_constraints` answers "which global default rules are formally effective for the whole project now"
+3. a `shared_contract` may stay permanently independent even after promotion
+4. only conclusions that have become project-wide default rules should be absorbed into `system_constraints`
 
 Shared directory rules:
 
-1. candidate shared files belong under `docs/specs/shared/candidate/`
-2. stable shared files belong under `docs/specs/shared/stable/`
+1. candidate shared files belong under `docs/specs/shared_contracts/candidate/`
+2. stable shared files belong under `docs/specs/shared_contracts/stable/`
 3. they must not remain under one module's appendix path pretending to be module-local appendix files
 4. if such directory drift is found, the discovering standard command must migrate the file and fix bindings before continuing
 
 Shared reading, invalidation, and cleanup rules:
 
-1. if `shared_appendix_refs` is not empty, executors must read the bound Shared Appendix files together with the module's current-layer truth
-2. `cand_check`, `cand_plan`, `cand_impl`, `cand_verify`, `stable_verify`, and `spec_fork` must not skip bound Shared Appendix files
-3. if a bound Shared Appendix's effective truth changes, all module candidate-side process files still carrying the old snapshot become invalid and fall back to `cand_check`
+1. if `shared_contract_refs` is not empty, executors must read the bound Shared Contract files together with the module's current-layer truth
+2. `cand_check`, `cand_plan`, `cand_impl`, `cand_verify`, `stable_verify`, and `spec_fork` must not skip bound Shared Contract files
+3. if a bound Shared Contract's effective truth changes, all module candidate-side process files still carrying the old snapshot become invalid and fall back to `cand_check`
 4. if the only delta is `bound_modules`, do not invalidate candidate-side process files on that basis alone; report governance drift instead
-5. if a stable Shared Appendix changes, any claim that a module still aligns with `stable` must be re-read and re-judged
-6. Shared Appendix files are not cleaned up merely because one module finished promotion; they may be cleaned only when no module still binds them, when they are replaced by newer shared files, or when their stable conclusions have been fully absorbed into the formal global baseline
-7. if `bound_modules` diverges from the real set implied by module `shared_appendix_refs`, that is governance drift and must be repaired by the command responsible for the binding change
-8. any task that changes `docs/specs/shared/**` or any module's `shared_appendix_refs` must complete Shared Appendix state reconciliation before claiming the state is closed
+5. if a stable Shared Contract changes, any claim that a module still aligns with `stable` must be re-read and re-judged
+6. Shared Contract files are not cleaned up merely because one module finished promotion; they may be cleaned only when no module still binds them, when they are replaced by newer shared files, or when their stable conclusions have been fully absorbed into the formal global baseline
+7. if `bound_modules` diverges from the real set implied by module `shared_contract_refs`, that is governance drift and must be repaired by the command responsible for the binding change
+8. any task that changes `docs/specs/shared_contracts/**` or any module's `shared_contract_refs` must complete Shared Contract state reconciliation before claiming the state is closed
 
 Shared frontmatter should include at least:
 
-1. `shared_id: shared_xxx`
+1. `shared_contract_id: shared_xxx`
 2. `layer: stable | candidate`
 3. `shared_version: <semver>`
 4. `bound_modules`
 5. `system_constraints_stable_ref`
+
+Additional rules:
+
+1. if no module formally binds the shared truth yet, `bound_modules` may be `none`
+2. expected future consumers should be recorded as body-level planning text rather than being treated as formal bindings before `shared_contract_refs` exists
 
 ---
 
@@ -265,20 +283,31 @@ When a module involves technical choices, shared infrastructure, cross-module re
 
 At minimum that section should cover:
 
+For both `stable` and `candidate`:
+
 1. `system_constraints_stable_ref`
-2. `shared_appendix_refs`
+2. `shared_contract_refs`
 3. `shared_mechanism_reuse_summary`
 4. `global_constraint_exceptions`
-5. `proposed_system_constraints_updates`
-6. `promotion_to_system_stable`
+
+For `candidate` only:
+
+5. `system_constraints_change_proposal`
 
 Rules:
 
 1. if the formal global baseline exists, `system_constraints_stable_ref` must equal the current stable system-constraint version
 2. if no formal global baseline exists yet, it must be `none`
-3. if the module behavior depends on Shared Appendix truth, `shared_appendix_refs` must bind it explicitly
-4. if the module deviates from global constraints or Shared Appendix truth, that deviation must be written explicitly instead of implied
-5. if a stable-layer Spec explicitly records `system_constraints_stable_ref` and that recorded reference no longer matches the current formal global baseline state, the module may no longer claim it still aligns with `stable` and must fall back to `stable_verify`
+3. if the module behavior depends on Shared Contract truth, `shared_contract_refs` must bind it explicitly
+4. if the module deviates from global constraints or Shared Contract truth, that deviation must be written explicitly instead of implied
+5. `system_constraints_change_proposal` exists only in module `candidate`; it is not an independent command target or lifecycle object
+6. a stable-layer Spec must not treat `system_constraints_change_proposal` as an active required field or active proposal container
+7. `system_constraints_change_proposal` should state at minimum:
+   - which global default rule is being added, changed, or removed
+   - why the current formal baseline is insufficient
+   - how the current module round implements and verifies against that proposal
+   - which modules or shared contracts would be affected if promoted
+8. if a stable-layer Spec explicitly records `system_constraints_stable_ref` and that recorded reference no longer matches the current formal global baseline state, the module may no longer claim it still aligns with `stable` and must fall back to `stable_verify`
 
 ---
 
@@ -293,7 +322,7 @@ The main process files are:
 3. `_verify_result/{module}.md`
 
 Their validity never depends on file existence alone.
-They remain valid only when their binding fields still match the current candidate main file, the current-layer module appendix snapshot when applicable, the current global baseline state, and the current Shared Appendix snapshot when applicable.
+They remain valid only when their binding fields still match the current candidate main file, the current-layer module appendix snapshot when applicable, the current global baseline state, and the current Shared Contract snapshot when applicable.
 
 They must also satisfy the centralized candidate handoff contract defined in:
 
@@ -307,7 +336,7 @@ Additional rules:
 1. process files are not checkpoints
 2. process files must not be used as a substitute for writing updated truth back into candidate or appendix files
 3. when a command reports fallback, blocking, or resume decisions about process-file invalidation, it should use the standardized `fallback_reason_code` first and only then add natural-language explanation
-4. when a process file records `spec_fingerprint`, `module_appendix_snapshot`, `system_constraints_stable_fingerprint`, or `shared_appendix_snapshot`, those fields must use the fixed definitions from `process_snapshot_contract.md`
+4. when a process file records `spec_fingerprint`, `module_appendix_snapshot`, `system_constraints_stable_fingerprint`, or `shared_contract_snapshot`, those fields must use the fixed definitions from `process_snapshot_contract.md`
 
 ---
 
@@ -334,7 +363,7 @@ The default closure logic is:
 1. `stable`-side verification keeps or restores confidence in the current formal version
 2. `candidate`-side work must move through `cand_check -> cand_plan -> cand_impl -> cand_verify -> cand_promote`
 3. invalid process files force fallback to the smallest still-valid step
-4. Shared Appendix changes may invalidate many modules at once and must be reconciled explicitly
+4. Shared Contract changes may invalidate many modules at once and must be reconciled explicitly
 5. formal promotion must clean the round's candidate files and process artifacts
 
 Checkpoint relationship rules:

@@ -23,12 +23,12 @@ Rules:
    - `system_constraints_stable_file_ref`
    - `system_constraints_stable_version_ref`
    - `system_constraints_stable_fingerprint`
-   - `shared_appendix_snapshot`
+   - `shared_contract_snapshot`
 5. `gate` is always `cand_verify`.
 6. `next_command` may only be `cand_promote`, `cand_verify`, `cand_impl`, or `cand_check`.
 7. `cand_verify` creates the file if it does not exist and later overwrites it instead of appending review noise.
 8. If candidate truth changes, or implementation changes after verification, the file becomes outdated.
-9. It also becomes outdated when formal global baseline bindings or Shared Appendix bindings drift.
+9. It also becomes outdated when formal global baseline bindings or Shared Contract bindings drift.
 10. `spec_fork` must delete the previous round's `_verify_result/{module}.md`.
 11. `cand_promote` must delete the corresponding `_verify_result/{module}.md`.
 12. Consumers must validate bindings, not just existence.

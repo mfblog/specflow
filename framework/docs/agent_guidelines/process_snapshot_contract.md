@@ -9,7 +9,7 @@ It answers six questions:
 1. what `spec_fingerprint` means
 2. what `module_appendix_snapshot` means
 3. what `system_constraints_stable_fingerprint` means
-4. what `shared_appendix_snapshot` means
+4. what `shared_contract_snapshot` means
 5. how these values must be normalized before comparison
 6. which files must use this contract
 
@@ -24,7 +24,7 @@ This contract governs snapshot fields written into:
 1. `docs/specs/_check_result/{module}.md`
 2. `docs/specs/_plans/{module}.md`
 3. `docs/specs/_verify_result/{module}.md`
-4. any governance flow that re-validates those snapshot fields, including `shared_flow_reconcile`
+4. any governance flow that re-validates those snapshot fields, including `shared_sync`
 
 It does not define business-module truth.
 It only defines how process files record the truth version they were written against.
@@ -64,7 +64,7 @@ Rules:
 
 1. include only current-layer module-local supporting files explicitly referenced by the current-layer main Spec file
 2. do not include the main Spec file itself
-3. do not include Shared Appendix files from `shared_appendix_refs`
+3. do not include Shared Contract files from `shared_contract_refs`
 4. if no module-local appendix file is explicitly referenced by the current-layer main Spec file, use literal `none`
 5. do not use an empty list, `null`, omitted field, or natural-language placeholder text
 
@@ -131,17 +131,17 @@ Plain meaning:
 
 ---
 
-## 5. Shared Appendix Snapshot Contract
+## 5. Shared Contract Snapshot Contract
 
 ### 5.1 Shape
 
-`shared_appendix_snapshot` records the exact Shared Appendix set bound by the current module round.
+`shared_contract_snapshot` records the exact Shared Contract set bound by the current module round.
 
 It has only two legal forms:
 
 1. literal `none`
 2. a normalized ordered list where each item contains:
-   - `shared_id`
+   - `shared_contract_id`
    - `layer`
    - `file_ref`
    - `version_ref`
@@ -149,7 +149,7 @@ It has only two legal forms:
 
 ### 5.2 When To Use `none`
 
-Use literal `none` only when the module current-layer truth binds no Shared Appendix files.
+Use literal `none` only when the module current-layer truth binds no Shared Contract files.
 
 Do not use:
 
@@ -162,23 +162,23 @@ Do not use:
 
 For each snapshot item:
 
-1. `shared_id`
-   - the Shared Appendix identifier from that file's frontmatter
+1. `shared_contract_id`
+   - the `shared_contract_id` from that file's frontmatter
 2. `layer`
    - `candidate` or `stable`
 3. `file_ref`
-   - the exact repository path of the bound Shared Appendix file
+   - the exact repository path of the bound Shared Contract file
 4. `version_ref`
    - `<shared_file_prefix>@<shared_version>`
    - for example `c_shared_xxx@0.1.0` or `s_shared_xxx@1.0.0`
 5. `fingerprint`
-   - the Section 3 hash of the exact bound Shared Appendix file
+   - the Section 3 hash of the exact bound Shared Contract file
 
 ### 5.4 Ordering Rules
 
-When `shared_appendix_snapshot` is a list, normalize ordering before write-back or comparison:
+When `shared_contract_snapshot` is a list, normalize ordering before write-back or comparison:
 
-1. sort by `shared_id`
+1. sort by `shared_contract_id`
 2. then by `layer`
 3. then by `file_ref`
 
@@ -186,15 +186,15 @@ Executors must compare the normalized ordered form.
 
 ### 5.5 Inclusion Boundary
 
-`shared_appendix_snapshot` records only the Shared Appendix files formally bound by the module current-layer truth.
+`shared_contract_snapshot` records only the Shared Contract files formally bound by the module current-layer truth.
 
 It must not duplicate:
 
-1. the module's own `shared_appendix_refs` prose
+1. the module's own `shared_contract_refs` prose
 2. `bound_modules`
 3. unrelated shared files not formally bound by the module
 
-If a Shared Appendix file's `bound_modules` field changes, the file fingerprint may also change.
+If a Shared Contract file's `bound_modules` field changes, the file fingerprint may also change.
 That change does not by itself invalidate downstream process files, because `bound_modules` is declarative metadata rather than the module's formal binding source.
 Treat a `bound_modules`-only delta as governance drift to be reported and repaired separately.
 
@@ -207,13 +207,13 @@ When a command or governance flow re-validates a process file, it must:
 1. rebuild `spec_fingerprint` from the current bound main Spec file
 2. rebuild `module_appendix_snapshot` from the current-layer main Spec file's explicitly referenced module-local appendix set, or `none`
 3. rebuild `system_constraints_stable_fingerprint` from the current bound stable system-constraints file, or `none`
-4. rebuild `shared_appendix_snapshot` from the module's current-layer bound Shared Appendix set using Section 5
+4. rebuild `shared_contract_snapshot` from the module's current-layer bound Shared Contract set using Section 5
 5. compare the rebuilt values against the process file snapshot fields exactly
 
-Shared Appendix exception:
+Shared Contract exception:
 
-1. if a rebuilt Shared Appendix snapshot differs only because a bound Shared Appendix file changed `bound_modules`, do not invalidate the process file on that basis alone
-2. in that case, report governance drift instead and keep using the module's formal binding source from `shared_appendix_refs`
+1. if a rebuilt Shared Contract snapshot differs only because a bound Shared Contract file changed `bound_modules`, do not invalidate the process file on that basis alone
+2. in that case, report governance drift instead and keep using the module's formal binding source from `shared_contract_refs`
 
 If any one of those values differs, the process file is invalid for downstream consumption.
 
