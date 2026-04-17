@@ -1,40 +1,50 @@
 # SpecFlow Tooling
 
-This directory now contains two layers of tooling:
+This directory now contains the standalone Go CLI that serves as the core for deterministic governance actions.
 
-1. host-facing shell or PowerShell scripts
-2. a standalone Go CLI for deterministic governance actions
+Compiled binaries are placed under:
 
-The Go project is the new core for actions that should not depend on duplicated platform-specific scripts.
+1. `specflow/tooling/bin/specflowctl-linux-amd64`
+2. `specflow/tooling/bin/specflowctl-linux-arm64`
+3. `specflow/tooling/bin/specflowctl-darwin-amd64`
+4. `specflow/tooling/bin/specflowctl-darwin-arm64`
+5. `specflow/tooling/bin/specflowctl-windows-amd64.exe`
+6. `specflow/tooling/bin/specflowctl-windows-arm64.exe`
 
 ## Build
 
-From the repository root:
+To rebuild those binaries from source, run from the repository root:
 
 ```bash
-go build -o ./bin/specflowctl ./specflow/tooling/cmd/specflowctl
-```
-
-Or from `specflow/tooling/`:
-
-```bash
-go build -o ../../bin/specflowctl ./cmd/specflowctl
+go run ./specflow/tooling/cmd/specflowctl build-release --repo-root .
 ```
 
 ## Current Command Surface
 
 The current first batch intentionally covers only high-ROI deterministic actions:
 
-1. `entry check`
+1. `init`
+   - installs files from `manifest.tsv`
+2. `doctor`
+   - checks whether the installed structure, hook, and current-platform binary are healthy
+3. `upgrade`
+   - refreshes framework-managed files and managed blocks
+4. `build-release`
+   - rebuilds the platform binaries into `specflow/tooling/bin/`
+5. `entry check`
    - verifies managed-block consistency across registered entry files
-2. `entry sync`
+6. `entry sync`
    - syncs registered entry-file managed blocks from one chosen source
-3. `registry validate`
+7. `registry validate`
    - validates `docs/project_standards/_registry.md`
-4. `review collect-default-scope`
+8. `review collect-default-scope`
    - collects the default deterministic file scope for `spec_flow_review`
-5. `process cleanup-fallback`
+9. `process cleanup-fallback`
    - applies command-defined fallback cleanup for candidate-chain process files
+10. `snapshot rebuild`
+   - rebuilds the current process snapshot inputs from formal truth files
+11. `snapshot validate-process`
+   - compares an existing process file snapshot against rebuilt current truth
 
 ## Boundary
 

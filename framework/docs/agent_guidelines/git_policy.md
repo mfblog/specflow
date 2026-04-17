@@ -114,4 +114,4 @@ If the task changes a registered entry index file listed in `specflow/framework/
 2. it should normally be committed in the current task
 3. entry-file sync must be completed before commit; that sync aligns only the managed block defined in `specflow/framework/docs/agent_guidelines/entry_index_registry.md`
 4. if multiple registered entry files were modified and their managed blocks still differ, an explicit sync source must be chosen before continuing
-   - use `specflow/tooling/sync_entry_docs.sh --source <registered-entry-file>` before retrying the commit
+   - use `specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>` before retrying the commit

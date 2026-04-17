@@ -9,10 +9,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/buildrelease"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/entrysync"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/install"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/projectstandards"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewscope"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 )
 
 func main() {
@@ -29,6 +32,14 @@ func run(args []string, stdout, stderr io.Writer) error {
 	}
 
 	switch args[0] {
+	case "init":
+		return runInit(args[1:], stdout, stderr)
+	case "doctor":
+		return runDoctor(args[1:], stdout, stderr)
+	case "upgrade":
+		return runUpgrade(args[1:], stdout, stderr)
+	case "build-release":
+		return runBuildRelease(args[1:], stdout, stderr)
 	case "entry":
 		return runEntry(args[1:], stdout, stderr)
 	case "registry":
@@ -37,6 +48,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runReview(args[1:], stdout, stderr)
 	case "process":
 		return runProcess(args[1:], stdout, stderr)
+	case "snapshot":
+		return runSnapshot(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		writeRootUsage(stdout)
 		return nil
@@ -44,6 +57,83 @@ func run(args []string, stdout, stderr io.Writer) error {
 		writeRootUsage(stderr)
 		return fmt.Errorf("unknown command %q", args[0])
 	}
+}
+
+func runInit(args []string, stdout, stderr io.Writer) error {
+	fs := flag.NewFlagSet("init", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	repoRoot := fs.String("repo-root", ".", "repository root")
+	force := fs.Bool("force", false, "overwrite managed files")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	result, err := install.Init(mustAbs(*repoRoot), *force)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "specFlow init completed. copied=%d skipped=%d\n", result.Copied, result.Skipped)
+	return nil
+}
+
+func runDoctor(args []string, stdout, stderr io.Writer) error {
+	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	repoRoot := fs.String("repo-root", ".", "repository root")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	result, err := install.Doctor(mustAbs(*repoRoot))
+	if err != nil {
+		return err
+	}
+	for _, warning := range result.Warnings {
+		fmt.Fprintln(stdout, warning)
+	}
+	if len(result.Failures) == 0 {
+		fmt.Fprintln(stdout, "specFlow doctor passed")
+		return nil
+	}
+	for _, failure := range result.Failures {
+		fmt.Fprintln(stdout, failure)
+	}
+	return fmt.Errorf("specFlow doctor failed: %d issue(s)", len(result.Failures))
+}
+
+func runUpgrade(args []string, stdout, stderr io.Writer) error {
+	fs := flag.NewFlagSet("upgrade", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	repoRoot := fs.String("repo-root", ".", "repository root")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	result, err := install.Upgrade(mustAbs(*repoRoot))
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "specFlow upgrade completed. updated=%d skipped=%d\n", result.Updated, result.Skipped)
+	return nil
+}
+
+func runBuildRelease(args []string, stdout, stderr io.Writer) error {
+	fs := flag.NewFlagSet("build-release", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	repoRoot := fs.String("repo-root", ".", "repository root")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	result, err := buildrelease.BuildAll(mustAbs(*repoRoot), nil)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(stdout, "Built release binaries:")
+	for _, target := range result.Targets {
+		fmt.Fprintf(stdout, "- %s\n", target)
+	}
+	return nil
 }
 
 func runEntry(args []string, stdout, stderr io.Writer) error {
@@ -245,15 +335,80 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 	}
 }
 
+func runSnapshot(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		writeSnapshotUsage(stderr)
+		return errors.New("missing snapshot subcommand")
+	}
+
+	switch args[0] {
+	case "rebuild":
+		fs := flag.NewFlagSet("snapshot rebuild", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		module := fs.String("module", "", "formal module name")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*module) == "" {
+			writeSnapshotUsage(stderr)
+			return errors.New("module is required")
+		}
+		result, err := snapshot.RebuildCurrent(mustAbs(*repoRoot), *module)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(stdout, snapshot.Render(result))
+		return nil
+	case "validate-process":
+		fs := flag.NewFlagSet("snapshot validate-process", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		module := fs.String("module", "", "formal module name")
+		processKind := fs.String("process", "", "check | plan | verify")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*module) == "" || strings.TrimSpace(*processKind) == "" {
+			writeSnapshotUsage(stderr)
+			return errors.New("module and process are required")
+		}
+		result, err := snapshot.ValidateProcessFile(mustAbs(*repoRoot), *module, *processKind)
+		if err != nil {
+			return err
+		}
+		if result.Valid {
+			fmt.Fprintf(stdout, "Process snapshot is valid. file=%s\n", result.ProcessFile)
+			return nil
+		}
+		fmt.Fprintf(stdout, "Process snapshot is invalid. file=%s\n", result.ProcessFile)
+		for _, mismatch := range result.Mismatches {
+			fmt.Fprintf(stdout, "- %s\n", mismatch)
+		}
+		return errors.New("process snapshot mismatch")
+	case "-h", "--help", "help":
+		writeSnapshotUsage(stdout)
+		return nil
+	default:
+		writeSnapshotUsage(stderr)
+		return fmt.Errorf("unknown snapshot subcommand %q", args[0])
+	}
+}
+
 func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl <command> <subcommand> [flags]")
+	fmt.Fprintln(w, "  specflowctl <command> [subcommand] [flags]")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Commands:")
+	fmt.Fprintln(w, "  init     Install specFlow files from manifest")
+	fmt.Fprintln(w, "  doctor   Check installed specFlow structure")
+	fmt.Fprintln(w, "  upgrade  Refresh framework-managed files")
+	fmt.Fprintln(w, "  build-release Build platform binaries into specflow/tooling/bin")
 	fmt.Fprintln(w, "  entry    Check or sync registered entry-file managed blocks")
 	fmt.Fprintln(w, "  registry Validate docs/project_standards/_registry.md")
 	fmt.Fprintln(w, "  review   Collect deterministic governance review scope")
 	fmt.Fprintln(w, "  process  Execute deterministic fallback cleanup")
+	fmt.Fprintln(w, "  snapshot Rebuild or compare process snapshot fields")
 }
 
 func writeEntryUsage(w io.Writer) {
@@ -275,6 +430,12 @@ func writeReviewUsage(w io.Writer) {
 func writeProcessUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl process cleanup-fallback --module MODULE --from-command COMMAND --reason CODE [--repo-root PATH]")
+}
+
+func writeSnapshotUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl snapshot rebuild --module MODULE [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl snapshot validate-process --module MODULE --process check|plan|verify [--repo-root PATH]")
 }
 
 func writeList(w io.Writer, title string, items []string) {

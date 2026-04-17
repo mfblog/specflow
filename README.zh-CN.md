@@ -30,6 +30,17 @@
 这个仓库并不是要把所有项目都强行变成同一种形状。
 它提供一个可用的起点，并且默认你会按自己的业务去调整项目侧规则。
 
+下文所有命令示例里的 `<specflow-binary>`，都表示 `specflow/tooling/bin/` 下与你当前平台匹配的已编译可执行文件。
+
+例如：
+
+- Linux x86_64：`./specflow/tooling/bin/specflowctl-linux-amd64`
+- Linux arm64：`./specflow/tooling/bin/specflowctl-linux-arm64`
+- macOS Intel：`./specflow/tooling/bin/specflowctl-darwin-amd64`
+- macOS Apple Silicon：`./specflow/tooling/bin/specflowctl-darwin-arm64`
+- Windows x86_64：`.\specflow\tooling\bin\specflowctl-windows-amd64.exe`
+- Windows arm64：`.\specflow\tooling\bin\specflowctl-windows-arm64.exe`
+
 ## 它解决什么问题
 
 > 当代码跑得很快时，真相必须慢下来。
@@ -144,7 +155,7 @@ Copy-Item -Recurse -Force $env:TEMP\SpecFlow\specflow .\specflow
 完成后，直接进入下面的 `快速开始`，执行：
 
 ```bash
-./specflow/tooling/init.sh
+<specflow-binary> init
 ```
 
 ### 方式 2：用 `git subtree` 跟踪上游
@@ -176,7 +187,7 @@ Copy-Item -Recurse -Force .\vendor\specflow-upstream\specflow\* .\specflow\
 然后执行：
 
 ```bash
-./specflow/tooling/init.sh
+<specflow-binary> init
 ```
 
 后续如果你要升级：
@@ -185,7 +196,7 @@ Copy-Item -Recurse -Force .\vendor\specflow-upstream\specflow\* .\specflow\
 git fetch specflow-upstream
 git subtree pull --prefix=vendor/specflow-upstream specflow-upstream main --squash
 rsync -a --delete vendor/specflow-upstream/specflow/ ./specflow/
-./specflow/tooling/upgrade.sh
+<specflow-binary> upgrade
 ```
 
 这一串动作分别在做什么：
@@ -202,13 +213,7 @@ rsync -a --delete vendor/specflow-upstream/specflow/ ./specflow/
 当 `specflow/` 已经放进你的仓库后，在仓库根目录执行：
 
 ```bash
-./specflow/tooling/init.sh
-```
-
-Windows PowerShell：
-
-```powershell
-.\specflow\tooling\init.ps1
+<specflow-binary> init
 ```
 
 这一步会安装最基本的结构：
@@ -767,15 +772,10 @@ flowchart TD
   - 刷新 framework 管理的文件和 managed block
   - 当你明确要把项目更新到较新的 `specFlow` 基线时使用
 
-Shell 示例：
+示例：
 
-- `./specflow/tooling/doctor.sh`
-- `./specflow/tooling/upgrade.sh`
-
-Windows PowerShell：
-
-- `.\specflow\tooling\doctor.ps1`
-- `.\specflow\tooling\upgrade.ps1`
+- `<specflow-binary> doctor`
+- `<specflow-binary> upgrade`
 
 ### 还有哪些进阶 flow
 
