@@ -24,8 +24,9 @@ It may:
 
 1. update the module candidate-layer `shared_contract_refs`
 2. update module candidate body text so the behavior chain explains how that shared truth is consumed
-3. trigger `shared_sync` after any binding change
-4. stop at a `shared_ops` checkpoint when the target module is currently at `stable`
+3. update the target shared file's declarative `bound_modules` metadata so it matches the real binding set after this round's binding writeback
+4. trigger `shared_sync` after any binding change
+5. stop at a `shared_ops` checkpoint when the target module is currently at `stable`
 
 It does not:
 
@@ -60,8 +61,9 @@ Before execution:
    - set `required_writeback_target` to that module candidate main file because chat-only agreement does not create a legal binding target
 3. update the module candidate-layer `shared_contract_refs`
 4. update module candidate body text so the relevant behavior chain explains which behavior consumes the shared truth
-5. reject closure if the change is only a `shared_contract_refs` edit with no body-level consumption explanation
-6. after any change to module `shared_contract_refs`, execute `shared_sync` before claiming closure
+5. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
+6. reject closure if the change is only a `shared_contract_refs` edit with no body-level consumption explanation
+7. after any change to module `shared_contract_refs` or the target shared file's `bound_modules`, execute `shared_sync` before claiming closure
 
 ---
 
@@ -69,7 +71,7 @@ Before execution:
 
 Stop when one of the following is true:
 
-1. the module binding and body-level consumption explanation are complete and `shared_sync` has finished reconciliation
+1. the module binding, body-level consumption explanation, and target shared file `bound_modules` metadata are complete and `shared_sync` has finished reconciliation
 2. the request is not really binding and must be re-routed to another shared flow
 3. the target module does not actually depend on the shared truth
 4. the target module is currently at `stable` and the flow has raised a `shared_ops` checkpoint for `spec_fork:{module}` first
@@ -86,8 +88,9 @@ The output must include at least:
 3. whether the target module was already at `candidate` or first had to stop for `spec_fork:{module}`
 4. the binding writeback result in the module candidate-layer Spec, or the checkpoint result when candidate writeback could not start yet
 5. the body-level consumption explanation added or updated
-6. the `shared_sync` result, including affected modules and fallback if any
-7. the git close-out result when governance files or commit-triggering files were changed
+6. the target shared file `bound_modules` reconciliation result
+7. the `shared_sync` result, including affected modules and fallback if any
+8. the git close-out result when governance files or commit-triggering files were changed
 
 ---
 

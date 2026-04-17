@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This internal flow creates a project-local standard file and registers it in `docs/project_standards/_registry.md` when the user expresses intent that the project needs a new project-local review standard.
+This internal flow creates a project-local standard file and registers it in `docs/project_standards/_registry.md` when the user expresses intent that the project needs a new project-local standard.
 
 It answers four questions:
 
@@ -21,8 +21,8 @@ It is an internal agent flow that may be triggered from user intent.
 This flow may be used when the user clearly expresses intent such as:
 
 1. "Create a project-specific review standard."
-2. "Add a local rule for our project."
-3. "We need our own review guideline on top of the framework."
+2. "Add a project-local output/reporting rule."
+3. "We need a project-local decision or escalation rule."
 4. "Generate a standard file for this project rule."
 
 Additional rules:
@@ -30,6 +30,9 @@ Additional rules:
 1. the user does not need to know the internal flow name
 2. the agent may infer this flow from intent
 3. if the user intent is still too vague to decide the standard's object, the flow must stop and ask for clarification instead of creating an empty rule shell
+4. choose `review_standard` only when the user wants review, closure, or checking rules
+5. choose `output_standard` only when the user wants output, reporting, or result-format constraints
+6. choose `decision_standard` only when the user wants decision, escalation, or approval constraints
 
 ---
 
@@ -52,15 +55,15 @@ Before execution:
 
 ## 4. Procedure
 
-1. identify the project-local review problem the user wants to formalize
+1. identify the project-local governance problem the user wants to formalize
 2. if `docs/project_standards/_registry.md` was missing at the start of the round:
    - report that missing file as governance drift first
    - create or repair `docs/project_standards/_registry.md` in the same round before registering any new standard
    - do not continue as if the repository had simply chosen to use no project-local standards
 3. choose the smallest supported standard type from:
-   - `review_standard`
-   - `output_standard`
-   - `decision_standard`
+   - `review_standard` for project-local review, closure, or checking rules
+   - `output_standard` for project-local output or reporting constraints
+   - `decision_standard` for project-local decision or escalation constraints
 4. choose the target `surface`
 5. choose the target command or internal flow that must consume it
 6. choose a stable `standard_id`
