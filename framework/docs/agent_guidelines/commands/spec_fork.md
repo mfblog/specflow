@@ -48,12 +48,15 @@ By default it handles:
    - do not write `shared_contract_refs=none` merely because candidate-layer shared truth is not ready yet
 9. update Shared Contract `bound_modules` if the round changed shared bindings or shared files
 10. delete old `_check_result/{module}.md`, `_verify_result/{module}.md`, `_plans/{module}.md`, and previous-round candidate appendix files
+   - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --module {module} --mode spec_fork`
 11. update `_status.md`:
    - `Stable=yes`
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=cand_check`
+   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate yes --active-layer candidate --next-command cand_check --notes <status-note>`
 12. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects `Active Layer=candidate` for this module, even when no additional affected module is known yet
+   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
 13. perform git close-out if required
 
 ## 5. Stop Conditions

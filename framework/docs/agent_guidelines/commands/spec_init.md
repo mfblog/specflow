@@ -61,7 +61,9 @@ Before execution:
    - `Candidate=no`
    - `Active Layer=stable`
    - `Next Command=spec_fork`
+   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command spec_fork --notes <status-note> --create`
 9. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` after `_status.md` has been updated, even when no additional affected module is known yet
+   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
 10. perform git close-out if required by policy
 
 ## 5. Stop Conditions

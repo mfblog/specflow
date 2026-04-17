@@ -47,3 +47,61 @@ func TestApplyFallbackForPromoteEvidenceIncomplete(t *testing.T) {
 		t.Fatalf("expected verify file to be deleted, stat err=%v", err)
 	}
 }
+
+func TestApplySuccessCleanupForPromote(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/candidate/appendix"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+
+	status := strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Modules",
+		"",
+		"| Module | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|",
+		"| `module_ai` | `yes` | `no` | `stable` | `spec_fork` | promoted |",
+	}, "\n") + "\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/candidate/c_module_ai.md"), "candidate")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/candidate/appendix/c_module_ai_prompt.md"), "appendix")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_ai.md"), "check")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/module_ai.md"), "plan")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/module_ai.md"), "verify")
+
+	result, err := ApplySuccessCleanup(repoRoot, "module_ai", "cand_promote")
+	if err != nil {
+		t.Fatalf("ApplySuccessCleanup: %v", err)
+	}
+	if len(result.DeletedFiles) != 5 {
+		t.Fatalf("expected 5 deleted files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
+	}
+	for _, relPath := range []string{
+		"docs/specs/candidate/c_module_ai.md",
+		"docs/specs/candidate/appendix/c_module_ai_prompt.md",
+		"docs/specs/_check_result/module_ai.md",
+		"docs/specs/_plans/module_ai.md",
+		"docs/specs/_verify_result/module_ai.md",
+	} {
+		if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(relPath))); !os.IsNotExist(err) {
+			t.Fatalf("expected %s to be deleted, stat err=%v", relPath, err)
+		}
+	}
+}
+
+func mustMkdirAll(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", path, err)
+	}
+}
+
+func mustWriteFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}

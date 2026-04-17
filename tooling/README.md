@@ -21,7 +21,7 @@ go run ./specflow/tooling/cmd/specflowctl build-release --repo-root .
 
 ## Current Command Surface
 
-The current first batch intentionally covers only high-ROI deterministic actions:
+The current command surface intentionally covers only high-ROI deterministic actions:
 
 1. `init`
    - installs files from `manifest.tsv`
@@ -45,6 +45,15 @@ The current first batch intentionally covers only high-ROI deterministic actions
    - rebuilds the current process snapshot inputs from formal truth files
 11. `snapshot validate-process`
    - compares an existing process file snapshot against rebuilt current truth
+12. `status set-module`
+   - writes or creates one deterministic module row in `docs/specs/_status.md`
+13. `process cleanup-success`
+   - applies command-defined success-path cleanup for `spec_fork` and `cand_promote`
+14. `shared sync-impact`
+   - reconciles shared-truth impact by comparing current bindings and process snapshots
+   - invalidates candidate modules when shared truth drifted
+   - reroutes stable modules to `stable_verify` when stable shared truth drifted
+   - reports `bound_modules`-only metadata drift without invalidating modules
 
 ## Boundary
 
