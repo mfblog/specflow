@@ -36,6 +36,14 @@ When a request hits any of the following, handle it with `specFlow` rules:
 3. Requests involving module Specs, state progression, candidate closure, formal promotion, Shared Contract, shared_ops routing, or system constraints.
 4. Requests involving registered project-local standards under `docs/project_standards/`.
 5. Requests to create, register, or tighten a project-local standard for the current project.
+6. Direct implementation requests that would modify repo-tracked code or other repo-tracked implementation-side files.
+
+For direct implementation requests:
+
+1. read `specflow/framework/docs/agent_guidelines/implementation_change_policy.md` first
+2. classify the request as `implementation_only`, `truth_writeback_required`, or `boundary_unclear`
+3. if the result is `truth_writeback_required` or `boundary_unclear`, do not start from code; route to the smallest legal next step defined by `specflow/framework/docs/agent_guidelines/command_policy.md`
+4. if the result is `implementation_only`, still obey `_status.md`, `Active Layer`, `Next Command`, and the follow-up verification duty of the current layer
 
 If none of the above is hit, continue following the host agent's other rules.
 
@@ -107,37 +115,40 @@ If the user gives a concrete file prefix, treat it as a file reference:
 
 If a request is inside the `specFlow` scope but is not a standard command, handle it in this default order:
 
-1. First determine whether the request targets:
+1. If the request directly asks to modify repo-tracked code or other implementation-side files, read `specflow/framework/docs/agent_guidelines/implementation_change_policy.md` first.
+2. Then determine whether the request targets:
    - a module behavior object
    - or a governance object / governance flow
-2. If it targets a governance object or governance flow:
+3. If it targets a governance object or governance flow:
    - read the governance file that defines that flow's scope, preconditions, and procedure first
    - follow that file's declared read scope instead of automatically starting from `docs/specs/_status.md`
    - if the flow is plain `spec_flow_review`, do not narrow it to main command-chain files, recent edits, or non-shared rules only unless the user explicitly narrows it that way
    - before issuing any `pass` conclusion for plain `spec_flow_review`, confirm that the shared-governance rule set required by `spec_flow_review.md` has been read and is explicitly reported in the review output
-3. If it targets a module behavior object:
+4. If it targets a module behavior object:
    - read `docs/specs/_status.md` to confirm the target module's current `Active Layer` and `Next Command`
-4. If the module task touches module behavior truth, read the main Spec for the current layer.
-5. If the main Spec explicitly references appendix files or Shared Contract files, read them too.
-6. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
+5. If the module task touches module behavior truth, read the main Spec for the current layer.
+6. If the main Spec explicitly references appendix files or Shared Contract files, read them too.
+7. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
    - `docs/specs/system/stable/s_system_constraints.md`
-7. Then decide whether the current action is:
+8. Then decide whether the current action is:
    - explanation only
    - modifying `candidate`
    - modifying `stable`
    - executing a standard command
+   - or applying the direct implementation gate before any code modification
 
 ### 5. Mandatory Constraints
 
 1. Do not guess behavior by bypassing the source-of-truth files under `docs/specs/`.
 2. If you are unsure whether a change is a behavior change, treat it as a behavior change.
 3. Behavior changes must not start from code. Follow `specflow/framework/docs/agent_guidelines/spec_policy.md` first.
-4. A brand-new module may start with `candidate`; its first `stable` is created later by `cand_promote`.
-5. A historical module entering governance for the first time must begin with `spec_init:{module}` to create its first `stable`.
-6. Under `docs/specs/`, every Spec file except `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` is a behavior source of truth and should normally enter git history.
-7. `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` are draft-layer artifacts. If a task modifies only those files, do not `git commit` by default unless the user asks for it or the active command flow requires it.
-8. Changes to `specflow/framework/docs/agent_guidelines/*.md` should normally be committed in the current task.
-9. When Spec, command, and git-flow rules conflict, do not guess. Go back to the relevant policy or command file.
+4. Direct implementation requests must first be classified through `specflow/framework/docs/agent_guidelines/implementation_change_policy.md`. `truth_writeback_required` and `boundary_unclear` must not start from code.
+5. A brand-new module may start with `candidate`; its first `stable` is created later by `cand_promote`.
+6. A historical module entering governance for the first time must begin with `spec_init:{module}` to create its first `stable`.
+7. Under `docs/specs/`, every Spec file except `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` is a behavior source of truth and should normally enter git history.
+8. `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` are draft-layer artifacts. If a task modifies only those files, do not `git commit` by default unless the user asks for it or the active command flow requires it.
+9. Changes to `specflow/framework/docs/agent_guidelines/*.md` should normally be committed in the current task.
+10. When Spec, command, and git-flow rules conflict, do not guess. Go back to the relevant policy or command file.
 
 ### 6. Git Handling Rules
 
@@ -154,11 +165,13 @@ If the task falls inside the `specFlow` scope, at minimum you should know what t
 
 1. `specflow/framework/docs/agent_guidelines/spec_policy.md`
    - Defines Spec objects, layers, source-of-truth boundaries, and reading rules
-2. `specflow/framework/docs/agent_guidelines/command_policy.md`
-   - Defines standard commands, gates, and the default lifecycle
-3. `specflow/framework/docs/agent_guidelines/git_policy.md`
+2. `specflow/framework/docs/agent_guidelines/implementation_change_policy.md`
+   - Defines how direct implementation requests are classified and when code changes must be diverted back to truth writeback
+3. `specflow/framework/docs/agent_guidelines/command_policy.md`
+   - Defines standard commands, direct-implementation gates, and the default lifecycle
+4. `specflow/framework/docs/agent_guidelines/git_policy.md`
    - Defines which changes normally require commits and which do not
-4. `docs/specs/_status.md`
+5. `docs/specs/_status.md`
    - Records each formal module's current status, active layer, and default next command
 
 Do not blindly read everything at once. Read only what the current task actually needs.

@@ -92,6 +92,35 @@ Rules:
 3. it routes into internal shared flows according to `specflow/framework/docs/agent_guidelines/shared_ops.md`
 4. if routing cannot be stabilized safely, it must enter `shared_escape` and then checkpoint when required
 
+### 4.2 Direct Implementation Request Gate
+
+A direct implementation request means the user asks the executor to modify repo-tracked code or other implementation-side files without first entering a standard module command.
+
+Rules:
+
+1. every direct implementation request must be classified first through `specflow/framework/docs/agent_guidelines/implementation_change_policy.md`
+2. the only legal classification results are:
+   - `implementation_only`
+   - `truth_writeback_required`
+   - `boundary_unclear`
+3. `implementation_only` means implementation may continue only inside the current `Active Layer`, current `Next Command`, and current verification obligations
+4. `implementation_only` is not permission to skip lifecycle gates or to silently change truth later
+5. `truth_writeback_required` means the smallest legal next step is truth-side writeback or command routing, not code modification
+6. `boundary_unclear` means repository truth is not sufficient to safely start from code and must be treated exactly like `truth_writeback_required`
+7. a direct implementation request is a gate, not a new command
+
+The smallest legal next step is fixed as follows:
+
+| Current situation | Smallest legal next step |
+|---|---|
+| brand-new module, user directly asks to write code | `spec_new:{module}` |
+| existing `stable` module, and the requested change would alter formal behavior truth | `spec_fork:{module}` first, then write the new candidate truth before implementation |
+| existing `candidate` module, and the requested change would alter current candidate truth | write back into the current candidate main file, required appendix truth, or required Shared Contract truth first, then rerun `cand_check:{module}` |
+| request touches cross-module shared truth | `shared_ops:{natural-language request}` |
+| `implementation_only`, target module has `Active Layer=stable` | implementation may continue only inside current stable truth; after code changes, `stable_verify:{module}` is required before stable alignment may be claimed again |
+| `implementation_only`, target module has `Active Layer=candidate` and `_status.md` says `Next Command=cand_impl` | implementation may continue only under `cand_impl` semantics |
+| `implementation_only`, target module has `Active Layer=candidate` and `_status.md` says any `Next Command` other than `cand_impl` | do not modify code; return to the currently recorded smallest legal next step first |
+
 ---
 
 ## 5. Standard Commands
@@ -218,6 +247,11 @@ The rules below are shared gates. Every command follows them by default:
 34. The final command conclusion must still stay inside the framework-defined result set of that command.
 35. A downstream command must not consume a project-side extension field unless that downstream command explicitly declares that consumption contract.
 36. Shared-governance requests must enter through `shared_ops:{natural-language request}` rather than by asking the user to pre-select an internal shared flow.
+37. A direct implementation request must be classified through `specflow/framework/docs/agent_guidelines/implementation_change_policy.md` before repo-tracked code is modified.
+38. `implementation_only` does not bypass `Next Command`.
+39. If a direct implementation request is classified as `truth_writeback_required` or `boundary_unclear`, the executor must not modify code before the required truth-side writeback or routing step has completed.
+40. For `implementation_only` on `Active Layer=candidate`, code modification is allowed only when `_status.md` currently says `Next Command=cand_impl`.
+41. For `implementation_only` on `Active Layer=stable`, code modification may proceed only inside current stable truth, and `stable_verify` is required before stable alignment may be claimed again.
 
 ---
 

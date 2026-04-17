@@ -210,6 +210,24 @@ Additional rules:
 1. if no module formally binds the shared truth yet, `bound_modules` may be `none`
 2. expected future consumers should be recorded as body-level planning text rather than being treated as formal bindings before `shared_contract_refs` exists
 
+### 2.6 What Counts As Touching Formal Behavior Truth
+
+For direct implementation gating, a request touches formal behavior truth when it would create, remove, or change any formally acknowledged answer about:
+
+1. module goal or module boundary
+2. external protocols, field meanings, default values, validation rules, or error semantics
+3. main flow, state transitions, or convergence semantics
+4. acceptance criteria or other testable success conditions
+5. Shared Contract body text or binding relations
+6. project-wide default rules or explicit exceptions recorded through `system_constraints`
+
+Rules:
+
+1. implementation-only work such as pure refactors, tests, observability, performance optimization with unchanged semantics, or repairing an implementation deviation against already-explicit truth does not touch formal behavior truth
+2. if repository truth is not explicit enough to tell whether a request would change formal behavior truth, do not guess from code; use `specflow/framework/docs/agent_guidelines/implementation_change_policy.md` and classify the request as `boundary_unclear`
+3. if a request changes Shared Contract text, Shared Contract bindings, or the meaning of a `system_constraints` default rule or exception, it touches formal behavior truth even when the code diff itself looks local
+4. if you are unsure whether a request touches formal behavior truth, treat it as touching formal behavior truth
+
 ---
 
 ## 3. `_status.md`
