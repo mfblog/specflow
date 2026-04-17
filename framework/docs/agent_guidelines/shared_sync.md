@@ -4,11 +4,12 @@
 
 `shared_sync` is the internal flow that closes impact after `shared_contract` truth changes.
 
-It answers three questions:
+It answers four questions:
 
 1. which modules still hold outdated shared bindings or snapshots
 2. what the smallest actionable fallback step is for each affected module
 3. which candidate-side process files must be deleted so invalid gates cannot be reused
+4. when `shared_sync` must stop and return control to `shared_escape` instead of inventing its own stop path
 
 This is not the user-facing command entry.
 The user reaches it through `shared_ops:{natural-language request}`.
@@ -23,6 +24,7 @@ By default it handles:
 2. whether each module's current-layer `Global Constraint Alignment.shared_contract_refs` and process-file snapshots still match the current shared truth
 3. unified fallback and cleanup for `_status.md`, `_check_result`, `_plans`, and `_verify_result` when modules still hold old snapshots
 4. reporting `bound_modules` drift that must be fixed in the command responsible for the binding change
+5. stopping and returning control to `shared_escape` when repository truth is insufficient to determine the real binding set safely
 
 It does not:
 
@@ -30,6 +32,7 @@ It does not:
 2. replace `spec_flow_review`
 3. replace `cand_check`, `stable_verify`, or `cand_promote`
 4. decide whether a `shared_contract` should become `system_constraints`
+5. define an independent checkpoint path for unstable shared-boundary cases
 
 ---
 
@@ -67,6 +70,10 @@ Before execution:
    - include modules whose `shared_contract_refs` point to any changed or named `shared_contract_id`
    - include modules whose own `shared_contract_refs` changed in the current task
    - do not use `bound_modules` as the sole source for deciding which modules are affected
+   - if current repository truth is still insufficient to determine the real binding set or affected-module set safely:
+     - stop `shared_sync` before local fallback cleanup
+     - do not emit a `shared_sync`-local checkpoint
+     - return control to `shared_escape` through `shared_ops` so the uncertainty is handled by the shared-governance stop flow
 4. build the module current snapshot view:
    - if the module is at `candidate`, read any existing `_check_result/{module}.md`, `_plans/{module}.md`, and `_verify_result/{module}.md`
    - extract `shared_contract_snapshot` from those files when present
@@ -102,7 +109,7 @@ Stop when one of the following is true:
 
 1. all affected modules have been judged and required fallback or cleanup has been completed
 2. no affected modules exist and repository shared state has still been reconciled against current truth
-3. repository truth is insufficient to determine the real binding set and the active flow must stop instead of guessing
+3. repository truth is insufficient to determine the real binding set, so `shared_sync` has stopped without a local checkpoint and returned control to `shared_escape`
 
 ---
 
@@ -116,7 +123,8 @@ The output must include at least:
 4. the list of deleted process files
 5. any mismatch between `bound_modules` and the real binding set
 6. the standardized `fallback_reason_code` for each affected module
-7. the git close-out result
+7. when repository truth was insufficient to continue safely, that `shared_sync` returned control to `shared_escape` and did not issue an independent local checkpoint
+8. the git close-out result
 
 Allowed `fallback_reason_code` values:
 
@@ -135,3 +143,4 @@ Allowed `fallback_reason_code` values:
 3. replace `cand_check` to re-pass candidate closure
 4. replace `stable_verify` to re-check stable alignment
 5. absorb `shared_contract` conclusions into `system_constraints`
+6. keep unstable stop decisions inside `shared_sync` when the real problem is shared-boundary uncertainty

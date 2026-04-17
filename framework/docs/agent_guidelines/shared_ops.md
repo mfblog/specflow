@@ -200,6 +200,7 @@ Fixed closure rules:
 4. no internal shared flow may guess the module current layer without resolving it from `_status.md` first when the named module already exists
 5. no internal shared flow may modify module `stable` truth directly; if a shared request needs module truth writeback and the target module is currently at `stable`, the flow must stop at a `shared_ops` checkpoint and require `spec_fork:{module}` first
 6. if `shared_escape` emits a `remaining_steps_contract`, finishing only the first routed flow does not close `shared_ops`
+7. if a routed internal shared flow later discovers that repository truth is insufficient to continue stably, it must stop that flow and return control to `shared_escape` instead of inventing a flow-local checkpoint
 
 ---
 
@@ -218,6 +219,11 @@ Stop when one of the following is true:
 
 `shared_escape` is not a catch-all executor freedom zone.
 Its job is to decompose a complex shared request into smaller valid actions or stop safely.
+
+It may be entered from either:
+
+1. initial routing ambiguity inside `shared_ops`
+2. a previously routed internal shared flow that later discovered unstable continuation from current repository truth
 
 It must:
 
