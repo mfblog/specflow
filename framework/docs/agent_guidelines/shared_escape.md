@@ -25,6 +25,8 @@ By default it handles shared-governance requests that cannot be stably routed in
 3. `shared_bind`
 4. `shared_sync`
 
+It also handles cases where one of those already-routed internal shared flows later discovers that current repository truth is insufficient to continue safely.
+
 It may:
 
 1. decompose one complex request into a safe sequence of standard shared flows
@@ -60,24 +62,25 @@ Before execution:
 ## 4. Procedure
 
 1. identify the smallest distinct action units inside the current request
-2. test whether the request can be routed into exactly one standard shared flow without ambiguity
-3. if yes, stop and route back to that one standard flow instead of continuing inside `shared_escape`
-4. if more than one shared flow is involved, test whether a sequence exists whose order does not change formal truth
-5. if such a stable sequence exists, build a formal `remaining_steps_contract` that records:
+2. if control was returned by an already-routed internal shared flow, identify the unresolved remainder from that flow using current repository truth instead of assuming the earlier route is still sufficient
+3. test whether the request can be routed into exactly one standard shared flow without ambiguity
+4. if yes, stop and route back to that one standard flow instead of continuing inside `shared_escape`
+5. if more than one shared flow is involved, test whether a sequence exists whose order does not change formal truth
+6. if such a stable sequence exists, build a formal `remaining_steps_contract` that records:
    - the full ordered step list
    - the current step
    - the remaining steps after the current step
    - the closure condition that `shared_ops` stays open until the final listed step finishes
    - that the contract is execution-local and must be discarded if the current `shared_ops` handling stops before final closure
-6. if such a stable sequence exists, report that contract and route to the first legal flow only
-7. stop immediately and raise a checkpoint when any of the following holds:
+7. if such a stable sequence exists, report that contract and route to the first legal flow only
+8. stop immediately and raise a checkpoint when any of the following holds:
    - the same truth has two or more plausible formal landing points
    - the boundary between module-private truth and shared truth is unstable
    - the boundary between shared truth and `system_constraints_change_proposal` is unstable
    - the action order would change resulting formal truth
    - current repository truth is insufficient to support a stable decomposition
-8. when the request has crossed into `system_constraints_change_proposal`, require writeback into the responsible module candidate instead of inventing a new shared-side target
-9. if the current `shared_ops` handling stops before all listed steps finish, require rerunning `shared_ops` from current repository truth rather than resuming an old `remaining_steps_contract`
+9. when the request has crossed into `system_constraints_change_proposal`, require writeback into the responsible module candidate instead of inventing a new shared-side target
+10. if the current `shared_ops` handling stops before all listed steps finish, require rerunning `shared_ops` from current repository truth rather than resuming an old `remaining_steps_contract`
 
 ---
 
@@ -98,15 +101,16 @@ The output must include at least:
 1. the complex intent recognized from the request
 2. why single-flow routing was unstable
 3. whether a safe decomposition exists
-4. when a safe decomposition exists, the formal `remaining_steps_contract`, including:
+4. when control was returned from an already-routed internal shared flow, which flow returned control and why its continuation was no longer stable
+5. when a safe decomposition exists, the formal `remaining_steps_contract`, including:
    - `step_order`
    - `current_step`
    - `remaining_steps`
    - `shared_ops_closure_rule`
    - `durability=execution_local`
    - `resume_rule=rerun_shared_ops_from_current_truth_if_interrupted`
-5. the smallest legal next shared flow if decomposition is stable
-6. if a checkpoint is raised:
+6. the smallest legal next shared flow if decomposition is stable
+7. if a checkpoint is raised:
    - `type`
    - `blocking`
    - `command=shared_ops`
@@ -116,7 +120,7 @@ The output must include at least:
    - `required_writeback_target`
    - `resume_signal`
    - `resume_next_step`
-7. when the boundary crosses into `system_constraints_change_proposal`, which module candidate must receive the writeback before `shared_ops` may resume
+8. when the boundary crosses into `system_constraints_change_proposal`, which module candidate must receive the writeback before `shared_ops` may resume
 
 ---
 
