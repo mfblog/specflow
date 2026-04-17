@@ -135,18 +135,20 @@ Before execution:
 
 If you cannot determine exactly which governance files are being reviewed, do not issue a `pass`.
 If a default-scope review did not cover the shared-governance rule set, do not issue a `pass`.
+If the review output does not explicitly report the shared-governance coverage and result, do not issue a `pass`.
 
 ## 5. Procedure
 
 1. locate the governance files inside the current review scope
 2. if project-local standards are claimed, resolve the active project-local review set from `docs/project_standards/_registry.md` instead of scanning `docs/project_standards/` blindly
 3. map each rule point to the rule objects it affects
-4. explicitly review whether shared-governance routing, closure, boundary, and stop/checkpoint rules remain coherent with the main command system
-5. run closure review first
-6. run side-effect review second
-7. grade every real problem by severity and blocking status
-8. add background, trigger mechanism, impact scope, and repair suggestion to each finding
-9. give an overall conclusion and the next action for the current review scope
+4. enumerate the shared-governance rule files actually covered by the current review
+5. explicitly review whether shared-governance routing, closure, boundary, and stop/checkpoint rules remain coherent with the main command system
+6. run closure review first
+7. run side-effect review second
+8. grade every real problem by severity and blocking status
+9. add background, trigger mechanism, impact scope, and repair suggestion to each finding
+10. give an overall conclusion and the next action for the current review scope
 
 Severity must use the shared meanings defined in:
 
@@ -187,15 +189,20 @@ Do not report the following by default:
 The output should include:
 
 1. review scope
-2. overall conclusion
-3. findings ordered by severity and blocking priority
-4. for each finding:
+2. the exact governance files reviewed, or a stable grouped list that still makes file coverage auditable
+3. an explicit shared-governance coverage section that states:
+   - whether `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_sync.md`, and `shared_escape.md` were reviewed
+   - whether the shared-governance review result is pass, blocked, or has findings
+   - whether the review stayed at governance-rule level rather than executing a concrete shared request instance
+4. overall conclusion
+5. findings ordered by severity and blocking priority
+6. for each finding:
    - what the problem is
    - why it happens
    - what it impacts
    - the minimal recommended fix
-5. whether the current review passes or is blocked
-6. the next action
+7. whether the current review passes or is blocked
+8. the next action
 
 ## 8. Non-Goals
 

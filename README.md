@@ -799,6 +799,7 @@ This is not for reviewing one business module.
 It is for reviewing the mechanism.
 By default it also reviews the shared-governance rule files inside the governance baseline, not only the main command chain.
 But it reviews whether those shared rules stay coherent; it does not replace `shared_ops` for handling a concrete shared request instance.
+Its output should also explicitly report whether shared-governance coverage happened, which required shared rule files were covered, and whether that review result is pass, blocked, or has findings.
 
 ### Internal Flows That Exist But Are Not Normal User Entry Points
 

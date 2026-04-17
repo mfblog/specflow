@@ -796,6 +796,7 @@ Windows PowerShell：
 它审的是机制本身。
 默认情况下，它会审治理基线里的 shared-governance 规则文件，不只是模块命令链。
 但它审的是这些 shared 规则是否自洽，不是代替 `shared_ops` 去处理具体 shared 请求实例。
+输出时也应明确交代 shared-governance 是否已覆盖、覆盖了哪些关键规则文件、结论是 pass / blocked / 有 finding。
 
 ### 存在但不是普通用户入口的内部 flow
 
