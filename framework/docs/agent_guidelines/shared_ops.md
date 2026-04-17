@@ -14,6 +14,7 @@ It answers five questions:
 3. whether the request can be handled by one standard shared flow
 4. whether the request must fall into `shared_escape`
 5. whether the command must stop at a checkpoint instead of continuing automatically
+6. whether a multi-step shared request still has unfinished formal follow-up
 
 This file defines the routing and stop rules for `shared_ops`.
 It does not replace module commands.
@@ -174,6 +175,7 @@ This is mandatory, not optional.
 5. if routing is not stable, enter `shared_escape`
 6. if the routed flow changes shared truth or module shared bindings, do not claim closure until required reconciliation through `shared_sync` is complete
 7. if the request crosses into `system_constraints_change_proposal`, stop through `shared_escape` and raise a checkpoint instead of inventing a shared-side continuation
+8. if `shared_escape` emitted a `remaining_steps_contract`, do not claim `shared_ops` closure until every listed step has finished under that contract
 
 ## 7. Internal Flow Contracts
 
@@ -193,6 +195,8 @@ Fixed closure rules:
 2. if `shared_bind` changes any module `shared_contract_refs`, it must not claim closure until `shared_sync` has completed
 3. if a routed request crosses into `system_constraints_change_proposal`, the shared flow must stop through `shared_escape` and raise a `shared_ops` checkpoint rather than inventing a shared-side continuation
 4. no internal shared flow may guess the module current layer without resolving it from `_status.md` first when the named module already exists
+5. no internal shared flow may modify module `stable` truth directly; if a shared request needs module truth writeback and the target module is currently at `stable`, the flow must stop at a `shared_ops` checkpoint and require `spec_fork:{module}` first
+6. if `shared_escape` emits a `remaining_steps_contract`, finishing only the first routed flow does not close `shared_ops`
 
 ---
 
@@ -201,8 +205,9 @@ Fixed closure rules:
 Stop when one of the following is true:
 
 1. the request has been stably routed into one internal shared flow and that flow has completed its own closure requirements
-2. the request has been routed into `shared_escape` and a checkpoint has been raised
-3. the request is outside shared-truth governance and must return to module-side truth handling before resume
+2. the request has been decomposed by `shared_escape`, every step listed in `remaining_steps_contract` has finished, and all closure requirements of the final step are complete
+3. the request has been routed into `shared_escape` and a checkpoint has been raised
+4. the request is outside shared-truth governance and must return to module-side truth handling before resume
 
 ## 9. Escape And Checkpoint Rules
 
@@ -244,6 +249,7 @@ Fixed rules:
 3. otherwise set `module=none`
 4. `required_writeback_target` may point to one or more shared-contract files, module candidate files, or appendix files when those are the truth targets that must be updated before resume
 5. `resume_next_step` must be the smallest legal follow-up, which is normally rerunning `shared_ops` after the required truth writeback
+6. when the checkpoint exists because one or more target modules are still at `stable`, `required_writeback_target` must point to the future module candidate main file set rather than the current stable file set
 
 A `shared_ops` checkpoint must also report at least:
 
@@ -267,9 +273,11 @@ The output must include at least:
 1. the recognized intent from the user request
 2. the routed target flow and why that flow owns the request
 3. the repository truth inputs used to make the routing decision
-4. whether reconciliation through `shared_sync` was required and whether it has completed
-5. if routing was unstable, the `shared_escape` result or checkpoint
-6. the git close-out result when governance files or commit-triggering files were changed
+4. whether the request required direct module truth writeback and whether any target module first had to stop for `spec_fork:{module}`
+5. whether reconciliation through `shared_sync` was required and whether it has completed
+6. if `shared_escape` emitted a `remaining_steps_contract`, that contract and the current completion position
+7. if routing was unstable, the `shared_escape` result or checkpoint
+8. the git close-out result when governance files or commit-triggering files were changed
 
 ## 11. Boundary Against Other Objects
 
@@ -278,6 +286,7 @@ The output must include at least:
 1. `module` keeps the full lifecycle command chain
 2. `shared_ops` handles only cross-module shared-truth governance
 3. if the real task is still single-module candidate closure, do not route into `shared_ops`
+4. if the needed truth writeback target is a module currently at `stable`, `shared_ops` must stop for module-side `spec_fork` rather than writing stable directly
 
 ### 11.2 Boundary Against `system_constraints_change_proposal`
 
@@ -296,3 +305,4 @@ The output must include at least:
 2. guarantee that every shared request can continue without a checkpoint
 3. allow the executor to guess through unstable shared/system/module boundaries
 4. define a new independent lifecycle object parallel to modules
+5. treat a partially executed multi-step sequence as a closed shared request

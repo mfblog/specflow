@@ -30,6 +30,7 @@ It may:
 1. decompose one complex request into a safe sequence of standard shared flows
 2. raise a `clarification` checkpoint
 3. raise a `decision` checkpoint
+4. emit a formal `remaining_steps_contract` when safe decomposition exists
 
 It does not:
 
@@ -60,14 +61,19 @@ Before execution:
 2. test whether the request can be routed into exactly one standard shared flow without ambiguity
 3. if yes, stop and route back to that one standard flow instead of continuing inside `shared_escape`
 4. if more than one shared flow is involved, test whether a sequence exists whose order does not change formal truth
-5. if such a stable sequence exists, report that sequence and route to the first legal flow only
-6. stop immediately and raise a checkpoint when any of the following holds:
+5. if such a stable sequence exists, build a formal `remaining_steps_contract` that records:
+   - the full ordered step list
+   - the current step
+   - the remaining steps after the current step
+   - the closure condition that `shared_ops` stays open until the final listed step finishes
+6. if such a stable sequence exists, report that contract and route to the first legal flow only
+7. stop immediately and raise a checkpoint when any of the following holds:
    - the same truth has two or more plausible formal landing points
    - the boundary between module-private truth and shared truth is unstable
    - the boundary between shared truth and `system_constraints_change_proposal` is unstable
    - the action order would change resulting formal truth
    - current repository truth is insufficient to support a stable decomposition
-7. when the request has crossed into `system_constraints_change_proposal`, require writeback into the responsible module candidate instead of inventing a new shared-side target
+8. when the request has crossed into `system_constraints_change_proposal`, require writeback into the responsible module candidate instead of inventing a new shared-side target
 
 ---
 
@@ -75,7 +81,7 @@ Before execution:
 
 Stop when one of the following is true:
 
-1. the request has been reduced to exactly one legal next shared flow
+1. the request has been reduced to exactly one legal next shared flow and any required `remaining_steps_contract` has been emitted
 2. a checkpoint has been raised because automatic continuation would be unsafe
 3. the request has crossed out of shared-only governance and must return to module-side candidate truth writeback before resume
 
@@ -88,8 +94,13 @@ The output must include at least:
 1. the complex intent recognized from the request
 2. why single-flow routing was unstable
 3. whether a safe decomposition exists
-4. the smallest legal next shared flow if decomposition is stable
-5. if a checkpoint is raised:
+4. when a safe decomposition exists, the formal `remaining_steps_contract`, including:
+   - `step_order`
+   - `current_step`
+   - `remaining_steps`
+   - `shared_ops_closure_rule`
+5. the smallest legal next shared flow if decomposition is stable
+6. if a checkpoint is raised:
    - `type`
    - `blocking`
    - `command=shared_ops`
@@ -99,7 +110,7 @@ The output must include at least:
    - `required_writeback_target`
    - `resume_signal`
    - `resume_next_step`
-6. when the boundary crosses into `system_constraints_change_proposal`, which module candidate must receive the writeback before `shared_ops` may resume
+7. when the boundary crosses into `system_constraints_change_proposal`, which module candidate must receive the writeback before `shared_ops` may resume
 
 ---
 
@@ -111,3 +122,4 @@ The output must include at least:
 2. continue automatically when action order changes formal truth
 3. keep system-boundary conclusions only in chat
 4. replace the actual downstream shared flow that must perform the work
+5. treat a first-step route as the full closure of a multi-step shared request
