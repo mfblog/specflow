@@ -49,6 +49,7 @@ Before execution:
 6. read the target `shared_contract`
 7. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
 8. if the target module is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/spec_fork.md`
+9. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 
 ---
 
