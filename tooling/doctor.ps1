@@ -6,8 +6,7 @@ $Manifest = Join-Path $SpecFlowRoot "tooling/manifest.tsv"
 $Failures = 0
 $ManagedBegin = "<!-- SPECFLOW:BEGIN -->"
 $ManagedEnd = "<!-- SPECFLOW:END -->"
-$SyncScriptRel = "specflow/tooling/sync_entry_docs.sh"
-$ExpectedHookLine = '"${REPO_ROOT}/specflow/tooling/sync_entry_docs.sh" --stage'
+$CurrentBinaryRel = "specflow/tooling/bin/specflowctl-windows-amd64.exe"
 
 function Get-ManagedBlock {
   param([string]$Path)
@@ -79,15 +78,20 @@ try {
 } catch {
 }
 
-$SyncScript = Join-Path $TargetRoot $SyncScriptRel
-if (!(Test-Path $SyncScript)) {
-  Write-Host "MISSING $SyncScriptRel"
+$Arch = $env:PROCESSOR_ARCHITECTURE
+if ($Arch -eq "ARM64") {
+  $CurrentBinaryRel = "specflow/tooling/bin/specflowctl-windows-arm64.exe"
+}
+
+$CurrentBinary = Join-Path $TargetRoot $CurrentBinaryRel
+if (!(Test-Path $CurrentBinary)) {
+  Write-Host "MISSING $CurrentBinaryRel"
   $Failures++
 }
 
 $HookFile = Join-Path $TargetRoot ".githooks/pre-commit"
-if ((Test-Path $HookFile) -and -not (Select-String -Path $HookFile -SimpleMatch $ExpectedHookLine -Quiet)) {
-  Write-Host "INVALID .githooks/pre-commit does not call $SyncScriptRel"
+if ((Test-Path $HookFile) -and (-not (Select-String -Path $HookFile -SimpleMatch "specflow/tooling/bin/specflowctl-" -Quiet) -or -not (Select-String -Path $HookFile -SimpleMatch "entry sync --stage" -Quiet))) {
+  Write-Host "INVALID .githooks/pre-commit does not call specflow binary entry sync"
   $Failures++
 }
 

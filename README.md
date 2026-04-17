@@ -28,6 +28,17 @@ You can understand it in one sentence:
 This repository is not trying to force every project into one fixed shape.
 It gives you a usable starting point, and expects you to change the project-side rules to fit your own domain.
 
+For all command examples below, `<specflow-binary>` means the compiled executable that matches your current platform under `specflow/tooling/bin/`.
+
+Examples:
+
+- Linux x86_64: `./specflow/tooling/bin/specflowctl-linux-amd64`
+- Linux arm64: `./specflow/tooling/bin/specflowctl-linux-arm64`
+- macOS Intel: `./specflow/tooling/bin/specflowctl-darwin-amd64`
+- macOS Apple Silicon: `./specflow/tooling/bin/specflowctl-darwin-arm64`
+- Windows x86_64: `.\specflow\tooling\bin\specflowctl-windows-amd64.exe`
+- Windows arm64: `.\specflow\tooling\bin\specflowctl-windows-arm64.exe`
+
 ## What Problem It Solves
 
 > When the code moves fast, truth has to move slower.
@@ -142,7 +153,7 @@ Copy-Item -Recurse -Force $env:TEMP\SpecFlow\specflow .\specflow
 After that, go to `Quick Start` below and run:
 
 ```bash
-./specflow/tooling/init.sh
+<specflow-binary> init
 ```
 
 ### Option 2: Track The Upstream With `git subtree`
@@ -174,7 +185,7 @@ Copy-Item -Recurse -Force .\vendor\specflow-upstream\specflow\* .\specflow\
 Then run:
 
 ```bash
-./specflow/tooling/init.sh
+<specflow-binary> init
 ```
 
 Later, when you want to update:
@@ -183,7 +194,7 @@ Later, when you want to update:
 git fetch specflow-upstream
 git subtree pull --prefix=vendor/specflow-upstream specflow-upstream main --squash
 rsync -a --delete vendor/specflow-upstream/specflow/ ./specflow/
-./specflow/tooling/upgrade.sh
+<specflow-binary> upgrade
 ```
 
 What each step is doing:
@@ -200,13 +211,7 @@ What each step is doing:
 After the `specflow/` directory is in your repository, run this from the repository root:
 
 ```bash
-./specflow/tooling/init.sh
-```
-
-Windows PowerShell:
-
-```powershell
-.\specflow\tooling\init.ps1
+<specflow-binary> init
 ```
 
 This installs the basic structure you need:
@@ -770,15 +775,10 @@ The tooling scripts below are useful, but they are not the first commands a begi
   - refreshes framework-managed files and managed blocks
   - use it when you intentionally want to bring the installed project onto a newer `specFlow` baseline
 
-Shell examples:
+Examples:
 
-- `./specflow/tooling/doctor.sh`
-- `./specflow/tooling/upgrade.sh`
-
-Windows PowerShell:
-
-- `.\specflow\tooling\doctor.ps1`
-- `.\specflow\tooling\upgrade.ps1`
+- `<specflow-binary> doctor`
+- `<specflow-binary> upgrade`
 
 ### Advanced Flows You Should Know Exist
 

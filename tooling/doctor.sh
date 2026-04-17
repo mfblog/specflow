@@ -8,8 +8,7 @@ MANIFEST="${SPECFLOW_ROOT}/tooling/manifest.tsv"
 failures=0
 MANAGED_BEGIN='<!-- SPECFLOW:BEGIN -->'
 MANAGED_END='<!-- SPECFLOW:END -->'
-SYNC_SCRIPT_REL="specflow/tooling/sync_entry_docs.sh"
-EXPECTED_HOOK_LINE='"${REPO_ROOT}/specflow/tooling/sync_entry_docs.sh" --stage'
+CURRENT_BIN_REL="specflow/tooling/bin/specflowctl-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
 
 extract_managed_block() {
   local file="$1"
@@ -82,14 +81,23 @@ if command -v git >/dev/null 2>&1; then
   fi
 fi
 
-if [[ ! -f "${TARGET_ROOT}/${SYNC_SCRIPT_REL}" ]]; then
-  echo "MISSING ${SYNC_SCRIPT_REL}"
+case "$(uname -s)" in
+  Linux*)   CURRENT_BIN_REL="specflow/tooling/bin/specflowctl-linux-$(uname -m)" ;;
+  Darwin*)  CURRENT_BIN_REL="specflow/tooling/bin/specflowctl-darwin-$(uname -m)" ;;
+  MINGW*|MSYS*|CYGWIN*) CURRENT_BIN_REL="specflow/tooling/bin/specflowctl-windows-$(uname -m).exe" ;;
+esac
+
+CURRENT_BIN_REL="${CURRENT_BIN_REL//x86_64/amd64}"
+CURRENT_BIN_REL="${CURRENT_BIN_REL//aarch64/arm64}"
+
+if [[ ! -f "${TARGET_ROOT}/${CURRENT_BIN_REL}" ]]; then
+  echo "MISSING ${CURRENT_BIN_REL}"
   failures=$((failures + 1))
 fi
 
 hook_file="${TARGET_ROOT}/.githooks/pre-commit"
-if [[ -f "${hook_file}" ]] && ! grep -Fq "${EXPECTED_HOOK_LINE}" "${hook_file}"; then
-  echo "INVALID .githooks/pre-commit does not call ${SYNC_SCRIPT_REL}"
+if [[ -f "${hook_file}" ]] && { ! grep -Fq "specflow/tooling/bin/specflowctl-" "${hook_file}" || ! grep -Fq "entry sync --stage" "${hook_file}"; }; then
+  echo "INVALID .githooks/pre-commit does not call specflow binary entry sync"
   failures=$((failures + 1))
 fi
 

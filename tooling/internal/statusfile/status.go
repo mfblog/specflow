@@ -9,7 +9,29 @@ import (
 
 const relativeStatusPath = "docs/specs/_status.md"
 
+type ModuleStatus struct {
+	Module      string
+	Stable      string
+	Candidate   string
+	ActiveLayer string
+	NextCommand string
+	Notes       string
+}
+
 func LoadModules(repoRoot string) ([]string, error) {
+	statuses, err := LoadModuleStatuses(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	modules := make([]string, 0, len(statuses))
+	for _, status := range statuses {
+		modules = append(modules, status.Module)
+	}
+	return modules, nil
+}
+
+func LoadModuleStatuses(repoRoot string) ([]ModuleStatus, error) {
 	path := filepath.Join(repoRoot, relativeStatusPath)
 	lines, _, err := readLines(path)
 	if err != nil {
@@ -21,15 +43,35 @@ func LoadModules(repoRoot string) ([]string, error) {
 		return nil, err
 	}
 
-	modules := make([]string, 0, end-start)
+	statuses := make([]ModuleStatus, 0, end-start)
 	for idx := start; idx < end; idx++ {
 		cells, ok := parseTableLine(lines[idx])
 		if !ok || len(cells) < 6 {
 			continue
 		}
-		modules = append(modules, stripCodeSpan(cells[0]))
+		statuses = append(statuses, ModuleStatus{
+			Module:      stripCodeSpan(cells[0]),
+			Stable:      stripCodeSpan(cells[1]),
+			Candidate:   stripCodeSpan(cells[2]),
+			ActiveLayer: stripCodeSpan(cells[3]),
+			NextCommand: stripCodeSpan(cells[4]),
+			Notes:       strings.TrimSpace(cells[5]),
+		})
 	}
-	return modules, nil
+	return statuses, nil
+}
+
+func LookupModuleStatus(repoRoot, module string) (ModuleStatus, error) {
+	statuses, err := LoadModuleStatuses(repoRoot)
+	if err != nil {
+		return ModuleStatus{}, err
+	}
+	for _, status := range statuses {
+		if status.Module == module {
+			return status, nil
+		}
+	}
+	return ModuleStatus{}, fmt.Errorf("module %q not found in %s", module, relativeStatusPath)
 }
 
 func UpdateNextCommand(repoRoot, module, nextCommand string) (bool, error) {

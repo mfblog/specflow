@@ -59,7 +59,7 @@ Fixed rules:
 6. If multiple registered entry files were modified and their managed blocks still differ, the task enters an explicit source-selection case:
    - do not guess the sync source from mtime, path order, or other environment metadata
    - explicitly choose which registered entry file is the source for this round before syncing
-   - run `specflow/tooling/sync_entry_docs.sh --source <registered-entry-file>`
+   - run `specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>`
    - `<registered-entry-file>` must be one of the registered project-side entry files from this registry, for example `AGENTS.md`
 7. Syncing is only responsible for re-aligning managed blocks across registered entry files. It does not narrow review scope or rewrite governance judgment rules.
 
@@ -77,10 +77,10 @@ The default time to sync entry files is before `git commit`.
 Rules:
 
 1. The tracked `pre-commit` hook lives at `.githooks/pre-commit`.
-2. That hook calls `specflow/tooling/sync_entry_docs.sh` before `git commit`.
-3. If the script succeeds, the synced managed blocks are re-added to the index and the commit continues.
-4. If the script finds a case where multiple registered entry files were modified and their managed blocks still differ, so no source can be chosen automatically, it must block the commit and require an explicit source choice.
-   - use `specflow/tooling/sync_entry_docs.sh --source <registered-entry-file>` to provide that choice
+2. That hook calls the matching `specflow/tooling/bin/specflowctl-<os>-<arch>` binary before `git commit`, and runs `entry sync --stage`.
+3. If the binary command succeeds, the synced managed blocks are re-added to the index and the commit continues.
+4. If the binary command finds a case where multiple registered entry files were modified and their managed blocks still differ, so no source can be chosen automatically, it must block the commit and require an explicit source choice.
+   - use `specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>` to provide that choice
 5. If the repository-level hook path is not enabled yet, run:
    - `git config core.hooksPath .githooks`
 
