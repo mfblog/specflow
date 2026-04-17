@@ -57,7 +57,7 @@ Before execution:
 1. confirm the request is really about extracting already-existing module-local formal truth
 2. identify the smallest shared object that multiple modules truly depend on
 3. if any involved module current layer is `stable`, do not modify that module `stable` directly:
-   - raise a blocking `shared_ops` checkpoint
+   - raise a blocking `shared_ops` checkpoint with `type=prerequisite_action`
    - require `spec_fork:{module}` for each such module before extraction continues
    - set `required_writeback_target` to the corresponding module candidate main file set because chat-only agreement does not create legal extraction targets
 4. create or update the target candidate-layer `shared_contract`

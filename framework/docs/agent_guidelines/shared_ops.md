@@ -80,9 +80,10 @@ Before routing a `shared_ops` request:
 3. read `docs/specs/_status.md` when the request names existing formal modules
 4. resolve each named existing module's current layer from `_status.md` before reading its main Spec
 5. read the current relevant module candidate or stable files after current-layer resolution
-6. if the request names modules that do not yet have current-layer Spec files, do not block on that absence before routing
-7. read the relevant `shared_contract` files if the request names shared truth directly
-8. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross the boundary into global-default-rule promotion
+6. read any explicitly referenced appendix truth needed to judge whether the real source truth is module-private, shared, or still boundary-unstable
+7. if the request names modules that do not yet have current-layer Spec files, do not block on that absence before routing
+8. read the relevant `shared_contract` files if the request names shared truth directly
+9. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross the boundary into global-default-rule promotion
 
 The executor must not route by keyword alone when the named files already show a different formal situation.
 
@@ -168,6 +169,7 @@ This is mandatory, not optional.
 1. confirm the request really belongs to cross-module shared-truth governance
 2. resolve the relevant repository truth before routing:
    - use `_status.md` to resolve current layer for any named existing formal module
+   - read current-layer appendix truth whenever the routing decision depends on where the formal truth currently lives or whether module-private versus shared boundary is already stable
    - read named `shared_contract` files when shared truth is named directly
    - read `s_system_constraints.md` when the request may cross the shared/system boundary
 3. test whether the request belongs to exactly one of `shared_new`, `shared_extract`, `shared_bind`, or `shared_sync`
@@ -227,6 +229,7 @@ Allowed checkpoint types:
 
 1. `clarification`
 2. `decision`
+3. `prerequisite_action`
 
 ### 9.2 Mandatory Checkpoint Conditions
 
@@ -237,6 +240,7 @@ A checkpoint is mandatory when any one of the following holds:
 3. the boundary between shared truth and `system_constraints_change_proposal` is unstable
 4. the execution order of multiple shared actions would change the resulting formal truth
 5. current repository truth is insufficient to support a stable decomposition
+6. the current flow cannot continue legally until an upstream command such as `spec_fork:{module}` has created the required writeback target
 
 ### 9.3 Shared Checkpoint Output
 
@@ -250,6 +254,7 @@ Fixed rules:
 4. `required_writeback_target` may point to one or more shared-contract files, module candidate files, or appendix files when those are the truth targets that must be updated before resume
 5. `resume_next_step` must be the smallest legal follow-up, which is normally rerunning `shared_ops` after the required truth writeback
 6. when the checkpoint exists because one or more target modules are still at `stable`, `required_writeback_target` must point to the future module candidate main file set rather than the current stable file set
+7. when the current flow is blocked on an upstream command creating the legal writeback target first, use `type=prerequisite_action`
 
 A `shared_ops` checkpoint must also report at least:
 
@@ -275,7 +280,7 @@ The output must include at least:
 3. the repository truth inputs used to make the routing decision
 4. whether the request required direct module truth writeback and whether any target module first had to stop for `spec_fork:{module}`
 5. whether reconciliation through `shared_sync` was required and whether it has completed
-6. if `shared_escape` emitted a `remaining_steps_contract`, that contract and the current completion position
+6. if `shared_escape` emitted a `remaining_steps_contract`, that contract, the current completion position, and the fact that the contract is execution-local rather than durable truth
 7. if routing was unstable, the `shared_escape` result or checkpoint
 8. the git close-out result when governance files or commit-triggering files were changed
 
@@ -306,3 +311,4 @@ The output must include at least:
 3. allow the executor to guess through unstable shared/system/module boundaries
 4. define a new independent lifecycle object parallel to modules
 5. treat a partially executed multi-step sequence as a closed shared request
+6. treat `remaining_steps_contract` as durable truth that may be resumed later without rerunning `shared_ops` from current repository truth

@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This file defines the structured checkpoint protocol used by `specflow` candidate-side commands.
+This file defines the structured checkpoint protocol used by `specflow` commands and governance flows that explicitly adopt checkpoint handling.
 
 It answers five questions:
 
@@ -18,7 +18,7 @@ This is a direct rule document for executors.
 
 ## 2. What A Checkpoint Is
 
-A checkpoint is a structured communication stop raised by a command when the command cannot close correctly without a small amount of human input or human judgment.
+A checkpoint is a structured communication stop raised by an active command or governance flow when it cannot close correctly without a small amount of human input or human judgment.
 
 It is not:
 
@@ -29,7 +29,7 @@ It is not:
 
 Plain meaning:
 
-1. the active command is still responsible for the workflow state
+1. the active command or governance flow is still responsible for the workflow state
 2. the checkpoint only formalizes the stop reason, the required user response, and the legal resume path
 
 ---
@@ -44,12 +44,15 @@ Only these checkpoint types are allowed:
    - use when more than one materially different direction remains viable and the user must choose one
 3. `human_verify`
    - use when automation is insufficient to close confidence and a small amount of human effect judgment is still required
+4. `prerequisite_action`
+   - use when the active flow cannot legally continue until one explicit upstream command or repository writeback action is completed first
 
 Type rules:
 
-1. `clarification` and `decision` are allowed only where the active command file explicitly permits them
-2. `human_verify` is allowed only where the active command file explicitly permits it
-3. executors must not invent additional checkpoint types
+1. `clarification` and `decision` are allowed only where the active command file or governance-flow file explicitly permits them
+2. `human_verify` is allowed only where the active command file or governance-flow file explicitly permits it
+3. `prerequisite_action` is allowed only where the active command file or governance-flow file explicitly permits it
+4. executors must not invent additional checkpoint types
 
 ---
 
@@ -74,9 +77,10 @@ Field meanings:
 2. `blocking`
    - always records whether the current command is fully blocked pending user input
 3. `command`
-   - the active command that raised the checkpoint
+   - the active command or governance flow that raised the checkpoint
 4. `module`
    - the formal module name
+   - use literal `none` only when the active governance flow is not bound to exactly one formal module, for example a cross-module `shared_ops` checkpoint
 5. `question_or_action`
    - the exact input or verification the user must provide
 6. `why_blocking`
@@ -95,16 +99,17 @@ Field meanings:
 Checkpoint resume must follow these rules:
 
 1. the active command does not become `pass` merely because a checkpoint was raised
-2. the active command must re-judge its gate conditions after resume instead of assuming the checkpoint answer fixed everything
-3. if the checkpoint conclusion changes behavior truth, boundary truth, or acceptance truth, that conclusion must be written back to the current candidate or required appendix before resume
+2. the active command or governance flow must re-judge its gate conditions after resume instead of assuming the checkpoint answer fixed everything
+3. if the checkpoint conclusion changes behavior truth, boundary truth, or acceptance truth, that conclusion must be written back to the current candidate, required appendix, shared-contract file, or other flow-declared truth target before resume
 4. executors must not treat chat-only conclusions as durable truth
 5. `resume_next_step` must be the smallest legal step, not the most convenient step
 
 Writeback rules:
 
-1. for `clarification`, `required_writeback_target` should normally be the current candidate main file or a required appendix file
-2. for `decision`, `required_writeback_target` should normally be the current candidate main file or a required appendix file when the decision affects behavior truth
+1. for `clarification`, `required_writeback_target` should normally be the current candidate main file, a required appendix file, or the active flow's declared shared-truth target
+2. for `decision`, `required_writeback_target` should normally be the current candidate main file, a required appendix file, or the active flow's declared shared-truth target when the decision affects behavior truth
 3. for `human_verify`, `required_writeback_target` may be `none` only when the checkpoint concerns final confidence rather than truth repair
+4. for `prerequisite_action`, `required_writeback_target` should name the concrete truth or process target that must exist before resume, and `resume_next_step` should point to rerunning the active flow after that prerequisite is complete
 
 ---
 
@@ -125,6 +130,7 @@ Additional type boundaries:
 1. `clarification` is not a substitute for missing technical investigation
 2. `decision` is not a substitute for executor reluctance to recommend the best option
 3. `human_verify` is not a substitute for tests, static checks, or implementation verification that the executor could have performed
+4. `prerequisite_action` is not a substitute for an avoidable executor task; use it only when the current flow truly depends on a separate formal command or writeback target that cannot be skipped
 
 ---
 
@@ -134,11 +140,11 @@ The checkpoint protocol works together with:
 
 1. `specflow/framework/docs/agent_guidelines/command_policy.md`
 2. `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md`
-3. the active command file
+3. the active command file or governance-flow file
 
 Priority rules:
 
-1. the active command file decides whether that command may raise a checkpoint and which types are legal
+1. the active command file or governance-flow file decides whether that flow may raise a checkpoint and which types are legal
 2. `command_policy.md` decides command-level progression and fallback rules
 3. this file defines the common structure and resume semantics of checkpoints
 

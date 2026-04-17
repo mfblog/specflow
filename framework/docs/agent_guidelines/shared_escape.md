@@ -30,7 +30,8 @@ It may:
 1. decompose one complex request into a safe sequence of standard shared flows
 2. raise a `clarification` checkpoint
 3. raise a `decision` checkpoint
-4. emit a formal `remaining_steps_contract` when safe decomposition exists
+4. raise a `prerequisite_action` checkpoint when one required upstream command must happen first
+5. emit a formal `remaining_steps_contract` when safe decomposition exists
 
 It does not:
 
@@ -38,6 +39,7 @@ It does not:
 2. replace the downstream standard shared flows
 3. create an independent system command chain
 4. keep truth in chat without required writeback
+5. turn `remaining_steps_contract` into durable truth that survives a later resume without fresh routing
 
 ---
 
@@ -66,6 +68,7 @@ Before execution:
    - the current step
    - the remaining steps after the current step
    - the closure condition that `shared_ops` stays open until the final listed step finishes
+   - that the contract is execution-local and must be discarded if the current `shared_ops` handling stops before final closure
 6. if such a stable sequence exists, report that contract and route to the first legal flow only
 7. stop immediately and raise a checkpoint when any of the following holds:
    - the same truth has two or more plausible formal landing points
@@ -74,6 +77,7 @@ Before execution:
    - the action order would change resulting formal truth
    - current repository truth is insufficient to support a stable decomposition
 8. when the request has crossed into `system_constraints_change_proposal`, require writeback into the responsible module candidate instead of inventing a new shared-side target
+9. if the current `shared_ops` handling stops before all listed steps finish, require rerunning `shared_ops` from current repository truth rather than resuming an old `remaining_steps_contract`
 
 ---
 
@@ -99,6 +103,8 @@ The output must include at least:
    - `current_step`
    - `remaining_steps`
    - `shared_ops_closure_rule`
+   - `durability=execution_local`
+   - `resume_rule=rerun_shared_ops_from_current_truth_if_interrupted`
 5. the smallest legal next shared flow if decomposition is stable
 6. if a checkpoint is raised:
    - `type`

@@ -55,7 +55,7 @@ Before execution:
 
 1. confirm the target module truly reuses the target shared truth rather than merely sharing a topic or naming style
 2. if the target module current layer is `stable`, do not modify `stable` directly:
-   - raise a blocking `shared_ops` checkpoint
+   - raise a blocking `shared_ops` checkpoint with `type=prerequisite_action`
    - require `spec_fork:{module}` to create the target module candidate first
    - set `required_writeback_target` to that module candidate main file because chat-only agreement does not create a legal binding target
 3. update the module candidate-layer `shared_contract_refs`
