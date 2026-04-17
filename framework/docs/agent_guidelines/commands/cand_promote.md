@@ -74,14 +74,17 @@ By default it handles:
    - `Candidate=no`
    - `Active Layer=stable`
    - `Next Command=spec_fork`
+   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command spec_fork --notes <status-note>`
 14. only after that update may physical deletion happen:
    - `docs/specs/candidate/c_{module}.md`
    - current-round candidate appendix files
    - `_check_result/{module}.md`
    - `_plans/{module}.md`
    - `_verify_result/{module}.md`
+   - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --module {module} --mode cand_promote`
 15. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
 16. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer, even when no additional affected module is known yet
+   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
 17. perform git close-out if required
 
 ## 5. Stop Conditions

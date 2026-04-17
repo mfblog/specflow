@@ -19,6 +19,13 @@ type CleanupResult struct {
 	StatusUpdated bool
 }
 
+type SuccessCleanupResult struct {
+	Module       string
+	Mode         string
+	DeletedFiles []string
+	MissingFiles []string
+}
+
 type cleanupRule struct {
 	NextCommand string
 	FileKinds   []string
@@ -106,6 +113,39 @@ func ApplyFallback(repoRoot, module, fromCommand, reason string) (CleanupResult,
 	return result, nil
 }
 
+func ApplySuccessCleanup(repoRoot, module, mode string) (SuccessCleanupResult, error) {
+	result := SuccessCleanupResult{
+		Module: strings.TrimSpace(module),
+		Mode:   strings.TrimSpace(mode),
+	}
+	if result.Module == "" || result.Mode == "" {
+		return result, fmt.Errorf("module and mode are required")
+	}
+	if _, err := ensureFormalModule(repoRoot, result.Module); err != nil {
+		return result, err
+	}
+
+	paths, err := successCleanupPaths(repoRoot, result.Module, result.Mode)
+	if err != nil {
+		return result, err
+	}
+	for _, relPath := range paths {
+		absPath := filepath.Join(repoRoot, filepath.FromSlash(relPath))
+		if _, err := os.Stat(absPath); err != nil {
+			if os.IsNotExist(err) {
+				result.MissingFiles = append(result.MissingFiles, relPath)
+				continue
+			}
+			return result, fmt.Errorf("stat %s: %w", relPath, err)
+		}
+		if err := os.Remove(absPath); err != nil {
+			return result, fmt.Errorf("delete %s: %w", relPath, err)
+		}
+		result.DeletedFiles = append(result.DeletedFiles, relPath)
+	}
+	return result, nil
+}
+
 func lookupRule(fromCommand, reason string) (cleanupRule, error) {
 	commandRules, ok := rules[fromCommand]
 	if !ok {
@@ -133,6 +173,47 @@ func filePathsForModule(module string, fileKinds []string) []string {
 	return paths
 }
 
+func successCleanupPaths(repoRoot, module, mode string) ([]string, error) {
+	paths := []string{}
+	switch mode {
+	case "spec_fork":
+		paths = append(paths, filePathsForModule(module, []string{"check", "plan", "verify"})...)
+		appendixPaths, err := candidateAppendixPaths(repoRoot, module)
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, appendixPaths...)
+	case "cand_promote":
+		paths = append(paths, fmt.Sprintf("docs/specs/candidate/c_%s.md", module))
+		paths = append(paths, filePathsForModule(module, []string{"check", "plan", "verify"})...)
+		appendixPaths, err := candidateAppendixPaths(repoRoot, module)
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, appendixPaths...)
+	default:
+		return nil, fmt.Errorf("unsupported success cleanup mode %q", mode)
+	}
+	return sortAndDedupeStrings(paths), nil
+}
+
+func candidateAppendixPaths(repoRoot, module string) ([]string, error) {
+	pattern := filepath.Join(repoRoot, "docs/specs/candidate/appendix", fmt.Sprintf("c_%s_*.md", module))
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]string, 0, len(matches))
+	for _, match := range matches {
+		rel, err := filepath.Rel(repoRoot, match)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, filepath.ToSlash(rel))
+	}
+	return result, nil
+}
+
 func ensureFormalModule(repoRoot, module string) (bool, error) {
 	modules, err := statusfile.LoadModules(repoRoot)
 	if err != nil {
@@ -144,4 +225,17 @@ func ensureFormalModule(repoRoot, module string) (bool, error) {
 		}
 	}
 	return false, fmt.Errorf("module %q is not registered in docs/specs/_status.md", module)
+}
+
+func sortAndDedupeStrings(values []string) []string {
+	seen := map[string]bool{}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if seen[value] {
+			continue
+		}
+		seen[value] = true
+		result = append(result, value)
+	}
+	return result
 }

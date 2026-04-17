@@ -91,6 +91,7 @@ Before execution:
    - name the command or change owner that must fix it
    - do not invalidate modules on a `bound_modules`-only delta
 9. if `_status.md` points to a step later than the real smallest actionable step, correct it
+   - the deterministic reconciliation work in Steps 4, 6, 7, 8, and 9 may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x]`
 10. finish git close-out if required by policy
 
 ---

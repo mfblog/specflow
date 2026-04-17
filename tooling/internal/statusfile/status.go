@@ -75,6 +75,15 @@ func LookupModuleStatus(repoRoot, module string) (ModuleStatus, error) {
 }
 
 func UpdateNextCommand(repoRoot, module, nextCommand string) (bool, error) {
+	status, err := LookupModuleStatus(repoRoot, module)
+	if err != nil {
+		return false, err
+	}
+	status.NextCommand = nextCommand
+	return UpsertModuleStatus(repoRoot, status, false)
+}
+
+func UpsertModuleStatus(repoRoot string, status ModuleStatus, createIfMissing bool) (bool, error) {
 	path := filepath.Join(repoRoot, relativeStatusPath)
 	lines, hadTrailingNewline, err := readLines(path)
 	if err != nil {
@@ -92,17 +101,20 @@ func UpdateNextCommand(repoRoot, module, nextCommand string) (bool, error) {
 		if !ok || len(cells) < 6 {
 			continue
 		}
-		if stripCodeSpan(cells[0]) != module {
+		if stripCodeSpan(cells[0]) != status.Module {
 			continue
 		}
-		cells[4] = fmt.Sprintf("`%s`", nextCommand)
-		lines[idx] = formatTableLine(cells)
+		lines[idx] = formatModuleStatusLine(status)
 		updated = true
 		break
 	}
 
 	if !updated {
-		return false, fmt.Errorf("module %q not found in %s", module, relativeStatusPath)
+		if !createIfMissing {
+			return false, fmt.Errorf("module %q not found in %s", status.Module, relativeStatusPath)
+		}
+		lines = append(lines[:end], append([]string{formatModuleStatusLine(status)}, lines[end:]...)...)
+		updated = true
 	}
 
 	content := strings.Join(lines, "\n")
@@ -173,6 +185,17 @@ func parseTableLine(line string) ([]string, bool) {
 
 func formatTableLine(cells []string) string {
 	return "| " + strings.Join(cells, " | ") + " |"
+}
+
+func formatModuleStatusLine(status ModuleStatus) string {
+	return formatTableLine([]string{
+		fmt.Sprintf("`%s`", status.Module),
+		fmt.Sprintf("`%s`", status.Stable),
+		fmt.Sprintf("`%s`", status.Candidate),
+		fmt.Sprintf("`%s`", status.ActiveLayer),
+		fmt.Sprintf("`%s`", status.NextCommand),
+		status.Notes,
+	})
 }
 
 func stripCodeSpan(value string) string {

@@ -72,6 +72,7 @@ It does not:
 12. update `_status.md`:
    - if still aligned -> `Next Command=spec_fork`
    - if drift exists -> keep `Next Command=stable_verify`
+   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command <spec_fork-or-stable_verify> --notes <status-note>`
 13. perform git close-out if required
 
 ## 5. Stop Conditions

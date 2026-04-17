@@ -46,6 +46,14 @@ type ValidationResult struct {
 	Expected    Snapshot
 }
 
+type ProcessSnapshotData struct {
+	ProcessKind            string
+	ProcessFile            string
+	Scalars                map[string]string
+	ModuleAppendixSnapshot []AppendixEntry
+	SharedContractSnapshot []SharedContractEntry
+}
+
 var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
 
 func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
@@ -123,7 +131,7 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 		return ValidationResult{}, err
 	}
 
-	processFile, err := processFilePath(module, processKind)
+	processFile, err := ProcessFilePath(module, processKind)
 	if err != nil {
 		return ValidationResult{}, err
 	}
@@ -170,6 +178,35 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 	}
 
 	return result, nil
+}
+
+func LoadProcessSnapshot(repoRoot, module, processKind string) (ProcessSnapshotData, error) {
+	processFile, err := ProcessFilePath(module, processKind)
+	if err != nil {
+		return ProcessSnapshotData{}, err
+	}
+	processAbs := filepath.Join(repoRoot, filepath.FromSlash(processFile))
+	content, err := os.ReadFile(processAbs)
+	if err != nil {
+		return ProcessSnapshotData{}, fmt.Errorf("read %s: %w", processFile, err)
+	}
+
+	parsed, err := parseProcessSnapshot(string(content))
+	if err != nil {
+		return ProcessSnapshotData{}, fmt.Errorf("%s: %w", processFile, err)
+	}
+
+	scalars := make(map[string]string, len(parsed.scalars))
+	for key, value := range parsed.scalars {
+		scalars[key] = value
+	}
+	return ProcessSnapshotData{
+		ProcessKind:            processKind,
+		ProcessFile:            processFile,
+		Scalars:                scalars,
+		ModuleAppendixSnapshot: append([]AppendixEntry(nil), parsed.appendixEntries...),
+		SharedContractSnapshot: append([]SharedContractEntry(nil), parsed.sharedEntries...),
+	}, nil
 }
 
 func Render(snapshot Snapshot) string {
@@ -617,7 +654,7 @@ func renderSharedLines(entries []SharedContractEntry) []string {
 	return lines
 }
 
-func processFilePath(module, processKind string) (string, error) {
+func ProcessFilePath(module, processKind string) (string, error) {
 	switch processKind {
 	case "check":
 		return fmt.Sprintf("docs/specs/_check_result/%s.md", module), nil

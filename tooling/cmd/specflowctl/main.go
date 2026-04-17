@@ -15,7 +15,9 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/projectstandards"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewscope"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/sharedsync"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
 func main() {
@@ -48,8 +50,12 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runReview(args[1:], stdout, stderr)
 	case "process":
 		return runProcess(args[1:], stdout, stderr)
+	case "shared":
+		return runShared(args[1:], stdout, stderr)
 	case "snapshot":
 		return runSnapshot(args[1:], stdout, stderr)
+	case "status":
+		return runStatus(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		writeRootUsage(stdout)
 		return nil
@@ -326,12 +332,101 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		writeList(stdout, "Missing files", result.MissingFiles)
 		fmt.Fprintf(stdout, "Status file updated: %t\n", result.StatusUpdated)
 		return nil
+	case "cleanup-success":
+		fs := flag.NewFlagSet("process cleanup-success", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		module := fs.String("module", "", "formal module name")
+		mode := fs.String("mode", "", "success cleanup mode")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*module) == "" || strings.TrimSpace(*mode) == "" {
+			writeProcessUsage(stderr)
+			return errors.New("module and mode are required")
+		}
+
+		result, err := processcleanup.ApplySuccessCleanup(mustAbs(*repoRoot), *module, *mode)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "Applied success cleanup for %s\n", result.Module)
+		fmt.Fprintf(stdout, "Mode: %s\n", result.Mode)
+		writeList(stdout, "Deleted files", result.DeletedFiles)
+		writeList(stdout, "Missing files", result.MissingFiles)
+		return nil
 	case "-h", "--help", "help":
 		writeProcessUsage(stdout)
 		return nil
 	default:
 		writeProcessUsage(stderr)
 		return fmt.Errorf("unknown process subcommand %q", args[0])
+	}
+}
+
+func runShared(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		writeSharedUsage(stderr)
+		return errors.New("missing shared subcommand")
+	}
+
+	switch args[0] {
+	case "sync-impact":
+		fs := flag.NewFlagSet("shared sync-impact", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		modules := fs.String("modules", "", "comma-separated formal modules")
+		sharedRefs := fs.String("shared-refs", "", "comma-separated shared version refs")
+		sharedIDs := fs.String("shared-ids", "", "comma-separated shared contract ids")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+
+		result, err := sharedsync.SyncImpact(mustAbs(*repoRoot), sharedsync.Options{
+			Modules:    parseCSV(*modules),
+			SharedRefs: parseCSV(*sharedRefs),
+			SharedIDs:  parseCSV(*sharedIDs),
+		})
+		if err != nil {
+			return err
+		}
+
+		writeList(stdout, "Scoped modules", result.ScopedModules)
+		writeList(stdout, "Scoped shared refs", result.ScopedSharedRefs)
+		writeList(stdout, "Scoped shared ids", result.ScopedSharedIDs)
+		fmt.Fprintf(stdout, "Module results (%d):\n", len(result.ModuleResults))
+		if len(result.ModuleResults) == 0 {
+			fmt.Fprintln(stdout, "- none")
+		}
+		for _, item := range result.ModuleResults {
+			fmt.Fprintf(stdout, "- %s | layer=%s | outcome=%s | next=%s | reason=%s | status_updated=%t\n", item.Module, item.ActiveLayer, item.Outcome, item.NextCommand, noneIfEmpty(item.FallbackReasonCode), item.StatusUpdated)
+			for _, diagnostic := range item.Diagnostics {
+				fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)
+			}
+			for _, path := range item.DeletedFiles {
+				fmt.Fprintf(stdout, "  deleted: %s\n", path)
+			}
+			for _, path := range item.MissingFiles {
+				fmt.Fprintf(stdout, "  missing: %s\n", path)
+			}
+		}
+		fmt.Fprintf(stdout, "Bound-module drifts (%d):\n", len(result.BoundModuleDrifts))
+		if len(result.BoundModuleDrifts) == 0 {
+			fmt.Fprintln(stdout, "- none")
+			return nil
+		}
+		for _, drift := range result.BoundModuleDrifts {
+			fmt.Fprintf(stdout, "- %s | file=%s | version=%s | bound_modules_only_delta=%t\n", drift.SharedContractID, drift.FileRef, drift.VersionRef, drift.BoundModulesOnlyDelta)
+			fmt.Fprintf(stdout, "  declared=%s\n", strings.Join(defaultListValue(drift.DeclaredModules), ", "))
+			fmt.Fprintf(stdout, "  actual=%s\n", strings.Join(defaultListValue(drift.ActualModules), ", "))
+		}
+		return nil
+	case "-h", "--help", "help":
+		writeSharedUsage(stdout)
+		return nil
+	default:
+		writeSharedUsage(stderr)
+		return fmt.Errorf("unknown shared subcommand %q", args[0])
 	}
 }
 
@@ -395,6 +490,69 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 	}
 }
 
+func runStatus(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		writeStatusUsage(stderr)
+		return errors.New("missing status subcommand")
+	}
+
+	switch args[0] {
+	case "set-module":
+		fs := flag.NewFlagSet("status set-module", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		module := fs.String("module", "", "formal module name")
+		stable := fs.String("stable", "", "yes | no")
+		candidate := fs.String("candidate", "", "yes | no")
+		activeLayer := fs.String("active-layer", "", "stable | candidate")
+		nextCommand := fs.String("next-command", "", "next command")
+		notes := fs.String("notes", "", "notes text")
+		create := fs.Bool("create", false, "create row when missing")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*module) == "" || strings.TrimSpace(*stable) == "" || strings.TrimSpace(*candidate) == "" || strings.TrimSpace(*activeLayer) == "" || strings.TrimSpace(*nextCommand) == "" {
+			writeStatusUsage(stderr)
+			return errors.New("module, stable, candidate, active-layer, and next-command are required")
+		}
+		if *stable != "yes" && *stable != "no" {
+			return fmt.Errorf("stable must be yes or no")
+		}
+		if *candidate != "yes" && *candidate != "no" {
+			return fmt.Errorf("candidate must be yes or no")
+		}
+		if *activeLayer != "stable" && *activeLayer != "candidate" {
+			return fmt.Errorf("active-layer must be stable or candidate")
+		}
+
+		updated, err := statusfile.UpsertModuleStatus(mustAbs(*repoRoot), statusfile.ModuleStatus{
+			Module:      strings.TrimSpace(*module),
+			Stable:      strings.TrimSpace(*stable),
+			Candidate:   strings.TrimSpace(*candidate),
+			ActiveLayer: strings.TrimSpace(*activeLayer),
+			NextCommand: strings.TrimSpace(*nextCommand),
+			Notes:       strings.TrimSpace(*notes),
+		}, *create)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "Status row upserted: %t\n", updated)
+		fmt.Fprintf(stdout, "Module: %s\n", strings.TrimSpace(*module))
+		fmt.Fprintf(stdout, "Stable: %s\n", strings.TrimSpace(*stable))
+		fmt.Fprintf(stdout, "Candidate: %s\n", strings.TrimSpace(*candidate))
+		fmt.Fprintf(stdout, "Active Layer: %s\n", strings.TrimSpace(*activeLayer))
+		fmt.Fprintf(stdout, "Next Command: %s\n", strings.TrimSpace(*nextCommand))
+		fmt.Fprintf(stdout, "Notes: %s\n", noneIfEmpty(strings.TrimSpace(*notes)))
+		return nil
+	case "-h", "--help", "help":
+		writeStatusUsage(stdout)
+		return nil
+	default:
+		writeStatusUsage(stderr)
+		return fmt.Errorf("unknown status subcommand %q", args[0])
+	}
+}
+
 func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl <command> [subcommand] [flags]")
@@ -408,7 +566,9 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  registry Validate docs/project_standards/_registry.md")
 	fmt.Fprintln(w, "  review   Collect deterministic governance review scope")
 	fmt.Fprintln(w, "  process  Execute deterministic fallback cleanup")
+	fmt.Fprintln(w, "  shared   Execute deterministic shared-impact reconciliation helpers")
 	fmt.Fprintln(w, "  snapshot Rebuild or compare process snapshot fields")
+	fmt.Fprintln(w, "  status   Apply deterministic _status.md row writeback")
 }
 
 func writeEntryUsage(w io.Writer) {
@@ -430,12 +590,23 @@ func writeReviewUsage(w io.Writer) {
 func writeProcessUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl process cleanup-fallback --module MODULE --from-command COMMAND --reason CODE [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl process cleanup-success --module MODULE --mode spec_fork|cand_promote [--repo-root PATH]")
+}
+
+func writeSharedUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl shared sync-impact [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--repo-root PATH]")
 }
 
 func writeSnapshotUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl snapshot rebuild --module MODULE [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl snapshot validate-process --module MODULE --process check|plan|verify [--repo-root PATH]")
+}
+
+func writeStatusUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl status set-module --module MODULE --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
 }
 
 func writeList(w io.Writer, title string, items []string) {
@@ -455,4 +626,34 @@ func mustAbs(path string) string {
 		return path
 	}
 	return abs
+}
+
+func parseCSV(value string) []string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		result = append(result, part)
+	}
+	return result
+}
+
+func noneIfEmpty(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "none"
+	}
+	return value
+}
+
+func defaultListValue(items []string) []string {
+	if len(items) == 0 {
+		return []string{"none"}
+	}
+	return items
 }
