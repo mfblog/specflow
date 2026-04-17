@@ -32,10 +32,27 @@ By default it handles:
 2. read `docs/specs/candidate/c_{module}.md` and all required appendix files
 3. validate the full binding relation of `_verify_result/{module}.md` according to the candidate handoff contract
 4. if `_verify_result/{module}.md` is invalid, identify the reason and stop immediately:
-   - if code changed after verification -> fall back to `cand_verify`
-   - if implementation drift against candidate exists -> fall back to `cand_impl`
-   - if bound Shared Contract truth, layer, version, or snapshot drifted -> use `fallback_reason_code=shared_contract_drift` and fall back to `cand_check`
-   - if candidate truth or formal global baseline changed -> fall back to `cand_check`
+   - if code changed after verification:
+     - delete `_verify_result/{module}.md`
+     - fall back to `cand_verify`
+   - if implementation drift against candidate exists:
+     - delete `_verify_result/{module}.md`
+     - fall back to `cand_impl`
+   - if another required binding of `_verify_result/{module}.md` no longer matches the current round:
+     - delete `_check_result/{module}.md`
+     - delete `_plans/{module}.md`
+     - delete `_verify_result/{module}.md`
+     - use `fallback_reason_code=binding_drift` and fall back to `cand_check`
+   - if bound Shared Contract truth, layer, version, or snapshot drifted:
+     - delete `_check_result/{module}.md`
+     - delete `_plans/{module}.md`
+     - delete `_verify_result/{module}.md`
+     - use `fallback_reason_code=shared_contract_drift` and fall back to `cand_check`
+   - if candidate truth or formal global baseline changed:
+     - delete `_check_result/{module}.md`
+     - delete `_plans/{module}.md`
+     - delete `_verify_result/{module}.md`
+     - fall back to `cand_check`
 5. continue only when bindings, coverage, and gate fields all remain valid
 6. before the first file mutation, capture the recovery baseline required by `recovery_policy.md`
 7. confirm that candidate `frontmatter.version` is the new `stable` version for this round
@@ -88,12 +105,13 @@ By default it handles:
 5. Shared Contract reconciliation result when the round changed shared truth or bindings
 6. cleanup result
 7. `handoff validation result`
-8. `fallback_reason_code` if verification became invalid
-9. fallback reason if verification became invalid
-10. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
-11. recovery-state explanation if incomplete promotion occurred
-12. git close-out result
-13. follow-up state explanation
+8. fallback cleanup result when verification became invalid before promotion could start
+9. `fallback_reason_code` if verification became invalid
+10. fallback reason if verification became invalid
+11. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
+12. recovery-state explanation if incomplete promotion occurred
+13. git close-out result
+14. follow-up state explanation
    - when promotion succeeds, the follow-up state must explicitly confirm:
      - `Stable=yes`
      - `Candidate=no`

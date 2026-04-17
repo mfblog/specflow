@@ -30,7 +30,11 @@ By default it handles:
 2. read `s_system_constraints.md` if it exists
 3. read `docs/specs/_check_result/{module}.md`
 4. verify the pass gate bindings are still valid
-5. if the pass gate is invalid, stop immediately and fall back `_status.md` to `cand_check`
+5. if the pass gate is invalid, stop immediately:
+   - delete `_check_result/{module}.md`
+   - delete `_plans/{module}.md` if it exists
+   - delete `_verify_result/{module}.md` if it exists
+   - fall back `_status.md` to `cand_check`
 6. determine the planning result shape for this round before plan write-back:
    - every `cand_plan` run must end in exactly one of these result shapes: `plan-ready`, `truth-fallback`, `plan-blocked`, or `decision-checkpoint`
    - if research preflight is not required because implementation-critical unknowns are already sufficiently closed, treat the round as `plan-ready`
@@ -48,6 +52,9 @@ By default it handles:
    - do not create or update `docs/specs/_plans/{module}.md`
    - keep `_status.md` at `cand_plan` unless the checkpoint answer must first be written back into candidate truth or appendix truth
 10. if the result is `truth-fallback`:
+   - delete `_check_result/{module}.md`
+   - delete `_plans/{module}.md` if it exists
+   - delete `_verify_result/{module}.md` if it exists
    - do not create or update `docs/specs/_plans/{module}.md`
    - update `_status.md` to `cand_check`
    - report `fallback_reason_code=truth_incomplete`
@@ -100,12 +107,13 @@ By default it handles:
 3. plan binding result
 4. research preflight result when research preflight was used
 5. `handoff validation result`
-6. `checkpoint result` when a checkpoint stop was raised
+6. cleanup result when planning fell back to `cand_check`
+7. `checkpoint result` when a checkpoint stop was raised
    - when present, it must satisfy the fixed checkpoint fields defined by `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
-7. `fallback_reason_code` for fallback, blocking, or checkpoint stops
-8. blocking reason and resume signal when planning stayed at `cand_plan` without fallback
-9. git close-out result
-10. `_status.md` update result
+8. `fallback_reason_code` for fallback, blocking, or checkpoint stops
+9. blocking reason and resume signal when planning stayed at `cand_plan` without fallback
+10. git close-out result
+11. `_status.md` update result
 
 Allowed checkpoint types:
 

@@ -70,6 +70,19 @@ For candidate-side commands that only consume upstream artifacts and then discov
 3. update `_status.md` to that smallest actionable step
 4. do not invent extra recovery states
 
+Default cleanup map:
+
+1. if the smallest fallback is `cand_check`, delete:
+   - `_check_result/{module}.md`
+   - `_plans/{module}.md`
+   - `_verify_result/{module}.md`
+2. if the smallest fallback is `cand_impl`, delete:
+   - `_verify_result/{module}.md`
+   - keep `_check_result/{module}.md` and `_plans/{module}.md` only when their bindings still hold
+3. if the smallest fallback is `cand_verify`, delete:
+   - `_verify_result/{module}.md`
+   - keep `_check_result/{module}.md` and `_plans/{module}.md` only when their bindings still hold
+
 Plain meaning:
 
 1. ordinary candidate-chain drift recovery usually needs cleanup plus `_status.md` fallback

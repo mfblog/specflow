@@ -30,8 +30,16 @@ By default it handles:
 3. read the current `_check_result/{module}.md`
 4. read the current `_plans/{module}.md`
 5. validate all required bindings of the pass gate and plan file according to the candidate handoff contract
-6. if any binding is invalid, stop immediately and fall back `_status.md` to `cand_check`
-7. if `system_constraints_stable_ref` no longer matches the current formal global baseline state, stop immediately and fall back to `cand_check`
+6. if any binding is invalid, stop immediately:
+   - delete `_check_result/{module}.md`
+   - delete `_plans/{module}.md`
+   - delete `_verify_result/{module}.md` if it exists
+   - fall back `_status.md` to `cand_check`
+7. if `system_constraints_stable_ref` no longer matches the current formal global baseline state, stop immediately:
+   - delete `_check_result/{module}.md`
+   - delete `_plans/{module}.md`
+   - delete `_verify_result/{module}.md` if it exists
+   - fall back to `cand_check`
 8. only when both pass gate and plan are still valid may implementation continue
 9. implement slice by slice in the order defined by the current plan unless the plan itself declares a dependency-safe different order
 10. for each slice, use the recorded objective, file scope, dependencies, verification action, and done condition as the execution boundary
@@ -59,10 +67,11 @@ By default it handles:
 4. plan write-back result
 5. blocked-slice result when implementation could not finish the current plan round
 6. `handoff validation result`
-7. `fallback_reason_code` when the pass gate or plan was invalid
-8. fallback reason if the pass gate or plan was invalid
-9. git close-out result
-10. `_status.md` update result
+7. cleanup result when implementation fell back to `cand_check`
+8. `fallback_reason_code` when the pass gate or plan was invalid
+9. fallback reason if the pass gate or plan was invalid
+10. git close-out result
+11. `_status.md` update result
 
 Allowed checkpoint types:
 

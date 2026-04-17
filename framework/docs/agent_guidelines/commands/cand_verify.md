@@ -31,7 +31,11 @@ By default it handles:
 
 1. read the candidate Spec, required appendix files, Shared Contract files, pass gate, and plan
 2. validate all required bindings
-3. if the pass gate or plan is invalid, stop immediately and fall back `_status.md` to `cand_check`
+3. if the pass gate or plan is invalid, stop immediately:
+   - delete `_check_result/{module}.md`
+   - delete `_plans/{module}.md`
+   - delete `_verify_result/{module}.md` if it exists
+   - fall back `_status.md` to `cand_check`
 4. verify current code against key protocols, main flow, error handling, acceptance criteria, and any explicit `system_constraints_change_proposal`
 5. perform goal-backward verification for each key acceptance claim instead of stopping at artifact existence
 6. for each key claim, judge at minimum:
@@ -74,14 +78,15 @@ By default it handles:
 4. goal-backward evidence result
 5. downgrade decision when `partial` or `not_checked` exists
 6. verify-result write-back result
-7. `checkpoint result` when a checkpoint stop was raised
+7. cleanup result when verification fell back to `cand_check`
+8. `checkpoint result` when a checkpoint stop was raised
    - when present, it must satisfy the fixed checkpoint fields defined by `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
-8. `fallback_reason_code` for fallback or checkpoint stops
-9. deviation list
-10. fallback reason if pass gate or plan was invalid
-11. next-step suggestion
-12. git close-out result
-13. `_status.md` update result
+9. `fallback_reason_code` for fallback or checkpoint stops
+10. deviation list
+11. fallback reason if pass gate or plan was invalid
+12. next-step suggestion
+13. git close-out result
+14. `_status.md` update result
 
 Allowed checkpoint types:
 
