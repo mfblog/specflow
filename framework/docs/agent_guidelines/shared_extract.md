@@ -25,8 +25,9 @@ It may:
 1. create or update a candidate-layer `shared_contract`
 2. rewrite module candidate-side references and boundary explanation
 3. remove duplicate formal truth from the source module candidate side
-4. trigger `shared_sync` after any shared-truth or binding writeback
-5. stop at a `shared_ops` checkpoint when any source or consumer module is currently at `stable`
+4. update the target shared file's declarative `bound_modules` metadata so it matches the real binding set after extraction writeback
+5. trigger `shared_sync` after any shared-truth or binding writeback
+6. stop at a `shared_ops` checkpoint when any source or consumer module is currently at `stable`
 
 It does not:
 
@@ -64,8 +65,9 @@ Before execution:
 4. create or update the target candidate-layer `shared_contract`
 5. rewrite the source module candidate side so the extracted truth is no longer duplicated as module-local formal truth
 6. if additional consumer modules already depend on the extracted truth, update their module candidate-side references and explanations as required
-7. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
-8. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
+7. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
+8. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
+9. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
 
 ---
 
@@ -74,6 +76,7 @@ Before execution:
 Stop when one of the following is true:
 
 1. the shared extraction is complete, duplicate formal truth is removed, and `shared_sync` has finished reconciliation
+   - the target shared file `bound_modules` metadata must already match the real module-side binding set
 2. the request is not really extraction and must be re-routed to another shared flow
 3. one or more involved modules are currently at `stable` and the flow has raised a `shared_ops` checkpoint for `spec_fork` first
 4. module-private truth versus shared truth is still not stably separable
@@ -90,8 +93,9 @@ The output must include at least:
 3. the source module files that originally carried the truth
 4. the target shared-contract file written or updated, or the checkpoint result when extraction could not legally start yet
 5. the module candidate-side rewrite result and whether duplicate formal truth was fully removed
-6. the `shared_sync` result, including affected modules and fallback if any
-7. the git close-out result when governance files or commit-triggering files were changed
+6. the target shared file `bound_modules` reconciliation result
+7. the `shared_sync` result, including affected modules and fallback if any
+8. the git close-out result when governance files or commit-triggering files were changed
 
 ---
 

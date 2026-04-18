@@ -24,7 +24,8 @@ By default it handles:
 6. read required candidate appendix files and bound Shared Contract files, and decide how each one will be handled after promotion
 7. read `specflow/framework/docs/agent_guidelines/recovery_policy.md` before promotion
 8. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` before promotion
-9. read the git policy before promotion
+9. if the module candidate currently binds any candidate-layer Shared Contract file, the executor must be able to state the post-promotion Shared Contract topology before file mutation starts
+10. read the git policy before promotion
 
 ## 4. Procedure
 
@@ -58,11 +59,16 @@ By default it handles:
 7. confirm that candidate `frontmatter.version` is the new `stable` version for this round
 8. if the module candidate contains a closed `system_constraints_change_proposal` that this round has implemented and verified, absorb the promoted conclusion into `docs/specs/system/stable/s_system_constraints.md`
 9. if `shared_contract_refs` is not empty, decide for each bound shared item:
+   - determine the post-promotion binding target for the promoted module stable truth; a promoted stable module must not keep binding a candidate-layer Shared Contract file
    - if it should remain an independent cross-module truth after promotion, promote it into `docs/specs/shared_contracts/stable/`
+   - if another candidate-layer module still needs the candidate-layer Shared Contract for the same `shared_contract_id`, keep that candidate-layer file in place and do not delete it merely because the current module finished promotion
    - if part of its conclusion has become a project-wide default rule, also absorb that specific conclusion into `s_system_constraints.md`
    - do not absorb a Shared Contract into module `stable` merely because promotion happened
    - do not treat promotion itself as a reason to delete a still-needed Shared Contract
-   - if the required post-promotion truth shape is still unclear, stop promotion
+   - if the round changed a shared item that has both stable-layer and candidate-layer files, resolve which modules are expected to remain bound to each layer after promotion before continuing
+   - if this round's topology change or linked `system_constraints` absorption would leave a touched Shared Contract file with no formal bound modules, this promotion round owns resolving that file's terminal state instead of leaving orphaned shared truth for later cleanup
+   - if such a touched file now has no formal bound modules and cleanup is legal under `spec_policy.md`, delete it in this round when it has been replaced by the promoted target or when its remaining conclusion has been fully absorbed into `s_system_constraints.md`
+   - if the required post-promotion truth shape is still unclear, or the round cannot safely judge whether an unbound touched file should be deleted or kept as independently authored shared truth, stop promotion and require rerouting through `shared_ops:{natural-language request}` from current repository truth instead of guessing a module-local-only continuation
 10. generate or update `docs/specs/stable/s_{module}.md`
 11. if current-round candidate appendix files exist, in the same promotion round either:
    - migrate retained content to `docs/specs/stable/appendix/` or an equivalent dedicated subdirectory
@@ -105,16 +111,19 @@ By default it handles:
 2. formal version confirmation result
 3. file and state update result
 4. `system_constraints` linked-promotion result
-5. Shared Contract reconciliation result when the round changed shared truth or bindings
-6. cleanup result
-7. `handoff validation result`
-8. fallback cleanup result when verification became invalid before promotion could start
-9. `fallback_reason_code` if verification became invalid
-10. fallback reason if verification became invalid
-11. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
-12. recovery-state explanation if incomplete promotion occurred
-13. git close-out result
-14. follow-up state explanation
+5. post-promotion Shared Contract topology result, including which shared files remain at stable, which remain at candidate, and which binding target the promoted module now uses
+6. terminal-state result for any touched Shared Contract file that became unbound in this round
+7. Shared Contract reconciliation result when the round changed shared truth or bindings
+8. cleanup result
+9. `handoff validation result`
+10. fallback cleanup result when verification became invalid before promotion could start
+11. `fallback_reason_code` if verification became invalid
+12. fallback reason if verification became invalid
+13. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
+14. recovery-state explanation if incomplete promotion occurred
+15. when promotion stopped because post-promotion Shared Contract topology or unbound-file terminal state was unclear, the required next step through `shared_ops`
+16. git close-out result
+17. follow-up state explanation
    - when promotion succeeds, the follow-up state must explicitly confirm:
      - `Stable=yes`
      - `Candidate=no`

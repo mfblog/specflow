@@ -35,6 +35,7 @@ Examples:
 shared_ops:我一开始就要设计一个给 agent 和 assistant 共用的结构化输出 fallback 共享契约
 shared_ops:把 module_ai 和 module_memory 里共用的 app config topology 抽成 shared contract
 shared_ops:module_skill 需要复用 shared_app_config_topology
+shared_ops:给 shared_app_config_topology 开下一轮 candidate 继续演进
 shared_ops:我刚改了 structured_output_fallback，帮我检查影响哪些模块
 ```
 
@@ -96,15 +97,17 @@ The executor must not route by keyword alone when the named files already show a
 
 Use `shared_new` only when the request clearly means:
 
-1. the user wants to design shared truth from the start
+1. the user wants to design shared truth from the start, or open the next candidate-layer round for an already-independent shared object
 2. that truth is intended to exist independently rather than first living in one module appendix
-3. the request is not mainly about reusing an already-existing `shared_contract`
+3. the main task is shaping shared truth itself rather than binding one module to it or only checking downstream impact
 
 Typical signals:
 
 1. "一开始就要设计成共享"
 2. "先规划一个多个模块共用的正式协议"
 3. "这部分本来就不属于单模块"
+4. "给已有 shared 开下一轮 candidate"
+5. "继续演进 shared_xxx"
 
 ### 5.2 Route To `shared_extract`
 
@@ -160,7 +163,7 @@ This is mandatory, not optional.
 1. one request simultaneously hits more than one standard shared flow and the action order matters to formal truth
 2. the request is really re-drawing the boundary between module-private truth and shared truth
 3. the request simultaneously involves shared restructuring and `system_constraints_change_proposal`
-4. one existing `shared_contract` needs to be split, merged, renamed, or structurally reorganized
+4. one existing `shared_contract` needs to be split, merged, renamed, retired, or structurally reorganized
 5. current repository truth is insufficient to stably judge which part belongs to shared and which part stays module-private
 
 ---
@@ -177,8 +180,10 @@ This is mandatory, not optional.
 4. if exactly one standard shared flow applies, route to that flow
 5. if routing is not stable, enter `shared_escape`
 6. if the routed flow changes shared truth or module shared bindings, do not claim closure until required reconciliation through `shared_sync` is complete
-7. if the request crosses into `system_constraints_change_proposal`, stop through `shared_escape` and raise a checkpoint instead of inventing a shared-side continuation
-8. if `shared_escape` emitted a `remaining_steps_contract`, do not claim `shared_ops` closure until every listed step has finished under that contract
+   - if that routed work makes a touched shared file lose its last formal binding, do not claim closure until the owner of that binding/topology change has either resolved that file's terminal state or returned control to `shared_escape`
+7. if a module-side command such as `cand_promote` stops because post-promotion Shared Contract topology is unclear, re-enter shared governance through `shared_ops` from current repository truth instead of guessing a module-local-only continuation
+8. if the request crosses into `system_constraints_change_proposal`, stop through `shared_escape` and raise a checkpoint instead of inventing a shared-side continuation
+9. if `shared_escape` emitted a `remaining_steps_contract`, do not claim `shared_ops` closure until every listed step has finished under that contract
 
 ## 7. Internal Flow Contracts
 
@@ -201,6 +206,7 @@ Fixed closure rules:
 5. no internal shared flow may modify module `stable` truth directly; if a shared request needs module truth writeback and the target module is currently at `stable`, the flow must stop at a `shared_ops` checkpoint and require `spec_fork:{module}` first
 6. if `shared_escape` emits a `remaining_steps_contract`, finishing only the first routed flow does not close `shared_ops`
 7. if a routed internal shared flow later discovers that repository truth is insufficient to continue stably, it must stop that flow and return control to `shared_escape` instead of inventing a flow-local checkpoint
+8. if a routed internal shared flow changes bindings or topology so a touched shared file would have no formal bindings remaining, that same handling round must resolve the touched file's terminal state or return control to `shared_escape`; `shared_ops` must not leave cleanup ownership implicit
 
 ---
 
