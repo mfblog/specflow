@@ -76,29 +76,30 @@ By default it handles:
    - if this round's topology change or linked `system_constraints` absorption would leave a touched Shared Contract file with no formal bound modules, this promotion round owns resolving that file's terminal state instead of leaving orphaned shared truth for later cleanup
    - if such a touched file now has no formal bound modules and cleanup is legal under `spec_policy.md`, delete it in this round when it has been replaced by the promoted target or when its remaining conclusion has been fully absorbed into `s_system_constraints.md`
    - if the required post-promotion truth shape is still unclear, or the round cannot safely judge whether an unbound touched file should be deleted or kept as independently authored shared truth, stop promotion and require rerouting through `shared_ops:{natural-language request}` from current repository truth instead of guessing a module-local-only continuation
-11. generate or update `docs/specs/modules/stable/s_{module}.md`
-12. if current-round candidate appendix files exist, in the same promotion round either:
+11. before `shared_sync`, update `bound_modules` for every remaining touched Shared Contract file so that each surviving stable-layer or candidate-layer file matches the real post-promotion binding set implied by module `shared_contract_refs`
+12. generate or update `docs/specs/modules/stable/s_{module}.md`
+13. if current-round candidate appendix files exist, in the same promotion round either:
    - migrate retained content to `docs/specs/modules/stable/appendix/` or an equivalent dedicated subdirectory
    - absorb the content into `docs/specs/modules/stable/s_{module}.md`
    - delete candidate appendix files no longer needed
-13. do not delete `docs/specs/modules/candidate/c_{module}.md` until `_status.md` has already been updated to `Candidate=no`
-14. update `_status.md` to the promoted stable state:
+14. do not delete `docs/specs/modules/candidate/c_{module}.md` until `_status.md` has already been updated to `Candidate=no`
+15. update `_status.md` to the promoted stable state:
    - `Stable=yes`
    - `Candidate=no`
    - `Active Layer=stable`
    - `Next Command=spec_fork`
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command spec_fork --notes <status-note>`
-15. only after that update may physical deletion happen:
+16. only after that update may physical deletion happen:
    - `docs/specs/modules/candidate/c_{module}.md`
    - current-round candidate appendix files
    - `_check_result/{module}.md`
    - `_plans/{module}.md`
    - `_verify_result/{module}.md`
    - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --module {module} --mode cand_promote`
-16. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
-17. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer, even when no additional affected module is known yet
+17. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
+18. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer, even when no additional affected module is known yet
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
-18. perform git close-out if required
+19. perform git close-out if required
 
 ## 5. Stop Conditions
 
@@ -119,18 +120,19 @@ By default it handles:
 3. file and state update result
 4. `system_constraints` linked-promotion result
 5. post-promotion Shared Contract topology result, including which shared files remain at stable, which remain at candidate, and which binding target the promoted module now uses
-6. terminal-state result for any touched Shared Contract file that became unbound in this round
-7. Shared Contract reconciliation result when the round changed shared truth or bindings
-8. cleanup result
-9. `handoff validation result`
-10. fallback cleanup result when verification became invalid before promotion could start
-11. `fallback_reason_code` if verification became invalid
-12. fallback reason if verification became invalid
-13. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
-14. recovery-state explanation if incomplete promotion occurred
-15. when promotion stopped because post-promotion Shared Contract topology or unbound-file terminal state was unclear, the required next step through `shared_ops`
-16. git close-out result
-17. follow-up state explanation
+6. `bound_modules` writeback result for every remaining touched Shared Contract file after post-promotion topology was decided
+7. terminal-state result for any touched Shared Contract file that became unbound in this round
+8. Shared Contract reconciliation result when the round changed shared truth or bindings
+9. cleanup result
+10. `handoff validation result`
+11. fallback cleanup result when verification became invalid before promotion could start
+12. `fallback_reason_code` if verification became invalid
+13. fallback reason if verification became invalid
+14. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
+15. recovery-state explanation if incomplete promotion occurred
+16. when promotion stopped because post-promotion Shared Contract topology or unbound-file terminal state was unclear, the required next step through `shared_ops`
+17. git close-out result
+18. follow-up state explanation
    - when promotion succeeds, the follow-up state must explicitly confirm:
      - `Stable=yes`
      - `Candidate=no`

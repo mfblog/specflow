@@ -237,7 +237,8 @@ Stop when one of the following is true:
 1. the request has been stably routed into one internal shared flow and that flow has completed its own closure requirements
 2. the request has been decomposed by `shared_escape`, every step listed in `remaining_steps_contract` has finished, and all closure requirements of the final step are complete
 3. the request has been routed into `shared_escape` and a checkpoint has been raised
-4. the request is outside shared-truth governance and must return to module-side truth handling before resume
+4. a previously routed internal shared flow has raised a `shared_ops` checkpoint directly and the current request is blocked pending that checkpoint's declared prerequisite, clarification, or decision
+5. the request is outside shared-truth governance and must return to module-side truth handling before resume
 
 ## 9. Escape And Checkpoint Rules
 
@@ -288,6 +289,8 @@ Fixed rules:
 5. `resume_next_step` must be the smallest legal follow-up, which is normally rerunning `shared_ops` after the required truth writeback
 6. when the checkpoint exists because one or more target modules are still at `stable`, `required_writeback_target` must point to the future module candidate main file set rather than the current stable file set
 7. when the current flow is blocked on an upstream command creating the legal writeback target first, use `type=prerequisite_action`
+8. when a routed internal shared flow raises a `shared_ops` checkpoint directly, the current `shared_ops` handling result is `blocked` rather than closed
+9. when Rule 8 applies, do not treat the routed internal flow as completed merely because it reached its own stop point; `shared_ops` remains open until the checkpoint is answered and the required follow-up has been rerun from current repository truth
 
 A `shared_ops` checkpoint must also report at least:
 
@@ -314,8 +317,9 @@ The output must include at least:
 4. whether the request required direct module truth writeback and whether any target module first had to stop for `spec_fork:{module}`
 5. whether reconciliation through `shared_sync` was required and whether it has completed
 6. if `shared_escape` emitted a `remaining_steps_contract`, that contract, the current completion position, and the fact that the contract is execution-local rather than durable truth
-7. if routing was unstable, the `shared_escape` result or checkpoint
-8. the git close-out result when governance files or commit-triggering files were changed
+7. if a checkpoint stopped the request, whether that checkpoint came from `shared_escape` or from a previously routed internal shared flow
+8. when a previously routed internal shared flow raised a `shared_ops` checkpoint directly, that the current `shared_ops` result is `blocked` rather than closed, plus the declared `resume_next_step`
+9. the git close-out result when governance files or commit-triggering files were changed
 
 ## 11. Boundary Against Other Objects
 
