@@ -9,35 +9,13 @@
   <img alt="human-and-ai" src="https://img.shields.io/badge/human%20%2B%20AI-collaboration-111111?style=for-the-badge&labelColor=111111&color=7C3AED">
 </p>
 
-
-
 **English** · [简体中文](./README.zh-CN.md)
 
-
-
-[Add To Your Repository](#add-specflow-to-your-repository) · [Quick Start](#quick-start) · [3-Minute Flow](#the-3-minute-flow) · [Shared Truth](#appendix-and-cross-module-sharing) · [Project Standards](#project-specific-standards) · [Advanced Usage](#advanced-usage)
+[Add To Your Repository](#add-to-your-repository) · [Quick Start](#quick-start) · [How To Use It](#how-you-actually-use-it) · [Shared Truth](#when-work-stops-being-module-local) · [Advanced Usage](#advanced-usage)
 
 ---
 
-`specFlow` is a module-oriented, spec-driven development paradigm for teams that build with both humans and AI through agentic runtimes.
-
-You can understand it in one sentence:
-
-`specFlow` helps a project write behavior into files first, then let humans and AI change code around those files in a controlled way.
-
-This repository is not trying to force every project into one fixed shape.
-It gives you a usable starting point, and expects you to change the project-side rules to fit your own domain.
-
-For all command examples below, `<specflow-binary>` means the compiled executable that matches your current platform under `specflow/tooling/bin/`.
-
-Examples:
-
-- Linux x86_64: `./specflow/tooling/bin/specflowctl-linux-amd64`
-- Linux arm64: `./specflow/tooling/bin/specflowctl-linux-arm64`
-- macOS Intel: `./specflow/tooling/bin/specflowctl-darwin-amd64`
-- macOS Apple Silicon: `./specflow/tooling/bin/specflowctl-darwin-arm64`
-- Windows x86_64: `.\specflow\tooling\bin\specflowctl-windows-amd64.exe`
-- Windows arm64: `.\specflow\tooling\bin\specflowctl-windows-arm64.exe`
+`specFlow` makes AI-assisted development feel like engineering again: instead of letting requirements dissolve into chat logs, code diffs, and personal memory, it gives every module a current truth, a next truth, and a clear path from idea to verified change. Humans and agents can move fast together while the repository still knows what is true, what is changing, and what is ready to ship. It is not a rigid template, but a strong working skeleton you can adapt and sharpen for your own domain.
 
 ## What Problem It Solves
 
@@ -78,13 +56,7 @@ In plain language:
 That means:
 
 - the basic working target is a formal `module`
-- commands are written in forms such as `{command}:{module}`
 - Specs, planning, implementation, verification, and promotion are normally organized per module
-
-So when you use `specFlow`, you are usually doing two things together:
-
-1. running your work through an agentic runtime
-2. letting that runtime follow a module-based governance flow
 
 ## Start Here
 
@@ -94,47 +66,26 @@ If you are new, do not try to understand the whole system first.
 
 Read in this order:
 
-1. `Add specFlow To Your Repository`
+1. `Add To Your Repository`
 2. `Quick Start`
-3. `The Core Model`
-4. `The 3-Minute Flow`
-5. `The First Commands`
-6. `Command Order And Project State`
+3. `How You Actually Use It`
+4. `The Core Model`
+5. `The 3-Minute Flow`
+6. `When You Need Manual Control`, only when you actually need it
 
 That is enough to start using `specFlow`.
 
 If later you want to understand how to customize the rules or use the deeper governance features, jump to `Advanced Usage`.
 
-## Add specFlow To Your Repository
+## Add To Your Repository
 
 > First place `specflow/` in your repository. Then run `init`.
 
-There are two practical ways to adopt `specFlow`.
+For most teams, the default setup is enough:
 
-```mermaid
-flowchart TD
-    A["Want specFlow in your repository"] --> B["Simplest path"]
-    A --> C["Want upstream tracking in git"]
-    B --> D["Clone this repository separately"]
-    D --> E["Copy only specflow/ into your project root"]
-    C --> F["Add this repository as a subtree under vendor/"]
-    F --> G["Sync vendor copy into root specflow/"]
-```
-
-How to read this:
-
-- if you want the shortest setup, clone this repository somewhere else and copy only the `specflow/` directory into your project root
-- if you want to keep an explicit upstream source in your git history, keep this repository as a subtree under a vendor directory, then sync its `specflow/` directory into your root `specflow/`
-
-### Option 1: Clone Separately And Copy `specflow/`
-
-This is the recommended path for most teams.
-
-Why this is the default recommendation:
-
-- it keeps the host repository shape simple
-- it matches how the tooling is documented, because the installed path is `./specflow/...`
-- it does not require users to learn `git subtree` before they can get started
+1. clone this repository somewhere else
+2. copy only the `specflow/` directory into your project root
+3. run `init`
 
 Shell example:
 
@@ -150,59 +101,7 @@ git clone https://github.com/Bingordinary/SpecFlow.git $env:TEMP\SpecFlow
 Copy-Item -Recurse -Force $env:TEMP\SpecFlow\specflow .\specflow
 ```
 
-After that, go to `Quick Start` below and run:
-
-```bash
-<specflow-binary> init
-```
-
-### Option 2: Track The Upstream With `git subtree`
-
-Use this when you want the upstream repository to stay visible in your git history and you want a repeatable update path.
-
-Important:
-
-- in this repository, the installable payload lives under the `specflow/` subdirectory
-- because of that, adding this repository directly as `--prefix=specflow` would create `specflow/specflow/...`
-- the safe subtree workflow is to keep the upstream repository under a vendor directory, then sync its `specflow/` folder into your root `specflow/`
-
-Initial setup:
-
-```bash
-git remote add specflow-upstream https://github.com/Bingordinary/SpecFlow.git
-git subtree add --prefix=vendor/specflow-upstream specflow-upstream main --squash
-rsync -a vendor/specflow-upstream/specflow/ ./specflow/
-```
-
-Windows PowerShell equivalent:
-
-```powershell
-git remote add specflow-upstream https://github.com/Bingordinary/SpecFlow.git
-git subtree add --prefix=vendor/specflow-upstream specflow-upstream main --squash
-Copy-Item -Recurse -Force .\vendor\specflow-upstream\specflow\* .\specflow\
-```
-
-Then run:
-
-```bash
-<specflow-binary> init
-```
-
-Later, when you want to update:
-
-```bash
-git fetch specflow-upstream
-git subtree pull --prefix=vendor/specflow-upstream specflow-upstream main --squash
-rsync -a --delete vendor/specflow-upstream/specflow/ ./specflow/
-<specflow-binary> upgrade
-```
-
-What each step is doing:
-
-1. `git subtree add` stores the upstream repository under `vendor/specflow-upstream`
-2. `rsync` copies the installable `specflow/` payload into the location your project will actually use
-3. `git subtree pull` refreshes the vendor copy later
-4. `upgrade` reapplies newer framework-managed files and managed blocks after you sync a newer upstream version
+If you need a long-term upstream sync workflow, treat that as advanced maintenance and see [tooling/README.md](./tooling/README.md) plus the repository history strategy you prefer.
 
 ## Quick Start
 
@@ -214,6 +113,9 @@ After the `specflow/` directory is in your repository, run this from the reposit
 <specflow-binary> init
 ```
 
+For all command examples below, `<specflow-binary>` means the compiled executable that matches your platform under `specflow/tooling/bin/`.
+See [tooling/README.md](./tooling/README.md) for the exact filenames.
+
 This installs the basic structure you need:
 
 - `AGENTS.md`, `GEMINI.md`, `CLAUDE.md`
@@ -222,12 +124,10 @@ This installs the basic structure you need:
 - `.githooks/pre-commit`
 - supporting files used by the workflow
 
-That is the whole initialization step.
-
 One clarification:
 
-- `init` will create the hook file under `.githooks/pre-commit`
-- but Git will not automatically start using that folder unless `core.hooksPath` points to `.githooks`
+- `init` creates the hook file under `.githooks/pre-commit`
+- Git will not automatically use that folder unless `core.hooksPath` points to `.githooks`
 
 If you want Git to actually use the installed hook, run:
 
@@ -235,7 +135,196 @@ If you want Git to actually use the installed hook, run:
 git config core.hooksPath .githooks
 ```
 
-After initialization, a beginner can start directly with the basic command flow below.
+From this point on, a beginner usually does not need to start by memorizing commands.
+
+If your runtime reads the installed instruction files, the normal day-one experience can be natural language:
+
+- "Add rate limiting to the auth module."
+- "This checkout behavior changed. Update the truth first, then implement it."
+- "Check whether current code still matches the accepted truth."
+
+The runtime should route that intent into the correct internal `specFlow` flow.
+
+## How You Actually Use It
+
+After `init`, you normally use `specFlow` in one of two ways:
+
+1. say what you want in natural language
+2. let the runtime route it into the right `specFlow` step
+3. when you want exact control, use the matching command yourself
+
+What makes this spec-driven is simple:
+
+- the current accepted truth of one module lives in `docs/specs/modules/stable/s_{module}.md`
+- the next truth being prepared lives in `docs/specs/modules/candidate/c_{module}.md`
+
+The main document you write is that module Spec file.
+
+A formal module Spec should cover at least:
+
+- module goal and boundary
+- key terminology
+- data structures and protocols
+- state machine and main flow
+- edge cases and error handling
+- verifiability and acceptance criteria
+
+If the module depends on shared truth or global constraints, the Spec also needs to record that alignment explicitly.
+
+Read the three cases below as one rough story about the same module over time.
+This is intentionally simplified.
+The point is to show the lifecycle shape, not every exact rule.
+
+```mermaid
+flowchart LR
+    A["A. first version"] --> B["B. next version"]
+    B --> C["C. later alignment check"]
+```
+
+How to read this:
+
+- `A. first version` is when the module is created for the first time.
+- `B. next version` is when that same module changes later.
+- `C. later alignment check` is when you want confidence that current code still matches the accepted truth.
+
+One note before the story:
+
+- if the module already existed before `specFlow`, use `spec_init:{module}` once to capture its current accepted behavior as the first governed `stable`
+- after that, the module behaves like the story below
+
+### Case 1: The First Version Of A Module
+
+What you say:
+
+- "Create a new module for search."
+
+If you want exact control:
+
+```text
+spec_new:module_search
+-> write docs/specs/modules/candidate/c_module_search.md
+-> cand_check:module_search
+-> cand_plan:module_search
+-> cand_impl:module_search
+-> cand_verify:module_search
+-> cand_promote:module_search
+```
+
+What those commands are doing:
+
+- `spec_new` creates the first `candidate` for the new module
+- then you or the runtime write the actual candidate content into `c_module_search.md`
+- `cand_check` makes sure that written candidate truth is closed enough to guide work
+- `cand_plan` turns that truth into an implementation plan
+- `cand_impl` writes code against that candidate
+- `cand_verify` checks whether the code matches the candidate
+- `cand_promote` turns the accepted candidate into the new `stable`
+
+When you write the document content:
+
+- right after `spec_new`, the file exists but it still needs real content
+- this is where you write the first candidate design in `c_module_search.md`
+- the minimum useful content is:
+  - what the module is for
+  - what inputs and outputs it owns
+  - what the main flow is
+  - what edge cases matter
+  - how you will know the result is correct
+- only after that does `cand_check` have something real to judge
+- if `cand_check` says the candidate is still incomplete, you keep editing the same candidate file until it is closed enough
+
+What `specFlow` adds here:
+
+- the new module does not begin as "just some new code"
+- the repository gets a written first version of the module's behavior before implementation drifts
+- later agents can see what the module was supposed to do, not just what happened to get coded first
+
+### Case 2: The Next Version Of That Same Module
+
+What you say:
+
+- "Update search so typo correction runs before ranking."
+
+If you want exact control:
+
+```text
+spec_fork:module_search
+-> edit docs/specs/modules/candidate/c_module_search.md
+-> cand_check:module_search
+-> cand_plan:module_search
+-> cand_impl:module_search
+-> cand_verify:module_search
+-> cand_promote:module_search
+```
+
+What those commands are doing:
+
+- `spec_fork` opens a new `candidate` from the current `stable`
+- then you or the runtime edit `c_module_search.md` to describe the next version
+- `cand_check` confirms that edited next truth is clear enough
+- `cand_plan`, `cand_impl`, and `cand_verify` move that next truth into code and verify it
+- `cand_promote` makes the next truth become the new accepted `stable`
+
+When you write the document content:
+
+- `spec_fork` gives you a starting point by deriving the candidate from the current stable truth
+- then you edit the candidate file to describe what changes in this round
+- this is where you update things such as:
+  - changed protocol or field meaning
+  - changed main flow
+  - new validation or error behavior
+  - new acceptance criteria
+- `cand_check` is the point where the system asks "is this updated candidate written clearly enough to drive the implementation round"
+- if the answer is no, you go back to the same candidate file and keep refining it
+
+What `specFlow` adds here:
+
+- it separates current accepted behavior from next behavior being prepared
+- the repository does not have to guess after the fact whether the code change was a bug fix, a behavior change, or an unfinished idea
+- another agent can read the current truth and the next truth directly instead of reconstructing intent from diffs and chat logs
+
+### Case 3: Later You Recheck Whether It Is Still Aligned
+
+What you say:
+
+- "Check whether the search module still matches the accepted truth."
+
+If you want exact control:
+
+```text
+read docs/specs/modules/stable/s_module_search.md
+-> stable_verify:module_search
+```
+
+If drift exists and you want to start the next change round:
+
+```text
+spec_fork:module_search
+-> edit docs/specs/modules/candidate/c_module_search.md
+-> cand_check:module_search
+```
+
+What that command is doing:
+
+- it checks the current implementation against the current accepted `stable`
+- it does not start a new candidate round just because you asked for verification
+- if drift exists, that drift must be handled before anyone claims stable alignment
+
+What `specFlow` adds here:
+
+- verification becomes an explicit repository action, not only a conversational judgment
+- the project gets a clear answer to "still aligned" versus "drift exists"
+- that makes it easier to trust the result later, especially when a different person or a different agent revisits the module
+
+The beginner takeaway is simple:
+
+- first version of a new module: `spec_new` + candidate chain
+- next version of an existing governed module: `spec_fork` + candidate chain
+- later alignment check: `stable_verify`
+- historical module entering governance for the first time: `spec_init`
+
+You can still start in natural language.
+These command names are the exact handles behind that lifecycle.
 
 ## The Core Model
 
@@ -248,457 +337,210 @@ There are only two core states a beginner needs first:
 
 ```mermaid
 flowchart LR
-    A["stable"] --> B["open candidate"]
-    B --> C["candidate"]
-    C --> D["implement and verify"]
-    D --> E["promote"]
+    A["A. stable"] --> B["B. open candidate"]
+    B --> C["C. candidate"]
+    C --> D["D. implement and verify"]
+    D --> E["E. promote"]
     E --> A
 ```
 
 How to read this:
 
-- `stable` is the currently accepted version.
-- `candidate` is the version you are currently working on.
-- when the candidate is ready and verified, it is promoted and becomes the new stable version.
+- `A. stable` is the currently accepted version.
+- `C. candidate` is the next version being shaped.
+- `D. implement and verify` happens around the candidate.
+- `E. promote` turns the accepted candidate into the new stable.
 
 ## The 3-Minute Flow
 
-> This is the shortest path from idea to governed change.
+> Learn the work pattern first. Learn the command names later.
 
-Suppose you want to add a new module called `module_search`.
+If you only want the shortest useful model, remember this sequence:
 
-The shortest beginner path looks like this:
-
-1. run `spec_new:module_search`
-2. write the candidate Spec for `module_search`
-3. run `cand_check:module_search`
-4. run `cand_plan:module_search`
-5. run `cand_impl:module_search`
-6. run `cand_verify:module_search`
-7. run `cand_promote:module_search`
-
-What this means in plain language:
-
-- first define the behavior you want
-- then make sure the definition is clear enough
-- then plan the work
-- then write the code
-- then check whether the code matches the definition
-- then promote that definition into the current accepted version
-
-If instead `module_search` already exists and you want to change it, the path usually starts with `spec_fork:module_search` instead of `spec_new:module_search`.
-
-## The First Commands
-
-For a beginner, `specFlow` is easiest to understand like this:
-
-- you write or update a Spec
-- you choose a command based on what you want to do next
-- the command tells the agent what kind of action you are taking
-
-You do not need to memorize the entire governance system at the beginning.
-You mainly need to know what each command is for.
-
-## How A Command Is Named
-
-Most `specFlow` commands look like this:
-
-```text
-prefix_action:{module}
-```
-
-Example:
-
-```text
-cand_plan:module_search
-```
-
-This command has two parts:
-
-- `cand_plan`
-  - the action name
-- `module_search`
-  - the module this action is targeting
-
-You can read it as:
-
-- run the `cand_plan` action for `module_search`
-
-### What The Prefixes Mean
-
-The important prefixes are:
-
-- `spec`
-  - this is about opening, creating, or switching the Spec version you want to work on
-- `cand`
-  - this is about working inside the `candidate` version
-- `stable`
-  - this is about checking or operating against the currently effective `stable` version
-
-Shortest examples:
-
-- `spec_new`
-  - create the first candidate Spec for a new module
-- `spec_fork`
-  - open a new candidate from the current stable Spec
-- `cand_impl`
-  - implement against the current candidate Spec
-- `stable_verify`
-  - verify whether current code still matches stable
-
-### What The Action Words Mean
-
-After the prefix, the action word tells you what kind of step you are doing.
-
-A beginner-friendly way to read them is:
-
-- `new`
-  - create a new Spec from zero
-- `fork`
-  - open the next Spec version from an existing stable version
-- `check`
-  - decide whether the current candidate Spec is clear enough to guide work
-- `plan`
-  - turn the candidate Spec into an implementation plan
-- `impl`
-  - implement the code according to the candidate Spec and plan
-- `verify`
-  - check whether the implemented code really matches the Spec
-- `promote`
-  - make the verified candidate become the new stable version
-
-One important clarification:
-
-- before `cand_impl`, you are mainly shaping and checking the Spec
-- at `cand_impl`, the work moves from Spec files into code changes
-- at `cand_verify`, the code is checked against the Spec again before promotion
-
-So:
-
-- `spec_new` means "create a new Spec version from zero"
-- `cand_verify` means "verify the implementation against the candidate"
-- `stable_verify` means "verify the implementation against stable"
-
-## Commands You Need First
-
-You do not need every command on day one.
-Start with these:
-
-- `spec_init:{module}`
-  - create the first `stable` Spec for an existing historical module
-- `spec_new:{module}`
-  - create the first `candidate` Spec for a brand-new module
-- `spec_fork:{module}`
-  - open a new `candidate` from an existing `stable`
-- `cand_check:{module}`
-  - check whether the current candidate is clear enough to drive work
-- `cand_plan:{module}`
-  - make the implementation plan from the candidate
-- `cand_impl:{module}`
-  - implement against the candidate
-- `cand_verify:{module}`
-  - verify whether implementation matches the candidate
-- `cand_promote:{module}`
-  - promote the candidate into the new `stable`
-- `stable_verify:{module}`
-  - verify whether current code still matches `stable`
-
-## Should I Use `spec_init`, `spec_new`, Or `spec_fork`?
-
-Use this quick rule:
-
-- use `spec_init:{module}` when the module already exists in the project, but has never entered formal `specFlow` governance before
-- use `spec_new:{module}` when this is a brand-new module and you want to create its first governed version as `candidate`
-- use `spec_fork:{module}` when this module already has a `stable` version and you want to change it
-
-Shortest comparison:
-
-| You are trying to do | Use this command |
-| --- | --- |
-| Bring an existing historical module into governance for the first time | `spec_init:{module}` |
-| Start governance for a brand-new module | `spec_new:{module}` |
-| Make a next version from an existing stable module | `spec_fork:{module}` |
-
-If you only remember one sentence, remember this:
-
-- `spec_init` gives an already-existing module its first governed `stable`
-- `spec_new` starts a brand-new module from zero
-- `spec_fork` starts the next change from the current stable truth
-
-## Command Order And Project State
-
-If you only want the shortest mental model, remember these three common paths.
-
-Important:
-
-- this is the common order, not a rule saying every module in the whole project must always be processed in one single global sequence
-- when a project has many modules, the real current state should be checked in `docs/specs/_status.md`
-- `_status.md` is maintained by the `specFlow` command flow as the project state index
-- in normal use, you read `_status.md` to know what is going on; you do not use it as a scratchpad for manual edits
-
-In plain language:
-
-- the diagrams below help you understand the normal path for one module
-- `_status.md` tells you the real current position of all modules in the project
+1. write or update the behavior truth
+2. make sure that truth is clear enough to guide work
+3. implement against that truth
+4. verify the code against that truth
+5. promote the verified next truth into the accepted version
 
 ```mermaid
 flowchart LR
-    A["Many modules in one project"] --> B["Read docs/specs/_status.md"]
-    B --> C["Find Active Layer"]
-    C --> D["Find Next Command"]
-    D --> E["Choose the next action for that module"]
+    A["A. write truth"] --> B["B. close the truth enough to work"]
+    B --> C["C. implement"]
+    C --> D["D. verify"]
+    D --> E["E. promote"]
 ```
 
 How to read this:
 
-- if you are only thinking about one module, the command-order diagrams below are enough
-- if you are dealing with many modules, `_status.md` is the first place to look
-- the key fields are `Active Layer` and `Next Command`
+- `A. write truth` means the behavior should become explicit in files first.
+- `B. close the truth enough to work` means the repository should not rely on chat memory for key decisions.
+- `C. implement` and `D. verify` happen against that written truth.
+- `E. promote` makes the accepted next version become the current baseline.
 
-### Path 1: A Historical Module Enters Governance For The First Time
+This is what `specFlow` is trying to protect.
+
+The command system exists to make this sequence explicit and reviewable.
+But for a beginner, the sequence matters more than the exact command names.
+
+## When You Need Manual Control
+
+Manual control matters only when:
+
+- you want to drive the exact step yourself
+- the runtime did not route your request the way you expected
+- you are debugging governance state for a module
+
+Most manual control starts from just three entry decisions:
+
+| Situation | Use this command |
+| --- | --- |
+| bring an existing historical module into governance for the first time | `spec_init:{module}` |
+| start a brand-new module | `spec_new:{module}` |
+| change a module that already has governed `stable` truth | `spec_fork:{module}` |
+
+After that, the normal candidate chain is:
+
+```text
+cand_check -> cand_plan -> cand_impl -> cand_verify -> cand_promote
+```
+
+There is also one stable-side maintenance step:
+
+```text
+stable_verify
+```
+
+Use `stable_verify:{module}` only when the module is currently on `stable`, but you need to check whether the code still matches that accepted truth.
+
+If you want one compact picture:
 
 ```mermaid
 flowchart LR
-    A["spec_init"] --> B["first stable created"]
-    B --> C["spec_fork when you want the next change"]
+    A["A. spec_init or spec_new or spec_fork"] --> B["B. cand_check"]
+    B --> C["C. cand_plan"]
+    C --> D["D. cand_impl"]
+    D --> E["E. cand_verify"]
+    E --> F["F. cand_promote"]
 ```
 
-Plain explanation:
+This is the explicit control surface.
+You only need it when natural-language routing is not enough.
 
-- the module already exists in the project
-- you first capture its already-effective behavior as the first `stable`
-- this is governance onboarding, not future design work
-- when you later want to change that module, you open a `candidate` with `spec_fork`
+## When To Read `_status.md`
 
-### Path 2: A Brand-New Module
+`docs/specs/_status.md` is the project state index.
+
+You normally look at it only when one of these is true:
+
+- the project has many modules
+- you are not sure which layer one module is currently on
+- you want to know the default next step for that module
 
 ```mermaid
 flowchart LR
-    A["spec_new"] --> B["cand_check"]
-    B --> C["cand_plan"]
-    C --> D["cand_impl"]
-    D --> E["cand_verify"]
-    E --> F["cand_promote"]
+    A["A. not sure where one module currently stands"] --> B["B. read docs/specs/_status.md"]
+    B --> C["C. find Active Layer"]
+    C --> D["D. find Next Command"]
 ```
 
-Plain explanation:
+How to read this:
 
-- create the new candidate
-- make sure it is clear enough
-- write the plan
-- implement
-- verify
-- promote
+- `B. read docs/specs/_status.md` tells you the current recorded state.
+- `C. find Active Layer` tells you whether the module is currently on `stable` or `candidate`.
+- `D. find Next Command` tells you the default next legal step.
 
-### Path 3: An Existing Stable Module Needs Change
+In normal use, `_status.md` is for reading state, not for manual scratch edits.
 
-```mermaid
-flowchart LR
-    A["spec_fork"] --> B["cand_check"]
-    B --> C["cand_plan"]
-    C --> D["cand_impl"]
-    D --> E["cand_verify"]
-    E --> F["cand_promote"]
-```
+## When Work Stops Being Module-Local
 
-Plain explanation:
+Most work should stay module-local for as long as possible.
 
-- copy the current stable into a new candidate
-- make the candidate clear enough
-- plan
-- implement
-- verify
-- promote
+There are three different places truth can live:
 
-### Stable-Side Maintenance
-
-There is also one important stable-side maintenance path:
-
-```mermaid
-flowchart LR
-    A["stable module"] --> B["code changed or alignment is in doubt"]
-    B --> C["stable_verify"]
-    C --> D["still aligned"]
-    C --> E["drift exists and must be repaired first"]
-```
-
-Plain explanation:
-
-- `stable_verify` is not the normal way to start a new design round
-- it is used when a module is currently on `stable`, but you need to check whether the code still matches that `stable`
-- only after stable alignment is clear should the module move on to the next controlled upgrade round
-
-### One Important Clarification
-
-At the learning stage, you can treat these commands as a toolbox:
-
-- first understand what each command is for
-- then choose the command that matches your current job
-
-But if you want the built-in governance to stay closed and trustworthy, the full workflow does assume command prerequisites and normal ordering.
-So the beginner-friendly reading method is "learn the commands first", not "the rules do not exist".
-
-## What specFlow Actually Is
-
-`specFlow` is not mainly a code framework.
-It is a change-governance paradigm.
-
-That means it gives you:
-
-- a way to store behavior truth in files
-- a way to separate current truth from next truth
-- a way to move work with explicit commands
-- a way to verify before calling something done
-
-## Appendix And Cross-Module Sharing
-
-The basic command flow above is enough for normal module work.
-
-But there is one extra mechanism you should know exists:
-
-- module appendix
+- the module main spec
+- the module appendix
 - cross-module shared truth
 
-You do not need to learn the internal governance details on day one.
-You mainly need one simple picture of how these pieces relate.
-
 ```mermaid
 flowchart LR
-    A["module main spec"] --> B["module appendix"]
-    B --> C["shared natural-language intent"]
-    C --> D["shared_ops:request"]
-    D --> E["route into a standard shared flow"]
-    D --> F["complex case enters checkpoint"]
+    A["A. module main spec"] --> B["B. module appendix"]
+    B --> C["C. shared natural-language intent"]
+    C --> D["D. shared_ops request"]
 ```
 
 How to read this:
 
-- keep the module main Spec focused on the module's core behavior
-- if some formal details are too long or too specific for the main file, keep them in that module's appendix
-- if that truth still belongs to only one module, it stays in the module main file or module appendix
-- once you need to work on cross-module shared truth, enter through `shared_ops:{natural-language request}`
+- `A. module main spec` is the main home for one module's behavior.
+- `B. module appendix` is still one module's truth, just expanded out of the main file.
+- `D. shared_ops request` is where you enter when the truth is no longer only about one module.
 
-Use this simple rule:
+Use this rule:
 
 - first appearance stays in the current module
 - do not extract something into shared just because it may be reused later
-- when shared work begins, describe the intent directly instead of picking an internal shared flow name
-
-In plain language:
-
-- `appendix` is still module-owned truth
-- `shared contract` is truth that multiple formal modules depend on
-- shared exists to prevent dual source of truth, not to collect vaguely similar ideas
+- move into shared only when multiple modules really depend on the same truth
 
 ### How To Use `shared_ops`
 
 `shared_ops:{natural-language request}` is the only user-facing entry for shared governance.
 
-Use it when you want to do things such as:
+Use it when you want to:
 
 - design shared truth from the start
 - extract already-written module truth into a shared contract
 - bind a module to an existing shared contract
-- change shared topology such as split / merge / rename / retire
+- change shared topology such as split, merge, rename, or retire
 - check which modules are affected after a shared-contract change
 
-The key rule is:
+The important idea is simple:
 
-- you do not need to choose `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, or `shared_sync` yourself
-- you describe the intent
-- the agent routes it according to the shared-governance rules
-- if the request cannot be safely routed, the agent must stop at a checkpoint rather than guess
-
-Examples:
-
-- `shared_ops:I want to design a shared structured-output fallback contract for both agent and assistant from the start`
-- `shared_ops:Extract the app config topology currently duplicated in module_ai and module_memory into a shared contract`
-- `shared_ops:module_skill needs to reuse shared_app_config_topology`
-- `shared_ops:Split shared_runtime_model and decide whether the old shared should be retired`
-- `shared_ops:I changed structured_output_fallback; tell me which modules need fallback`
-
-What happens next:
-
-- the agent first classifies the request into a shared-governance intent
-- if the route is stable, it enters the matching internal shared flow
-- if one request mixes multiple actions and the order would change formal truth, it must stop at a checkpoint
-- that checkpoint should explain the complex intent, why automatic continuation is unsafe, and the recommended action sequence
-
-One important boundary:
-
-- `shared_ops` handles only cross-module shared-truth governance
-- it should not replace module lifecycle commands for single-module closure
-- it should not replace module-side `system_constraints_change_proposal` when the real task becomes global-default-rule promotion
+- you describe the shared intent
+- the runtime chooses the internal shared flow
+- if the route is unsafe or ambiguous, it must stop at a checkpoint instead of guessing
 
 ## Advanced Usage
 
-Once basic usage makes sense, this is the section that helps you understand the whole system and DIY it for your own project.
+Once basic usage makes sense, this is the section that helps you understand the whole system and adapt it to your own project.
 
-The advanced part is about four things:
+The advanced part is mainly about four things:
 
 - understanding the document structure
 - knowing which files you should customize
+- adding project-local standards
 - knowing which governance flows exist beyond the standard module commands
-- knowing when the system should stop at a checkpoint instead of guessing
 
 ### The Project Structure
 
-The easiest way to understand the repository is to split it into four layers:
+At a high level, the repository splits into four layers:
 
 ```mermaid
 flowchart TD
-    A["tooling/"] --> B["bootstrap and maintenance"]
-    C["templates/root/"] --> D["files installed into the host project"]
-    E["framework/docs/agent_guidelines/"] --> F["baseline governance rules and command docs"]
-    G["host project docs/ and entry files"] --> H["your project-specific truth and standards"]
+    A["A. tooling"] --> B["B. bootstrap and maintenance"]
+    C["C. templates root"] --> D["D. files installed into the host project"]
+    E["E. framework docs"] --> F["F. baseline governance rules and command docs"]
+    G["G. host project docs and entry files"] --> H["H. your project-specific truth and standards"]
 ```
 
 How to read this:
 
-- `tooling/` is how you install, check, and upgrade the paradigm
-- `templates/root/` is the bootstrap material copied into the target repository
-- `framework/docs/agent_guidelines/` is the baseline rule system of `specFlow` itself
-- the installed project-side files under `docs/` and the entry files are where your project expresses its own truth and standards
+- `A. tooling` installs, checks, and upgrades the paradigm.
+- `C. templates root` is the material copied into the target repository.
+- `E. framework docs` is the baseline rule system of `specFlow` itself.
+- `G. host project docs and entry files` is where your project expresses its own truth and standards.
 
-### What Lives Where
-
-Use this short map:
-
-- `specflow/tooling/`
-  - install, doctor, upgrade, and sync scripts
-- `specflow/templates/root/`
-  - template files that are copied into the host repository root
-- `specflow/framework/docs/agent_guidelines/`
-  - the rule system of the paradigm itself
-- `docs/specs/`
-  - your project's formal Specs and process-state files
-- `docs/project_standards/`
-  - your project's local standards that tighten or clarify the baseline
-- `AGENTS.md`, `GEMINI.md`, `CLAUDE.md`
-  - entry files for different executors, with a `specFlow` managed block plus your project-owned area
-
-### How To Customize The Rules
+### What You Normally Customize
 
 The safe beginner rule is:
 
 - change project-owned files first
 - change framework files only when you intentionally want to evolve the paradigm itself
 
-Most teams will mainly customize:
+Most teams mainly customize:
 
 - `docs/specs/**`
-  - the actual module truth of the project
 - `docs/project_standards/**`
-  - project-specific standards
 - the project-owned parts of `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md`
-  - project-specific executor instructions
-
-Most teams should usually not change `framework/docs/agent_guidelines/**` unless they are deliberately changing the specFlow mechanism itself.
-
-In plain language:
-
-- if you want to adapt `specFlow` to your project, edit the installed project-side files
-- if you want to redesign how `specFlow` itself works, edit the framework rules
 
 ### Project-Specific Standards
 
@@ -715,143 +557,42 @@ One important rule:
 - it becomes active only after it is registered in `_registry.md`
 
 In normal use, you usually do not need to build these files by hand.
-The simplest path is to ask the agent in plain language, for example:
-
-- "Create a project-specific review standard for Prompt quality and let `cand_check` use it."
-- "Add a project-local output standard for this project."
-- "Create a local decision rule for escalation in this repository."
-
-What the agent should do next:
-
-1. create one standard file under `docs/project_standards/`
-2. add one registry entry to `docs/project_standards/_registry.md`
-3. make sure the target command or flow already supports the chosen consumption surface
-
-In mechanism terms, this is handled by an internal flow named `project_standard_create`.
-You do not need to invoke that internal name directly.
-The normal user-facing way is to express the rule you want in plain language.
-
-A project standard normally has two parts:
-
-- the rule file
-- the registry entry that activates it
-
-Example registry entry:
-
-| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `project_prompt_guidelines` | `review_standard` | `candidate_closure_review` | `docs/project_standards/prompt_guidelines.md` | `cand_check` | `all_targets_on_surface` | `tighten` | `framework_wins` |
-
-How to read this:
-
-- `type` says what kind of project standard this is
-- `surface` says which command-defined extension point it plugs into
-- `file` points to the actual rule document
-- `consumed_by` says which command or internal flow must read it
-- `effect` can tighten or clarify the framework baseline, but must not weaken it
-
-One important boundary:
-
-- project-specific standards may tighten or clarify the framework
-- they must not weaken, bypass, or replace the framework baseline
-
-### What You Normally Keep
-
-Most projects should keep these core mechanics:
-
-- Specs as source of truth
-- `stable` and `candidate` layering
-- command-based progression
-- verification before promotion
-- `_status.md` as the state index
-- clear ownership between framework-managed files and project-owned files
+The simplest path is to ask the agent in plain language.
 
 ### Maintenance Tools
 
-The tooling scripts below are useful, but they are not the first commands a beginner needs to learn.
+The tooling surface is useful, but it is not the first thing a beginner needs to learn.
 
+The most common maintenance commands are:
+
+- `init`
 - `doctor`
-  - checks whether the installed `specFlow` structure is healthy
-  - use it when you suspect the local setup is broken, missing files, or out of sync
 - `upgrade`
-  - refreshes framework-managed files and managed blocks
-  - use it when you intentionally want to bring the installed project onto a newer `specFlow` baseline
 
-Examples:
+See [tooling/README.md](./tooling/README.md) for the full tooling surface.
 
-- `<specflow-binary> doctor`
-- `<specflow-binary> upgrade`
-
-### Advanced Flows You Should Know Exist
+### Advanced Flows
 
 Besides the standard module commands, `specFlow` also has advanced flows.
 
-These are important because they help you inspect or evolve the system itself, not just move one module forward.
-
-#### `spec_flow_review`
-
-Use `spec_flow_review` when you want to review the governance system itself.
-
-Plain meaning:
-
-- review whether the `specFlow` rules are still self-consistent
-- review whether rule changes introduced conflicts, ambiguity, or side effects
-
-This is not for reviewing one business module.
-It is for reviewing the mechanism.
-By default it also reviews the shared-governance rule files inside the governance baseline, not only the main command chain.
-But it reviews whether those shared rules stay coherent; it does not replace `shared_ops` for handling a concrete shared request instance.
-Its output should also explicitly report whether shared-governance coverage happened, which required shared rule files were covered, and whether that review result is pass, blocked, or has findings.
-
-### Internal Flows That Exist But Are Not Normal User Entry Points
-
-There are also internal or non-primary flows such as:
-
-- `shared_topology`
-- `shared_sync`
-- `project_standard_create`
-
-You should know they exist, because they are part of the full mechanism.
-But they are not the normal first things users should call directly.
-
-In plain language:
-
-- `spec_flow_review` is an advanced user-facing review flow
-- the default review covers shared-governance rules, not only the main command chain
-- `shared_ops:{natural-language request}` is the only user-facing entry for cross-module shared governance
-- flows such as `shared_topology` and `shared_sync` exist mainly to keep the mechanism closed behind the scenes
-
-### How To Invoke Advanced Flows
-
-There are two normal ways to invoke an advanced flow.
-
-1. express the intent in plain language
-2. say the exact flow name directly
-
-Examples of plain-language intent:
-
-- "Review whether the framework rules are still consistent."
-
-Examples of direct invocation:
+Two you should know exist are:
 
 - `spec_flow_review`
+- `shared_ops:{natural-language request}`
 
-This matters because intent recognition is convenient, but it is not magic.
-If the agent does not recognize your intent correctly, saying the exact flow name is the clean fallback.
+Use `spec_flow_review` when you want to review the governance system itself rather than move one business module forward.
 
-### What To Read When You Want To DIY The Whole System
+### What To Read If You Want The Full Baseline
 
 If you want to deeply understand or redesign the system, read in this order:
 
 1. `framework/docs/agent_guidelines/spec_policy.md`
 2. `framework/docs/agent_guidelines/command_policy.md`
 3. `framework/docs/agent_guidelines/git_policy.md`
-4. `framework/docs/agent_guidelines/spec_flow_review.md`
-5. `framework/docs/agent_guidelines/shared_ops.md`
-6. `framework/docs/agent_guidelines/shared_topology.md`
-7. `framework/docs/agent_guidelines/shared_sync.md`
-8. the command docs under `framework/docs/agent_guidelines/commands/`
-9. the installed project-side files under `docs/`
+4. `framework/docs/agent_guidelines/shared_ops.md`
+5. `framework/docs/agent_guidelines/spec_flow_review.md`
+6. the command docs under `framework/docs/agent_guidelines/commands/`
+7. the installed project-side files under `docs/`
 
 ## File Ownership
 
@@ -876,17 +617,3 @@ Files like `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` use a managed block model, 
 - your team does not want formal behavior truth in files
 - you do not need `stable` and `candidate`
 - you do not need humans and AI to follow one shared operating model
-
-## Final Positioning
-
-The right way to think about `specFlow` is:
-
-- not "a rigid framework that must be obeyed"
-- but "a paradigm that can be downloaded, understood quickly, and then adapted"
-
-The goal is simple:
-
-- make truth explicit
-- make change explicit
-- make verification explicit
-- make customization explicit
