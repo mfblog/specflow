@@ -94,9 +94,9 @@ Additional rules:
 4. Business-module `stable`, `candidate`, and process-instance files are not in the default scope.
 5. The default entry-index set for this flow is the template entry set under `specflow/templates/root/`, not executor guesswork and not the project-side registered-file set.
 6. `entry_index_registry.md` may still be read in this flow, but only to check whether project-side entry ownership and sync rules remain coherent with the template-side design.
-7. The default governance baseline explicitly includes shared-governance rule files under `specflow/framework/docs/agent_guidelines/`, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_sync.md`, and `shared_escape.md`.
+7. The default governance baseline explicitly includes shared-governance rule files under `specflow/framework/docs/agent_guidelines/`, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`.
 8. Content truth files consumed by governance rules may be read only to confirm how governance binds, reads, or constrains them. Their own business or engineering content is not reviewed by default here.
-9. If `shared_sync` exists, this flow only reviews whether it closes the Shared Contract lifecycle. It does not replace its actual reconciliation work.
+9. If `shared_topology` or `shared_sync` exists, this flow only reviews whether the defined shared flows together close the Shared Contract lifecycle. It does not replace their actual reconciliation work.
 10. If project-local standards are part of the framework baseline extension surface, this flow reviews both:
    - whether their registration and consumption rules remain closed
    - whether the current project's registered project-local standard content introduces governance conflict, ambiguity, or gate-semantic drift against the framework baseline
@@ -176,7 +176,7 @@ Before execution:
    - `consumed_by=spec_flow_review`
    - the current `applies_to` selector
 13. if the repository claims the project-local standards extension surface but `docs/project_standards/_registry.md` is missing or invalid, report governance drift instead of silently treating that case as "no project-local standards"
-14. if the scope is the default governance baseline, explicitly confirm that the shared-governance rule set has been read, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_sync.md`, and `shared_escape.md`
+14. if the scope is the default governance baseline, explicitly confirm that the shared-governance rule set has been read, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`
 15. do not treat reading only `command_policy.md`, `commands/*.md`, or other main command-chain files as sufficient for a default-scope review when shared-governance rules were not also covered
 
 If you cannot determine exactly which governance files are being reviewed, do not issue a `pass`.
@@ -244,7 +244,7 @@ The output should include:
 1. review scope
 2. the exact governance files reviewed, or a stable grouped list that still makes file coverage auditable
 3. an explicit shared-governance coverage section that states:
-   - whether `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_sync.md`, and `shared_escape.md` were reviewed
+   - whether `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md` were reviewed
    - whether the shared-governance review result is pass, blocked, or has findings
    - whether the review stayed at governance-rule level rather than executing a concrete shared request instance
 4. an explicit project-local governance-input coverage section that states:

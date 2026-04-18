@@ -61,6 +61,7 @@ By default it handles:
 9. if `shared_contract_refs` is not empty, decide for each bound shared item:
    - determine the post-promotion binding target for the promoted module stable truth; a promoted stable module must not keep binding a candidate-layer Shared Contract file
    - if it should remain an independent cross-module truth after promotion, promote it into `docs/specs/shared_contracts/stable/`
+   - when this round writes or updates a stable-layer Shared Contract file, use the already-decided candidate `shared_version` for that file; do not invent or bump a Shared Contract version during module promotion itself
    - if another candidate-layer module still needs the candidate-layer Shared Contract for the same `shared_contract_id`, keep that candidate-layer file in place and do not delete it merely because the current module finished promotion
    - if part of its conclusion has become a project-wide default rule, also absorb that specific conclusion into `s_system_constraints.md`
    - do not absorb a Shared Contract into module `stable` merely because promotion happened

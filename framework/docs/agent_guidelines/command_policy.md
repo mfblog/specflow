@@ -70,7 +70,7 @@ Additional rules:
 3. `{module}` points only to objects formally recognized as modules by the mechanism. Appendix files, topic-expansion files, Prompt source templates, and similar supporting files are not legal command targets.
 4. `shared contract` is also not a legal module command target. Do not write `cand_check:shared_xxx` or equivalent forms.
 5. `shared_ops:{natural-language request}` is a user-facing shared-governance command entry, but it is not a `{command}:{module}` command.
-6. `shared_new`, `shared_extract`, `shared_bind`, `shared_sync`, and `shared_escape` are internal shared-governance flow names, not direct user-facing commands.
+6. `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, `shared_sync`, and `shared_escape` are internal shared-governance flow names, not direct user-facing commands.
 7. `project_standard_create` is also not a standard module command in `{command}:{module}` form.
 8. checkpoints and clarification actions are not standard commands in `{command}:{module}` form.
 9. only the standard commands listed in Section 5 advance the normal module lifecycle.
