@@ -2,8 +2,6 @@
 
 ![SpecFlow title block](./assets/specflow-title-block.svg)
 
-
-
 <p>
   <img alt="规格驱动" src="https://img.shields.io/badge/spec-driven-111111?style=for-the-badge&labelColor=111111&color=2F855A">
   <img alt="模块导向" src="https://img.shields.io/badge/module-oriented-111111?style=for-the-badge&labelColor=111111&color=1F6FEB">
@@ -11,132 +9,79 @@
   <img alt="人机协作" src="https://img.shields.io/badge/human%20%2B%20AI-collaboration-111111?style=for-the-badge&labelColor=111111&color=7C3AED">
 </p>
 
-
-
 [English](./README.md) · **简体中文**
 
-
-
-[接入仓库](#怎样把-specflow-放进你的仓库) · [快速开始](#快速开始) · [三分钟流程](#三分钟流程) · [共享机制](#附录与跨模块共享) · [项目标准](#项目级标准) · [进阶用法](#进阶用法)
+[接入仓库](#接入仓库) · [快速开始](#快速开始) · [实际怎么用](#实际怎么用) · [共享真相](#什么时候不再是单模块问题) · [进阶用法](#进阶用法)
 
 ---
 
-`specFlow` 是一套面向 agentic runtime 的、以模块为基本组织单位的 Spec 驱动开发范式。
-
-你可以把它理解成一句话：
-
-`specFlow` 先把行为写进文件里，再让人和 AI 围绕这些文件去改代码，而且整个过程是受控的。
-
-这个仓库并不是要把所有项目都强行变成同一种形状。
-它提供一个可用的起点，并且默认你会按自己的业务去调整项目侧规则。
-
-下文所有命令示例里的 `<specflow-binary>`，都表示 `specflow/tooling/bin/` 下与你当前平台匹配的已编译可执行文件。
-
-例如：
-
-- Linux x86_64：`./specflow/tooling/bin/specflowctl-linux-amd64`
-- Linux arm64：`./specflow/tooling/bin/specflowctl-linux-arm64`
-- macOS Intel：`./specflow/tooling/bin/specflowctl-darwin-amd64`
-- macOS Apple Silicon：`./specflow/tooling/bin/specflowctl-darwin-arm64`
-- Windows x86_64：`.\specflow\tooling\bin\specflowctl-windows-amd64.exe`
-- Windows arm64：`.\specflow\tooling\bin\specflowctl-windows-arm64.exe`
+`specFlow` 想做的，是让 AI 辅助开发重新像工程，而不是一连串聪明但会蒸发的对话：它把每个模块的当前真相、下一版真相，以及从想法到验证落地的推进路径，真正留在仓库里。这样一来，人和 agent 可以一起高速推进，但项目本身仍然清楚知道什么是真的、什么正在变化、什么已经可以交付。它不是死模板，而是一套很强的治理骨架，你可以继续按自己的业务把它改得更锋利。
 
 ## 它解决什么问题
 
-> 当代码跑得很快时，真相必须慢下来。
+> 代码可以快，真相不能乱。
 
-很多 AI 辅助开发项目最后都会碰到同样的问题：
+很多 AI 辅助开发项目，最后都会卡在同一类问题上：
 
 - 真正的需求只存在于聊天记录里
-- 不同的人对同一个功能理解不一样
-- 代码改了，但没人能明确说现在行为到底对不对
-- 每个人或每个 agent 的工作方式不同，流程越来越难信任
+- 不同的人、不同的 agent，对同一个功能理解不一致
+- 代码已经改了，但没人能明确说现在的正式行为到底是什么
+- 临时推进很快，回头看时却很难判断这轮改动是否真正收口
 
-`specFlow` 解决问题的核心做法只有一个：
+`specFlow` 的做法很简单：
 
-- 把行为真相显式地写进文件
+- 把行为真相落到仓库文件里
 
-然后再围绕这份真相加上一组小而明确的命令，让设计、计划、实现、验证、升级不会彼此漂移。
+然后再围绕这份真相加上一套明确的推进步骤，让设计、计划、实现、验证、升级不会一路漂移下去。
 
-## specFlow 是怎么使用的
+## specFlow 怎么用
 
 > Runtime 驱动，模块组织，Spec 优先。
 
-`specFlow` 不是一个可以单独运行的 runtime。
+`specFlow` 不是一个单独运行的 runtime。
 
-它是一层治理规则，需要和 agentic runtime 一起使用，例如：
+它是一层治理规则，需要和 agentic runtime 一起工作，例如：
 
 - `Codex`
 - `Gemini CLI`
 - `Claude Code`
 
-用大白话说：
+可以把它理解成：
 
-- `specFlow` 负责提供工作规则
-- runtime 负责读取规则并真正执行工作
+- `specFlow` 负责定义这件事在仓库里应该怎么推进
+- runtime 负责按照这些规则真正去读文件、改文件、改代码、做验证
 
-`specFlow` 同时也是模块导向的。
-
-这意味着：
-
-- 基本工作对象是正式的 `module`
-- 命令采用 `{command}:{module}` 这样的形式
-- Spec、计划、实现、验证、升级，通常都围绕单个模块展开
-
-所以你在使用 `specFlow` 时，通常是在同时做两件事：
-
-1. 用一个 agentic runtime 执行工作
-2. 让这个 runtime 按模块化治理流程推进
+它还是模块导向的。
+也就是说，大部分正式工作都会围绕一个明确的 `module` 展开，Spec、计划、实现、验证和升级，通常也按模块收口。
 
 ## 从这里开始
 
-> 先掌握最短路径，后面再扩展。
+> 先抓住最短路径，后面再扩展。
 
-如果你是第一次接触，不要一上来就试图理解整套系统。
+如果你是第一次接触 `specFlow`，不要一上来试图吃透所有规则。
 
 建议按这个顺序读：
 
-1. `怎样把 specFlow 放进你的仓库`
+1. `接入仓库`
 2. `快速开始`
-3. `核心模型`
-4. `三分钟流程`
-5. `第一批要认识的命令`
-6. `命令顺序与项目状态`
+3. `实际怎么用`
+4. `核心模型`
+5. `三分钟理解流程`
+6. `什么时候需要手动控命令`，只有你真的需要精确控制时再看
 
-读完这些，你就已经可以开始用 `specFlow`。
+读完这些，你就已经知道它大致怎么用了。
 
-如果后面你想理解如何自定义规则，或者想进入更深的治理机制，再去看 `进阶用法`。
+如果后面你想理解更深的治理机制、自定义方式或者完整基线，再进入 `进阶用法`。
 
-## 怎样把 specFlow 放进你的仓库
+## 接入仓库
 
 > 先把 `specflow/` 放进项目，再执行 `init`。
 
-把 `specFlow` 接入你自己的仓库，实际有两种可用方式。
+对大多数团队来说，默认接入方式就够了：
 
-```mermaid
-flowchart TD
-    A["想把 specFlow 接入你的仓库"] --> B["最简单的路径"]
-    A --> C["希望在 git 历史里保留上游来源"]
-    B --> D["单独 clone 这个仓库"]
-    D --> E["只把 specflow/ 复制到项目根目录"]
-    C --> F["把这个仓库作为 subtree 放到 vendor/ 下"]
-    F --> G["再把 vendor 里的 specflow/ 同步到根目录"]
-```
-
-这张图怎么理解：
-
-- 如果你想最快接入，就把这个仓库 clone 到独立目录，然后只复制 `specflow/` 到你项目根目录
-- 如果你想在 git 历史里显式保留上游来源，就把这个仓库作为 subtree 放到 `vendor/` 下，再把其中的 `specflow/` 同步到项目根目录
-
-### 方式 1：单独 clone，然后复制 `specflow/`
-
-这是最推荐的大多数团队起步方式。
-
-为什么默认推荐这个：
-
-- 它让宿主项目的目录形状最简单
-- 它和文档里的工具路径完全一致，因为安装后就是 `./specflow/...`
-- 它不要求用户在开始前先学会 `git subtree`
+1. 把这个仓库 clone 到别的目录
+2. 只把其中的 `specflow/` 目录复制到你项目根目录
+3. 回到你的项目里执行 `init`
 
 Shell 示例：
 
@@ -152,744 +97,523 @@ git clone https://github.com/Bingordinary/SpecFlow.git $env:TEMP\SpecFlow
 Copy-Item -Recurse -Force $env:TEMP\SpecFlow\specflow .\specflow
 ```
 
-完成后，直接进入下面的 `快速开始`，执行：
-
-```bash
-<specflow-binary> init
-```
-
-### 方式 2：用 `git subtree` 跟踪上游
-
-当你希望上游仓库在你自己的 git 历史里保持可追踪，并且想要一条可重复执行的升级路径时，用这个方式。
-
-有一个前提必须讲清楚：
-
-- 当前这个仓库里，可安装内容位于 `specflow/` 子目录下
-- 所以如果你直接用 `--prefix=specflow` 接入整个仓库，会得到 `specflow/specflow/...`
-- 因此当前安全的 subtree 用法是：先把整个上游仓库放到 `vendor/` 下，再把其中的 `specflow/` 同步到你项目根目录的 `specflow/`
-
-首次接入：
-
-```bash
-git remote add specflow-upstream https://github.com/Bingordinary/SpecFlow.git
-git subtree add --prefix=vendor/specflow-upstream specflow-upstream main --squash
-rsync -a vendor/specflow-upstream/specflow/ ./specflow/
-```
-
-Windows PowerShell 对应写法：
-
-```powershell
-git remote add specflow-upstream https://github.com/Bingordinary/SpecFlow.git
-git subtree add --prefix=vendor/specflow-upstream specflow-upstream main --squash
-Copy-Item -Recurse -Force .\vendor\specflow-upstream\specflow\* .\specflow\
-```
-
-然后执行：
-
-```bash
-<specflow-binary> init
-```
-
-后续如果你要升级：
-
-```bash
-git fetch specflow-upstream
-git subtree pull --prefix=vendor/specflow-upstream specflow-upstream main --squash
-rsync -a --delete vendor/specflow-upstream/specflow/ ./specflow/
-<specflow-binary> upgrade
-```
-
-这一串动作分别在做什么：
-
-1. `git subtree add` 把上游仓库存放到 `vendor/specflow-upstream`
-2. `rsync` 把真正可安装的 `specflow/` 同步到项目实际使用的位置
-3. `git subtree pull` 在以后刷新 vendor 里的上游副本
-4. `upgrade` 在你同步了新版本后，重新应用较新的 framework 管理文件和 managed block
+如果你真的需要长期跟上游同步，把它当成维护层问题处理即可，再去看 [tooling/README.md](./tooling/README.md) 和你偏好的仓库同步策略。
 
 ## 快速开始
 
-> 先把文件框架装好，再让 runtime 按流程工作。
+> 先把结构装好，再开始用。
 
-当 `specflow/` 已经放进你的仓库后，在仓库根目录执行：
+当 `specflow/` 已经进入你的仓库后，在仓库根目录执行：
 
 ```bash
 <specflow-binary> init
 ```
 
-这一步会安装最基本的结构：
+下文里的 `<specflow-binary>`，都表示 `specflow/tooling/bin/` 下与你当前平台匹配的可执行文件。
+具体文件名可以直接看 [tooling/README.md](./tooling/README.md)。
+
+这一条命令会把最基本的骨架装进来，包括：
 
 - `AGENTS.md`、`GEMINI.md`、`CLAUDE.md`
 - `docs/specs/`
-  - 包括模块 Spec、appendix 文件和流程状态文件
+  - 这里面会放模块 Spec、appendix 文件、流程状态文件
 - `.githooks/pre-commit`
-- 其他工作流所需的辅助文件
-
-初始化本身就这么多。
+- 其他这套工作流需要的支持文件
 
 有一个细节要注意：
 
-- `init` 会在 `.githooks/pre-commit` 下创建 hook 文件
-- 但 Git 不会自动启用这个目录，除非 `core.hooksPath` 指向 `.githooks`
+- `init` 会创建 `.githooks/pre-commit`
+- 但 Git 不会自动使用这个目录，除非 `core.hooksPath` 指向 `.githooks`
 
-如果你希望 Git 真的使用这里的 hook，请执行：
+如果你想让 Git 真的启用这里的 hook，请执行：
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-初始化完成后，新手就可以直接进入下面的基础命令流。
+从这一步开始，新手通常不需要先去背命令。
+
+如果你的 runtime 会读取这些入口文件，日常交互通常可以直接从自然语言开始，例如：
+
+- “给 auth 模块加上 rate limit。”
+- “checkout 这里的行为改了，先更新真相，再实现。”
+- “帮我检查当前代码是不是还符合已接受的真相。”
+
+正常情况下，runtime 应该把这些意图路由到正确的 `specFlow` 流程里。
+
+## 实际怎么用
+
+执行完 `init` 后，日常使用通常有两种方式：
+
+1. 直接用自然语言描述你要做什么
+2. 让 runtime 把这个意图路由到合适的 `specFlow` 步骤
+3. 如果你想精确控制，再自己显式写命令
+
+这套东西之所以叫“文档驱动”，核心就在这里：
+
+- 当前已经正式接受的模块真相，放在 `docs/specs/modules/stable/s_{module}.md`
+- 正在准备中的下一版真相，放在 `docs/specs/modules/candidate/c_{module}.md`
+
+你真正要写的主文档，就是这个模块 Spec 文件。
+
+一份正式的模块 Spec，至少应该能回答这些问题：
+
+- 这个模块是干什么的，边界在哪里
+- 关键术语是什么意思
+- 输入输出、数据结构、协议长什么样
+- 主流程和状态流转是什么
+- 边界情况和错误处理怎么定
+- 怎样验证它算是正确完成
+
+如果这个模块还依赖共享真相或全局约束，那么这些对齐关系也要在 Spec 里写明。
+
+下面三个 case，不要把它看成三个零散 FAQ。
+更合适的读法是：这是同一个模块从第一次出现，到后续演进，再到后来回头做对齐检查的一条简化生命周期。
+
+这个描述故意做了简化。
+它的目标是帮你建立感觉，不是把所有精确规则都塞在这里。
+
+```mermaid
+flowchart LR
+    A["A. 第一版"] --> B["B. 下一版"]
+    B --> C["C. 后续对齐检查"]
+```
+
+怎么理解这张图：
+
+- `A. 第一版` 是这个模块第一次被正式建立起来
+- `B. 下一版` 是同一个模块后面继续演进
+- `C. 后续对齐检查` 是过了一段时间后，你回来确认当前代码是不是还符合正式真相
+
+在进入案例前先补一个前提：
+
+- 如果这个模块在 `specFlow` 接入前就已经存在，那么第一次纳管时先用 `spec_init:{module}`
+- 它的作用不是设计下一版，而是先把“当前已经生效的真实行为”落成第一份 governed `stable`
+- 从那以后，这个模块就会按下面这条故事线继续走
+
+### 场景 1：给模块做第一版
+
+你会怎么说：
+
+- “帮我创建一个 search 模块。”
+
+如果你想精确控制：
+
+```text
+spec_new:module_search
+-> write docs/specs/modules/candidate/c_module_search.md
+-> cand_check:module_search
+-> cand_plan:module_search
+-> cand_impl:module_search
+-> cand_verify:module_search
+-> cand_promote:module_search
+```
+
+这些命令分别在干什么：
+
+- `spec_new` 先给这个新模块创建第一份 `candidate`
+- 接着你或 runtime 把真正的 candidate 内容写进 `c_module_search.md`
+- `cand_check` 判断这份 candidate 是否已经闭合到足以支撑后续工作
+- `cand_plan` 把这份真相转成实现计划
+- `cand_impl` 按 candidate 去改代码
+- `cand_verify` 检查代码是否真的符合 candidate
+- `cand_promote` 把被接受的 candidate 变成新的 `stable`
+
+文档内容是在什么时候写进去的：
+
+- `spec_new` 之后，文件虽然存在了，但内容还没有自然完整到能直接推进
+- 这时你要在 `c_module_search.md` 里把第一版 candidate 真正写出来
+- 最少应该写到让人能看懂：
+  - 这个模块到底负责什么
+  - 它接什么输入，产什么输出
+  - 主要流程怎么走
+  - 关键边界情况是什么
+  - 你准备拿什么标准判断它算正确
+- 只有写到这个程度，`cand_check` 才有东西可判断
+- 如果 `cand_check` 认为还不够闭合，就继续回到同一个 candidate 文件里补内容
+
+这里 `specFlow` 额外提供的价值是：
+
+- 新模块不会从“先写一坨代码”开始
+- 仓库里会先留下第一版行为真相，再进入实现
+- 后面别的 agent 接手时，能直接看到这个模块本来要做什么，而不是只能从代码结果反推
+
+### 场景 2：给同一个模块继续做下一版
+
+你会怎么说：
+
+- “把 search 改成先做 typo correction，再做 ranking。”
+
+如果你想精确控制：
+
+```text
+spec_fork:module_search
+-> edit docs/specs/modules/candidate/c_module_search.md
+-> cand_check:module_search
+-> cand_plan:module_search
+-> cand_impl:module_search
+-> cand_verify:module_search
+-> cand_promote:module_search
+```
+
+这些命令分别在干什么：
+
+- `spec_fork` 从当前 `stable` 打开一个新的 `candidate`
+- 接着你或 runtime 修改 `c_module_search.md`，描述这一轮的下一版行为
+- `cand_check` 确认这份更新后的 candidate 是否已经写清楚
+- `cand_plan`、`cand_impl`、`cand_verify` 负责把这一轮真相真正推进成代码并验证
+- `cand_promote` 则把这一轮的下一版变成新的正式 `stable`
+
+文档内容是在什么时候写进去的：
+
+- `spec_fork` 不是直接把下一版写完，它只是给你一个从当前 stable 派生出来的起点
+- 真正的变化内容，还是要你写进 `c_module_search.md`
+- 这一轮通常会改到这些东西：
+  - 协议或字段含义变了什么
+  - 主流程哪里变了
+  - 验证规则或错误行为哪里变了
+  - 这轮新增了什么验收标准
+- `cand_check` 的作用就是问一句：这份“下一版真相”现在是不是已经写清楚到足够驱动实现
+- 如果答案是否，那就继续回到 candidate 文档里补，不是硬往后推
+
+这里 `specFlow` 额外提供的价值是：
+
+- 当前已接受行为和下一版行为被明确分开
+- 仓库不需要事后再猜，这次改动到底是修 bug、改行为，还是只改到一半
+- 后来的 agent 可以直接读“当前真相”和“下一版真相”，而不是重新从 diff 和聊天记录里拼意图
+
+### 场景 3：过一段时间回来，检查它还对不对
+
+你会怎么说：
+
+- “帮我检查 search 模块现在是不是还符合已接受的真相。”
+
+如果你想精确控制：
+
+```text
+read docs/specs/modules/stable/s_module_search.md
+-> stable_verify:module_search
+```
+
+如果发现 drift，而且你想顺势开始下一轮改动：
+
+```text
+spec_fork:module_search
+-> edit docs/specs/modules/candidate/c_module_search.md
+-> cand_check:module_search
+```
+
+这个命令在做什么：
+
+- `stable_verify` 检查的是：当前实现是否还符合当前正式接受的 `stable`
+- 它不是因为你提了“检查”就自动开启一个新的 candidate 轮次
+- 如果发现 drift，就先把“已经漂移”这个事实说清楚，再决定后续怎么处理
+
+这里 `specFlow` 额外提供的价值是：
+
+- 验证变成仓库里的正式动作，而不只是聊天里一句“看起来没问题”
+- 项目能得到一个明确结论：`still aligned` 还是 `drift exists`
+- 后面不管换成另一个人还是另一个 agent 再回来，都更容易信任这次检查结果
+
+给新手的最短总结：
+
+- 新模块第一版：`spec_new` + candidate 链
+- 已经纳管的模块继续做下一版：`spec_fork` + candidate 链
+- 后来做对齐检查：`stable_verify`
+- 历史模块第一次纳管：`spec_init`
+
+你依然可以从自然语言开始。
+这些命令只是把这条生命周期背后的精确抓手显式写出来。
 
 ## 核心模型
 
 > 一份当前真相，一份下一版真相。
 
-新手一开始只需要记住两个核心状态：
+新手一开始只需要抓住两个状态：
 
-- `stable`：项目当前承认的行为真相
+- `stable`：项目当前正式承认的行为真相
 - `candidate`：正在准备中的下一版行为真相
 
 ```mermaid
 flowchart LR
-    A["stable"] --> B["打开 candidate"]
-    B --> C["candidate"]
-    C --> D["实现并验证"]
-    D --> E["升级"]
+    A["A. stable"] --> B["B. 打开 candidate"]
+    B --> C["C. candidate"]
+    C --> D["D. 实现并验证"]
+    D --> E["E. 升级"]
     E --> A
-```
-
-怎么理解这张图：
-
-- `stable` 是当前已经被接受的版本
-- `candidate` 是你当前正在处理的下一版
-- 当 `candidate` 已经完成并验证通过后，它会被提升成新的 `stable`
-
-## 三分钟流程
-
-> 这是从想法走到受控变更的最短路径。
-
-假设你要新增一个模块 `module_search`。
-
-新手最短路径通常是：
-
-1. 执行 `spec_new:module_search`
-2. 写出 `module_search` 的 candidate Spec
-3. 执行 `cand_check:module_search`
-4. 执行 `cand_plan:module_search`
-5. 执行 `cand_impl:module_search`
-6. 执行 `cand_verify:module_search`
-7. 执行 `cand_promote:module_search`
-
-用大白话说，这一串动作就是：
-
-- 先把要做的行为定义清楚
-- 然后确认定义已经足够清楚
-- 再写实施计划
-- 再去改代码
-- 再检查代码是不是真的符合定义
-- 最后把这一版升级成当前接受的版本
-
-如果 `module_search` 已经存在，而你只是要改它，通常起点不是 `spec_new`，而是 `spec_fork`。
-
-## 第一批要认识的命令
-
-先用一个新手视角来理解：
-
-- 你先写或更新 Spec
-- 然后根据下一步想做什么来选命令
-- 命令是在告诉 agent：你现在正在做哪一种动作
-
-一开始不需要死记整套治理系统。
-你最需要先知道的是：每个命令分别是干什么的。
-
-## 命令名怎么读
-
-大多数 `specFlow` 命令都是这种形式：
-
-```text
-prefix_action:{module}
-```
-
-例如：
-
-```text
-cand_plan:module_search
-```
-
-这个命令有两部分：
-
-- `cand_plan`
-  - 动作名
-- `module_search`
-  - 目标模块
-
-所以它的意思就是：
-
-- 对 `module_search` 执行 `cand_plan`
-
-### 前缀是什么意思
-
-最重要的前缀有三个：
-
-- `spec`
-  - 打开、创建或切换你要工作的 Spec 版本
-- `cand`
-  - 在 `candidate` 这一层里推进工作
-- `stable`
-  - 对当前生效的 `stable` 做检查或操作
-
-最短例子：
-
-- `spec_new`
-  - 给新模块创建第一份 candidate Spec
-- `spec_fork`
-  - 从当前 stable 打开一份新的 candidate
-- `cand_impl`
-  - 按当前 candidate Spec 去实现代码
-- `stable_verify`
-  - 检查当前代码是否还符合 stable
-
-### 动作词是什么意思
-
-前缀后面的动作词，表示你现在在做哪一种步骤。
-
-用新手最容易懂的方式来看：
-
-- `new`
-  - 从零开始创建新的 Spec
-- `fork`
-  - 从已有 stable 打开下一版 Spec
-- `check`
-  - 判断当前 candidate Spec 是否已经足够清楚，可以稳定地驱动工作
-- `plan`
-  - 把 candidate Spec 转成实施计划
-- `impl`
-  - 按 candidate Spec 和计划去修改代码
-- `verify`
-  - 检查已经实现出来的代码是否真的符合 Spec
-- `promote`
-  - 把已经验证通过的 candidate 升级成新的 stable
-
-这里有一个关键澄清：
-
-- 在 `cand_impl` 之前，主要是在收敛和检查 Spec
-- 到了 `cand_impl`，工作才正式从 Spec 文件进入代码修改
-- 到了 `cand_verify`，就是把代码再拿回去对照 Spec 做确认
-
-所以：
-
-- `spec_new` 的意思是“从零开始创建一份新的 Spec 版本”
-- `cand_verify` 的意思是“对照 candidate 去验证实现”
-- `stable_verify` 的意思是“对照 stable 去验证实现”
-
-## 第一批需要先会用的命令
-
-第一天不需要掌握所有命令。
-先从这些开始：
-
-- `spec_init:{module}`
-  - 给一个历史模块创建第一份 `stable`
-- `spec_new:{module}`
-  - 给一个全新的模块创建第一份 `candidate`
-- `spec_fork:{module}`
-  - 从现有 `stable` 打开下一份 `candidate`
-- `cand_check:{module}`
-  - 检查当前 candidate 是否已经足够清楚
-- `cand_plan:{module}`
-  - 从 candidate 生成实施计划
-- `cand_impl:{module}`
-  - 按 candidate 去做实现
-- `cand_verify:{module}`
-  - 检查实现是否符合 candidate
-- `cand_promote:{module}`
-  - 把 candidate 升级成新的 `stable`
-- `stable_verify:{module}`
-  - 检查当前代码是否还符合 `stable`
-
-## 我应该用 `spec_init`、`spec_new` 还是 `spec_fork`？
-
-快速判断规则如下：
-
-- 当模块早就存在，但还没有正式纳入 `specFlow` 治理时，用 `spec_init:{module}`
-- 当这是一个全新的模块，你要创建它的第一份 candidate 时，用 `spec_new:{module}`
-- 当模块已经有了 `stable`，你现在要继续做下一版变更时，用 `spec_fork:{module}`
-
-最短对比：
-
-| 你现在要做什么 | 用哪个命令 |
-| --- | --- |
-| 把一个历史模块第一次正式纳入治理 | `spec_init:{module}` |
-| 给一个全新模块建立第一版治理对象 | `spec_new:{module}` |
-| 基于现有 stable 开启下一轮变更 | `spec_fork:{module}` |
-
-如果你只记一句话，就记这个：
-
-- `spec_init` 是“旧模块第一次纳管，先落 stable”
-- `spec_new` 是“新模块从零开始，先落 candidate”
-- `spec_fork` 是“已有 stable，再开下一版”
-
-## 命令顺序与项目状态
-
-如果你只想先抓住最短心智模型，可以记住下面三条常见路径。
-
-要注意：
-
-- 这是常见顺序，不是说整个项目所有模块永远都必须走同一个全局顺序
-- 当项目里有很多模块时，真实状态要以 `docs/specs/_status.md` 为准
-- `_status.md` 由 `specFlow` 命令流维护，是项目状态索引
-- 正常使用时你是“读取” `_status.md`，而不是把它当作随手编辑的草稿板
-
-```mermaid
-flowchart LR
-    A["一个项目里有很多模块"] --> B["读取 docs/specs/_status.md"]
-    B --> C["找到 Active Layer"]
-    C --> D["找到 Next Command"]
-    D --> E["为该模块选择下一步动作"]
-```
-
-怎么理解这张图：
-
-- 如果你只关心单个模块，下面的命令路径图通常就够了
-- 如果你面对的是一个多模块项目，第一眼先看 `_status.md`
-- 关键字段是 `Active Layer` 和 `Next Command`
-
-### 路径 1：历史模块第一次纳入治理
-
-```mermaid
-flowchart LR
-    A["spec_init"] --> B["创建第一份 stable"]
-    B --> C["需要下一轮变更时执行 spec_fork"]
-```
-
-说明：
-
-- 模块原本就存在
-- 你先把它当前已经生效的行为沉淀成第一份 `stable`
-- 这一步是在做“纳管”，不是在设计下一版
-- 后面如果你要继续修改它，再用 `spec_fork` 打开 candidate
-
-### 路径 2：全新模块
-
-```mermaid
-flowchart LR
-    A["spec_new"] --> B["cand_check"]
-    B --> C["cand_plan"]
-    C --> D["cand_impl"]
-    D --> E["cand_verify"]
-    E --> F["cand_promote"]
-```
-
-说明：
-
-- 创建新的 candidate
-- 确认它已经足够清楚
-- 写计划
-- 实现
-- 验证
-- 升级
-
-### 路径 3：已有 stable 的模块继续演进
-
-```mermaid
-flowchart LR
-    A["spec_fork"] --> B["cand_check"]
-    B --> C["cand_plan"]
-    C --> D["cand_impl"]
-    D --> E["cand_verify"]
-    E --> F["cand_promote"]
-```
-
-说明：
-
-- 从当前 stable 复制出新的 candidate
-- 让 candidate 收敛到足够清楚
-- 计划
-- 实现
-- 验证
-- 升级
-
-### stable 侧维护
-
-还有一条很重要的 stable 侧维护路径：
-
-```mermaid
-flowchart LR
-    A["stable 模块"] --> B["代码变了或当前对齐状态存疑"]
-    B --> C["stable_verify"]
-    C --> D["仍然对齐"]
-    C --> E["已经漂移，必须先修复"]
-```
-
-说明：
-
-- `stable_verify` 不是开启新设计轮次的常规起点
-- 它是在模块当前处于 `stable` 时，用来检查代码是否仍然符合这份 `stable`
-- 只有 stable 对齐重新明确之后，模块才适合进入下一轮受控升级
-
-### 一个重要说明
-
-在学习阶段，你可以先把这些命令当作工具箱：
-
-- 先理解每个命令是干什么的
-- 再选择与你当前工作匹配的那个命令
-
-但如果你希望内建治理真的保持闭环、可信，那么完整流程仍然依赖前置条件和正常顺序。
-所以新手友好的阅读方式是“先学会命令”，而不是“规则不存在”。
-
-## specFlow 到底是什么
-
-`specFlow` 并不主要是一个代码框架。
-它更像是一种变更治理范式。
-
-它提供的是：
-
-- 一种把行为真相落到文件里的方式
-- 一种把当前真相和下一版真相分开的方式
-- 一种用显式命令推进工作的方式
-- 一种在宣布完成之前先验证的方式
-
-## 附录与跨模块共享
-
-基础命令流已经足够覆盖普通模块工作。
-
-但还有一个你应该知道存在的机制：
-
-- 模块 appendix
-- 跨模块 shared truth
-
-第一天你不需要学内部治理细节。
-你只需要先建立一个简单的关系图。
-
-```mermaid
-flowchart LR
-    A["模块主 Spec"] --> B["模块 appendix"]
-    B --> C["共享相关自然语言意图"]
-    C --> D["shared_ops:需求描述"]
-    D --> E["进入标准共享链路"]
-    D --> F["复杂场景进入 checkpoint"]
-```
-
-这张图怎么读：
-
-- 模块主 Spec 只放这个模块最核心的行为定义
-- 如果有些正式内容太长、太细、但仍只属于该模块，就放到这个模块自己的 appendix
-- 只要这份真相还只属于一个模块，它就应该留在模块主文件或模块 appendix 中
-- 当你开始处理跨模块共享真相时，统一从 `shared_ops:{自然语言需求}` 进入
-
-最简单的规则是：
-
-- 第一次出现时，先留在当前模块
-- 不要因为“将来可能复用”就提前抽成 shared
-- 当你确认要处理共享真相时，不需要先记内部链路名，直接描述你的意图
-
-用大白话说：
-
-- `appendix` 仍然是模块自己的真相
-- `shared contract` 是多个正式模块共同依赖的一份真相
-- shared 的目的，是避免双份真相，不是收集“看起来有点像”的内容
-
-### 如何使用 `shared_ops`
-
-`shared_ops:{自然语言需求}` 是 shared 相关治理的唯一用户入口。
-
-你会在下面这些场景下使用它：
-
-- 你一开始就想把某部分设计成共享真相
-- 你想把已经写在模块里的某段真相抽成 shared contract
-- 某个模块现在要复用已有 shared contract
-- 你要对已有 shared 做拆分、合并、重命名或退场处理
-- 你改了 shared contract，想知道会影响哪些模块
-
-最重要的规则是：
-
-- 你不用自己挑 `shared_new`、`shared_extract`、`shared_bind`、`shared_topology`、`shared_sync`
-- 你只需要把需求说出来
-- agent 会按 shared 规则自动归类
-- 如果无法稳定归类，agent 必须停在 checkpoint，而不是硬猜
-
-典型写法：
-
-- `shared_ops:我一开始就要设计一个给 agent 和 assistant 共用的结构化输出 fallback 共享契约`
-- `shared_ops:把 module_ai 和 module_memory 里共用的 app config topology 抽成 shared contract`
-- `shared_ops:module_skill 需要复用 shared_app_config_topology`
-- `shared_ops:把 shared_runtime_model 拆开，并决定旧 shared 是否退场`
-- `shared_ops:我刚改了 structured_output_fallback，帮我检查影响哪些模块`
-
-执行后会发生什么：
-
-- agent 会先判断这次意图属于哪类 shared 操作
-- 如果能稳定归类，它会进入对应的内部共享链路
-- 如果同一句需求里混了多个动作，且顺序会改变正式真相，它必须停在 checkpoint
-- checkpoint 会告诉你：当前识别到的复杂意图、为什么不能自动继续、以及推荐的拆分动作序列
-
-有一个边界必须明确：
-
-- `shared_ops` 只处理跨模块共享真相治理
-- 如果你的任务本质上还是单模块 candidate 收口，它不应替代 module 命令链
-- 如果你的任务已经变成推动全局默认规则，它也不应替代模块内的 `system_constraints_change_proposal`
-
-## 进阶用法
-
-当你已经理解基础用法后，这一节帮助你理解整个系统，并且把它真正改造成适合你项目的样子。
-
-进阶部分主要是四件事：
-
-- 理解文档结构
-- 知道哪些文件可以由你来自定义
-- 知道标准模块命令之外还有哪些治理 flow
-- 知道当意图识别不够准确时，系统会如何进入 checkpoint
-
-### 项目结构
-
-理解这个仓库最简单的方式，是把它分成四层：
-
-```mermaid
-flowchart TD
-    A["tooling/"] --> B["安装、检查、升级"]
-    C["templates/root/"] --> D["安装到目标仓库的文件"]
-    E["framework/docs/agent_guidelines/"] --> F["基线治理规则与命令文档"]
-    G["宿主项目的 docs/ 与入口文件"] --> H["项目自己的真相与标准"]
 ```
 
 怎么理解：
 
-- `tooling/` 负责安装、检查、升级
-- `templates/root/` 是会被拷贝到目标仓库里的模板
-- `framework/docs/agent_guidelines/` 是 `specFlow` 自己的基线规则系统
-- 安装到项目里的 `docs/` 和入口文件，才是你的项目表达自身真相和规则的地方
+- `A. stable` 是当前正式版本
+- `C. candidate` 是下一版正在成形的真相
+- `D. 实现并验证` 是围绕 candidate 发生的
+- `E. 升级` 是把被接受的 candidate 变成新的 stable
 
-### 什么东西放在哪里
+## 三分钟理解流程
 
-用这个最短地图来看：
+> 先理解工作顺序，再去记命令名。
 
-- `specflow/tooling/`
-  - 安装、doctor、upgrade、sync 脚本
-- `specflow/templates/root/`
-  - 会复制到目标仓库根目录的模板文件
-- `specflow/framework/docs/agent_guidelines/`
-  - 这套范式自己的规则系统
-- `docs/specs/`
-  - 你项目里的正式 Spec 和流程状态文件
-- `docs/project_standards/`
-  - 你项目自己的补充标准，用来收紧或澄清基线
-- `AGENTS.md`、`GEMINI.md`、`CLAUDE.md`
-  - 不同执行器的入口文件，包含 `specFlow` 管理块和项目自有区域
+如果你只想抓住最短可用模型，就记住这条顺序：
 
-### 如何自定义规则
+1. 先写或更新行为真相
+2. 把这份真相写到足够能指导工作
+3. 按这份真相实现
+4. 按这份真相验证
+5. 把被验证通过的下一版升成正式版本
 
-新手最安全的原则是：
+```mermaid
+flowchart LR
+    A["A. 写真相"] --> B["B. 写到足够可推进"]
+    B --> C["C. 实现"]
+    C --> D["D. 验证"]
+    D --> E["E. 升级"]
+```
 
-- 先改项目拥有的文件
-- 只有当你是明确想修改 `specFlow` 机制本身时，才去改 framework 文件
+这张图最重要的意思是：
 
-大多数团队主要会改这些：
+- 真相应该先进文件，而不是只活在聊天里
+- 实现和验证都应该围绕已经写下来的真相进行
+- `specFlow` 想保护的就是这条顺序
+
+命令系统存在的意义，是把这条顺序显式化、可审阅化。
+但对新手来说，先理解这条顺序，通常比先背命令更重要。
+
+## 什么时候需要手动控命令
+
+只有这些时候，你才真的需要自己显式控制命令：
+
+- 你想精确指定当前该走哪一步
+- runtime 路由出来的结果和你预期不一致
+- 你正在排查某个模块的治理状态
+
+大多数手动控制，先从三个入口判断开始：
+
+| 你的情况 | 对应命令 |
+| --- | --- |
+| 历史模块第一次纳入治理 | `spec_init:{module}` |
+| 全新模块第一次进入治理 | `spec_new:{module}` |
+| 已有 stable 的模块要开新一轮演进 | `spec_fork:{module}` |
+
+一旦模块已经进入 candidate 链，后面的正常顺序通常是：
+
+```text
+cand_check -> cand_plan -> cand_impl -> cand_verify -> cand_promote
+```
+
+另外还有一个 stable 侧的维护动作：
+
+```text
+stable_verify
+```
+
+只有在模块当前停留在 `stable`，而你又想确认代码是不是还和这份 stable 对得上时，才会用到它。
+
+如果你只想要一张最小流程图：
+
+```mermaid
+flowchart LR
+    A["A. spec_init 或 spec_new 或 spec_fork"] --> B["B. cand_check"]
+    B --> C["C. cand_plan"]
+    C --> D["D. cand_impl"]
+    D --> E["E. cand_verify"]
+    E --> F["F. cand_promote"]
+```
+
+这就是显式控制面。
+只有当自然语言入口不够稳，或者你想精确掌控时，才需要它。
+
+## 什么时候看 `_status.md`
+
+`docs/specs/_status.md` 是整个项目的模块状态索引。
+
+一般只有这些情况下，你才需要先去看它：
+
+- 项目里模块很多
+- 你不确定某个模块现在停在哪一层
+- 你想知道这个模块默认下一步该做什么
+
+```mermaid
+flowchart LR
+    A["A. 不确定模块当前在哪"] --> B["B. 读 docs/specs/_status.md"]
+    B --> C["C. 看 Active Layer"]
+    C --> D["D. 看 Next Command"]
+```
+
+怎么理解：
+
+- `B. 读 docs/specs/_status.md` 是为了确认当前仓库记录的事实状态
+- `C. 看 Active Layer` 是确认这个模块现在处于 `stable` 还是 `candidate`
+- `D. 看 Next Command` 是确认它默认下一步应该走哪条命令
+
+正常使用里，`_status.md` 是用来读状态的，不是让你手写草稿的地方。
+
+## 什么时候不再是单模块问题
+
+大部分真相应该尽量在单模块内部解决。
+
+通常真相会落在三个地方之一：
+
+- 模块主 Spec
+- 模块 appendix
+- 跨模块共享真相
+
+```mermaid
+flowchart LR
+    A["A. 模块主 Spec"] --> B["B. 模块 appendix"]
+    B --> C["C. 共享意图"]
+    C --> D["D. shared_ops 请求"]
+```
+
+怎么理解：
+
+- `A. 模块主 Spec` 是一个模块主行为的正式落点
+- `B. 模块 appendix` 还是单模块真相，只是把细节从主文件里展开
+- `D. shared_ops 请求` 是当这份真相不再只属于一个模块时，你应该进入的用户入口
+
+可以先记住一条简单规则：
+
+- 第一版内容先留在当前模块里
+- 不要因为“以后可能复用”就过早抽 shared
+- 只有当多个模块真的依赖同一份正式真相时，才把它变成 shared
+
+### 如何使用 `shared_ops`
+
+`shared_ops:{natural-language request}` 是 shared 治理唯一正式的用户入口。
+
+你会在这些场景里用到它：
+
+- 一开始就要设计成共享真相
+- 把已经写在模块里的内容抽成 shared contract
+- 让一个模块绑定到已有 shared contract
+- 调整 shared 拓扑，比如拆分、合并、重命名、退场
+- 改了 shared 之后，检查会影响哪些模块
+
+这块最重要的理解是：
+
+- 你描述 shared 相关的意图
+- runtime 决定该进哪个内部 shared flow
+- 如果路由不稳或边界不清，系统必须停下来做 checkpoint，而不是硬猜
+
+## 进阶用法
+
+当基础用法已经看明白以后，这一节才是帮助你理解整套系统、并把它改造成适合自己项目的地方。
+
+进阶部分主要关心四件事：
+
+- 仓库结构怎么分层
+- 通常改哪些文件
+- 怎么加项目级标准
+- 除了标准模块命令之外，还有哪些治理 flow
+
+### 项目结构
+
+从高层看，这个仓库可以分成四层：
+
+```mermaid
+flowchart TD
+    A["A. tooling"] --> B["B. 初始化和维护"]
+    C["C. templates root"] --> D["D. 安装进宿主项目的文件"]
+    E["E. framework docs"] --> F["F. specFlow 自己的治理规则"]
+    G["G. 宿主项目 docs 和入口文件"] --> H["H. 你的项目真相和项目标准"]
+```
+
+怎么理解：
+
+- `A. tooling` 负责安装、检查、升级这套范式
+- `C. templates root` 是会复制到目标项目里的模板骨架
+- `E. framework docs` 是 `specFlow` 自己的基线规则
+- `G. 宿主项目 docs 和入口文件` 才是你自己项目表达真相和项目标准的地方
+
+### 通常改哪些地方
+
+新手最安全的规则是：
+
+- 先改项目侧文件
+- 只有当你明确在改 `specFlow` 本身时，才去改 framework 规则
+
+大多数团队真正会改的，主要是这些地方：
 
 - `docs/specs/**`
-  - 项目本身的模块真相
 - `docs/project_standards/**`
-  - 项目自己的标准
-- `AGENTS.md`、`GEMINI.md`、`CLAUDE.md` 的项目自有部分
-  - 项目自己的执行器说明
-
-大多数团队通常不应该改 `framework/docs/agent_guidelines/**`，除非你是真的要重设计这套机制本身。
-
-用大白话说：
-
-- 如果你是想让 `specFlow` 适配你的项目，就改项目侧文件
-- 如果你是想重做 `specFlow` 自己的治理机制，才去改 framework 规则
+- `AGENTS.md`、`GEMINI.md`、`CLAUDE.md` 里属于项目自己的部分
 
 ### 项目级标准
 
-`specFlow` 允许项目在 framework baseline 之上增加自己的本地标准。
+`specFlow` 允许项目在 framework 基线之上再加项目级标准。
 
-这些标准放在：
+这些标准主要放在：
 
 - `docs/project_standards/`
 - `docs/project_standards/_registry.md`
 
-有一个关键规则：
+最关键的一条规则是：
 
-- 一个标准文件不是“存在就生效”
-- 它只有在 `_registry.md` 里注册之后，才算正式生效
+- 不是说标准文件存在，它就自动生效
+- 只有注册进 `_registry.md` 以后，它才会真正进入流程
 
-在正常使用里，你通常不需要自己手搓这些文件。
-最简单的方式是直接用自然语言让 agent 帮你创建，例如：
-
-- “给这个项目新增一个 Prompt 质量审查标准，并让 `cand_check` 使用它。”
-- “给这个项目新增一个项目级输出标准。”
-- “为这个仓库新增一个本地升级决策规则。”
-
-接下来 agent 应该做的事情是：
-
-1. 在 `docs/project_standards/` 下创建一个标准文件
-2. 在 `docs/project_standards/_registry.md` 里增加一条注册项
-3. 确认目标命令或 flow 已经支持这个标准要挂载的 `surface`
-
-从机制角度讲，这件事由一个内部 flow `project_standard_create` 处理。
-你不需要直接记住或手动调用这个内部名字。
-对用户来说，正常入口就是用自然语言描述你想新增的项目规则。
-
-一个项目标准通常由两部分组成：
-
-- 规则文件本体
-- 用来启用它的 registry entry
-
-示例 registry entry：
-
-| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `project_prompt_guidelines` | `review_standard` | `candidate_closure_review` | `docs/project_standards/prompt_guidelines.md` | `cand_check` | `all_targets_on_surface` | `tighten` | `framework_wins` |
-
-怎么理解这几个字段：
-
-- `type` 表示这是什么类型的项目标准
-- `surface` 表示它挂在哪个命令已经定义好的扩展点上
-- `file` 指向真正的规则文档
-- `consumed_by` 表示哪个命令或内部 flow 会读取它
-- `effect` 只能是收紧或澄清，不能削弱 baseline
-
-最重要的边界是：
-
-- 项目级标准可以收紧或澄清 framework
-- 但不能削弱、绕过或替代 framework baseline
-
-### 通常应该保持什么不变
-
-大多数项目最好保留这些核心机制：
-
-- Spec 作为真相源
-- `stable` 和 `candidate` 的分层
-- 用命令推进过程
-- 升级前先验证
-- 用 `_status.md` 作为状态索引
-- 明确区分 framework 管理文件和 project 拥有文件
+正常使用时，你通常不必手工从零搭这些文件。
+最简单的方式，还是直接用自然语言让 agent 帮你创建。
 
 ### 维护工具
 
-下面这些工具脚本很有用，但它们不是新手第一天必须学的入口。
+tooling 层很有用，但它不是新手第一天最该学的东西。
 
+最常见的维护命令通常是：
+
+- `init`
 - `doctor`
-  - 检查本地安装的 `specFlow` 结构是否健康
-  - 当你怀疑文件缺失、结构损坏或状态不同步时使用
 - `upgrade`
-  - 刷新 framework 管理的文件和 managed block
-  - 当你明确要把项目更新到较新的 `specFlow` 基线时使用
 
-示例：
+完整的 tooling 面，直接看 [tooling/README.md](./tooling/README.md)。
 
-- `<specflow-binary> doctor`
-- `<specflow-binary> upgrade`
+### 进阶 flow
 
-### 还有哪些进阶 flow
+除了标准模块命令，`specFlow` 还有一些更偏治理本身的 flow。
 
-除了标准模块命令外，`specFlow` 还有一些进阶 flow。
-
-这些 flow 的意义是帮助你检查或演化这套治理机制本身，而不只是推进某一个模块。
-
-#### `spec_flow_review`
-
-当你想审查治理系统本身是否仍然自洽时，使用 `spec_flow_review`。
-
-它的含义是：
-
-- 检查 `specFlow` 规则之间是否仍然一致
-- 检查规则变更有没有引入冲突、歧义或副作用
-
-这不是用来审查某个业务模块的。
-它审的是机制本身。
-默认情况下，它会审治理基线里的 shared-governance 规则文件，不只是模块命令链。
-但它审的是这些 shared 规则是否自洽，不是代替 `shared_ops` 去处理具体 shared 请求实例。
-输出时也应明确交代 shared-governance 是否已覆盖、覆盖了哪些关键规则文件、结论是 pass / blocked / 有 finding。
-
-### 存在但不是普通用户入口的内部 flow
-
-还有一些内部或非主要入口 flow，例如：
-
-- `shared_topology`
-- `shared_sync`
-- `project_standard_create`
-
-你最好知道它们存在，因为它们是完整机制的一部分。
-但它们不是一般用户最先直接调用的入口。
-
-用大白话说：
-
-- `spec_flow_review` 是一个面向用户的进阶审查 flow
-- 默认审查会覆盖 shared-governance 规则，不只是主命令链
-- `shared_ops:{自然语言需求}` 是跨模块共享治理的唯一对外入口
-- 像 `shared_topology` 和 `shared_sync` 这样的 flow 主要是为了让机制内部保持闭环
-
-### 如何触发进阶 flow
-
-触发进阶 flow 通常有两种方式：
-
-1. 用自然语言表达意图
-2. 直接写出 flow 名称
-
-自然语言例子：
-
-- “检查 framework 规则现在是否还自洽。”
-
-直接调用例子：
+最值得先知道存在的是两个：
 
 - `spec_flow_review`
+- `shared_ops:{natural-language request}`
 
-这件事重要的原因是：
+当你想审的是治理系统本身，而不是推进某个业务模块时，才会进入 `spec_flow_review`。
 
-- 意图识别很方便
-- 但它不是魔法
-- 如果 agent 没有准确识别你的意思，直接写正式 flow 名就是最干净的兜底方式
+### 想吃透整套 baseline 时怎么读
 
-### 如果你想自己研究或重做整套系统，建议怎么读
-
-如果你想深入理解，或者真的准备重设计系统，可以按下面顺序读：
+如果你想真的把整套系统吃透，或者准备自己重构这套机制，建议按这个顺序读：
 
 1. `framework/docs/agent_guidelines/spec_policy.md`
 2. `framework/docs/agent_guidelines/command_policy.md`
 3. `framework/docs/agent_guidelines/git_policy.md`
-4. `framework/docs/agent_guidelines/spec_flow_review.md`
-5. `framework/docs/agent_guidelines/shared_ops.md`
-6. `framework/docs/agent_guidelines/shared_topology.md`
-7. `framework/docs/agent_guidelines/shared_sync.md`
-8. `framework/docs/agent_guidelines/commands/` 下的命令文档
-9. 项目里安装后的 `docs/` 文件
+4. `framework/docs/agent_guidelines/shared_ops.md`
+5. `framework/docs/agent_guidelines/spec_flow_review.md`
+6. `framework/docs/agent_guidelines/commands/` 下的命令文档
+7. 安装到项目侧的 `docs/` 文件
 
 ## 文件所有权
 
-`specFlow` 里有两种文件所有权模式：
+`specFlow` 里有两种所有权模式：
 
 - `framework`
-  - 文件结构由 `specFlow` 拥有
-  - `upgrade` 可以刷新这类文件
+  - `specFlow` 管理文件结构
+  - `upgrade` 可能会刷新它
 - `project`
-  - 文件在 bootstrap 完成后由你的项目拥有
-  - `upgrade` 不应覆盖已经存在的 project-owned 文件
+  - 初始化之后，这部分属于你的项目
+  - `upgrade` 不应该直接覆盖已有项目文件
 
-这很重要，因为 `specFlow` 的目标是“可适配”，不是“永远接管整个仓库”。
+这件事为什么重要：
 
-像 `AGENTS.md`、`GEMINI.md`、`CLAUDE.md` 这些入口文件采用的是 managed block 模型，所以项目可以在 `specFlow` 管理块之外保留自己的说明。
+- 因为 `specFlow` 的目标不是永远接管你的仓库
+- 它是为了给你一个可持续调整的治理骨架
+
+像 `AGENTS.md`、`GEMINI.md`、`CLAUDE.md` 这类入口文件，采用的是 managed block 模式。
+也就是说，`specFlow` 管自己的 block，你的项目也能在 block 外保留自己的长期说明。
 
 ## 什么情况下不适合用它
 
-在下面这些情况下，`specFlow` 可能太重了：
+如果你的情况是下面这样，`specFlow` 可能就偏重了：
 
-- 你的项目很小
-- 你的团队不想把正式行为真相写进文件
-- 你并不需要 `stable` 和 `candidate` 这套分层
-- 你并不需要让人和 AI 遵守同一套工作模型
-
-## 最后的定位
-
-理解 `specFlow` 最合适的方式，不是：
-
-- “一个必须死守的僵硬框架”
-
-而是：
-
-- “一个可以下载下来、快速理解、然后按项目改造的开发治理范式”
-
-它的目标很简单：
-
-- 让真相显式化
-- 让变更显式化
-- 让验证显式化
-- 让自定义显式化
+- 项目非常小
+- 团队并不想把行为真相正式写进文件
+- 你并不需要 `stable` 和 `candidate` 这种分层
+- 你也不需要让人和 AI 长期遵守同一套协作模型
