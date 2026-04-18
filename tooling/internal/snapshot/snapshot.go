@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
@@ -62,7 +63,7 @@ func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
 		return Snapshot{}, err
 	}
 
-	mainSpecRef, err := resolveMainSpecFileRef(moduleStatus)
+	mainSpecRef, err := specpaths.MainSpecFileRef(moduleStatus.ActiveLayer, moduleStatus.Module)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -93,7 +94,7 @@ func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
 	}
 	result.ModuleAppendixSnapshot = appendixEntries
 
-	systemFileRef := "docs/specs/system/stable/s_system_constraints.md"
+	systemFileRef := specpaths.SystemConstraintsStableFileRef
 	systemAbs := filepath.Join(repoRoot, filepath.FromSlash(systemFileRef))
 	if _, err := os.Stat(systemAbs); err == nil {
 		systemContent, err := os.ReadFile(systemAbs)
@@ -224,17 +225,6 @@ func Render(snapshot Snapshot) string {
 	lines = append(lines, "shared_contract_snapshot:")
 	lines = append(lines, renderSharedLines(snapshot.SharedContractSnapshot)...)
 	return strings.Join(lines, "\n")
-}
-
-func resolveMainSpecFileRef(moduleStatus statusfile.ModuleStatus) (string, error) {
-	switch moduleStatus.ActiveLayer {
-	case "candidate":
-		return fmt.Sprintf("docs/specs/candidate/c_%s.md", moduleStatus.Module), nil
-	case "stable":
-		return fmt.Sprintf("docs/specs/stable/s_%s.md", moduleStatus.Module), nil
-	default:
-		return "", fmt.Errorf("unsupported active layer %q for module %s", moduleStatus.ActiveLayer, moduleStatus.Module)
-	}
 }
 
 func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry, error) {

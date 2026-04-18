@@ -4,12 +4,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 )
 
 func TestRebuildCurrentCollectsAppendixAndSharedSnapshot(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/candidate/appendix"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/system/stable"))
 
@@ -32,7 +34,11 @@ See [appendix](./appendix/c_module_demo_prompt.md).
 2. ` + "`shared_contract_refs`:" + `
    - ` + "`c_shared_demo@0.2.0`" + `
 `
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/candidate/c_module_demo.md"), mainSpec)
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), mainSpec)
 
 	appendix := `---
 module: module_demo
@@ -42,7 +48,7 @@ spec_version_ref: c_module_demo@0.1.0
 
 # Appendix
 `
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/candidate/appendix/c_module_demo_prompt.md"), appendix)
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_module_demo_prompt.md"), appendix)
 
 	shared := `---
 shared_contract_id: shared_demo
@@ -69,7 +75,7 @@ version: 1.1.0
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
-	if result.SpecFileRef != "docs/specs/candidate/c_module_demo.md" {
+	if result.SpecFileRef != mainSpecRef {
 		t.Fatalf("unexpected spec file ref: %s", result.SpecFileRef)
 	}
 	if result.SpecVersionRef != "c_module_demo@0.1.0" {

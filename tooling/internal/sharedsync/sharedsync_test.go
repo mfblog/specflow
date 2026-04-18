@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 )
 
 func TestSyncImpactKeepsCandidateWhenOnlyBoundModulesChanged(t *testing.T) {
@@ -150,7 +151,7 @@ Body changed.
 
 func setupCandidateSharedRepo(t *testing.T, repoRoot string) string {
 	t.Helper()
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/candidate"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
@@ -165,7 +166,11 @@ func setupCandidateSharedRepo(t *testing.T, repoRoot string) string {
 		"| `module_demo` | `no` | `yes` | `candidate` | `cand_plan` | current round |",
 	}, "\n")+"\n")
 
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/candidate/c_module_demo.md"), strings.Join([]string{
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
 		"---",
 		"id: module_demo",
 		"layer: candidate",
@@ -206,7 +211,7 @@ Body stays the same.
 
 func setupStableSharedRepo(t *testing.T, repoRoot string) string {
 	t.Helper()
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/stable"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir)))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/stable"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 
@@ -220,7 +225,11 @@ func setupStableSharedRepo(t *testing.T, repoRoot string) string {
 		"| `module_demo` | `yes` | `no` | `stable` | `spec_fork` | stable round |",
 	}, "\n")+"\n")
 
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/stable/s_module_demo.md"), strings.Join([]string{
+	mainSpecRef, err := specpaths.MainSpecFileRef("stable", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
 		"---",
 		"id: module_demo",
 		"layer: stable",

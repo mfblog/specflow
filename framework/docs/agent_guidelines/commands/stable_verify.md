@@ -38,7 +38,7 @@ It does not:
 
 ## 4. Procedure
 
-1. read `docs/specs/stable/s_{module}.md` and any required appendix or Shared Contract files
+1. read `docs/specs/modules/stable/s_{module}.md` and any required appendix or Shared Contract files
 2. if the stable truth explicitly records `system_constraints_stable_ref`, or if the verification scenario otherwise requires global-baseline or shared-mechanism judgment, read `s_system_constraints.md`
 3. if the stable truth explicitly records `system_constraints_stable_ref`, judge whether that recorded reference still matches the current formal global baseline state
 4. verify current code against key protocols, main flow, error handling, and acceptance criteria in `stable`

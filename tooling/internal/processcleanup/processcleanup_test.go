@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 )
 
 func TestApplyFallbackForPromoteEvidenceIncomplete(t *testing.T) {
@@ -50,7 +52,7 @@ func TestApplyFallbackForPromoteEvidenceIncomplete(t *testing.T) {
 
 func TestApplySuccessCleanupForPromote(t *testing.T) {
 	repoRoot := t.TempDir()
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/candidate/appendix"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result"))
@@ -66,8 +68,12 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 		"| `module_ai` | `yes` | `no` | `stable` | `spec_fork` | promoted |",
 	}, "\n") + "\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/candidate/c_module_ai.md"), "candidate")
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/candidate/appendix/c_module_ai_prompt.md"), "appendix")
+	candidateMainRef, err := specpaths.MainSpecFileRef("candidate", "module_ai")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(candidateMainRef)), "candidate")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_module_ai_prompt.md"), "appendix")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_ai.md"), "check")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/module_ai.md"), "plan")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/module_ai.md"), "verify")
@@ -80,8 +86,8 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 		t.Fatalf("expected 5 deleted files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
 	}
 	for _, relPath := range []string{
-		"docs/specs/candidate/c_module_ai.md",
-		"docs/specs/candidate/appendix/c_module_ai_prompt.md",
+		candidateMainRef,
+		specpaths.CandidateAppendixDir + "/c_module_ai_prompt.md",
 		"docs/specs/_check_result/module_ai.md",
 		"docs/specs/_plans/module_ai.md",
 		"docs/specs/_verify_result/module_ai.md",

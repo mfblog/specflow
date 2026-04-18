@@ -108,7 +108,7 @@ An object counts as a formal module only when all of the following hold:
 4. it has its own formal Spec file for the relevant layer
 5. that main Spec file itself satisfies the minimum content requirements instead of outsourcing core truth to supporting files for the long term
 
-Being placed under `docs/specs/candidate/` or having a module-like file name is not enough by itself.
+Being placed under `docs/specs/modules/candidate/` or having a module-like file name is not enough by itself.
 
 #### 2.5.2 Single-Module Supporting Expansion Files
 
@@ -124,9 +124,9 @@ Rules:
 
 Directory rules:
 
-1. candidate supporting files belong under `docs/specs/candidate/appendix/` or an equivalent dedicated subdirectory
-2. stable supporting files belong under `docs/specs/stable/appendix/` or an equivalent dedicated subdirectory
-3. the roots of `docs/specs/candidate/` and `docs/specs/stable/` should normally contain only main module files
+1. candidate supporting files belong under `docs/specs/modules/candidate/appendix/` or an equivalent dedicated subdirectory
+2. stable supporting files belong under `docs/specs/modules/stable/appendix/` or an equivalent dedicated subdirectory
+3. the roots of `docs/specs/modules/candidate/` and `docs/specs/modules/stable/` should normally contain only main module files
 4. if a supporting file remains in a root directory, that is directory drift
 5. the first standard command that discovers that drift during mandatory checks must fix it before continuing
 

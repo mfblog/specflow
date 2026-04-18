@@ -37,7 +37,7 @@ By default it handles:
    - delete `_verify_result/{module}.md` if it exists
    - fall back `_status.md` to `cand_check`
 6. if the module already has `stable`, derive a planning-aid change surface before judging the round:
-   - use `git diff --no-index -- docs/specs/stable/s_{module}.md docs/specs/candidate/c_{module}.md`
+   - use `git diff --no-index -- docs/specs/modules/stable/s_{module}.md docs/specs/modules/candidate/c_{module}.md`
    - use the diff to identify which candidate sections changed in this round and which implementation slices need direct focus first
    - do not treat the diff as a substitute for reading the full candidate, required appendix truth, or bound Shared Contract truth
    - do not assume unchanged lines are irrelevant, because unchanged candidate truth may still constrain implementation

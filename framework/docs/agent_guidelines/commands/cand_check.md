@@ -97,8 +97,8 @@ Project-local review extension contract:
 
 ## 4. Procedure
 
-1. read `docs/specs/candidate/c_{module}.md` plus all required appendix and Shared Contract files
-2. if `stable` exists, also read `docs/specs/stable/s_{module}.md` plus required stable appendix files
+1. read `docs/specs/modules/candidate/c_{module}.md` plus all required appendix and Shared Contract files
+2. if `stable` exists, also read `docs/specs/modules/stable/s_{module}.md` plus required stable appendix files
 3. read `docs/specs/system/stable/s_system_constraints.md` if it exists; otherwise continue with the "no formal global baseline yet" state
 4. judge `progressability`
 5. judge `content completeness`

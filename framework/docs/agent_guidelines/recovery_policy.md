@@ -97,12 +97,12 @@ Plain meaning:
 Before `cand_promote` makes its first file mutation, it must capture a recovery baseline covering every file the round may overwrite or delete, including at minimum:
 
 1. the current module row in `docs/specs/_status.md`
-2. `docs/specs/candidate/c_{module}.md`
+2. `docs/specs/modules/candidate/c_{module}.md`
 3. current-round candidate appendix files for that module
 4. current-round `_check_result/{module}.md`
 5. current-round `_plans/{module}.md`
 6. current-round `_verify_result/{module}.md`
-7. `docs/specs/stable/s_{module}.md` if it already existed before promotion
+7. `docs/specs/modules/stable/s_{module}.md` if it already existed before promotion
 8. `docs/specs/system/stable/s_system_constraints.md` if the round may mutate it
 9. any Shared Contract files the round may mutate, promote, absorb, or delete
 

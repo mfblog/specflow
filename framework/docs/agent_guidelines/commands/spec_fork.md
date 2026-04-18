@@ -31,13 +31,13 @@ By default it handles:
 ## 4. Procedure
 
 1. read `s_system_constraints.md` if it exists; otherwise continue with no formal global baseline
-2. read `docs/specs/stable/s_{module}.md` and any explicitly referenced appendix files
+2. read `docs/specs/modules/stable/s_{module}.md` and any explicitly referenced appendix files
 3. read bound stable Shared Contract files if any
 4. determine the target formal version for this round:
    - compatible new capability -> next `MINOR`
    - incompatible change -> next `MAJOR`
    - compatible fix or alignment -> next `PATCH`
-5. generate `docs/specs/candidate/c_{module}.md` from the current stable file
+5. generate `docs/specs/modules/candidate/c_{module}.md` from the current stable file
 6. set candidate `frontmatter.version` to that target version
 7. write `system_constraints_stable_ref`
    - if the new round proposes a global baseline change, record it in `system_constraints_change_proposal` inside the module candidate

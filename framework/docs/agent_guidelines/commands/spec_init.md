@@ -41,7 +41,7 @@ Before execution:
 
 1. summarize the module's already-effective behavior baseline
 2. if needed, read `s_system_constraints.md` as an upstream input
-3. create `docs/specs/stable/s_{module}.md`
+3. create `docs/specs/modules/stable/s_{module}.md`
 4. ensure the file covers:
    - `Context & Motivation`
    - `Terminology`

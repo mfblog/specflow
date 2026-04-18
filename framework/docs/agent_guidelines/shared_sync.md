@@ -21,7 +21,7 @@ The user reaches it through `shared_ops:{natural-language request}`.
 By default it handles:
 
 1. version, body, layer, or binding changes under `docs/specs/shared_contracts/candidate/` and `docs/specs/shared_contracts/stable/`
-2. whether each module's current-layer `Global Constraint Alignment.shared_contract_refs` and process-file snapshots still match the current shared truth
+2. whether each module's current-layer `Global Constraint Alignment.shared_contract_refs` and process-file snapshots still match the exact shared layer and file the module currently binds
 3. unified fallback and cleanup for `_status.md`, `_check_result`, `_plans`, and `_verify_result` when modules still hold old snapshots
 4. reporting `bound_modules` drift that must be fixed in the command responsible for the binding change
 5. stopping and returning control to `shared_escape` when repository truth is insufficient to determine the real binding set safely
@@ -45,7 +45,7 @@ Before execution:
 3. read `docs/specs/_status.md`
 4. read the current `shared_contract` files under `docs/specs/shared_contracts/candidate/` and `docs/specs/shared_contracts/stable/`
 5. identify the affected-object source:
-   - if the current task changed `docs/specs/shared_contracts/**`, use those changed files to resolve the changed `shared_contract_id` set first
+   - if the current task changed `docs/specs/shared_contracts/**`, use those changed files to resolve the changed `shared_contract_id` plus layer/file set first
    - if the current task changed any module's `shared_contract_refs`, include those modules directly in the affected-module set
    - if `shared_ops` routed in from a named shared target, resolve that target first
 6. scan `_status.md` and build the repository-wide current-layer module set
@@ -60,15 +60,16 @@ Before execution:
 
 1. build the current `shared_contract` view:
    - read the files that currently exist under `docs/specs/shared_contracts/candidate/` and `docs/specs/shared_contracts/stable/`
-   - record each object's `shared_contract_id`, `layer`, `shared_version`, current body fingerprint, and `bound_modules`
+   - record each object's `shared_contract_id`, `layer`, `file_ref`, `shared_version`, current body fingerprint, and `bound_modules`
 2. build the repository-wide module current-layer binding index from the already-updated `_status.md`:
    - enumerate formal modules from `_status.md`
    - read `Global Constraint Alignment.shared_contract_refs` from each module's current-layer main file needed for binding resolution
-   - treat module `shared_contract_refs` as the only formal source of which modules currently bind which shared truth
+   - treat module `shared_contract_refs` as the only formal source of which modules currently bind which shared truth, which layer they bind, and which exact file currently carries that binding
    - treat `bound_modules` only as declarative metadata
 3. derive the affected module set:
-   - include modules whose `shared_contract_refs` point to any changed or named `shared_contract_id`
+   - include modules whose `shared_contract_refs` point to any changed or named Shared Contract file, or to the changed layer of a named `shared_contract_id`
    - include modules whose own `shared_contract_refs` changed in the current task
+   - do not include modules bound only to the sibling layer of the same `shared_contract_id` unless their own binding changed in the current task
    - do not use `bound_modules` as the sole source for deciding which modules are affected
    - if current repository truth is still insufficient to determine the real binding set or affected-module set safely:
      - stop `shared_sync` before local fallback cleanup
@@ -80,9 +81,9 @@ Before execution:
    - rebuild the normalized snapshot according to `process_snapshot_contract.md`
 5. for each affected module, judge whether its shared binding is still valid:
    - if `shared_contract_refs=none` and the module is not in a changed-binding case, leave it unchanged
-   - treat the binding as invalid if the referenced file is missing, the layer mismatches, the version reference mismatches, or the module-to-shared relation changed
-   - for `candidate` modules, also treat it as invalid if any existing process file's `shared_contract_snapshot` differs from the rebuilt snapshot, except when the delta comes only from `bound_modules`
-   - for `stable` modules, also treat it as invalid if the stable shared truth changed enough that "still aligned with stable" can no longer be claimed safely
+   - treat the binding as invalid if the referenced file is missing, the layer mismatches, the file target mismatches, the version reference mismatches, or the module-to-shared relation changed
+   - for `candidate` modules, rebuild the snapshot from the exact currently bound Shared Contract files; treat the binding as invalid if any existing process file's `shared_contract_snapshot` differs from that rebuilt snapshot, except when the delta comes only from `bound_modules`
+   - for `stable` modules, judge only against bound stable-layer Shared Contract files; treat the binding as invalid if the stable shared truth changed enough that "still aligned with stable" can no longer be claimed safely
 6. for invalid `candidate` modules:
    - delete `_check_result/{module}.md`
    - delete `_plans/{module}.md`
@@ -120,11 +121,12 @@ The output must include at least:
 1. a summary of shared-truth changes
 2. the list of affected modules
 3. the fallback result for each affected module
-4. the list of deleted process files
-5. any mismatch between `bound_modules` and the real binding set
-6. the standardized `fallback_reason_code` for each affected module
-7. when repository truth was insufficient to continue safely, that `shared_sync` returned control to `shared_escape` and did not issue an independent local checkpoint
-8. the git close-out result
+4. which changed Shared Contract layer or file caused each affected-module result
+5. the list of deleted process files
+6. any mismatch between `bound_modules` and the real binding set
+7. the standardized `fallback_reason_code` for each affected module
+8. when repository truth was insufficient to continue safely, that `shared_sync` returned control to `shared_escape` and did not issue an independent local checkpoint
+9. the git close-out result
 
 Allowed `fallback_reason_code` values:
 
@@ -143,4 +145,5 @@ Allowed `fallback_reason_code` values:
 3. replace `cand_check` to re-pass candidate closure
 4. replace `stable_verify` to re-check stable alignment
 5. absorb `shared_contract` conclusions into `system_constraints`
-6. keep unstable stop decisions inside `shared_sync` when the real problem is shared-boundary uncertainty
+6. silently retarget a module from candidate-layer shared truth to stable-layer shared truth, or the reverse
+7. keep unstable stop decisions inside `shared_sync` when the real problem is shared-boundary uncertainty
