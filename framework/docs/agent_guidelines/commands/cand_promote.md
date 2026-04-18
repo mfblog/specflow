@@ -81,19 +81,19 @@ By default it handles:
      - `unbound_retention_reason: <why this unbound state is intentional now>`
      - `unbound_retention_owner: cand_promote`
    - if the required post-promotion truth shape is still unclear, or the round cannot safely judge whether an unbound touched file should be deleted or kept as independently authored shared truth, stop promotion and require rerouting through `shared_ops:{natural-language request}` from current repository truth instead of guessing a module-local-only continuation
-11. before `shared_sync`, update `bound_modules` for every remaining touched Shared Contract file so that each surviving stable-layer or candidate-layer file matches the real post-promotion binding set implied by module `shared_contract_refs`
-12. generate or update `docs/specs/modules/stable/s_{module}.md`
-13. if current-round candidate appendix files exist, in the same promotion round either:
+11. generate or update `docs/specs/modules/stable/s_{module}.md`
+12. if current-round candidate appendix files exist, in the same promotion round either:
    - migrate retained content to `docs/specs/modules/stable/appendix/` or an equivalent dedicated subdirectory
    - absorb the content into `docs/specs/modules/stable/s_{module}.md`
    - delete candidate appendix files no longer needed
-14. do not delete `docs/specs/modules/candidate/c_{module}.md` until `_status.md` has already been updated to `Candidate=no`
-15. update `_status.md` to the promoted stable state:
+13. do not delete `docs/specs/modules/candidate/c_{module}.md` until `_status.md` has already been updated to `Candidate=no`
+14. update `_status.md` to the promoted stable state:
    - `Stable=yes`
    - `Candidate=no`
    - `Active Layer=stable`
    - `Next Command=spec_fork`
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command spec_fork --notes <status-note>`
+15. before `shared_sync`, update `bound_modules` for every remaining touched Shared Contract file only after Step 11 has written the promoted module stable truth and Step 14 has updated `_status.md`, so each surviving stable-layer or candidate-layer file matches the real post-promotion binding set implied by module `shared_contract_refs`
 16. only after that update may physical deletion happen:
    - `docs/specs/modules/candidate/c_{module}.md`
    - current-round candidate appendix files
@@ -102,7 +102,7 @@ By default it handles:
    - `_verify_result/{module}.md`
    - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --module {module} --mode cand_promote`
 17. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
-18. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer, even when no additional affected module is known yet
+18. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer and Step 15 has written the surviving shared-file metadata, even when no additional affected module is known yet
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
 19. perform git close-out if required
 

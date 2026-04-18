@@ -102,7 +102,7 @@ Stop when one of the following is true:
 2. the request is not really topology change and must be re-routed to another shared flow
 3. one or more affected modules are currently at `stable` and the flow has raised a `shared_ops` checkpoint for `spec_fork` first
 4. repository truth is insufficient to continue safely, so control has returned to `shared_escape` through `shared_ops`
-5. the topology plan requires new or changed stable-layer shared semantics, so this flow has written or updated the required candidate-layer Shared Contract files and stopped without direct stable-layer writeback
+5. the topology plan requires new or changed stable-layer shared semantics, so this flow has completed the current-round candidate-layer Shared Contract writeback and any required `shared_sync` without direct stable-layer writeback; any later stable-layer Shared Contract file must be produced by a legal promotion rather than by this flow
 6. the request has crossed into `system_constraints_change_proposal`, so control has returned to `shared_escape` through `shared_ops` for checkpoint handling instead of continuing here
 
 ---
