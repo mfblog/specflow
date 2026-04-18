@@ -72,7 +72,7 @@ Before execution:
 9. after any change to module `shared_contract_refs` or to any shared file `bound_modules` touched in Steps 6 and 7, execute `shared_sync` before claiming closure
 10. if Step 3 recorded a previous bound Shared Contract file and `shared_sync` shows that no module still binds it after this round:
    - if the current round can safely prove that the previous file has been replaced by the new target and cleanup is legal under `spec_policy.md`, delete that now-unbound previous shared file in the same round
-   - otherwise, stop and return control to `shared_escape` through `shared_ops` so shared governance can decide whether that unbound file must stay as an independently authored shared object
+   - otherwise, stop and return control to `shared_topology` through `shared_ops` so shared governance can decide whether that unbound file must be retired, replaced, renamed, split, merged, or explicitly kept as an independently authored shared object
    - after a deletion in this step, rerun `shared_sync` before claiming closure
 
 ---

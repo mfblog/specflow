@@ -73,6 +73,18 @@ Versions use `MAJOR.MINOR.PATCH`.
 3. `PATCH`
    - wording-only clarification that does not change the meaning of formal constraints
 
+### 4.3 Shared Contract
+
+1. `shared_version` uses `MAJOR.MINOR.PATCH`
+2. the first candidate-layer file for a brand-new shared object should normally start at `0.1.0`
+3. when a current round opens the next candidate-layer file for a shared object that already has a stable-layer file, that candidate file must already carry the intended next stable `shared_version`
+4. `MAJOR`
+   - incompatible change to the formally bound shared semantics, required consumer interpretation, or cross-module contract shape
+5. `MINOR`
+   - compatible shared-truth extension, additional reusable capability, or compatible topology evolution that requires consumer awareness but not contract breakage
+6. `PATCH`
+   - wording-only clarification, compatible tightening, or alignment-only update that does not change the required consumer interpretation
+
 Notes:
 
 1. `candidate` content may change frequently.

@@ -599,11 +599,12 @@ Use it when you want to do things such as:
 - design shared truth from the start
 - extract already-written module truth into a shared contract
 - bind a module to an existing shared contract
+- change shared topology such as split / merge / rename / retire
 - check which modules are affected after a shared-contract change
 
 The key rule is:
 
-- you do not need to choose `shared_new`, `shared_extract`, `shared_bind`, or `shared_sync` yourself
+- you do not need to choose `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, or `shared_sync` yourself
 - you describe the intent
 - the agent routes it according to the shared-governance rules
 - if the request cannot be safely routed, the agent must stop at a checkpoint rather than guess
@@ -613,6 +614,7 @@ Examples:
 - `shared_ops:I want to design a shared structured-output fallback contract for both agent and assistant from the start`
 - `shared_ops:Extract the app config topology currently duplicated in module_ai and module_memory into a shared contract`
 - `shared_ops:module_skill needs to reuse shared_app_config_topology`
+- `shared_ops:Split shared_runtime_model and decide whether the old shared should be retired`
 - `shared_ops:I changed structured_output_fallback; tell me which modules need fallback`
 
 What happens next:
@@ -805,6 +807,7 @@ Its output should also explicitly report whether shared-governance coverage happ
 
 There are also internal or non-primary flows such as:
 
+- `shared_topology`
 - `shared_sync`
 - `project_standard_create`
 
@@ -816,7 +819,7 @@ In plain language:
 - `spec_flow_review` is an advanced user-facing review flow
 - the default review covers shared-governance rules, not only the main command chain
 - `shared_ops:{natural-language request}` is the only user-facing entry for cross-module shared governance
-- flows such as `shared_sync` exist mainly to keep the mechanism closed behind the scenes
+- flows such as `shared_topology` and `shared_sync` exist mainly to keep the mechanism closed behind the scenes
 
 ### How To Invoke Advanced Flows
 
@@ -845,9 +848,10 @@ If you want to deeply understand or redesign the system, read in this order:
 3. `framework/docs/agent_guidelines/git_policy.md`
 4. `framework/docs/agent_guidelines/spec_flow_review.md`
 5. `framework/docs/agent_guidelines/shared_ops.md`
-6. `framework/docs/agent_guidelines/shared_sync.md`
-7. the command docs under `framework/docs/agent_guidelines/commands/`
-8. the installed project-side files under `docs/`
+6. `framework/docs/agent_guidelines/shared_topology.md`
+7. `framework/docs/agent_guidelines/shared_sync.md`
+8. the command docs under `framework/docs/agent_guidelines/commands/`
+9. the installed project-side files under `docs/`
 
 ## File Ownership
 

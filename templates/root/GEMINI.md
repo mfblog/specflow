@@ -83,10 +83,10 @@ Governance review entries are:
 Additional rules:
 
 1. `spec_flow_review` and `shared_ops:{natural-language request}` are not standard module commands in `{command}:{module}` form.
-2. `shared_sync` is an internal shared flow used after Shared Contract changes; users should enter shared work through `shared_ops`.
+2. `shared_topology` and `shared_sync` are internal shared flows used after Shared Contract topology, binding, or lifecycle changes; users should enter shared work through `shared_ops`.
 3. `project_standard_create` is not a standard user-facing command. It is an internal flow the agent may use when the user asks to create a project-local standard.
 4. plain `spec_flow_review` means the default governance-baseline review defined in `specflow/framework/docs/agent_guidelines/spec_flow_review.md` unless the user explicitly narrows the scope.
-5. that default `spec_flow_review` must cover the shared-governance rule set, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_sync.md`, and `shared_escape.md`, even when the user did not mention shared governance explicitly.
+5. that default `spec_flow_review` must cover the shared-governance rule set, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`, even when the user did not mention shared governance explicitly.
 6. if the review output does not explicitly report shared-governance coverage and result, the `spec_flow_review` is not complete and must not be treated as a `pass`.
 
 ### 3. How To Resolve Modules And Files

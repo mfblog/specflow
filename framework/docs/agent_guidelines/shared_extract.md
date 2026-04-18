@@ -51,6 +51,7 @@ Before execution:
 7. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
 8. if any involved module is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/spec_fork.md`
 9. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
+10. if the round may create or update any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply
 
 ---
 
@@ -63,11 +64,13 @@ Before execution:
    - require `spec_fork:{module}` for each such module before extraction continues
    - set `required_writeback_target` to the corresponding module candidate main file set because chat-only agreement does not create legal extraction targets
 4. create or update the target candidate-layer `shared_contract`
-5. rewrite the source module candidate side so the extracted truth is no longer duplicated as module-local formal truth
-6. if additional consumer modules already depend on the extracted truth, update their module candidate-side references and explanations as required
-7. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
-8. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
-9. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
+5. if Step 4 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
+6. if Step 4 reopened an already-stable shared object at the candidate layer, set the candidate `shared_version` to the intended next stable version according to Shared Contract semantic version rules
+7. rewrite the source module candidate side so the extracted truth is no longer duplicated as module-local formal truth
+8. if additional consumer modules already depend on the extracted truth, update their module candidate-side references and explanations as required
+9. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
+10. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
+11. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
 
 ---
 
@@ -92,10 +95,11 @@ The output must include at least:
 2. which involved modules were already at `candidate` and which had to stop for `spec_fork`
 3. the source module files that originally carried the truth
 4. the target shared-contract file written or updated, or the checkpoint result when extraction could not legally start yet
-5. the module candidate-side rewrite result and whether duplicate formal truth was fully removed
-6. the target shared file `bound_modules` reconciliation result
-7. the `shared_sync` result, including affected modules and fallback if any
-8. the git close-out result when governance files or commit-triggering files were changed
+5. the written `shared_version` and why it is correct for the current round
+6. the module candidate-side rewrite result and whether duplicate formal truth was fully removed
+7. the target shared file `bound_modules` reconciliation result
+8. the `shared_sync` result, including affected modules and fallback if any
+9. the git close-out result when governance files or commit-triggering files were changed
 
 ---
 

@@ -23,7 +23,8 @@ By default it handles shared-governance requests that cannot be stably routed in
 1. `shared_new`
 2. `shared_extract`
 3. `shared_bind`
-4. `shared_sync`
+4. `shared_topology`
+5. `shared_sync`
 
 It also handles cases where one of those already-routed internal shared flows later discovers that current repository truth is insufficient to continue safely.
 

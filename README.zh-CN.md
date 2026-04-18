@@ -596,11 +596,12 @@ flowchart LR
 - 你一开始就想把某部分设计成共享真相
 - 你想把已经写在模块里的某段真相抽成 shared contract
 - 某个模块现在要复用已有 shared contract
+- 你要对已有 shared 做拆分、合并、重命名或退场处理
 - 你改了 shared contract，想知道会影响哪些模块
 
 最重要的规则是：
 
-- 你不用自己挑 `shared_new`、`shared_extract`、`shared_bind`、`shared_sync`
+- 你不用自己挑 `shared_new`、`shared_extract`、`shared_bind`、`shared_topology`、`shared_sync`
 - 你只需要把需求说出来
 - agent 会按 shared 规则自动归类
 - 如果无法稳定归类，agent 必须停在 checkpoint，而不是硬猜
@@ -610,6 +611,7 @@ flowchart LR
 - `shared_ops:我一开始就要设计一个给 agent 和 assistant 共用的结构化输出 fallback 共享契约`
 - `shared_ops:把 module_ai 和 module_memory 里共用的 app config topology 抽成 shared contract`
 - `shared_ops:module_skill 需要复用 shared_app_config_topology`
+- `shared_ops:把 shared_runtime_model 拆开，并决定旧 shared 是否退场`
 - `shared_ops:我刚改了 structured_output_fallback，帮我检查影响哪些模块`
 
 执行后会发生什么：
@@ -802,6 +804,7 @@ flowchart TD
 
 还有一些内部或非主要入口 flow，例如：
 
+- `shared_topology`
 - `shared_sync`
 - `project_standard_create`
 
@@ -813,7 +816,7 @@ flowchart TD
 - `spec_flow_review` 是一个面向用户的进阶审查 flow
 - 默认审查会覆盖 shared-governance 规则，不只是主命令链
 - `shared_ops:{自然语言需求}` 是跨模块共享治理的唯一对外入口
-- 像 `shared_sync` 这样的 flow 主要是为了让机制内部保持闭环
+- 像 `shared_topology` 和 `shared_sync` 这样的 flow 主要是为了让机制内部保持闭环
 
 ### 如何触发进阶 flow
 
@@ -845,9 +848,10 @@ flowchart TD
 3. `framework/docs/agent_guidelines/git_policy.md`
 4. `framework/docs/agent_guidelines/spec_flow_review.md`
 5. `framework/docs/agent_guidelines/shared_ops.md`
-6. `framework/docs/agent_guidelines/shared_sync.md`
-7. `framework/docs/agent_guidelines/commands/` 下的命令文档
-8. 项目里安装后的 `docs/` 文件
+6. `framework/docs/agent_guidelines/shared_topology.md`
+7. `framework/docs/agent_guidelines/shared_sync.md`
+8. `framework/docs/agent_guidelines/commands/` 下的命令文档
+9. 项目里安装后的 `docs/` 文件
 
 ## 文件所有权
 

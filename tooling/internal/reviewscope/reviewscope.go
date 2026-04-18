@@ -44,6 +44,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/docs/agent_guidelines/shared_new.md",
 		"specflow/framework/docs/agent_guidelines/shared_extract.md",
 		"specflow/framework/docs/agent_guidelines/shared_bind.md",
+		"specflow/framework/docs/agent_guidelines/shared_topology.md",
 		"specflow/framework/docs/agent_guidelines/shared_sync.md",
 		"specflow/framework/docs/agent_guidelines/shared_escape.md",
 	}

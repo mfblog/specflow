@@ -49,6 +49,7 @@ Before execution:
 6. read any relevant existing `shared_contract` files if the request names or overlaps them
 7. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
 8. if the round may create, update, or delete any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
+9. if the round may create or update any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply
 
 If the request names modules that do not yet have current-layer Spec files and the user intent is explicitly "design shared truth first", do not block on that absence.
 
@@ -61,13 +62,14 @@ If the request names modules that do not yet have current-layer Spec files and t
 3. decide the target shared object boundary:
    - one shared object per shared file
    - do not merge unrelated shared topics into one file
-4. if the request is to continue evolving an already-independent shared object that currently has only a stable-layer file, create or update the sibling candidate-layer `shared_contract` for the same `shared_contract_id`
+4. if the request is to continue evolving an already-independent shared object that currently has only a stable-layer file, create or update the sibling candidate-layer `shared_contract` for the same `shared_contract_id` and set its `shared_version` to the intended next stable version according to Shared Contract semantic version rules
 5. otherwise create or update the target candidate-layer `shared_contract`
-6. if no consumer module formally binds the shared truth yet:
+6. if Step 5 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
+7. if no consumer module formally binds the shared truth yet:
    - keep `bound_modules=none`
    - record expected future consumers only as planning text in the shared file body
-7. if the same truth still remains duplicated as formal module truth elsewhere, stop and report that boundary closure is incomplete
-8. after any write to `docs/specs/shared_contracts/**`, execute `shared_sync` before claiming closure, even when the affected-module set is currently empty
+8. if the same truth still remains duplicated as formal module truth elsewhere, stop and report that boundary closure is incomplete
+9. after any write to `docs/specs/shared_contracts/**`, execute `shared_sync` before claiming closure, even when the affected-module set is currently empty
 
 ---
 
@@ -89,11 +91,12 @@ The output must include at least:
 
 1. the recognized shared object and why it belongs to `shared_new`
 2. the target shared-contract file written or updated
-3. whether the round created the first candidate-layer file for an already-existing stable-layer shared object
-4. whether any named modules already bind that truth formally
-5. whether duplicate module-local formal truth was found
-6. the `shared_sync` result, including whether any modules were affected
-7. the git close-out result when governance files or commit-triggering files were changed
+3. the written `shared_version` and why it is correct for the current round
+4. whether the round created the first candidate-layer file for an already-existing stable-layer shared object
+5. whether any named modules already bind that truth formally
+6. whether duplicate module-local formal truth was found
+7. the `shared_sync` result, including whether any modules were affected
+8. the git close-out result when governance files or commit-triggering files were changed
 
 ---
 

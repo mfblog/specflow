@@ -220,6 +220,7 @@ Additional rules:
 
 1. if no module formally binds the shared truth yet, `bound_modules` may be `none`
 2. expected future consumers should be recorded as body-level planning text rather than being treated as formal bindings before `shared_contract_refs` exists
+3. `shared_version` must follow the Shared Contract semantic version rules defined in `specflow/framework/docs/agent_guidelines/git_policy.md`
 
 ### 2.6 What Counts As Touching Formal Behavior Truth
 
