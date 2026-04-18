@@ -30,7 +30,7 @@ By default it handles:
 ## 4. Procedure
 
 1. read and re-check the latest `_verify_result/{module}.md`
-2. read `docs/specs/candidate/c_{module}.md` and all required appendix files
+2. read `docs/specs/modules/candidate/c_{module}.md` and all required appendix files
 3. validate the full binding relation of `_verify_result/{module}.md` according to the candidate handoff contract
 4. if `_verify_result/{module}.md` is invalid, identify the reason and stop immediately:
    - if code changed after verification:
@@ -69,12 +69,12 @@ By default it handles:
    - if this round's topology change or linked `system_constraints` absorption would leave a touched Shared Contract file with no formal bound modules, this promotion round owns resolving that file's terminal state instead of leaving orphaned shared truth for later cleanup
    - if such a touched file now has no formal bound modules and cleanup is legal under `spec_policy.md`, delete it in this round when it has been replaced by the promoted target or when its remaining conclusion has been fully absorbed into `s_system_constraints.md`
    - if the required post-promotion truth shape is still unclear, or the round cannot safely judge whether an unbound touched file should be deleted or kept as independently authored shared truth, stop promotion and require rerouting through `shared_ops:{natural-language request}` from current repository truth instead of guessing a module-local-only continuation
-10. generate or update `docs/specs/stable/s_{module}.md`
+10. generate or update `docs/specs/modules/stable/s_{module}.md`
 11. if current-round candidate appendix files exist, in the same promotion round either:
-   - migrate retained content to `docs/specs/stable/appendix/` or an equivalent dedicated subdirectory
-   - absorb the content into `docs/specs/stable/s_{module}.md`
+   - migrate retained content to `docs/specs/modules/stable/appendix/` or an equivalent dedicated subdirectory
+   - absorb the content into `docs/specs/modules/stable/s_{module}.md`
    - delete candidate appendix files no longer needed
-12. do not delete `docs/specs/candidate/c_{module}.md` until `_status.md` has already been updated to `Candidate=no`
+12. do not delete `docs/specs/modules/candidate/c_{module}.md` until `_status.md` has already been updated to `Candidate=no`
 13. update `_status.md` to the promoted stable state:
    - `Stable=yes`
    - `Candidate=no`
@@ -82,7 +82,7 @@ By default it handles:
    - `Next Command=spec_fork`
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command spec_fork --notes <status-note>`
 14. only after that update may physical deletion happen:
-   - `docs/specs/candidate/c_{module}.md`
+   - `docs/specs/modules/candidate/c_{module}.md`
    - current-round candidate appendix files
    - `_check_result/{module}.md`
    - `_plans/{module}.md`

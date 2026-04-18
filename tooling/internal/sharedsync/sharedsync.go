@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
@@ -670,7 +671,7 @@ func parseSharedFile(relPath, content string) (sharedFile, error) {
 }
 
 func readModuleSharedRefs(repoRoot string, status statusfile.ModuleStatus) ([]string, error) {
-	mainSpecRef, err := resolveMainSpecRef(status)
+	mainSpecRef, err := specpaths.MainSpecFileRef(status.ActiveLayer, status.Module)
 	if err != nil {
 		return nil, err
 	}
@@ -687,17 +688,6 @@ func readModuleSharedRefs(repoRoot string, status statusfile.ModuleStatus) ([]st
 		return nil, fmt.Errorf("%s: %w", mainSpecRef, err)
 	}
 	return normalizeStrings(refs), nil
-}
-
-func resolveMainSpecRef(status statusfile.ModuleStatus) (string, error) {
-	switch status.ActiveLayer {
-	case "candidate":
-		return fmt.Sprintf("docs/specs/candidate/c_%s.md", status.Module), nil
-	case "stable":
-		return fmt.Sprintf("docs/specs/stable/s_%s.md", status.Module), nil
-	default:
-		return "", fmt.Errorf("unsupported active layer %q for module %s", status.ActiveLayer, status.Module)
-	}
 }
 
 func parseFrontmatter(content string) (map[string]string, string, error) {

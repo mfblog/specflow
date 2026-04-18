@@ -42,7 +42,7 @@ It does not:
    - if no, the round may initialize `shared_contract_refs=none`
    - if yes, the round must bind that shared truth explicitly in the first candidate instead of using `none`
 3. define the new module's goals, boundaries, protocols, and main flow
-4. create `docs/specs/candidate/c_{module}.md`
+4. create `docs/specs/modules/candidate/c_{module}.md`
 5. initialize `frontmatter.version` to `0.1.0`
 6. ensure the file covers the core sections of a formal Spec
 7. initialize `Global Constraint Alignment`:

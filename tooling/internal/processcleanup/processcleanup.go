@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
@@ -184,7 +185,11 @@ func successCleanupPaths(repoRoot, module, mode string) ([]string, error) {
 		}
 		paths = append(paths, appendixPaths...)
 	case "cand_promote":
-		paths = append(paths, fmt.Sprintf("docs/specs/candidate/c_%s.md", module))
+		candidateMainRef, err := specpaths.MainSpecFileRef("candidate", module)
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, candidateMainRef)
 		paths = append(paths, filePathsForModule(module, []string{"check", "plan", "verify"})...)
 		appendixPaths, err := candidateAppendixPaths(repoRoot, module)
 		if err != nil {
@@ -198,7 +203,7 @@ func successCleanupPaths(repoRoot, module, mode string) ([]string, error) {
 }
 
 func candidateAppendixPaths(repoRoot, module string) ([]string, error) {
-	pattern := filepath.Join(repoRoot, "docs/specs/candidate/appendix", fmt.Sprintf("c_%s_*.md", module))
+	pattern := filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixGlob(module)))
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, err

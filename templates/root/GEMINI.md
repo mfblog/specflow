@@ -100,9 +100,9 @@ If the user says only a module name such as `module_example`, read this first:
 Then resolve the actual target from `Active Layer`:
 
 1. If `Active Layer=stable`
-   - Default target: `docs/specs/stable/s_{module}.md`
+   - Default target: `docs/specs/modules/stable/s_{module}.md`
 2. If `Active Layer=candidate`
-   - Default target: `docs/specs/candidate/c_{module}.md`
+   - Default target: `docs/specs/modules/candidate/c_{module}.md`
 
 If the user gives a concrete file prefix, treat it as a file reference:
 
