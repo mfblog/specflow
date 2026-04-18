@@ -80,9 +80,13 @@ Before execution:
    - if the round opens or rewrites a candidate-layer file for a shared object that already has a stable-layer sibling, set that candidate file's `shared_version` to the intended next stable version according to Shared Contract semantic version rules
    - if the topology plan needs new or changed stable-layer shared semantics, do not write that stable-layer file directly in this flow; write or update the corresponding candidate-layer shared file first, carry the intended next stable `shared_version` there, and let a later legal promotion produce the stable-layer file
 7. rewrite every affected module candidate-side `shared_contract_refs` and body-level consumption explanation required by the topology plan
+   - any written `shared_contract_refs` must use the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
 8. for each touched shared file that has no formal bound modules after Step 7:
    - delete it in the same round when the topology plan treats it as retired and cleanup is legal under `spec_policy.md`
-   - otherwise keep it only when the current round explicitly records that it remains independently authored shared truth and why that unbound state is intentional
+   - otherwise keep it only when the current round writes that same Shared Contract file with the fixed intentional-unbound retention frontmatter from `spec_policy.md`:
+     - `unbound_retention: intentional`
+     - `unbound_retention_reason: <why this unbound state is intentional now>`
+     - `unbound_retention_owner: shared_topology`
    - reject closure if neither deletion nor explicit keep-writeback has happened
 9. update `bound_modules` only as declarative metadata so every remaining touched shared file matches the real binding set implied by module-side `shared_contract_refs`
 10. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure

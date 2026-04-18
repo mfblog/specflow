@@ -62,6 +62,7 @@ By default it handles:
 9. if `shared_contract_refs` is not empty, build the repository-wide real binding view for every touched shared item before deciding post-promotion topology:
    - start from `docs/specs/_status.md`
    - read every affected module current-layer main file needed to derive which modules currently bind each touched Shared Contract file or sibling layer through `shared_contract_refs`
+   - interpret every module-side `shared_contract_refs` through the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1 before deriving that real binding view
    - treat module `shared_contract_refs` as the formal source of the real binding set rather than `bound_modules`
    - if repository truth is insufficient to state the post-promotion topology safely, stop before file mutation and reroute through `shared_ops:{natural-language request}` from current repository truth
 10. if `shared_contract_refs` is not empty, decide for each bound shared item against that repository-wide binding view:
@@ -75,6 +76,10 @@ By default it handles:
    - if the round changed a shared item that has both stable-layer and candidate-layer files, resolve which modules are expected to remain bound to each layer after promotion from the repository-wide binding view before continuing
    - if this round's topology change or linked `system_constraints` absorption would leave a touched Shared Contract file with no formal bound modules, this promotion round owns resolving that file's terminal state instead of leaving orphaned shared truth for later cleanup
    - if such a touched file now has no formal bound modules and cleanup is legal under `spec_policy.md`, delete it in this round when it has been replaced by the promoted target or when its remaining conclusion has been fully absorbed into `s_system_constraints.md`
+   - if such a touched file now has no formal bound modules and the round intentionally keeps it as independently authored shared truth, write that same file with:
+     - `unbound_retention: intentional`
+     - `unbound_retention_reason: <why this unbound state is intentional now>`
+     - `unbound_retention_owner: cand_promote`
    - if the required post-promotion truth shape is still unclear, or the round cannot safely judge whether an unbound touched file should be deleted or kept as independently authored shared truth, stop promotion and require rerouting through `shared_ops:{natural-language request}` from current repository truth instead of guessing a module-local-only continuation
 11. before `shared_sync`, update `bound_modules` for every remaining touched Shared Contract file so that each surviving stable-layer or candidate-layer file matches the real post-promotion binding set implied by module `shared_contract_refs`
 12. generate or update `docs/specs/modules/stable/s_{module}.md`

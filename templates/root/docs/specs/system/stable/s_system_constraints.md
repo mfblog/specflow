@@ -35,7 +35,7 @@ This file uses `MAJOR.MINOR.PATCH`:
 When a module candidate references this file in `Global Constraint Alignment`, it must use:
 
 1. `system_constraints_stable_ref: s_system_constraints@<frontmatter.version>`
-2. if the module layer also binds Shared Contract files, it must additionally record `shared_contract_refs` in the same section; that field does not replace `system_constraints_stable_ref`
+2. if the module layer also binds Shared Contract files, it must additionally record `shared_contract_refs` in the same section using the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1; that field does not replace `system_constraints_stable_ref`
 3. if the module round proposes a global default-rule change, record it in `system_constraints_change_proposal` inside the module candidate rather than creating an independent system candidate file
 
 ## 3. Tech Stack Baseline

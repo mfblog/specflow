@@ -215,12 +215,23 @@ Shared frontmatter should include at least:
 3. `shared_version: <semver>`
 4. `bound_modules`
 5. `system_constraints_stable_ref`
+6. `unbound_retention` when a touched now-unbound Shared Contract is intentionally kept
+7. `unbound_retention_reason` when `unbound_retention` is present
+8. `unbound_retention_owner` when `unbound_retention` is present
 
 Additional rules:
 
 1. if no module formally binds the shared truth yet, `bound_modules` may be `none`
 2. expected future consumers should be recorded as body-level planning text rather than being treated as formal bindings before `shared_contract_refs` exists
 3. `shared_version` must follow the Shared Contract semantic version rules defined in `specflow/framework/docs/agent_guidelines/git_policy.md`
+4. if a touched Shared Contract file is intentionally kept after losing all formal bindings, the only durable writeback location for that decision is the Shared Contract file itself
+5. that intentional-unbound keep result must be written in frontmatter as:
+   - `unbound_retention: intentional`
+   - `unbound_retention_reason: <why this file remains independent shared truth now>`
+   - `unbound_retention_owner: <command_or_flow_name>`
+6. chat output, command summaries, and temporary planning notes do not count as intentional-unbound writeback
+7. do not use the intentional-unbound retention fields for architecture-first shared authoring that has not yet had any formal module binding; that case is governed by `bound_modules=none` plus body-level planning text
+8. if a later round rebinds or deletes that file, remove or stop carrying the intentional-unbound retention fields in the resulting file state
 
 ### 2.6 What Counts As Touching Formal Behavior Truth
 
@@ -328,7 +339,7 @@ Rules:
 
 1. if the formal global baseline exists, `system_constraints_stable_ref` must equal the current stable system-constraint version
 2. if no formal global baseline exists yet, it must be `none`
-3. if the module behavior depends on Shared Contract truth, `shared_contract_refs` must bind it explicitly
+3. if the module behavior depends on Shared Contract truth, `shared_contract_refs` must bind it explicitly using the Shared Contract binding contract from Section 6.1
 4. if the module deviates from global constraints or Shared Contract truth, that deviation must be written explicitly instead of implied
 5. `system_constraints_change_proposal` exists only in module `candidate`; it is not an independent command target or lifecycle object
 6. a stable-layer Spec must not treat `system_constraints_change_proposal` as an active required field or active proposal container
@@ -338,6 +349,42 @@ Rules:
    - how the current module round implements and verifies against that proposal
    - which modules or shared contracts would be affected if promoted
 8. if a stable-layer Spec explicitly records `system_constraints_stable_ref` and that recorded reference no longer matches the current formal global baseline state, the module may no longer claim it still aligns with `stable` and must fall back to `stable_verify`
+
+### 6.1 Shared Contract Binding Contract
+
+`shared_contract_refs` is the module-side formal binding source for Shared Contract truth.
+It has only two legal forms:
+
+1. literal `none`
+2. a markdown list of Shared Contract binding items
+
+Each binding item must be written as exactly:
+
+1. `<shared_file_prefix>@<shared_version>`
+
+Binding-item rules:
+
+1. `<shared_file_prefix>` must be either `c_shared_xxx` or `s_shared_xxx`
+2. `c_` means the bound file lives under `docs/specs/shared_contracts/candidate/`; `s_` means the bound file lives under `docs/specs/shared_contracts/stable/`
+3. the exact `file_ref` is derived deterministically as `docs/specs/shared_contracts/<layer>/<shared_file_prefix>.md`
+4. `<shared_version>` must equal the bound file frontmatter `shared_version`
+5. after the derived file is read, its frontmatter `shared_contract_id` is the identity used for snapshotting, binding comparison, and affected-module derivation
+6. if an item cannot be resolved to exactly one existing file with matching frontmatter version, the binding is invalid
+
+Normalization rules:
+
+1. use literal `none` only when the module current layer binds no Shared Contract files
+2. do not use `null`, an empty list, omitted content, or natural-language placeholders for a non-empty binding set
+3. duplicate binding items are forbidden
+4. raw markdown list order is not semantically meaningful; consumers must normalize the binding set by derived `file_ref` before comparison
+5. whenever a command or flow rewrites `shared_contract_refs`, it must write back that normalized order
+
+Consumer rules:
+
+1. any command or flow that derives a real binding set, affected-module set, or `shared_contract_snapshot` must first interpret `shared_contract_refs` through this contract
+2. stable-layer modules may bind only `s_` items
+3. candidate-layer modules may bind either `s_` or `c_` items, but the item itself must make the layer explicit
+4. when sibling layers of the same `shared_contract_id` both exist, only the exact resolved item is effective for that module unless the current round also rewrites that module's binding
 
 ---
 

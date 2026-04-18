@@ -215,6 +215,10 @@ Shared Contract exception:
 1. if a rebuilt Shared Contract snapshot differs only because a bound Shared Contract file changed `bound_modules`, do not invalidate the process file on that basis alone
 2. in that case, report governance drift instead and keep using the module's formal binding source from `shared_contract_refs`
 
+Resolver rule:
+
+1. before rebuilding `shared_contract_snapshot`, executors must first resolve the currently bound Shared Contract files from `shared_contract_refs` using the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
+
 If any one of those values differs, the process file is invalid for downstream consumption.
 
 ---

@@ -64,6 +64,7 @@ Before execution:
 2. build the repository-wide module current-layer binding index from the already-updated `_status.md`:
    - enumerate formal modules from `_status.md`
    - read `Global Constraint Alignment.shared_contract_refs` from each module's current-layer main file needed for binding resolution
+   - interpret each module's `shared_contract_refs` through the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1 before deriving the real binding set
    - treat module `shared_contract_refs` as the only formal source of which modules currently bind which shared truth, which layer they bind, and which exact file currently carries that binding
    - treat `bound_modules` only as declarative metadata
 3. derive the affected module set:
@@ -83,7 +84,7 @@ Before execution:
    - if `shared_contract_refs=none` and the module is not in a changed-binding case, leave it unchanged
    - treat the binding as invalid if the referenced file is missing, the layer mismatches, the file target mismatches, the version reference mismatches, or the module-to-shared relation changed
    - for `candidate` modules, rebuild the snapshot from the exact currently bound Shared Contract files; treat the binding as invalid if any existing process file's `shared_contract_snapshot` differs from that rebuilt snapshot, except when the delta comes only from `bound_modules`
-   - for `stable` modules, judge only against bound stable-layer Shared Contract files; treat the binding as invalid if the stable shared truth changed enough that "still aligned with stable" can no longer be claimed safely
+   - for `stable` modules, judge only against bound stable-layer Shared Contract files resolved through the binding contract; treat the binding as invalid if the resolved stable binding target changed in layer, file, or version, or if the current task changed that bound stable file in any way other than a `bound_modules`-only delta
 6. for invalid `candidate` modules:
    - delete `_check_result/{module}.md`
    - delete `_plans/{module}.md`

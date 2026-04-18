@@ -64,7 +64,7 @@ Before execution:
    - require `spec_fork:{module}` to create the target module candidate first
    - set `required_writeback_target` to that module candidate main file because chat-only agreement does not create a legal binding target
 3. if the module current-layer binding already points to another Shared Contract file and this round is retargeting that binding, record the previous bound Shared Contract file before writeback
-4. update the module candidate-layer `shared_contract_refs`
+4. update the module candidate-layer `shared_contract_refs` using the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
 5. update module candidate body text so the relevant behavior chain explains which behavior consumes the shared truth
 6. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
 7. if Step 3 recorded a previous bound Shared Contract file and it is different from the new target file, update that previous shared file's `bound_modules` to remove the module from the old declarative binding set

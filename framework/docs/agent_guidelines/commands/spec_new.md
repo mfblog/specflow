@@ -48,7 +48,7 @@ It does not:
 7. initialize `Global Constraint Alignment`:
    - `system_constraints_stable_ref=s_system_constraints@<current_version>` if the formal global baseline exists, otherwise `none`
    - write `shared_contract_refs=none` only when the first candidate does not yet reuse shared truth
-   - if the first candidate already reuses existing shared truth, write the explicit `shared_contract_refs` set and explain that reuse in the candidate body in the same round
+   - if the first candidate already reuses existing shared truth, write the explicit `shared_contract_refs` set using the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1 and explain that reuse in the candidate body in the same round
    - `shared_mechanism_reuse_summary`
    - `global_constraint_exceptions`
    - `system_constraints_change_proposal`
