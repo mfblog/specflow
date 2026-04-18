@@ -154,11 +154,15 @@ Rules:
 
 1. they are not legal `{command}:{module}` targets
 2. they may exist at both `candidate` and `stable`
-3. they enter a module's truth-reading surface only when explicitly bound in that module's current-layer `Global Constraint Alignment.shared_contract_refs`
-4. their lifecycle depends on the command chains of modules that bind them
-5. `bound_modules` is only a declaration of which modules the current text is expected to serve; it does not replace formal binding semantics
-6. they are not module appendices, because they do not belong to one module
-7. they do not become `system_constraints` automatically during promotion
+3. for one `shared_contract_id`, at most one current `candidate` file and at most one current `stable` file may exist at the same time
+4. candidate-layer and stable-layer files for the same `shared_contract_id` may coexist; the stable file is the current formal baseline and the candidate file is the current next-round draft
+5. they enter a module's truth-reading surface only when explicitly bound in that module's current-layer `Global Constraint Alignment.shared_contract_refs`
+6. stable-layer modules may bind only stable-layer Shared Contract files
+7. candidate-layer modules may bind either stable-layer or candidate-layer Shared Contract files, but the bound layer must be explicit in `shared_contract_refs`
+8. their lifecycle depends on the command chains of modules that bind them
+9. `bound_modules` is only a declaration of which modules the current text is expected to serve; it does not replace formal binding semantics
+10. they are not module appendices, because they do not belong to one module
+11. they do not become `system_constraints` automatically during promotion
 
 Shared-boundary rules:
 
@@ -190,12 +194,19 @@ Shared reading, invalidation, and cleanup rules:
 
 1. if `shared_contract_refs` is not empty, executors must read the bound Shared Contract files together with the module's current-layer truth
 2. `cand_check`, `cand_plan`, `cand_impl`, `cand_verify`, `stable_verify`, and `spec_fork` must not skip bound Shared Contract files
-3. if a bound Shared Contract's effective truth changes, all module candidate-side process files still carrying the old snapshot become invalid and fall back to `cand_check`
-4. if the only delta is `bound_modules`, do not invalidate candidate-side process files on that basis alone; report governance drift instead
-5. if a stable Shared Contract changes, any claim that a module still aligns with `stable` must be re-read and re-judged
-6. Shared Contract files are not cleaned up merely because one module finished promotion; they may be cleaned only when no module still binds them, when they are replaced by newer shared files, or when their stable conclusions have been fully absorbed into the formal global baseline
-7. if `bound_modules` diverges from the real set implied by module `shared_contract_refs`, that is governance drift and must be repaired by the command responsible for the binding change
-8. any task that changes `docs/specs/shared_contracts/**` or any module's `shared_contract_refs` must complete Shared Contract state reconciliation before claiming the state is closed
+3. when both layers exist for one `shared_contract_id`, a module is affected only by the exact bound layer and file recorded in its current-layer `shared_contract_refs`, unless the current task also rewrites that module's binding
+4. if a bound Shared Contract's effective truth changes, all module candidate-side process files still carrying the old snapshot become invalid and fall back to `cand_check`
+5. a module promotion may generate or update a stable-layer Shared Contract while the candidate-layer Shared Contract for the same `shared_contract_id` remains in place for other candidate-layer modules
+6. promoted stable modules must not keep binding candidate-layer Shared Contract files after promotion
+7. if the current round cannot determine the post-promotion stable/candidate Shared Contract topology from repository truth, promotion or shared governance must stop instead of guessing
+8. if the only delta is `bound_modules`, do not invalidate candidate-side process files on that basis alone; report governance drift instead
+9. if a stable Shared Contract changes, any claim that a module still aligns with `stable` must be re-read and re-judged
+10. Shared Contract files are not cleaned up merely because one module finished promotion; they may be cleaned only when no module still binds them, when they are replaced by newer shared files, or when their stable conclusions have been fully absorbed into the formal global baseline
+11. candidate-layer Shared Contract files must not be deleted merely because a stable-layer file for the same `shared_contract_id` was generated in one module's promotion; they may be deleted only after no candidate-layer module still binds them
+12. when a command or shared flow changes bindings or topology so a touched Shared Contract file would have no formal bindings remaining, that same command or flow owns resolving the terminal state of that file in the same round instead of leaving orphaned shared truth for later guesswork
+13. if no module still binds a touched Shared Contract file and the current round does not explicitly keep it as independently authored shared truth, the owner of the binding or topology change must delete that now-unbound file when Rules 10 and 11 allow that cleanup
+14. if `bound_modules` diverges from the real set implied by module `shared_contract_refs`, that is governance drift and must be repaired by the command responsible for the binding change
+15. any task that changes `docs/specs/shared_contracts/**` or any module's `shared_contract_refs` must complete Shared Contract state reconciliation before claiming the state is closed
 
 Shared frontmatter should include at least:
 
