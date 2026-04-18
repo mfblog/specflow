@@ -221,11 +221,11 @@ The rules below are shared gates. Every command follows them by default:
 8. `Next Command` is the default next permitted action. Do not skip past it unless an explicit rule allows it.
 9. Process files are not valid just because they exist. Their bound Spec layer, Spec file, version references, fingerprints, and command-required fields must also match.
 10. Every module candidate must explicitly record `system_constraints_stable_ref`.
-11. If a module depends on Shared Contract files at the current layer, it must also explicitly record `shared_contract_refs`.
+11. If a module depends on Shared Contract files at the current layer, it must also explicitly record `shared_contract_refs` using the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1.
 12. If `s_system_constraints.md` exists and the module candidate's `system_constraints_stable_ref` does not equal the current stable system-constraint version, the module's candidate-side process files become invalid and fall back to `cand_check`.
 13. If `s_system_constraints.md` does not exist and the module candidate's `system_constraints_stable_ref` is not `none`, the module's candidate-side process files become invalid and fall back to `cand_check`.
 14. If the effective module-local appendix truth explicitly referenced by the current-layer main Spec changes, the module's candidate-side process files become invalid and fall back to `cand_check`.
-15. If the effective Shared Contract truth referenced by `shared_contract_refs` changes, the module's candidate-side process files become invalid and fall back to `cand_check`.
+15. If the effective Shared Contract truth resolved from `shared_contract_refs` under that binding contract changes, the module's candidate-side process files become invalid and fall back to `cand_check`.
 16. A `bound_modules`-only delta does not by itself invalidate candidate-side process files, because `bound_modules` is declarative metadata rather than the module's formal binding source. Report governance drift instead.
 17. If a stable-layer module's explicitly referenced stable appendix truth changes, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.
 18. If a stable-layer module's bound stable Shared Contract changed, the module may no longer claim it still aligns with `stable` and falls back to `stable_verify`.

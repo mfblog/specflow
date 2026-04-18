@@ -77,6 +77,7 @@ Before execution:
 7. if Step 5 reopened an already-stable shared object at the candidate layer, set the candidate `shared_version` to the intended next stable version according to Shared Contract semantic version rules
 8. rewrite every source module candidate side so the extracted truth is no longer duplicated as module-local formal truth
 9. rewrite every additional involved consumer module candidate-side reference and behavior explanation required by the extraction result
+   - any written `shared_contract_refs` must use the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
 10. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
 11. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
 12. if any involved module that should now consume the extracted truth was not fully reviewed and rewritten where required, stop and report consumer-coverage failure

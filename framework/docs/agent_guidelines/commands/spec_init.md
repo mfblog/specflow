@@ -51,7 +51,7 @@ Before execution:
    - `Testability / Acceptance Criteria`
 5. if needed, add `Global Constraint Alignment` with at least:
    - `system_constraints_stable_ref`
-   - `shared_contract_refs`
+   - `shared_contract_refs` written in the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
    - `shared_mechanism_reuse_summary`
    - `global_constraint_exceptions`
 6. do not introduce `system_constraints_change_proposal` into the first `stable`; that field belongs only to module `candidate`

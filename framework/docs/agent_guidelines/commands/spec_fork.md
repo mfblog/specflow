@@ -45,6 +45,7 @@ By default it handles:
 8. write `system_constraints_stable_ref`
    - if the new round proposes a global baseline change, record it in `system_constraints_change_proposal` inside the module candidate
 9. re-check `shared_contract_refs`:
+   - interpret and rewrite that field using the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
    - judge Shared Contract bindings independently from whether `s_system_constraints.md` exists
    - if the stable layer depended on shared files and the candidate still depends on the same unchanged shared truth, keep binding those existing shared files in the candidate
    - create or bind candidate-layer shared files only when the current round changes the shared truth itself
@@ -54,7 +55,10 @@ By default it handles:
    - derive the real repository-wide binding set of each touched Shared Contract from current-layer module `shared_contract_refs` plus the target module candidate writeback prepared in Step 9
    - if repository truth is insufficient to decide whether any touched Shared Contract file would become unbound after this round, stop and reroute through `shared_ops:{natural-language request}` from current repository truth instead of leaving cleanup ownership implicit
 11. if the round changed shared bindings or shared files, resolve Shared Contract terminal state and `bound_modules` in the same round:
-   - if a touched Shared Contract file would have no formal bound modules after this round, in the same round either delete it when cleanup is legal under `spec_policy.md` or explicitly keep it as independently authored shared truth and write why that unbound state is intentional
+   - if a touched Shared Contract file would have no formal bound modules after this round, in the same round either delete it when cleanup is legal under `spec_policy.md` or explicitly keep it as independently authored shared truth by writing that file with:
+     - `unbound_retention: intentional`
+     - `unbound_retention_reason: <why this unbound state is intentional now>`
+     - `unbound_retention_owner: spec_fork`
    - reject closure if neither deletion nor explicit keep-writeback has happened for a touched now-unbound Shared Contract file
    - update `bound_modules` only as declarative metadata so each remaining touched Shared Contract file matches the real binding set implied by module `shared_contract_refs`
 12. delete old `_check_result/{module}.md`, `_verify_result/{module}.md`, `_plans/{module}.md`, and previous-round candidate appendix files
