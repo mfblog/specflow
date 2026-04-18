@@ -24,8 +24,9 @@ By default it handles:
 6. read required candidate appendix files and bound Shared Contract files, and decide how each one will be handled after promotion
 7. read `specflow/framework/docs/agent_guidelines/recovery_policy.md` before promotion
 8. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` before promotion
-9. if the module candidate currently binds any candidate-layer Shared Contract file, the executor must be able to state the post-promotion Shared Contract topology before file mutation starts
-10. read the git policy before promotion
+9. if the module candidate currently binds any candidate-layer Shared Contract file, or if the round may change the layer, version, or terminal state of any touched Shared Contract file, read `docs/specs/_status.md` and every affected module current-layer main file needed to derive the real repository-wide binding set from `shared_contract_refs` before file mutation starts
+10. if repository truth is insufficient to derive that real binding set safely, do not start file mutation; reroute through `shared_ops:{natural-language request}` from current repository truth instead of guessing promotion-local topology
+11. read the git policy before promotion
 
 ## 4. Procedure
 
@@ -58,7 +59,12 @@ By default it handles:
 6. before the first file mutation, capture the recovery baseline required by `recovery_policy.md`
 7. confirm that candidate `frontmatter.version` is the new `stable` version for this round
 8. if the module candidate contains a closed `system_constraints_change_proposal` that this round has implemented and verified, absorb the promoted conclusion into `docs/specs/system/stable/s_system_constraints.md`
-9. if `shared_contract_refs` is not empty, decide for each bound shared item:
+9. if `shared_contract_refs` is not empty, build the repository-wide real binding view for every touched shared item before deciding post-promotion topology:
+   - start from `docs/specs/_status.md`
+   - read every affected module current-layer main file needed to derive which modules currently bind each touched Shared Contract file or sibling layer through `shared_contract_refs`
+   - treat module `shared_contract_refs` as the formal source of the real binding set rather than `bound_modules`
+   - if repository truth is insufficient to state the post-promotion topology safely, stop before file mutation and reroute through `shared_ops:{natural-language request}` from current repository truth
+10. if `shared_contract_refs` is not empty, decide for each bound shared item against that repository-wide binding view:
    - determine the post-promotion binding target for the promoted module stable truth; a promoted stable module must not keep binding a candidate-layer Shared Contract file
    - if it should remain an independent cross-module truth after promotion, promote it into `docs/specs/shared_contracts/stable/`
    - when this round writes or updates a stable-layer Shared Contract file, use the already-decided candidate `shared_version` for that file; do not invent or bump a Shared Contract version during module promotion itself
@@ -66,33 +72,33 @@ By default it handles:
    - if part of its conclusion has become a project-wide default rule, also absorb that specific conclusion into `s_system_constraints.md`
    - do not absorb a Shared Contract into module `stable` merely because promotion happened
    - do not treat promotion itself as a reason to delete a still-needed Shared Contract
-   - if the round changed a shared item that has both stable-layer and candidate-layer files, resolve which modules are expected to remain bound to each layer after promotion before continuing
+   - if the round changed a shared item that has both stable-layer and candidate-layer files, resolve which modules are expected to remain bound to each layer after promotion from the repository-wide binding view before continuing
    - if this round's topology change or linked `system_constraints` absorption would leave a touched Shared Contract file with no formal bound modules, this promotion round owns resolving that file's terminal state instead of leaving orphaned shared truth for later cleanup
    - if such a touched file now has no formal bound modules and cleanup is legal under `spec_policy.md`, delete it in this round when it has been replaced by the promoted target or when its remaining conclusion has been fully absorbed into `s_system_constraints.md`
    - if the required post-promotion truth shape is still unclear, or the round cannot safely judge whether an unbound touched file should be deleted or kept as independently authored shared truth, stop promotion and require rerouting through `shared_ops:{natural-language request}` from current repository truth instead of guessing a module-local-only continuation
-10. generate or update `docs/specs/modules/stable/s_{module}.md`
-11. if current-round candidate appendix files exist, in the same promotion round either:
+11. generate or update `docs/specs/modules/stable/s_{module}.md`
+12. if current-round candidate appendix files exist, in the same promotion round either:
    - migrate retained content to `docs/specs/modules/stable/appendix/` or an equivalent dedicated subdirectory
    - absorb the content into `docs/specs/modules/stable/s_{module}.md`
    - delete candidate appendix files no longer needed
-12. do not delete `docs/specs/modules/candidate/c_{module}.md` until `_status.md` has already been updated to `Candidate=no`
-13. update `_status.md` to the promoted stable state:
+13. do not delete `docs/specs/modules/candidate/c_{module}.md` until `_status.md` has already been updated to `Candidate=no`
+14. update `_status.md` to the promoted stable state:
    - `Stable=yes`
    - `Candidate=no`
    - `Active Layer=stable`
    - `Next Command=spec_fork`
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command spec_fork --notes <status-note>`
-14. only after that update may physical deletion happen:
+15. only after that update may physical deletion happen:
    - `docs/specs/modules/candidate/c_{module}.md`
    - current-round candidate appendix files
    - `_check_result/{module}.md`
    - `_plans/{module}.md`
    - `_verify_result/{module}.md`
    - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --module {module} --mode cand_promote`
-15. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
-16. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer, even when no additional affected module is known yet
+16. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
+17. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer, even when no additional affected module is known yet
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
-17. perform git close-out if required
+18. perform git close-out if required
 
 ## 5. Stop Conditions
 
