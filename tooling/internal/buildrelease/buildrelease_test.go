@@ -15,3 +15,11 @@ func TestLdflagsForFingerprintFixesBuildID(t *testing.T) {
 		t.Fatalf("expected ldflags to embed tooling fingerprint, got %q", ldflags)
 	}
 }
+
+func TestBuildCommandArgsDisablesVCSMetadata(t *testing.T) {
+	args := strings.Join(buildCommandArgs("flags", "out"), " ")
+
+	if !strings.Contains(args, "-buildvcs=false") {
+		t.Fatalf("expected build args to disable VCS metadata, got %q", args)
+	}
+}
