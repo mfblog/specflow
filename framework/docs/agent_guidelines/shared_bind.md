@@ -52,7 +52,8 @@ Before execution:
 7. if the target module current-layer main Spec already binds another Shared Contract file and this round may retarget that binding, also read that currently bound Shared Contract file
 8. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
 9. if the target module is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/spec_fork.md`
-10. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
+10. read `specflow/framework/docs/agent_guidelines/git_policy.md` when the round may change module `shared_contract_refs`, update `bound_modules`, delete a touched Shared Contract file, or otherwise mutate commit-triggering governance files
+11. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 
 ---
 
@@ -72,7 +73,7 @@ Before execution:
 9. after any change to module `shared_contract_refs` or to any shared file `bound_modules` touched in Steps 6 and 7, execute `shared_sync` before claiming closure
 10. if Step 3 recorded a previous bound Shared Contract file and `shared_sync` shows that no module still binds it after this round:
    - if the current round can safely prove that the previous file has been replaced by the new target and cleanup is legal under `spec_policy.md`, delete that now-unbound previous shared file in the same round
-   - otherwise, stop and return control to `shared_topology` through `shared_ops` so shared governance can decide whether that unbound file must be retired, replaced, renamed, split, merged, or explicitly kept as an independently authored shared object
+   - otherwise, stop and return control to `shared_escape` through `shared_ops` so shared governance can decide whether stable decomposition exists or whether follow-up must route to `shared_topology`, checkpoint, or another legal next step
    - after a deletion in this step, rerun `shared_sync` before claiming closure
 
 ---
@@ -101,7 +102,7 @@ The output must include at least:
 5. the body-level consumption explanation added or updated
 6. the target shared file `bound_modules` reconciliation result
 7. when the round retargeted the module away from a previous shared file, the previous shared file `bound_modules` reconciliation result
-8. when the round retargeted the module away from a previous shared file, the previous shared file terminal-state result
+8. when the round retargeted the module away from a previous shared file, the previous shared file terminal-state result, including any return-to-`shared_escape` result when direct cleanup was not yet safe
 9. the `shared_sync` result, including affected modules and fallback if any
 10. the git close-out result when governance files or commit-triggering files were changed
 
