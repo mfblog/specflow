@@ -247,7 +247,8 @@ Additional rules:
    - `unbound_retention_owner: <command_or_flow_name>`
 9. chat output, command summaries, and temporary planning notes do not count as intentional-unbound writeback
 10. do not use the intentional-unbound retention fields for architecture-first shared authoring that has not yet had any formal module binding; that case is governed by `bound_modules=none` plus body-level planning text
-11. if a later round rebinds or deletes that file, remove or stop carrying the intentional-unbound retention fields in the resulting file state
+11. when a stable-layer Shared Contract file is intentionally kept after losing all formal bindings, a later shared-governance round may still open or rewrite its candidate-layer sibling before any new formal binding exists, but only when that round writes exactly one `promotion_owner_module` naming the formal module that must later adopt and promote that next-round draft
+12. if a later round rebinds or deletes that file, remove or stop carrying the intentional-unbound retention fields in the resulting file state
 
 ### 2.6 What Counts As Touching Formal Behavior Truth
 
