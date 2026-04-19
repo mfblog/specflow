@@ -80,6 +80,7 @@ Before execution:
 9. for every touched shared file that still has one or more formal bound modules after Steps 7 and 8, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 10. reject closure if the change is only a `shared_contract_refs` edit with no body-level consumption explanation
 11. after any change to module `shared_contract_refs` or to any shared file metadata touched in Steps 7, 8, and 9, execute `shared_sync` before claiming closure
+   - if any touched shared file changed only in `bound_modules` during this round, pass execution-local `bound_modules_only_shared_file_refs` with the exact file refs for those files
 12. if Step 3 recorded a previous bound Shared Contract file and `shared_sync` shows that no module still binds it after this round:
    - if the current round can safely prove that the previous file has been replaced by the new target and cleanup is legal under `spec_policy.md`, delete that now-unbound previous shared file in the same round
    - otherwise, stop and return control to `shared_escape` through `shared_ops` so shared governance can decide whether stable decomposition exists or whether follow-up must route to `shared_topology`, checkpoint, or another legal next step

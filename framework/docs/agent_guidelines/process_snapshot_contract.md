@@ -197,6 +197,7 @@ It must not duplicate:
 If a Shared Contract file's `bound_modules` field changes, the file fingerprint may also change.
 That change does not by itself invalidate downstream process files, because `bound_modules` is declarative metadata rather than the module's formal binding source.
 Treat a `bound_modules`-only delta as governance drift to be reported and repaired separately.
+A re-validating command or governance flow must not infer a `bound_modules`-only delta from fingerprint change alone.
 
 ---
 
@@ -212,8 +213,10 @@ When a command or governance flow re-validates a process file, it must:
 
 Shared Contract exception:
 
-1. if a rebuilt Shared Contract snapshot differs only because a bound Shared Contract file changed `bound_modules`, do not invalidate the process file on that basis alone
-2. in that case, report governance drift instead and keep using the module's formal binding source from `shared_contract_refs`
+1. if a rebuilt Shared Contract snapshot differs only because a bound Shared Contract file is explicitly declared by the active command or governance flow as `bound_modules`-only for the current round, do not invalidate the process file on that basis alone
+2. `shared_sync` consumes that declaration through its execution-local `bound_modules_only_shared_file_refs` input field
+3. otherwise, do not infer a `bound_modules`-only delta from fingerprint difference alone
+4. in that case, report governance drift instead and keep using the module's formal binding source from `shared_contract_refs` only when the active flow has the explicit declaration from Rule 1
 
 Resolver rule:
 

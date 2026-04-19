@@ -71,6 +71,7 @@ By default it handles:
    - `Next Command=cand_check`
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate yes --active-layer candidate --next-command cand_check --notes <status-note>`
 14. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects `Active Layer=candidate` for this module, even when no additional affected module is known yet
+   - if any touched shared file changed only in `bound_modules` during this round, pass execution-local `bound_modules_only_shared_file_refs` with the exact file refs for those files
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
    - if that `shared_sync` returns control because repository truth is still insufficient to continue safely, stop `spec_fork` as `blocked`, keep the newly created candidate-layer state in place, and reroute through `shared_ops:{natural-language request}` from current repository truth instead of claiming Shared Contract side effects are closed
 15. perform git close-out if required
