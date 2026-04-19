@@ -233,7 +233,7 @@ Body changed.
 	}
 }
 
-func TestSyncImpactKeepsPromotionOwnerStableModule(t *testing.T) {
+func TestSyncImpactKeepsStableLandingModule(t *testing.T) {
 	repoRoot := t.TempDir()
 	sharedRef := setupStableSharedRepo(t, repoRoot)
 
@@ -251,9 +251,9 @@ Body changed.
 `)
 
 	result, err := SyncImpact(repoRoot, Options{
-		Modules:              []string{"module_demo"},
-		SharedRefs:           []string{sharedRef},
-		PromotionOwnerModule: "module_demo",
+		Modules:             []string{"module_demo"},
+		SharedRefs:          []string{sharedRef},
+		StableLandingModule: "module_demo",
 	})
 	if err != nil {
 		t.Fatalf("SyncImpact: %v", err)
@@ -263,10 +263,97 @@ Body changed.
 	}
 	moduleResult := result.ModuleResults[0]
 	if moduleResult.Outcome != "unchanged" {
-		t.Fatalf("expected unchanged outcome for promotion owner, got %+v", moduleResult)
+		t.Fatalf("expected unchanged outcome for stable landing module, got %+v", moduleResult)
 	}
 	if moduleResult.NextCommand != "spec_fork" {
 		t.Fatalf("expected next command spec_fork, got %s", moduleResult.NextCommand)
+	}
+}
+
+func TestSyncImpactReroutesStableModuleWhenOnlyModuleScopeMarksChangedBinding(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupStableSharedRepo(t, repoRoot)
+
+	result, err := SyncImpact(repoRoot, Options{
+		Modules: []string{"module_demo"},
+	})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ModuleResults) != 1 {
+		t.Fatalf("expected one module result, got %d", len(result.ModuleResults))
+	}
+	moduleResult := result.ModuleResults[0]
+	if moduleResult.Outcome != "rerouted" {
+		t.Fatalf("expected rerouted outcome, got %+v", moduleResult)
+	}
+	if moduleResult.FallbackReasonCode != "binding_drift" {
+		t.Fatalf("expected binding_drift, got %s", moduleResult.FallbackReasonCode)
+	}
+	if moduleResult.NextCommand != "stable_verify" {
+		t.Fatalf("expected next command stable_verify, got %s", moduleResult.NextCommand)
+	}
+}
+
+func TestSyncImpactRejectsEmptySharedContractRefsList(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupCandidateSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: module_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo",
+		"",
+		"## Global Constraint Alignment",
+		"",
+		"1. system_constraints_stable_ref: none",
+		"2. shared_contract_refs:",
+		"",
+	}, "\n"))
+
+	_, err = SyncImpact(repoRoot, Options{Modules: []string{"module_demo"}})
+	if err == nil || !strings.Contains(err.Error(), "must not be an empty list") {
+		t.Fatalf("expected empty-list error, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsDuplicateSharedContractRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupCandidateSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: module_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo",
+		"",
+		"## Global Constraint Alignment",
+		"",
+		"1. system_constraints_stable_ref: none",
+		"2. shared_contract_refs:",
+		"   - c_shared_demo@0.1.0",
+		"   - c_shared_demo@0.1.0",
+		"",
+	}, "\n"))
+
+	_, err = SyncImpact(repoRoot, Options{Modules: []string{"module_demo"}})
+	if err == nil || !strings.Contains(err.Error(), "duplicate item") {
+		t.Fatalf("expected duplicate-item error, got %v", err)
 	}
 }
 
@@ -338,9 +425,9 @@ func setupCandidateSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. `system_constraints_stable_ref`: `none`",
-		"2. `shared_contract_refs`:",
-		"   - `c_shared_demo@0.1.0`",
+		"1. system_constraints_stable_ref: none",
+		"2. shared_contract_refs:",
+		"   - c_shared_demo@0.1.0",
 		"",
 	}, "\n"))
 
@@ -397,9 +484,9 @@ func setupStableSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. `system_constraints_stable_ref`: `none`",
-		"2. `shared_contract_refs`:",
-		"   - `s_shared_demo@1.0.0`",
+		"1. system_constraints_stable_ref: none",
+		"2. shared_contract_refs:",
+		"   - s_shared_demo@1.0.0",
 		"",
 	}, "\n"))
 

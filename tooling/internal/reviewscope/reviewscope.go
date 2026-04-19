@@ -98,22 +98,21 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	if err != nil {
 		return scope, err
 	}
-	if len(validation.Diagnostics) > 0 {
-		return scope, fmt.Errorf(strings.Join(validation.Diagnostics, "; "))
-	}
 
 	activeStandardFiles := make([]string, 0, len(validation.Entries))
 	overlayFiles := []string{}
 	overlaySet := map[string]bool{}
 	for _, entry := range validation.Entries {
-		activeStandardFiles = append(activeStandardFiles, entry.File)
+		if strings.TrimSpace(entry.File) != "" {
+			activeStandardFiles = append(activeStandardFiles, entry.File)
+		}
 
 		if entry.ConsumedBy != "spec_flow_review" || entry.Surface != "governance_baseline_review" {
 			continue
 		}
 		selector, err := projectstandards.ParseAppliesTo(entry.AppliesTo)
 		if err != nil {
-			return scope, err
+			continue
 		}
 		matched := selector.Kind == "all_targets_on_surface" ||
 			(selector.Kind == "review_scenario" && len(selector.Values) == 1 && selector.Values[0] == scope.Scenario)

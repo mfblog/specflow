@@ -258,6 +258,11 @@ func Render(snapshot Snapshot) string {
 
 func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry, error) {
 	mainDir := filepath.Dir(filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)))
+	currentLayer := mainSpecLayer(mainSpecRef)
+	currentModule, err := mainSpecModule(mainSpecRef)
+	if err != nil {
+		return nil, err
+	}
 	seen := map[string]bool{}
 	entries := []AppendixEntry{}
 	for _, match := range markdownLinkPattern.FindAllStringSubmatch(body, -1) {
@@ -265,10 +270,18 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 			continue
 		}
 		destination := strings.TrimSpace(match[1])
-		if !strings.HasPrefix(destination, "./appendix/") {
+		if destination == "" || strings.HasPrefix(destination, "/") || strings.Contains(destination, "://") {
 			continue
 		}
 		absPath := filepath.Clean(filepath.Join(mainDir, filepath.FromSlash(destination)))
+		relWithinLayerRoot, err := filepath.Rel(mainDir, absPath)
+		if err != nil {
+			return nil, err
+		}
+		relWithinLayerRoot = filepath.ToSlash(relWithinLayerRoot)
+		if strings.HasPrefix(relWithinLayerRoot, "../") || relWithinLayerRoot == ".." || filepath.Ext(relWithinLayerRoot) != ".md" || filepath.Dir(relWithinLayerRoot) == "." {
+			continue
+		}
 		relPath, err := filepath.Rel(repoRoot, absPath)
 		if err != nil {
 			return nil, err
@@ -286,6 +299,12 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 		frontmatter, _, err := parseFrontmatter(string(content))
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", relPath, err)
+		}
+		if layer := strings.TrimSpace(frontmatter["layer"]); layer != "" && layer != currentLayer {
+			return nil, fmt.Errorf("%s: appendix layer %q does not match main spec layer %q", relPath, layer, currentLayer)
+		}
+		if module := strings.TrimSpace(frontmatter["module"]); module != "" && module != currentModule {
+			return nil, fmt.Errorf("%s: appendix module %q does not match main spec module %q", relPath, module, currentModule)
 		}
 		appendixRef := frontmatter["spec_version_ref"]
 		if strings.TrimSpace(appendixRef) == "" {
@@ -429,30 +448,45 @@ func parseSharedContractRefs(body string) ([]string, bool, error) {
 	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 	for idx, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if !strings.Contains(trimmed, "`shared_contract_refs`") {
+		right, matched, err := parseNamedFieldLine(trimmed, "shared_contract_refs")
+		if err != nil {
+			return nil, false, err
+		}
+		if !matched {
 			continue
 		}
-		parts := strings.SplitN(trimmed, ":", 2)
-		if len(parts) != 2 {
-			return nil, false, fmt.Errorf("shared_contract_refs line is malformed")
-		}
-		right := strings.TrimSpace(parts[1])
 		if right == "`none`" || right == "none" {
 			return nil, true, nil
 		}
+		if right != "" {
+			return nil, false, fmt.Errorf("shared_contract_refs must use literal none or a markdown list")
+		}
 		refs := []string{}
+		seen := map[string]bool{}
 		for next := idx + 1; next < len(lines); next++ {
 			nextTrimmed := strings.TrimSpace(lines[next])
+			if nextTrimmed == "" {
+				continue
+			}
 			if strings.HasPrefix(nextTrimmed, "## ") || regexp.MustCompile(`^\d+\.`).MatchString(nextTrimmed) {
 				break
 			}
-			if strings.HasPrefix(nextTrimmed, "- ") {
-				ref := strings.TrimSpace(strings.TrimPrefix(nextTrimmed, "- "))
-				ref = strings.Trim(ref, "`")
-				if ref != "" {
-					refs = append(refs, ref)
-				}
+			if !strings.HasPrefix(nextTrimmed, "- ") {
+				return nil, false, fmt.Errorf("shared_contract_refs must be a markdown list of shared refs")
 			}
+			ref := strings.TrimSpace(strings.TrimPrefix(nextTrimmed, "- "))
+			ref = strings.Trim(ref, "`")
+			if ref == "" {
+				return nil, false, fmt.Errorf("shared_contract_refs contains an empty item")
+			}
+			if seen[ref] {
+				return nil, false, fmt.Errorf("shared_contract_refs contains duplicate item %q", ref)
+			}
+			seen[ref] = true
+			refs = append(refs, ref)
+		}
+		if len(refs) == 0 {
+			return nil, false, fmt.Errorf("shared_contract_refs must not be an empty list")
 		}
 		return refs, true, nil
 	}
@@ -463,20 +497,67 @@ func parseSystemConstraintsStableRef(body string) (string, bool, error) {
 	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if !strings.Contains(trimmed, "`system_constraints_stable_ref`") {
+		right, matched, err := parseNamedFieldLine(trimmed, "system_constraints_stable_ref")
+		if err != nil {
+			return "", false, err
+		}
+		if !matched {
 			continue
 		}
-		parts := strings.SplitN(trimmed, ":", 2)
-		if len(parts) != 2 {
-			return "", false, fmt.Errorf("system_constraints_stable_ref line is malformed")
-		}
-		value := strings.Trim(strings.TrimSpace(parts[1]), "`")
+		value := strings.Trim(right, "`")
 		if value == "" {
 			return "", false, fmt.Errorf("system_constraints_stable_ref is empty")
 		}
 		return value, true, nil
 	}
 	return "", false, nil
+}
+
+func parseNamedFieldLine(trimmed, fieldName string) (string, bool, error) {
+	parts := strings.SplitN(trimmed, ":", 2)
+	if len(parts) != 2 {
+		return "", false, nil
+	}
+	left := normalizeFieldKey(strings.TrimSpace(parts[0]))
+	if left != fieldName {
+		return "", false, nil
+	}
+	return strings.TrimSpace(parts[1]), true, nil
+}
+
+func normalizeFieldKey(value string) string {
+	value = strings.ReplaceAll(strings.TrimSpace(value), "`", "")
+	if idx := strings.Index(value, ". "); idx > 0 {
+		allDigits := true
+		for _, ch := range value[:idx] {
+			if ch < '0' || ch > '9' {
+				allDigits = false
+				break
+			}
+		}
+		if allDigits {
+			value = value[idx+2:]
+		}
+	}
+	return strings.TrimSpace(value)
+}
+
+func mainSpecLayer(mainSpecRef string) string {
+	base := strings.TrimSuffix(filepath.Base(mainSpecRef), ".md")
+	if strings.HasPrefix(base, "c_") {
+		return "candidate"
+	}
+	return "stable"
+}
+
+func mainSpecModule(mainSpecRef string) (string, error) {
+	base := strings.TrimSuffix(filepath.Base(mainSpecRef), ".md")
+	switch {
+	case strings.HasPrefix(base, "c_"), strings.HasPrefix(base, "s_"):
+		return base[2:], nil
+	default:
+		return "", fmt.Errorf("unsupported main spec file ref %q", mainSpecRef)
+	}
 }
 
 func sharedFileRefFromVersionRef(ref string) (string, error) {
@@ -505,16 +586,11 @@ type processSnapshot struct {
 }
 
 func parseProcessSnapshot(content string) (processSnapshot, error) {
-	block, err := extractFirstYAMLBlock(content)
-	if err != nil {
-		return processSnapshot{}, err
-	}
-
 	result := processSnapshot{
 		presentFields: map[string]bool{},
 		scalars:       map[string]string{},
 	}
-	lines := strings.Split(strings.ReplaceAll(block, "\r\n", "\n"), "\n")
+	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
 	currentList := ""
 	currentIndex := -1
 	for _, line := range lines {
@@ -583,28 +659,6 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 		result.sharedEntries = nil
 	}
 	return result, nil
-}
-
-func extractFirstYAMLBlock(content string) (string, error) {
-	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
-	inBlock := false
-	block := []string{}
-	for _, line := range lines {
-		if strings.TrimSpace(line) == "```yaml" {
-			if inBlock {
-				return "", fmt.Errorf("nested yaml block is not supported")
-			}
-			inBlock = true
-			continue
-		}
-		if strings.TrimSpace(line) == "```" && inBlock {
-			return strings.Join(block, "\n"), nil
-		}
-		if inBlock {
-			block = append(block, line)
-		}
-	}
-	return "", fmt.Errorf("yaml snapshot block not found")
 }
 
 func splitKeyValue(line string) (string, string) {

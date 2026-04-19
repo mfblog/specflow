@@ -112,9 +112,9 @@ By default it handles:
 17. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
 18. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer and Step 15 has written the surviving shared-file metadata, even when no additional affected module is known yet
    - this post-promotion `shared_sync` closes external affected-module fallout and shared-state reconciliation; it must not overturn the promoted module's own successful stable landing merely because the same promotion round also wrote the stable Shared Contract file or stable binding that the promoted module now legally uses
-   - pass execution-local `current_promotion_owner_module={module}` into that `shared_sync` run
+   - pass execution-local `current_stable_landing_module={module}` into that `shared_sync` run
    - if any surviving touched shared file changed only in `bound_modules` during this round, also pass execution-local `bound_modules_only_shared_file_refs` with the exact file refs for those files
-   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module} --promotion-owner-module {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
+   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module} --stable-landing-module {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
    - if that post-promotion `shared_sync` returns control because repository truth is still insufficient to continue safely, do not claim promotion success:
      - immediately run incomplete promotion recovery according to `recovery_policy.md`
      - after recovery, require rerouting through `shared_ops:{natural-language request}` from the restored candidate-layer repository truth
@@ -154,7 +154,7 @@ By default it handles:
 15. fallback reason if verification became invalid
 16. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
 17. recovery-state explanation if incomplete promotion occurred
-18. when post-promotion `shared_sync` was executed, the passed `current_promotion_owner_module` value
+18. when post-promotion `shared_sync` was executed, the passed `current_stable_landing_module` value
 19. when post-promotion `shared_sync` was executed, the passed `bound_modules_only_shared_file_refs` value when present
 20. when promotion stopped because post-promotion Shared Contract topology, retained candidate next-round draft shape, `promotion_owner_module`, unbound-file terminal state, or post-promotion `shared_sync` uncertainty was unclear, the required next step through `shared_ops`
 21. git close-out result
