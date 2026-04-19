@@ -78,6 +78,11 @@ Before execution:
 6. create, update, or delete the touched candidate-layer Shared Contract files according to the topology plan:
    - if the round creates the first file for a brand-new shared object, initialize `shared_version=0.1.0`
    - if the round opens or rewrites a candidate-layer file for a shared object that already has a stable-layer sibling, set that candidate file's `shared_version` to the intended next stable version according to Shared Contract semantic version rules
+   - for each candidate-layer file from the previous bullet, write exactly one `promotion_owner_module` into that file:
+     - the owner must be a formal module from the affected-module set or another formal module explicitly required by the topology plan
+     - that owner is the only module round allowed to land that candidate-layer shared file as the next stable-layer Shared Contract file
+     - the owner module may remain bound to the current stable-layer shared sibling until a later legal module candidate round rewrites its `shared_contract_refs`
+     - if current repository truth is insufficient to name one stable owner for such a file, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
    - if the topology plan needs new or changed stable-layer shared semantics, do not write that stable-layer file directly in this flow; write or update the corresponding candidate-layer shared file first, carry the intended next stable `shared_version` there, and let a later legal promotion produce the stable-layer file
 7. rewrite every affected module candidate-side `shared_contract_refs` and body-level consumption explanation required by the topology plan
    - any written `shared_contract_refs` must use the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
@@ -105,6 +110,7 @@ Stop when one of the following is true:
 4. repository truth is insufficient to continue safely, so control has returned to `shared_escape` through `shared_ops`
 5. the topology plan requires new or changed stable-layer shared semantics, so this flow has completed the current-round candidate-layer Shared Contract writeback and any required `shared_sync` without direct stable-layer writeback; any later stable-layer Shared Contract file must be produced by a legal promotion rather than by this flow
 6. the request has crossed into `system_constraints_change_proposal`, so control has returned to `shared_escape` through `shared_ops` for checkpoint handling instead of continuing here
+7. the topology plan would leave a next-round candidate-layer shared file for an already-stable shared object without a stable `promotion_owner_module`
 
 ---
 
@@ -120,12 +126,13 @@ The output must include at least:
    - which touched shared files were deleted
    - which touched shared files remain intentionally unbound and why
 4. the Shared Contract file writeback result, including the written `shared_version` for each created or updated candidate-layer file
-5. the module candidate-side retarget or rewrite result
-6. the `bound_modules` reconciliation result for each remaining touched shared file
-7. the `shared_sync` result, including affected modules and fallback if any
-8. the checkpoint result when candidate writeback could not legally start yet
-9. whether the flow had to stop with candidate-layer shared truth prepared for a later legal promotion instead of writing a stable-layer shared file directly
-10. the git close-out result when governance files or commit-triggering files were changed
+5. for each created or rewritten candidate-layer file that already has a stable-layer sibling, the written `promotion_owner_module`
+6. the module candidate-side retarget or rewrite result
+7. the `bound_modules` reconciliation result for each remaining touched shared file
+8. the `shared_sync` result, including affected modules and fallback if any
+9. the checkpoint result when candidate writeback could not legally start yet
+10. whether the flow had to stop with candidate-layer shared truth prepared for a later legal promotion instead of writing a stable-layer shared file directly
+11. the git close-out result when governance files or commit-triggering files were changed
 
 Allowed checkpoint types:
 

@@ -9,7 +9,7 @@ It answers four questions:
 1. whether the target truth should exist independently as `shared_contract`
 2. whether that truth is really cross-module shared truth rather than one module's private appendix
 3. which candidate-layer `shared_contract` file should carry that truth now, including when a stable-layer sibling file already exists
-4. how the repository must be reconciled after that shared truth is created or updated
+4. how the repository must be reconciled after that shared truth is created or updated, including who owns the later stable landing when a next-round shared candidate is opened for an already-stable shared object
 
 This is not a user-facing command entry.
 The user reaches it through `shared_ops:{natural-language request}`.
@@ -27,6 +27,7 @@ It may:
 3. update an existing candidate-layer `shared_contract` that is still the same shared object
 4. record expected future landing points in planning text when consumer modules do not yet have current-layer candidates
 5. trigger `shared_sync` after shared truth writeback
+6. declare the later `cand_promote` owner when the round opens the next candidate-layer file for a shared object that already has a stable-layer sibling
 
 It does not:
 
@@ -68,7 +69,11 @@ If the request names modules that do not yet have current-layer Spec files and t
 4. decide the target shared object boundary:
    - one shared object per shared file
    - do not merge unrelated shared topics into one file
-5. if the request is to continue evolving an already-independent shared object that currently has only a stable-layer file, create or update the sibling candidate-layer `shared_contract` for the same `shared_contract_id` and set its `shared_version` to the intended next stable version according to Shared Contract semantic version rules
+5. if the request is to continue evolving an already-independent shared object that currently has only a stable-layer file, create or update the sibling candidate-layer `shared_contract` for the same `shared_contract_id`, set its `shared_version` to the intended next stable version according to Shared Contract semantic version rules, and write exactly one `promotion_owner_module` into that candidate-layer shared file:
+   - the owner must be a formal module name
+   - that owner is the module round that must later bind or retarget legally to this candidate-layer shared file before it may land as the next stable-layer Shared Contract file
+   - the owner module may still remain formally bound to the current stable-layer shared sibling until a later legal module candidate round rewrites its `shared_contract_refs`
+   - if current repository truth is insufficient to name one stable promotion owner module, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
 6. otherwise create or update the target candidate-layer `shared_contract`
 7. if Step 6 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
 8. if no consumer module formally binds the shared truth yet:
@@ -89,6 +94,7 @@ Stop when one of the following is true:
 4. current repository truth is insufficient to rule out duplicate formal truth or alternate formal landing points, so control has returned to `shared_escape` through `shared_ops`
 5. the request is really a pure module retarget or shared impact-check request and must be re-routed to another shared flow
 6. the request has crossed into `system_constraints_change_proposal` and must stop at a `shared_ops` checkpoint instead of continuing here
+7. a next-round candidate for an already-stable shared object would be opened, but no stable `promotion_owner_module` can be named from current repository truth
 
 ---
 
@@ -104,7 +110,8 @@ The output must include at least:
 6. whether any named modules already bind that truth formally
 7. whether duplicate module-local formal truth was found, or whether the flow had to return to `shared_escape` because that judgment could not be stabilized safely
 8. the `shared_sync` result, including whether any modules were affected
-9. the git close-out result when governance files or commit-triggering files were changed
+9. when the round opened the next candidate-layer file for an already-stable shared object, the written `promotion_owner_module` and whether that owner still needs a later module-side binding retarget before promotion
+10. the git close-out result when governance files or commit-triggering files were changed
 
 ---
 
