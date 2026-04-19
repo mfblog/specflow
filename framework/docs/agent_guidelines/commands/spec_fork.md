@@ -72,6 +72,7 @@ By default it handles:
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate yes --active-layer candidate --next-command cand_check --notes <status-note>`
 14. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects `Active Layer=candidate` for this module, even when no additional affected module is known yet
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
+   - if that `shared_sync` returns control because repository truth is still insufficient to continue safely, stop `spec_fork` as `blocked`, keep the newly created candidate-layer state in place, and reroute through `shared_ops:{natural-language request}` from current repository truth instead of claiming Shared Contract side effects are closed
 15. perform git close-out if required
 
 ## 5. Stop Conditions
@@ -81,6 +82,7 @@ By default it handles:
 3. Shared Contract side effects are closed
 4. `_status.md` is updated
 5. if a touched Shared Contract file became unbound because of this round's binding change, its terminal state is already resolved or the command has stopped and rerouted through `shared_ops`
+6. if post-fork `shared_sync` could not continue safely, the command result is `blocked`, the candidate-layer state remains the current formal layer, and the required next step is rerunning `shared_ops` from current repository truth
 
 ## 6. Output Contract
 
@@ -92,7 +94,8 @@ By default it handles:
 6. cleanup result
 7. `_status.md` update result
 8. Shared Contract reconciliation result when the round changed shared truth or bindings
-9. git close-out result
+9. when post-fork `shared_sync` could not continue safely, that the command stopped as `blocked` and must resume through `shared_ops`
+10. git close-out result
 
 ## 7. Non-Goals
 
