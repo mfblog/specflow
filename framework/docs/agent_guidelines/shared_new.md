@@ -43,13 +43,14 @@ Before execution:
 
 1. read `specflow/framework/docs/agent_guidelines/spec_policy.md`
 2. read `specflow/framework/docs/agent_guidelines/command_policy.md`
-3. read `docs/specs/_status.md` when the request names existing formal modules
+3. read `docs/specs/_status.md` and use it as the repository-wide formal module index for duplicate-truth review
 4. resolve every named existing module's current layer from `_status.md` before reading its main Spec
 5. read any current-layer module main files already involved in the request
-6. read any relevant existing `shared_contract` files if the request names or overlaps them
-7. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
-8. if the round may create, update, or delete any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
-9. if the round may create or update any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply
+6. read every additional current-layer module main file needed to judge whether the target truth already exists as module-local formal truth, is already duplicated across modules, or is already formalized as shared truth elsewhere
+7. read any relevant existing `shared_contract` files if the request names or overlaps them
+8. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
+9. if the round may create, update, or delete any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
+10. if the round may create or update any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply
 
 If the request names modules that do not yet have current-layer Spec files and the user intent is explicitly "design shared truth first", do not block on that absence.
 
@@ -58,18 +59,23 @@ If the request names modules that do not yet have current-layer Spec files and t
 ## 4. Procedure
 
 1. confirm the request is really about independent shared authoring, including creating shared truth from the start or opening the next candidate-layer round for an already-independent shared object, rather than `shared_extract` or `shared_bind`
-2. inspect existing module truth and existing shared truth to ensure the target truth is not already formalized elsewhere as duplicate formal truth
-3. decide the target shared object boundary:
+2. resolve the repository-wide duplicate-truth review set from current repository truth before writeback:
+   - start from the formal module set recorded in `_status.md`
+   - include any named existing modules and any modules already shown by current repository truth to overlap the target topic
+   - read every additional current-layer module main file needed to judge whether the target truth already exists as module-local formal truth, is already duplicated across modules, or is already formalized as a different shared object
+   - if current repository truth is insufficient to rule those cases out safely, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+3. inspect existing module truth and existing shared truth across that repository-wide review set to ensure the target truth is not already formalized elsewhere as duplicate formal truth
+4. decide the target shared object boundary:
    - one shared object per shared file
    - do not merge unrelated shared topics into one file
-4. if the request is to continue evolving an already-independent shared object that currently has only a stable-layer file, create or update the sibling candidate-layer `shared_contract` for the same `shared_contract_id` and set its `shared_version` to the intended next stable version according to Shared Contract semantic version rules
-5. otherwise create or update the target candidate-layer `shared_contract`
-6. if Step 5 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
-7. if no consumer module formally binds the shared truth yet:
+5. if the request is to continue evolving an already-independent shared object that currently has only a stable-layer file, create or update the sibling candidate-layer `shared_contract` for the same `shared_contract_id` and set its `shared_version` to the intended next stable version according to Shared Contract semantic version rules
+6. otherwise create or update the target candidate-layer `shared_contract`
+7. if Step 6 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
+8. if no consumer module formally binds the shared truth yet:
    - keep `bound_modules=none`
    - record expected future consumers only as planning text in the shared file body
-8. if the same truth still remains duplicated as formal module truth elsewhere, stop and report that boundary closure is incomplete
-9. after any write to `docs/specs/shared_contracts/**`, execute `shared_sync` before claiming closure, even when the affected-module set is currently empty
+9. if the same truth still remains duplicated as formal module truth elsewhere, stop and report that boundary closure is incomplete
+10. after any write to `docs/specs/shared_contracts/**`, execute `shared_sync` before claiming closure, even when the affected-module set is currently empty
 
 ---
 
@@ -80,8 +86,9 @@ Stop when one of the following is true:
 1. the target candidate-layer `shared_contract` has been written and required reconciliation through `shared_sync` is complete
 2. the request is not really independent shared authoring or next-round opening and must be re-routed to another shared flow
 3. duplicate formal truth remains in module-local files and boundary closure has not been completed
-4. the request is really a pure module retarget or shared impact-check request and must be re-routed to another shared flow
-5. the request has crossed into `system_constraints_change_proposal` and must stop at a `shared_ops` checkpoint instead of continuing here
+4. current repository truth is insufficient to rule out duplicate formal truth or alternate formal landing points, so control has returned to `shared_escape` through `shared_ops`
+5. the request is really a pure module retarget or shared impact-check request and must be re-routed to another shared flow
+6. the request has crossed into `system_constraints_change_proposal` and must stop at a `shared_ops` checkpoint instead of continuing here
 
 ---
 
@@ -93,10 +100,11 @@ The output must include at least:
 2. the target shared-contract file written or updated
 3. the written `shared_version` and why it is correct for the current round
 4. whether the round created the first candidate-layer file for an already-existing stable-layer shared object
-5. whether any named modules already bind that truth formally
-6. whether duplicate module-local formal truth was found
-7. the `shared_sync` result, including whether any modules were affected
-8. the git close-out result when governance files or commit-triggering files were changed
+5. the repository-wide duplicate-truth review set used for the decision
+6. whether any named modules already bind that truth formally
+7. whether duplicate module-local formal truth was found, or whether the flow had to return to `shared_escape` because that judgment could not be stabilized safely
+8. the `shared_sync` result, including whether any modules were affected
+9. the git close-out result when governance files or commit-triggering files were changed
 
 ---
 
