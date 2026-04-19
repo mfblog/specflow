@@ -77,12 +77,13 @@ If the request names modules that do not yet have current-layer Spec files and t
    - derive that set from module `shared_contract_refs` rather than from `bound_modules`
    - include modules that currently bind the stable-layer sibling and modules that already bind its current candidate-layer sibling when that sibling exists
    - if current repository truth is insufficient to derive that affected-module set safely, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
-   - if that affected-module set is empty, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing a lifecycle owner with no current formal consumer set
+   - if that affected-module set is empty, continue only when current repository truth explicitly shows that the already-stable shared object is intentionally kept as independently authored shared truth with no current formal bindings; otherwise stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing a lifecycle owner with no current formal consumer set
 6. if the request is to continue evolving an already-independent shared object that currently has only a stable-layer file, create or update the sibling candidate-layer `shared_contract` for the same `shared_contract_id`, set its `shared_version` to the intended next stable version according to Shared Contract semantic version rules, and write exactly one `promotion_owner_module` into that candidate-layer shared file:
-   - the owner must be one formal module from the repository-wide affected-module set resolved in Step 5
+   - when the repository-wide affected-module set from Step 5 is not empty, the owner must be one formal module from that set
+   - when Step 5 confirmed that the already-stable shared object is intentionally kept with no current formal bindings, the owner must be one formal module explicitly required by the current round as the future adopter of that next-round draft
    - that owner is the module round that must later bind or retarget legally to this candidate-layer shared file before it may land as the next stable-layer Shared Contract file
    - the owner module may still remain formally bound to the current stable-layer shared sibling until a later legal module candidate round rewrites its `shared_contract_refs`
-   - if current repository truth is insufficient to name one stable promotion owner module, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+   - if current repository truth is insufficient to justify the no-current-binding continuation or to name one stable promotion owner module, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
 7. otherwise create or update the target candidate-layer `shared_contract`
 8. if Step 7 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
 9. if the target candidate-layer shared file has a stable-layer sibling after Steps 6 to 8, validate that the resulting candidate-layer file still carries exactly one valid `promotion_owner_module`:
@@ -124,7 +125,7 @@ The output must include at least:
 7. whether duplicate module-local formal truth was found, or whether the flow had to return to `shared_escape` because that judgment could not be stabilized safely
 8. the `shared_sync` result, including whether any modules were affected
 9. when the resulting candidate-layer shared file has a stable-layer sibling, the repository-wide affected-module set used for owner selection
-10. when the resulting candidate-layer shared file has a stable-layer sibling, the written or validated `promotion_owner_module` and whether that owner still needs a later module-side binding retarget before promotion
+10. when the resulting candidate-layer shared file has a stable-layer sibling, the written or validated `promotion_owner_module`, whether it came from the current affected-module set or an explicit intentionally-unbound continuation owner, and whether that owner still needs a later module-side binding retarget before promotion
 11. the git close-out result when governance files or commit-triggering files were changed
 
 ---
