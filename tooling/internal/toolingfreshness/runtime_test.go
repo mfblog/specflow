@@ -22,6 +22,9 @@ func TestCheckProcessFailsClosedWhenBuildFingerprintIsMissing(t *testing.T) {
 	if !strings.Contains(err.Error(), "missing embedded build fingerprint") {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	if !strings.Contains(err.Error(), "cd ") || !strings.Contains(err.Error(), "go run ./cmd/specflowctl build-release") {
+		t.Fatalf("error should include executable build-release recovery command, got: %v", err)
+	}
 }
 
 func TestCheckProcessStillBypassesDoctorWhenBuildFingerprintIsMissing(t *testing.T) {
