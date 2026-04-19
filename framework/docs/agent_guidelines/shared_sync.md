@@ -53,11 +53,12 @@ Before execution:
 8. read each affected module's current-layer main file according to `_status.md`
 9. if the task may modify `_status.md`, process files, or other commit-triggering governance files, read the Git closure rules first
 10. if the current task changed which layer now carries a directly affected module's formal binding source, `_status.md` must already be updated before this flow builds the current-layer module set
-11. if this flow was entered from a still-closing `cand_promote` round, the caller must pass one execution-local input field:
-   - `current_promotion_owner_module=<formal_module_name>`
-   - use the promoted module's formal name
+11. if this flow was entered from a still-closing stable-landing round whose same-round stable writeback must not invalidate its own landing, the caller must pass one execution-local input field:
+   - `current_stable_landing_module=<formal_module_name>`
+   - use the formal module name whose current stable truth and current stable Shared Contract binding were written in that same round
+   - this includes at minimum `spec_init` and `cand_promote`
    - do not infer or invent this field from changed files alone
-   - if the field is absent, apply no promotion-owner exception
+   - if the field is absent, apply no stable-landing exception
 12. if the current task changed one or more Shared Contract files only in `bound_modules`, the caller must pass one execution-local input field:
    - `bound_modules_only_shared_file_refs=<comma-separated-file-refs>`
    - use exact repository paths under `docs/specs/shared_contracts/**`
@@ -97,7 +98,7 @@ Before execution:
    - for `candidate` modules, rebuild the snapshot from the exact currently bound Shared Contract files; treat the binding as invalid if any existing process file's `shared_contract_snapshot` differs from that rebuilt snapshot, except when every differing bound Shared Contract file is explicitly listed in `bound_modules_only_shared_file_refs`
    - for `stable` modules, judge only against bound stable-layer Shared Contract files resolved through the binding contract; treat the binding as invalid if the resolved stable binding target changed in layer, file, or version, or if the current task changed that bound stable file in any way other than an explicit `bound_modules_only_shared_file_refs` declaration for that file
    - do not infer a `bound_modules`-only delta from Shared Contract fingerprint difference alone
-   - exception for the current promotion owner: if `current_promotion_owner_module` is present, the affected module equals that formal module name, and the changed stable Shared Contract file or stable binding is exactly the post-promotion target written by that same round, do not treat that promoted module as invalid on that basis alone
+   - exception for the current stable landing: if `current_stable_landing_module` is present, the affected module equals that formal module name, and the changed stable Shared Contract file or stable binding is exactly the same-round target written by that stable-landing round, do not treat that just-landed module as invalid on that basis alone
 6. for invalid `candidate` modules:
    - delete `_check_result/{module}.md`
    - delete `_plans/{module}.md`
@@ -113,7 +114,7 @@ Before execution:
    - name the command or change owner that must fix it
    - do not invalidate modules on a `bound_modules`-only delta
 9. if `_status.md` points to a step later than the real smallest actionable step, correct it
-   - the deterministic reconciliation work in Steps 4, 6, 7, 8, and 9 may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--promotion-owner-module module_a] [--bound-modules-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_x.md,docs/specs/shared_contracts/candidate/c_shared_y.md]`
+   - the deterministic reconciliation work in Steps 4, 6, 7, 8, and 9 may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--stable-landing-module module_a] [--bound-modules-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_x.md,docs/specs/shared_contracts/candidate/c_shared_y.md]`
 10. finish git close-out if required by policy
 
 ---
@@ -139,8 +140,8 @@ The output must include at least:
 5. the list of deleted process files
 6. any mismatch between `bound_modules` and the real binding set
 7. the standardized `fallback_reason_code` for each affected module
-8. any module kept valid under the current-round `cand_promote` owner exception
-9. the received `current_promotion_owner_module` value when that execution-local input was present
+8. any module kept valid under the current-round stable-landing exception
+9. the received `current_stable_landing_module` value when that execution-local input was present
 10. the received `bound_modules_only_shared_file_refs` value when that execution-local input was present
 11. when repository truth was insufficient to continue safely, that `shared_sync` returned control to `shared_escape` and did not issue an independent local checkpoint
 12. the git close-out result

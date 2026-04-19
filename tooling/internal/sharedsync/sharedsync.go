@@ -16,7 +16,7 @@ type Options struct {
 	Modules                        []string
 	SharedRefs                     []string
 	SharedIDs                      []string
-	PromotionOwnerModule           string
+	StableLandingModule            string
 	BoundModulesOnlySharedFileRefs []string
 }
 
@@ -24,7 +24,7 @@ type Result struct {
 	ScopedModules                  []string
 	ScopedSharedRefs               []string
 	ScopedSharedIDs                []string
-	PromotionOwnerModule           string
+	StableLandingModule            string
 	BoundModulesOnlySharedFileRefs []string
 	ModuleResults                  []ModuleResult
 	BoundModuleDrifts              []BoundModuleDrift
@@ -84,7 +84,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		Modules:                        normalizeStrings(options.Modules),
 		SharedRefs:                     normalizeStrings(options.SharedRefs),
 		SharedIDs:                      normalizeStrings(options.SharedIDs),
-		PromotionOwnerModule:           strings.TrimSpace(options.PromotionOwnerModule),
+		StableLandingModule:            strings.TrimSpace(options.StableLandingModule),
 		BoundModulesOnlySharedFileRefs: normalizeStrings(options.BoundModulesOnlySharedFileRefs),
 	}
 
@@ -116,9 +116,9 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 			return Result{}, fmt.Errorf("module %q is not registered in docs/specs/_status.md", module)
 		}
 	}
-	if normalized.PromotionOwnerModule != "" {
-		if _, ok := moduleBindings[normalized.PromotionOwnerModule]; !ok {
-			return Result{}, fmt.Errorf("promotion owner module %q is not registered in docs/specs/_status.md", normalized.PromotionOwnerModule)
+	if normalized.StableLandingModule != "" {
+		if _, ok := moduleBindings[normalized.StableLandingModule]; !ok {
+			return Result{}, fmt.Errorf("stable landing module %q is not registered in docs/specs/_status.md", normalized.StableLandingModule)
 		}
 	}
 
@@ -151,7 +151,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		ScopedModules:                  scopeModules,
 		ScopedSharedRefs:               normalized.SharedRefs,
 		ScopedSharedIDs:                normalized.SharedIDs,
-		PromotionOwnerModule:           normalized.PromotionOwnerModule,
+		StableLandingModule:            normalized.StableLandingModule,
 		BoundModulesOnlySharedFileRefs: normalized.BoundModulesOnlySharedFileRefs,
 		ModuleResults:                  results,
 		BoundModuleDrifts:              drifts,
@@ -253,7 +253,7 @@ func reconcileModule(repoRoot string, binding moduleBinding, options Options, sh
 	case "candidate":
 		return reconcileCandidate(repoRoot, binding, result, relevantSelectedRefs, moduleExplicit, bindingIssue, sharedFilesByRef, boundModulesOnlyFileRefs)
 	case "stable":
-		return reconcileStable(repoRoot, binding, result, relevantSelectedRefs, moduleExplicit, bindingIssue, sharedFilesByRef, boundModulesOnlyFileRefs, options.PromotionOwnerModule)
+		return reconcileStable(repoRoot, binding, result, relevantSelectedRefs, moduleExplicit, bindingIssue, sharedFilesByRef, boundModulesOnlyFileRefs, options.StableLandingModule)
 	default:
 		return ModuleResult{}, fmt.Errorf("unsupported active layer %q for module %s", binding.Status.ActiveLayer, binding.Status.Module)
 	}
@@ -339,16 +339,18 @@ func reconcileCandidate(repoRoot string, binding moduleBinding, result ModuleRes
 	return applyCandidateFallback(repoRoot, result, fallbackReason)
 }
 
-func reconcileStable(repoRoot string, binding moduleBinding, result ModuleResult, relevantSelectedRefs []string, moduleExplicit, bindingIssue bool, sharedFilesByRef map[string]sharedFile, boundModulesOnlyFileRefs map[string]bool, promotionOwnerModule string) (ModuleResult, error) {
+func reconcileStable(repoRoot string, binding moduleBinding, result ModuleResult, relevantSelectedRefs []string, moduleExplicit, bindingIssue bool, sharedFilesByRef map[string]sharedFile, boundModulesOnlyFileRefs map[string]bool, stableLandingModule string) (ModuleResult, error) {
 	fallbackReason := ""
-	isPromotionOwner := promotionOwnerModule != "" && binding.Status.Module == promotionOwnerModule
+	isStableLandingModule := stableLandingModule != "" && binding.Status.Module == stableLandingModule
 	switch {
 	case bindingIssue:
 		fallbackReason = "binding_drift"
-	case moduleExplicit && !isPromotionOwner:
+	case moduleExplicit && len(relevantSelectedRefs) == 0 && !isStableLandingModule:
 		fallbackReason = "binding_drift"
-	case len(relevantSelectedRefs) > 0 && !isPromotionOwner && hasNonBoundModulesSelectedChange(relevantSelectedRefs, sharedFilesByRef, boundModulesOnlyFileRefs):
+	case len(relevantSelectedRefs) > 0 && !isStableLandingModule && hasNonBoundModulesSelectedChange(relevantSelectedRefs, sharedFilesByRef, boundModulesOnlyFileRefs):
 		fallbackReason = "shared_contract_drift"
+	case moduleExplicit && len(relevantSelectedRefs) == 0:
+		result.Diagnostics = append(result.Diagnostics, "explicit module scope alone does not prove stable drift")
 	}
 
 	if fallbackReason == "" {
@@ -836,34 +838,78 @@ func parseSharedContractRefs(body string) ([]string, bool, error) {
 	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 	for idx, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if !strings.Contains(trimmed, "`shared_contract_refs`") {
+		right, matched, err := parseNamedFieldLine(trimmed, "shared_contract_refs")
+		if err != nil {
+			return nil, false, err
+		}
+		if !matched {
 			continue
 		}
-		parts := strings.SplitN(trimmed, ":", 2)
-		if len(parts) != 2 {
-			return nil, false, fmt.Errorf("shared_contract_refs line is malformed")
-		}
-		right := strings.TrimSpace(parts[1])
 		if right == "`none`" || right == "none" {
 			return nil, true, nil
 		}
+		if right != "" {
+			return nil, false, fmt.Errorf("shared_contract_refs must use literal none or a markdown list")
+		}
 		refs := []string{}
+		seen := map[string]bool{}
 		for next := idx + 1; next < len(lines); next++ {
 			nextTrimmed := strings.TrimSpace(lines[next])
+			if nextTrimmed == "" {
+				continue
+			}
 			if strings.HasPrefix(nextTrimmed, "## ") || isNumberedListLine(nextTrimmed) {
 				break
 			}
-			if strings.HasPrefix(nextTrimmed, "- ") {
-				ref := strings.TrimSpace(strings.TrimPrefix(nextTrimmed, "- "))
-				ref = strings.Trim(ref, "`")
-				if ref != "" {
-					refs = append(refs, ref)
-				}
+			if !strings.HasPrefix(nextTrimmed, "- ") {
+				return nil, false, fmt.Errorf("shared_contract_refs must be a markdown list of shared refs")
 			}
+			ref := strings.TrimSpace(strings.TrimPrefix(nextTrimmed, "- "))
+			ref = strings.Trim(ref, "`")
+			if ref == "" {
+				return nil, false, fmt.Errorf("shared_contract_refs contains an empty item")
+			}
+			if seen[ref] {
+				return nil, false, fmt.Errorf("shared_contract_refs contains duplicate item %q", ref)
+			}
+			seen[ref] = true
+			refs = append(refs, ref)
+		}
+		if len(refs) == 0 {
+			return nil, false, fmt.Errorf("shared_contract_refs must not be an empty list")
 		}
 		return refs, true, nil
 	}
 	return nil, false, nil
+}
+
+func parseNamedFieldLine(trimmed, fieldName string) (string, bool, error) {
+	parts := strings.SplitN(trimmed, ":", 2)
+	if len(parts) != 2 {
+		return "", false, nil
+	}
+	left := normalizeFieldKey(strings.TrimSpace(parts[0]))
+	if left != fieldName {
+		return "", false, nil
+	}
+	return strings.TrimSpace(parts[1]), true, nil
+}
+
+func normalizeFieldKey(value string) string {
+	value = strings.ReplaceAll(strings.TrimSpace(value), "`", "")
+	if idx := strings.Index(value, ". "); idx > 0 {
+		allDigits := true
+		for _, ch := range value[:idx] {
+			if ch < '0' || ch > '9' {
+				allDigits = false
+				break
+			}
+		}
+		if allDigits {
+			value = value[idx+2:]
+		}
+	}
+	return strings.TrimSpace(value)
 }
 
 func isNumberedListLine(line string) bool {

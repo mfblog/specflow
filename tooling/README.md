@@ -151,10 +151,10 @@ Each command below is present because it satisfies the tooling necessity contrac
     - fixed output: deleted process files for the closed round
     - not responsible for: deciding whether promotion or fork semantics are correct
 14. `shared sync-impact`
-    - necessary because comparing shared truth, bindings, and process snapshots is deterministic after the relevant scope is fixed
-    - fixed input: scoped modules, scoped shared refs or ids, current bindings, current shared truth, execution-local `promotion_owner_module`, and execution-local `bound_modules_only_shared_file_refs`
-    - fixed output: candidate invalidation, stable reroute, or metadata-drift reporting according to the existing shared-governance rules
-    - not responsible for: deciding shared boundary semantics or inferring caller-only facts that must be provided explicitly
+   - necessary because comparing shared truth, bindings, and process snapshots is deterministic after the relevant scope is fixed
+   - fixed input: scoped modules, scoped shared refs or ids, current bindings, current shared truth, execution-local `stable_landing_module`, and execution-local `bound_modules_only_shared_file_refs`
+   - fixed output: candidate invalidation, stable reroute, or metadata-drift reporting according to the existing shared-governance rules
+   - not responsible for: deciding shared boundary semantics or inferring caller-only facts that must be provided explicitly
 15. `shared reconcile-bound-modules`
     - necessary because reconciling `bound_modules` metadata from current module-side bindings is deterministic once the scope is fixed
     - fixed input: scoped modules, scoped shared refs or ids, and current module-side `shared_contract_refs`

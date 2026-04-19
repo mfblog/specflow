@@ -392,7 +392,7 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 		modules := fs.String("modules", "", "comma-separated formal modules")
 		sharedRefs := fs.String("shared-refs", "", "comma-separated shared version refs")
 		sharedIDs := fs.String("shared-ids", "", "comma-separated shared contract ids")
-		promotionOwnerModule := fs.String("promotion-owner-module", "", "formal promotion-owner module")
+		stableLandingModule := fs.String("stable-landing-module", "", "formal module whose same-round stable landing should not invalidate itself")
 		boundModulesOnlySharedFileRefs := fs.String("bound-modules-only-shared-file-refs", "", "comma-separated shared file refs proven to be bound_modules-only deltas")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
@@ -402,7 +402,7 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 			Modules:                        parseCSV(*modules),
 			SharedRefs:                     parseCSV(*sharedRefs),
 			SharedIDs:                      parseCSV(*sharedIDs),
-			PromotionOwnerModule:           strings.TrimSpace(*promotionOwnerModule),
+			StableLandingModule:            strings.TrimSpace(*stableLandingModule),
 			BoundModulesOnlySharedFileRefs: parseCSV(*boundModulesOnlySharedFileRefs),
 		})
 		if err != nil {
@@ -412,7 +412,7 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 		writeList(stdout, "Scoped modules", result.ScopedModules)
 		writeList(stdout, "Scoped shared refs", result.ScopedSharedRefs)
 		writeList(stdout, "Scoped shared ids", result.ScopedSharedIDs)
-		fmt.Fprintf(stdout, "Promotion owner module: %s\n", noneIfEmpty(result.PromotionOwnerModule))
+		fmt.Fprintf(stdout, "Stable landing module: %s\n", noneIfEmpty(result.StableLandingModule))
 		writeList(stdout, "Bound-modules-only shared file refs", result.BoundModulesOnlySharedFileRefs)
 		fmt.Fprintf(stdout, "Module results (%d):\n", len(result.ModuleResults))
 		if len(result.ModuleResults) == 0 {
@@ -642,7 +642,7 @@ func writeProcessUsage(w io.Writer) {
 
 func writeSharedUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl shared sync-impact [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--promotion-owner-module module_a] [--bound-modules-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_x.md] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl shared sync-impact [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--stable-landing-module module_a] [--bound-modules-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_x.md] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl shared reconcile-bound-modules [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--repo-root PATH]")
 }
 

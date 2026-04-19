@@ -205,8 +205,9 @@ Shared reading, invalidation, and cleanup rules:
 11. if a command or governance flow has explicit execution-local proof that the only current-round delta of a bound Shared Contract file is `bound_modules`, do not invalidate candidate-side process files on that basis alone; report governance drift instead
 12. do not infer a `bound_modules`-only delta from Shared Contract fingerprint change alone
 13. if a stable Shared Contract changes, any previously established claim that a module still aligns with `stable` must be re-read and re-judged
-14. the exception to Rule 13 is a still-closing `cand_promote` round for the same module:
-   - when that same promotion round wrote the module's new stable truth together with the module's current stable Shared Contract binding, treat that module's stable landing as owned by `cand_promote` rather than as a stale prior alignment claim for `shared_sync` invalidation
+14. the exception to Rule 13 is a still-closing stable-landing round for the same module:
+   - when that same round wrote the module's current stable truth together with the module's current stable Shared Contract binding, treat that landing as owned by the active stable-landing command rather than as a stale prior alignment claim for `shared_sync` invalidation
+   - this exception exists at minimum for `spec_init` and `cand_promote`
 15. if a promotion round writes or updates a stable-layer Shared Contract file from a candidate-layer Shared Contract file and still leaves a candidate-layer file for the same `shared_contract_id` in place after that landing, that same round must rewrite the remaining candidate-layer file as an explicit next-round draft:
    - it must carry the intended next stable `shared_version` after the just-landed stable file
    - it must carry exactly one next `promotion_owner_module`
