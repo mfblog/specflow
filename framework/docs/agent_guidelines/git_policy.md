@@ -144,6 +144,6 @@ If the task changes current-binary tooling inputs under:
 
 and the repository tracks compiled tooling binaries under `specflow/tooling/bin/`:
 
-1. run `go run ./specflow/tooling/cmd/specflowctl build-release --repo-root .` in the current task
+1. from the repository root, run `cd specflow/tooling` and then `go run ./cmd/specflowctl build-release --repo-root ../..` in the current task
 2. include the refreshed tracked binaries in the same checkpoint or commit rather than leaving source/binary drift in the worktree
 3. do not treat binary presence alone as proof that the binaries are current; the required state is that the binaries were rebuilt from the current tooling input set

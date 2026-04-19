@@ -16,7 +16,8 @@ Compiled binaries are placed under:
 To rebuild those binaries from source, run from the repository root:
 
 ```bash
-go run ./specflow/tooling/cmd/specflowctl build-release --repo-root .
+cd specflow/tooling
+go run ./cmd/specflowctl build-release --repo-root ../..
 ```
 
 ## Usage
@@ -167,7 +168,8 @@ When the tooling source changed but the current binary was not rebuilt yet, ordi
 The normal recovery path is:
 
 ```bash
-go run ./specflow/tooling/cmd/specflowctl build-release --repo-root .
+cd specflow/tooling
+go run ./cmd/specflowctl build-release --repo-root ../..
 ```
 
 `doctor` is also allowed to run in that stale state so it can report the binary mismatch explicitly.

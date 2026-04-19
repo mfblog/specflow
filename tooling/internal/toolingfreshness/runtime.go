@@ -36,8 +36,8 @@ func CheckProcess(args []string, cwd string) error {
 	}
 	if strings.TrimSpace(BuildFingerprint) == "" {
 		return fmt.Errorf(
-			"specflow binary missing embedded build fingerprint; run `go run ./specflow/tooling/cmd/specflowctl build-release --repo-root %s`",
-			repoRoot,
+			"specflow binary missing embedded build fingerprint; run `%s`",
+			buildReleaseRecoveryCommand(repoRoot),
 		)
 	}
 
@@ -50,9 +50,17 @@ func CheckProcess(args []string, cwd string) error {
 	}
 
 	return fmt.Errorf(
-		"stale specflow binary: built_fingerprint=%s live_fingerprint=%s; run `go run ./specflow/tooling/cmd/specflowctl build-release --repo-root %s`",
+		"stale specflow binary: built_fingerprint=%s live_fingerprint=%s; run `%s`",
 		shortFingerprint(report.EmbeddedFingerprint),
 		shortFingerprint(report.LiveFingerprint),
+		buildReleaseRecoveryCommand(repoRoot),
+	)
+}
+
+func buildReleaseRecoveryCommand(repoRoot string) string {
+	return fmt.Sprintf(
+		"cd %q && go run ./cmd/specflowctl build-release --repo-root %q",
+		filepath.Join(repoRoot, "specflow", "tooling"),
 		repoRoot,
 	)
 }
