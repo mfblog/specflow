@@ -50,10 +50,15 @@ Before execution:
 5. read the target module current-layer main Spec
 6. read the target `shared_contract`
 7. if the target module current-layer main Spec already binds another Shared Contract file and this round may retarget that binding, also read that currently bound Shared Contract file
-8. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
-9. if the target module is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/spec_fork.md`
-10. read `specflow/framework/docs/agent_guidelines/git_policy.md` when the round may change module `shared_contract_refs`, update `bound_modules`, delete a touched Shared Contract file, or otherwise mutate commit-triggering governance files
-11. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
+8. if the round may update `bound_modules` or resolve the terminal state of a touched Shared Contract file, resolve the repository-wide real binding set of each touched Shared Contract from current repository truth before writeback:
+   - start from the formal module set recorded in `_status.md`
+   - include the target shared file and any previous bound Shared Contract file already identified for retarget review
+   - read every additional current-layer module main file needed to judge which modules currently bind those touched Shared Contract files through `shared_contract_refs`
+   - do not treat the target module alone as sufficient when other modules may already bind the same shared truth
+9. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
+10. if the target module is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/spec_fork.md`
+11. read `specflow/framework/docs/agent_guidelines/git_policy.md` when the round may change module `shared_contract_refs`, update `bound_modules`, delete a touched Shared Contract file, or otherwise mutate commit-triggering governance files
+12. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 
 ---
 
@@ -65,14 +70,17 @@ Before execution:
    - require `spec_fork:{module}` to create the target module candidate first
    - set `required_writeback_target` to that module candidate main file because chat-only agreement does not create a legal binding target
 3. if the module current-layer binding already points to another Shared Contract file and this round is retargeting that binding, record the previous bound Shared Contract file before writeback
-4. update the module candidate-layer `shared_contract_refs` using the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
-5. update module candidate body text so the relevant behavior chain explains which behavior consumes the shared truth
-6. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
-7. if Step 3 recorded a previous bound Shared Contract file and it is different from the new target file, update that previous shared file's `bound_modules` to remove the module from the old declarative binding set
-8. for every touched shared file that still has one or more formal bound modules after Steps 6 and 7, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-9. reject closure if the change is only a `shared_contract_refs` edit with no body-level consumption explanation
-10. after any change to module `shared_contract_refs` or to any shared file metadata touched in Steps 6, 7, and 8, execute `shared_sync` before claiming closure
-11. if Step 3 recorded a previous bound Shared Contract file and `shared_sync` shows that no module still binds it after this round:
+4. resolve the repository-wide real binding set of the target shared file and any previous bound Shared Contract file from current repository truth before shared metadata writeback:
+   - derive that set from current-layer module `shared_contract_refs` rather than from `bound_modules`
+   - if current repository truth is insufficient to determine those touched real binding sets safely, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+5. update the module candidate-layer `shared_contract_refs` using the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
+6. update module candidate body text so the relevant behavior chain explains which behavior consumes the shared truth
+7. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by the repository-wide module-side `shared_contract_refs` plus this round's prepared target-module writeback
+8. if Step 3 recorded a previous bound Shared Contract file and it is different from the new target file, update that previous shared file's `bound_modules` only after reconciling it against the same repository-wide binding view plus this round's prepared target-module writeback
+9. for every touched shared file that still has one or more formal bound modules after Steps 7 and 8, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
+10. reject closure if the change is only a `shared_contract_refs` edit with no body-level consumption explanation
+11. after any change to module `shared_contract_refs` or to any shared file metadata touched in Steps 7, 8, and 9, execute `shared_sync` before claiming closure
+12. if Step 3 recorded a previous bound Shared Contract file and `shared_sync` shows that no module still binds it after this round:
    - if the current round can safely prove that the previous file has been replaced by the new target and cleanup is legal under `spec_policy.md`, delete that now-unbound previous shared file in the same round
    - otherwise, stop and return control to `shared_escape` through `shared_ops` so shared governance can decide whether stable decomposition exists or whether follow-up must route to `shared_topology`, checkpoint, or another legal next step
    - after a deletion in this step, rerun `shared_sync` before claiming closure
@@ -101,11 +109,12 @@ The output must include at least:
 3. whether the target module was already at `candidate` or first had to stop for `spec_fork:{module}`
 4. the binding writeback result in the module candidate-layer Spec, or the checkpoint result when candidate writeback could not start yet
 5. the body-level consumption explanation added or updated
-6. the target shared file `bound_modules` reconciliation result
-7. when the round retargeted the module away from a previous shared file, the previous shared file `bound_modules` reconciliation result
-8. when the round retargeted the module away from a previous shared file, the previous shared file terminal-state result, including any return-to-`shared_escape` result when direct cleanup was not yet safe
-9. the `shared_sync` result, including affected modules and fallback if any
-10. the git close-out result when governance files or commit-triggering files were changed
+6. the repository-wide binding-set review result used for the target shared file and any previous shared file touched by retargeting
+7. the target shared file `bound_modules` reconciliation result
+8. when the round retargeted the module away from a previous shared file, the previous shared file `bound_modules` reconciliation result
+9. when the round retargeted the module away from a previous shared file, the previous shared file terminal-state result, including any return-to-`shared_escape` result when direct cleanup was not yet safe
+10. the `shared_sync` result, including affected modules and fallback if any
+11. the git close-out result when governance files or commit-triggering files were changed
 
 ---
 

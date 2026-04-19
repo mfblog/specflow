@@ -53,29 +53,34 @@ Before execution:
 4. read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply
 5. read `docs/specs/_status.md`
 6. read each touched `shared_contract` file that may be split, merged, renamed, replaced, retired, or explicitly kept
-7. resolve every affected module's current layer from `_status.md` before reading its main Spec
-8. read every affected module current-layer main file needed to derive the real binding set from `shared_contract_refs`
-9. if any affected module is currently at `stable` and the topology change would require module truth writeback, also read `specflow/framework/docs/agent_guidelines/commands/spec_fork.md`
-10. read `docs/specs/system/stable/s_system_constraints.md` when the topology request may cross into project-wide default-rule promotion
-11. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
+7. build the repository-wide affected-module review set for the touched shared objects from current repository truth before topology planning:
+   - start from the formal module set recorded in `_status.md`
+   - read every additional current-layer module main file needed to judge which modules currently bind each touched shared object through `shared_contract_refs`
+   - do not treat only the user-named modules or currently obvious consumers as sufficient when other modules may still bind the touched shared objects
+8. resolve every affected module's current layer from `_status.md` before reading its main Spec
+9. read every affected module current-layer main file needed to derive the real binding set from `shared_contract_refs`
+10. if any affected module is currently at `stable` and the topology change would require module truth writeback, also read `specflow/framework/docs/agent_guidelines/commands/spec_fork.md`
+11. read `docs/specs/system/stable/s_system_constraints.md` when the topology request may cross into project-wide default-rule promotion
+12. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 
 ---
 
 ## 4. Procedure
 
 1. confirm the request is really about Shared Contract topology change or terminal-state resolution rather than `shared_new`, `shared_extract`, `shared_bind`, or `shared_sync`
-2. identify the touched shared objects and the real affected-module set from module `shared_contract_refs` rather than from `bound_modules`
-3. if any affected module current layer is `stable` and the topology change would require module truth writeback:
+2. resolve the complete repository-wide affected-module set for the touched shared objects from module `shared_contract_refs` rather than from `bound_modules`
+3. if current repository truth is insufficient to derive that complete affected-module set safely, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+4. if any affected module current layer is `stable` and the topology change would require module truth writeback:
    - raise a blocking `shared_ops` checkpoint with `type=prerequisite_action`
    - require `spec_fork:{module}` for each such module before topology writeback continues
    - set `required_writeback_target` to the corresponding module candidate main file set because chat-only agreement does not create legal topology-writeback targets
-4. decide the current-round topology plan explicitly:
+5. decide the current-round topology plan explicitly against that complete affected-module set:
    - which touched shared object identity remains the same
    - which new shared object identities must be created
    - which touched shared files must be deleted in this round
    - which touched shared files will remain intentionally unbound as independently authored shared truth
-5. if the current repository truth is not sufficient to stabilize Step 4, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
-6. create, update, or delete the touched candidate-layer Shared Contract files according to the topology plan:
+6. if the current repository truth is not sufficient to stabilize Step 5, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+7. create, update, or delete the touched candidate-layer Shared Contract files according to the topology plan:
    - if the round creates the first file for a brand-new shared object, initialize `shared_version=0.1.0`
    - if the round opens or rewrites a candidate-layer file for a shared object that already has a stable-layer sibling, set that candidate file's `shared_version` to the intended next stable version according to Shared Contract semantic version rules
    - for each candidate-layer file from the previous bullet, write exactly one `promotion_owner_module` into that file:
@@ -84,19 +89,19 @@ Before execution:
      - the owner module may remain bound to the current stable-layer shared sibling until a later legal module candidate round rewrites its `shared_contract_refs`
      - if current repository truth is insufficient to name one stable owner for such a file, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
    - if the topology plan needs new or changed stable-layer shared semantics, do not write that stable-layer file directly in this flow; write or update the corresponding candidate-layer shared file first, carry the intended next stable `shared_version` there, and let a later legal promotion produce the stable-layer file
-7. rewrite every affected module candidate-side `shared_contract_refs` and body-level consumption explanation required by the topology plan
+8. rewrite every affected module candidate-side `shared_contract_refs` and body-level consumption explanation required by the topology plan
    - any written `shared_contract_refs` must use the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
-8. for each touched shared file that has no formal bound modules after Step 7:
+9. for each touched shared file that has no formal bound modules after Step 8:
    - delete it in the same round when the topology plan treats it as retired and cleanup is legal under `spec_policy.md`
    - otherwise keep it only when the current round writes that same Shared Contract file with the fixed intentional-unbound retention frontmatter from `spec_policy.md`:
      - `unbound_retention: intentional`
      - `unbound_retention_reason: <why this unbound state is intentional now>`
      - `unbound_retention_owner: shared_topology`
    - reject closure if neither deletion nor explicit keep-writeback has happened
-9. for each touched shared file that still has one or more formal bound modules after Step 7, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-10. update `bound_modules` only as declarative metadata so every remaining touched shared file matches the real binding set implied by module-side `shared_contract_refs`
-11. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
-12. if `shared_sync` stops because repository truth is insufficient to continue safely, return control to `shared_escape` through `shared_ops` instead of inventing a flow-local checkpoint
+10. for each touched shared file that still has one or more formal bound modules after Step 8, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
+11. update `bound_modules` only as declarative metadata so every remaining touched shared file matches the real binding set implied by the repository-wide module-side `shared_contract_refs` plus this round's prepared module writeback
+12. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
+13. if `shared_sync` stops because repository truth is insufficient to continue safely, return control to `shared_escape` through `shared_ops` instead of inventing a flow-local checkpoint
 
 ---
 
@@ -119,7 +124,7 @@ Stop when one of the following is true:
 The output must include at least:
 
 1. the recognized topology intent and why it belongs to `shared_topology`
-2. the touched shared objects and the affected modules
+2. the touched shared objects and the repository-wide affected modules
 3. the explicit topology result for this round:
    - which shared objects remain
    - which new shared objects were created
