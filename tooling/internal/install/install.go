@@ -41,17 +41,18 @@ func Init(repoRoot string, force bool) (InitResult, error) {
 		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 			return result, fmt.Errorf("mkdir %s: %w", item.DestinationRelative, err)
 		}
-		if _, err := os.Stat(dest); err == nil && !force {
-			result.Skipped++
-			continue
-		}
-
-		if _, err := os.Stat(dest); err == nil && isManagedEntryFile(item.DestinationRelative) {
-			if err := replaceManagedBlockFile(source, dest); err != nil {
-				return result, fmt.Errorf("install managed block %s: %w", item.DestinationRelative, err)
+		if _, err := os.Stat(dest); err == nil {
+			if isManagedEntryFile(item.DestinationRelative) {
+				if err := syncManagedEntryFile(source, dest); err != nil {
+					return result, fmt.Errorf("install managed block %s: %w", item.DestinationRelative, err)
+				}
+				result.Copied++
+				continue
 			}
-			result.Copied++
-			continue
+			if !force {
+				result.Skipped++
+				continue
+			}
 		}
 
 		if err := copyFile(source, dest); err != nil {
@@ -181,6 +182,48 @@ func replaceManagedBlockFile(source, dest string) error {
 		return err
 	}
 	return os.WriteFile(dest, []byte(updated), 0o644)
+}
+
+func syncManagedEntryFile(source, dest string) error {
+	sourceContent, err := os.ReadFile(source)
+	if err != nil {
+		return err
+	}
+	block, err := managedblock.Extract(string(sourceContent))
+	if err != nil {
+		return err
+	}
+
+	destContent, err := os.ReadFile(dest)
+	if err != nil {
+		return err
+	}
+	destText := string(destContent)
+	hasBegin := strings.Contains(destText, managedblock.BeginMarker)
+	hasEnd := strings.Contains(destText, managedblock.EndMarker)
+
+	switch {
+	case hasBegin && hasEnd:
+		updated, err := managedblock.Replace(destText, block)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(dest, []byte(updated), 0o644)
+	case !hasBegin && !hasEnd:
+		if strings.HasSuffix(destText, "\r\n") {
+			destText = strings.TrimSuffix(destText, "\r\n") + "\n"
+		}
+		if strings.HasSuffix(destText, "\n") {
+			destText = strings.TrimRight(destText, "\n") + "\n\n" + block + "\n"
+		} else if strings.TrimSpace(destText) == "" {
+			destText = block + "\n"
+		} else {
+			destText = destText + "\n\n" + block + "\n"
+		}
+		return os.WriteFile(dest, []byte(destText), 0o644)
+	default:
+		return fmt.Errorf("managed block markers are incomplete in destination file")
+	}
 }
 
 func copyFile(source, dest string) error {

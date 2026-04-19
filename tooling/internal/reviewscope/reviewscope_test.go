@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestCollectDefaultSpecFlowScopeKeepsCollectingWhenRegistryHasDiagnostics(t *testing.T) {
+func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceInputs(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_review.md"), "# review\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/tooling_execution_policy.md"), "# tooling\n")
@@ -47,15 +47,15 @@ func TestCollectDefaultSpecFlowScopeKeepsCollectingWhenRegistryHasDiagnostics(t 
 	if err != nil {
 		t.Fatalf("CollectDefaultSpecFlowScope: %v", err)
 	}
-	if len(scope.ActiveProjectStandardFiles) != 1 || scope.ActiveProjectStandardFiles[0] != "docs/project_standards/prompt_guidelines.md" {
-		t.Fatalf("unexpected active standard files: %+v", scope.ActiveProjectStandardFiles)
+	if len(scope.ActiveProjectStandardFiles) != 0 {
+		t.Fatalf("expected invalid entry to be excluded from active standard files, got %+v", scope.ActiveProjectStandardFiles)
 	}
 	if len(scope.MatchedOverlayFiles) != 0 {
 		t.Fatalf("expected no matched overlay files, got %+v", scope.MatchedOverlayFiles)
 	}
 }
 
-func TestCollectDefaultSpecFlowScopeKeepsCollectingWhenOverlaySelectorIsMalformed(t *testing.T) {
+func TestCollectDefaultSpecFlowScopeExcludesMalformedOverlayEntry(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_review.md"), "# review\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/tooling_execution_policy.md"), "# tooling\n")
@@ -96,8 +96,8 @@ func TestCollectDefaultSpecFlowScopeKeepsCollectingWhenOverlaySelectorIsMalforme
 	if err != nil {
 		t.Fatalf("CollectDefaultSpecFlowScope: %v", err)
 	}
-	if len(scope.ActiveProjectStandardFiles) != 1 || scope.ActiveProjectStandardFiles[0] != "docs/project_standards/prompt_guidelines.md" {
-		t.Fatalf("unexpected active standard files: %+v", scope.ActiveProjectStandardFiles)
+	if len(scope.ActiveProjectStandardFiles) != 0 {
+		t.Fatalf("expected malformed overlay entry to be excluded from active standard files, got %+v", scope.ActiveProjectStandardFiles)
 	}
 	if len(scope.MatchedOverlayFiles) != 0 {
 		t.Fatalf("expected no matched overlay files, got %+v", scope.MatchedOverlayFiles)

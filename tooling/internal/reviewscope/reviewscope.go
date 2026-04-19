@@ -99,10 +99,10 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		return scope, err
 	}
 
-	activeStandardFiles := make([]string, 0, len(validation.Entries))
+	activeStandardFiles := make([]string, 0, len(validation.ValidEntries))
 	overlayFiles := []string{}
 	overlaySet := map[string]bool{}
-	for _, entry := range validation.Entries {
+	for _, entry := range validation.ValidEntries {
 		if strings.TrimSpace(entry.File) != "" {
 			activeStandardFiles = append(activeStandardFiles, entry.File)
 		}

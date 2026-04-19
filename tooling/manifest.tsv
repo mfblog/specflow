@@ -3,6 +3,7 @@ templates/root/GEMINI.md	GEMINI.md	framework
 templates/root/CLAUDE.md	CLAUDE.md	framework
 templates/root/.githooks/pre-commit	.githooks/pre-commit	framework
 templates/root/docs/chart_syntax_compatibility.md	docs/chart_syntax_compatibility.md	project
+templates/root/docs/project_standards/_registry.md	docs/project_standards/_registry.md	project
 templates/root/docs/specs/_check_result/README.md	docs/specs/_check_result/README.md	framework
 templates/root/docs/specs/_plans/README.md	docs/specs/_plans/README.md	framework
 templates/root/docs/specs/_verify_result/README.md	docs/specs/_verify_result/README.md	framework

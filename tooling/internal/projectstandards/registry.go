@@ -27,6 +27,7 @@ type RegistryEntry struct {
 
 type ValidationResult struct {
 	Entries      []RegistryEntry
+	ValidEntries []RegistryEntry
 	Diagnostics  []string
 	RegistryPath string
 }
@@ -116,70 +117,100 @@ func ValidateRegistry(repoRoot string) (ValidationResult, error) {
 		moduleSet[module] = true
 	}
 
+	idCounts := map[string]int{}
+	for _, entry := range entries {
+		if entry.StandardID != "" {
+			idCounts[entry.StandardID]++
+		}
+	}
+
 	seenIDs := map[string]bool{}
 	for _, entry := range entries {
 		rowPrefix := fmt.Sprintf("%s row %d", relativeRegistryPath, entry.Row)
+		entryValid := true
 		if entry.StandardID == "" {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: standard_id is required", rowPrefix))
+			entryValid = false
+		} else if idCounts[entry.StandardID] > 1 {
+			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: duplicate standard_id %q", rowPrefix, entry.StandardID))
+			entryValid = false
 		} else if seenIDs[entry.StandardID] {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: duplicate standard_id %q", rowPrefix, entry.StandardID))
+			entryValid = false
 		} else {
 			seenIDs[entry.StandardID] = true
 		}
 
 		if !supportedTypes[entry.Type] {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unsupported type %q", rowPrefix, entry.Type))
+			entryValid = false
 		}
 		if entry.File == "" || !strings.HasPrefix(entry.File, "docs/project_standards/") {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: file must stay under docs/project_standards/", rowPrefix))
+			entryValid = false
 		} else if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(entry.File))); err != nil {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: file %q does not exist", rowPrefix, entry.File))
+			entryValid = false
 		}
 		if entry.ConsumedBy == "" || entry.ConsumedBy == "all" {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: consumed_by must name one supported command or internal flow", rowPrefix))
+			entryValid = false
 		}
 		if entry.ConflictRule != "framework_wins" {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: conflict_rule must be framework_wins", rowPrefix))
+			entryValid = false
 		}
 
 		selector, selectorErr := ParseAppliesTo(entry.AppliesTo)
 		if selectorErr != nil {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: %v", rowPrefix, selectorErr))
+			entryValid = false
 		}
 
 		contract, ok := lookupContract(entry.ConsumedBy, entry.Surface)
 		if !ok {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unsupported consumed_by/surface pair %q/%q", rowPrefix, entry.ConsumedBy, entry.Surface))
+			entryValid = false
 			continue
 		}
 		if entry.Type != contract.StandardType {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: surface %q for %q only accepts %q", rowPrefix, entry.Surface, entry.ConsumedBy, contract.StandardType))
+			entryValid = false
 		}
 		if !contract.AllowedEffects[entry.Effect] {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: effect %q is not allowed on %q/%q", rowPrefix, entry.Effect, entry.ConsumedBy, entry.Surface))
+			entryValid = false
 		}
 		if selectorErr != nil {
 			continue
 		}
 		if !contract.AllowedKinds[selector.Kind] {
 			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: applies_to kind %q is not allowed on %q/%q", rowPrefix, selector.Kind, entry.ConsumedBy, entry.Surface))
+			entryValid = false
 			continue
 		}
 		switch selector.Kind {
 		case "module":
 			if !moduleSet[selector.Values[0]] {
 				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unknown formal module %q", rowPrefix, selector.Values[0]))
+				entryValid = false
 			}
 		case "module_set":
 			for _, module := range selector.Values {
 				if !moduleSet[module] {
 					result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unknown formal module %q in module_set", rowPrefix, module))
+					entryValid = false
 				}
 			}
 		case "review_scenario":
 			if !contract.AllowedScenarios[selector.Values[0]] {
 				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unsupported review scenario %q", rowPrefix, selector.Values[0]))
+				entryValid = false
 			}
+		}
+
+		if entryValid {
+			result.ValidEntries = append(result.ValidEntries, entry)
 		}
 	}
 
@@ -195,7 +226,7 @@ func LoadActiveEntries(repoRoot string) ([]RegistryEntry, error) {
 	if len(result.Diagnostics) > 0 {
 		return nil, fmt.Errorf(strings.Join(result.Diagnostics, "; "))
 	}
-	return result.Entries, nil
+	return result.ValidEntries, nil
 }
 
 func ParseAppliesTo(raw string) (AppliesSelector, error) {

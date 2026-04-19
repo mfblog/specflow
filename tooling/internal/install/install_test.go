@@ -41,10 +41,60 @@ func TestDoctorFailsForStaleBinary(t *testing.T) {
 	}
 }
 
+func TestDoctorFailsWhenProjectStandardsRegistryIsMissing(t *testing.T) {
+	repoRoot := t.TempDir()
+	liveFingerprint := setupDoctorRepo(t, repoRoot)
+	writeFingerprintProbeBinary(t, repoRoot, liveFingerprint)
+	if err := os.Remove(filepath.Join(repoRoot, "docs/project_standards/_registry.md")); err != nil {
+		t.Fatalf("Remove(project registry) failed: %v", err)
+	}
+
+	result, err := Doctor(repoRoot)
+	if err != nil {
+		t.Fatalf("Doctor returned unexpected error: %v", err)
+	}
+
+	joined := strings.Join(result.Failures, "\n")
+	if !strings.Contains(joined, "MISSING docs/project_standards/_registry.md") {
+		t.Fatalf("expected missing project registry failure, got %v", result.Failures)
+	}
+}
+
+func TestInitAppendsManagedBlockToExistingEntryFile(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/root/AGENTS.md\tAGENTS.md\tframework\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "specflow/templates/root/AGENTS.md"), "template host\n<!-- SPECFLOW:BEGIN -->\nmanaged body\n<!-- SPECFLOW:END -->\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "AGENTS.md"), "host content\n")
+
+	result, err := Init(repoRoot, false)
+	if err != nil {
+		t.Fatalf("Init returned error: %v", err)
+	}
+	if result.Copied != 1 || result.Skipped != 0 {
+		t.Fatalf("unexpected init result: %+v", result)
+	}
+
+	content, err := os.ReadFile(filepath.Join(repoRoot, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("ReadFile(AGENTS.md) failed: %v", err)
+	}
+	text := string(content)
+	if !strings.Contains(text, "host content") {
+		t.Fatalf("expected host content to be preserved, got %q", text)
+	}
+	if !strings.Contains(text, "<!-- SPECFLOW:BEGIN -->\nmanaged body\n<!-- SPECFLOW:END -->") {
+		t.Fatalf("expected managed block to be appended, got %q", text)
+	}
+}
+
 func setupDoctorRepo(t *testing.T, repoRoot string) string {
 	t.Helper()
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/root/.githooks/pre-commit\t.githooks/pre-commit\tframework\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), strings.Join([]string{
+		"templates/root/.githooks/pre-commit\t.githooks/pre-commit\tframework",
+		"templates/root/docs/project_standards/_registry.md\tdocs/project_standards/_registry.md\tproject",
+	}, "\n")+"\n")
 	mustWriteFile(t, filepath.Join(repoRoot, ".githooks/pre-commit"), "#!/usr/bin/env bash\nspecflow/tooling/bin/specflowctl-linux-amd64 entry sync --stage\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), "# registry\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module github.com/Bingordinary/SpecFlow/specflow/tooling\n\ngo 1.22.2\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/internal/demo/demo.go"), "package demo\n\nfunc Value() string { return \"demo\" }\n")
