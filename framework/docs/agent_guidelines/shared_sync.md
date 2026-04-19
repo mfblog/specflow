@@ -53,7 +53,11 @@ Before execution:
 8. read each affected module's current-layer main file according to `_status.md`
 9. if the task may modify `_status.md`, process files, or other commit-triggering governance files, read the Git closure rules first
 10. if the current task changed which layer now carries a directly affected module's formal binding source, `_status.md` must already be updated before this flow builds the current-layer module set
-11. if this flow was entered from a still-closing `cand_promote` round, carry that promoted module as the current promotion owner for same-round stable-invalidation judgment
+11. if this flow was entered from a still-closing `cand_promote` round, the caller must pass one execution-local input field:
+   - `current_promotion_owner_module=<formal_module_name>`
+   - use the promoted module's formal name
+   - do not infer or invent this field from changed files alone
+   - if the field is absent, apply no promotion-owner exception
 
 ---
 
@@ -86,7 +90,7 @@ Before execution:
    - treat the binding as invalid if the referenced file is missing, the layer mismatches, the file target mismatches, the version reference mismatches, or the module-to-shared relation changed
    - for `candidate` modules, rebuild the snapshot from the exact currently bound Shared Contract files; treat the binding as invalid if any existing process file's `shared_contract_snapshot` differs from that rebuilt snapshot, except when the delta comes only from `bound_modules`
    - for `stable` modules, judge only against bound stable-layer Shared Contract files resolved through the binding contract; treat the binding as invalid if the resolved stable binding target changed in layer, file, or version, or if the current task changed that bound stable file in any way other than a `bound_modules`-only delta
-   - exception for the current promotion owner: if the affected module is the promoted module carried into this flow from a still-closing `cand_promote` round, and the changed stable Shared Contract file or stable binding is exactly the post-promotion target written by that same round, do not treat that promoted module as invalid on that basis alone
+   - exception for the current promotion owner: if `current_promotion_owner_module` is present, the affected module equals that formal module name, and the changed stable Shared Contract file or stable binding is exactly the post-promotion target written by that same round, do not treat that promoted module as invalid on that basis alone
 6. for invalid `candidate` modules:
    - delete `_check_result/{module}.md`
    - delete `_plans/{module}.md`
@@ -102,7 +106,7 @@ Before execution:
    - name the command or change owner that must fix it
    - do not invalidate modules on a `bound_modules`-only delta
 9. if `_status.md` points to a step later than the real smallest actionable step, correct it
-   - the deterministic reconciliation work in Steps 4, 6, 7, 8, and 9 may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x]`
+   - the deterministic reconciliation work in Steps 4, 6, 7, 8, and 9 may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--promotion-owner-module module_a]`
 10. finish git close-out if required by policy
 
 ---
@@ -129,8 +133,9 @@ The output must include at least:
 6. any mismatch between `bound_modules` and the real binding set
 7. the standardized `fallback_reason_code` for each affected module
 8. any module kept valid under the current-round `cand_promote` owner exception
-9. when repository truth was insufficient to continue safely, that `shared_sync` returned control to `shared_escape` and did not issue an independent local checkpoint
-10. the git close-out result
+9. the received `current_promotion_owner_module` value when that execution-local input was present
+10. when repository truth was insufficient to continue safely, that `shared_sync` returned control to `shared_escape` and did not issue an independent local checkpoint
+11. the git close-out result
 
 Allowed `fallback_reason_code` values:
 

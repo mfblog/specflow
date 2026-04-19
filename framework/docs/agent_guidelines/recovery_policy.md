@@ -125,6 +125,7 @@ Examples:
 1. the command was interrupted after writing the new `stable`
 2. shared-file handling became blocked after some promotion writes already happened
 3. cleanup started but did not finish
+4. post-promotion `shared_sync` returned control because the real shared binding set or affected-module set could not be stabilized safely after promotion writes had already happened
 
 ### 5.3 Recovery Procedure
 
@@ -157,6 +158,11 @@ After incomplete promotion recovery completes, the only safe claim is:
 1. promotion did not complete
 2. repository semantics are restored to the candidate round
 3. the module must restart from `cand_check`
+
+Additional shared-governance rule:
+
+1. if the recovery trigger was post-promotion Shared Contract uncertainty discovered by `shared_sync`, rerun `shared_ops:{natural-language request}` from the restored candidate-layer repository truth before any later promotion retry
+2. that shared-governance follow-up does not change Rule 3; it only makes the required shared-truth repair explicit before the candidate chain is rebuilt
 
 The command must not claim:
 
