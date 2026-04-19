@@ -71,7 +71,11 @@ By default it handles:
    - if it should remain an independent cross-module truth after promotion, promote it into `docs/specs/shared_contracts/stable/`
    - when this round writes or updates a stable-layer Shared Contract file, use the already-decided candidate `shared_version` for that file; do not invent or bump a Shared Contract version during module promotion itself
    - when this round writes or updates a stable-layer Shared Contract file from a candidate-layer Shared Contract file that already had a stable-layer sibling before promotion, require that candidate file's `promotion_owner_module` to equal the promoted module name; otherwise stop before file mutation and reroute through `shared_ops:{natural-language request}`
-   - if another candidate-layer module still needs the candidate-layer Shared Contract for the same `shared_contract_id`, keep that candidate-layer file in place and do not delete it merely because the current module finished promotion
+   - if a candidate-layer Shared Contract file for the same `shared_contract_id` remains in place after this round lands the stable-layer Shared Contract file, rewrite that remaining candidate-layer file in the same round as an explicit next-round draft:
+     - set its `shared_version` to the intended next stable version after the just-landed stable file
+     - write exactly one next `promotion_owner_module`
+     - do not leave it as a candidate-layer duplicate of the just-landed stable truth
+   - if current repository truth is insufficient to define that retained next-round draft or its next `promotion_owner_module` safely, stop before file mutation and reroute through `shared_ops:{natural-language request}`
    - if part of its conclusion has become a project-wide default rule, also absorb that specific conclusion into `s_system_constraints.md`
    - do not absorb a Shared Contract into module `stable` merely because promotion happened
    - do not treat promotion itself as a reason to delete a still-needed Shared Contract
@@ -108,6 +112,7 @@ By default it handles:
 18. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer and Step 15 has written the surviving shared-file metadata, even when no additional affected module is known yet
    - this post-promotion `shared_sync` closes external affected-module fallout and shared-state reconciliation; it must not overturn the promoted module's own successful stable landing merely because the same promotion round also wrote the stable Shared Contract file or stable binding that the promoted module now legally uses
    - pass execution-local `current_promotion_owner_module={module}` into that `shared_sync` run
+   - if any surviving touched shared file changed only in `bound_modules` during this round, also pass execution-local `bound_modules_only_shared_file_refs` with the exact file refs for those files
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --modules {module} --promotion-owner-module {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
    - if that post-promotion `shared_sync` returns control because repository truth is still insufficient to continue safely, do not claim promotion success:
      - immediately run incomplete promotion recovery according to `recovery_policy.md`
@@ -127,6 +132,7 @@ By default it handles:
 4. if verification became invalid, the command stopped and `_status.md` fell back appropriately
 5. if the command entered incomplete-promotion recovery state, candidate semantics were restored and the module can restart from `cand_check`
 6. if post-promotion `shared_sync` could not continue safely, incomplete promotion recovery is complete and the next required action is rerunning `shared_ops` from restored candidate truth before any later candidate-chain restart
+7. if a candidate-layer Shared Contract sibling remains after promotion, its next-round draft state is already explicit for the current repository truth
 
 ## 6. Output Contract
 
@@ -136,20 +142,22 @@ By default it handles:
 4. `system_constraints` linked-promotion result
 5. post-promotion Shared Contract topology result, including which shared files remain at stable, which remain at candidate, and which binding target the promoted module now uses
 6. `promotion_owner_module` validation result for each touched candidate-layer Shared Contract file that already had a stable-layer sibling before promotion
-7. `bound_modules` writeback result for every remaining touched Shared Contract file after post-promotion topology was decided
-8. terminal-state result for any touched Shared Contract file that became unbound in this round
-9. Shared Contract reconciliation result when the round changed shared truth or bindings
-10. cleanup result
-11. `handoff validation result`
-12. fallback cleanup result when verification became invalid before promotion could start
-13. `fallback_reason_code` if verification became invalid
-14. fallback reason if verification became invalid
-15. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
-16. recovery-state explanation if incomplete promotion occurred
-17. when post-promotion `shared_sync` was executed, the passed `current_promotion_owner_module` value
-18. when promotion stopped because post-promotion Shared Contract topology, `promotion_owner_module`, unbound-file terminal state, or post-promotion `shared_sync` uncertainty was unclear, the required next step through `shared_ops`
-19. git close-out result
-20. follow-up state explanation
+7. next-round draft rewrite result for each candidate-layer Shared Contract file retained after this promotion created or updated the stable-layer sibling
+8. `bound_modules` writeback result for every remaining touched Shared Contract file after post-promotion topology was decided
+9. terminal-state result for any touched Shared Contract file that became unbound in this round
+10. Shared Contract reconciliation result when the round changed shared truth or bindings
+11. cleanup result
+12. `handoff validation result`
+13. fallback cleanup result when verification became invalid before promotion could start
+14. `fallback_reason_code` if verification became invalid
+15. fallback reason if verification became invalid
+16. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
+17. recovery-state explanation if incomplete promotion occurred
+18. when post-promotion `shared_sync` was executed, the passed `current_promotion_owner_module` value
+19. when post-promotion `shared_sync` was executed, the passed `bound_modules_only_shared_file_refs` value when present
+20. when promotion stopped because post-promotion Shared Contract topology, retained candidate next-round draft shape, `promotion_owner_module`, unbound-file terminal state, or post-promotion `shared_sync` uncertainty was unclear, the required next step through `shared_ops`
+21. git close-out result
+22. follow-up state explanation
    - when promotion succeeds, the follow-up state must explicitly confirm:
      - `Stable=yes`
      - `Candidate=no`

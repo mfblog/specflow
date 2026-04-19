@@ -58,6 +58,12 @@ Before execution:
    - use the promoted module's formal name
    - do not infer or invent this field from changed files alone
    - if the field is absent, apply no promotion-owner exception
+12. if the current task changed one or more Shared Contract files only in `bound_modules`, the caller must pass one execution-local input field:
+   - `bound_modules_only_shared_file_refs=<comma-separated-file-refs>`
+   - use exact repository paths under `docs/specs/shared_contracts/**`
+   - include only files whose current-round delta is provably `bound_modules`-only
+   - do not infer or invent this field inside `shared_sync`
+   - if the field is absent, treat no file as proven `bound_modules`-only
 
 ---
 
@@ -88,8 +94,9 @@ Before execution:
 5. for each affected module, judge whether its shared binding is still valid:
    - if `shared_contract_refs=none` and the module is not in a changed-binding case, leave it unchanged
    - treat the binding as invalid if the referenced file is missing, the layer mismatches, the file target mismatches, the version reference mismatches, or the module-to-shared relation changed
-   - for `candidate` modules, rebuild the snapshot from the exact currently bound Shared Contract files; treat the binding as invalid if any existing process file's `shared_contract_snapshot` differs from that rebuilt snapshot, except when the delta comes only from `bound_modules`
-   - for `stable` modules, judge only against bound stable-layer Shared Contract files resolved through the binding contract; treat the binding as invalid if the resolved stable binding target changed in layer, file, or version, or if the current task changed that bound stable file in any way other than a `bound_modules`-only delta
+   - for `candidate` modules, rebuild the snapshot from the exact currently bound Shared Contract files; treat the binding as invalid if any existing process file's `shared_contract_snapshot` differs from that rebuilt snapshot, except when every differing bound Shared Contract file is explicitly listed in `bound_modules_only_shared_file_refs`
+   - for `stable` modules, judge only against bound stable-layer Shared Contract files resolved through the binding contract; treat the binding as invalid if the resolved stable binding target changed in layer, file, or version, or if the current task changed that bound stable file in any way other than an explicit `bound_modules_only_shared_file_refs` declaration for that file
+   - do not infer a `bound_modules`-only delta from Shared Contract fingerprint difference alone
    - exception for the current promotion owner: if `current_promotion_owner_module` is present, the affected module equals that formal module name, and the changed stable Shared Contract file or stable binding is exactly the post-promotion target written by that same round, do not treat that promoted module as invalid on that basis alone
 6. for invalid `candidate` modules:
    - delete `_check_result/{module}.md`
@@ -106,7 +113,7 @@ Before execution:
    - name the command or change owner that must fix it
    - do not invalidate modules on a `bound_modules`-only delta
 9. if `_status.md` points to a step later than the real smallest actionable step, correct it
-   - the deterministic reconciliation work in Steps 4, 6, 7, 8, and 9 may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--promotion-owner-module module_a]`
+   - the deterministic reconciliation work in Steps 4, 6, 7, 8, and 9 may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--promotion-owner-module module_a] [--bound-modules-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_x.md,docs/specs/shared_contracts/candidate/c_shared_y.md]`
 10. finish git close-out if required by policy
 
 ---
@@ -134,8 +141,9 @@ The output must include at least:
 7. the standardized `fallback_reason_code` for each affected module
 8. any module kept valid under the current-round `cand_promote` owner exception
 9. the received `current_promotion_owner_module` value when that execution-local input was present
-10. when repository truth was insufficient to continue safely, that `shared_sync` returned control to `shared_escape` and did not issue an independent local checkpoint
-11. the git close-out result
+10. the received `bound_modules_only_shared_file_refs` value when that execution-local input was present
+11. when repository truth was insufficient to continue safely, that `shared_sync` returned control to `shared_escape` and did not issue an independent local checkpoint
+12. the git close-out result
 
 Allowed `fallback_reason_code` values:
 
@@ -155,4 +163,5 @@ Allowed `fallback_reason_code` values:
 4. replace `stable_verify` to re-check stable alignment
 5. absorb `shared_contract` conclusions into `system_constraints`
 6. silently retarget a module from candidate-layer shared truth to stable-layer shared truth, or the reverse
-7. keep unstable stop decisions inside `shared_sync` when the real problem is shared-boundary uncertainty
+7. infer a `bound_modules`-only delta from fingerprint change alone
+8. keep unstable stop decisions inside `shared_sync` when the real problem is shared-boundary uncertainty
