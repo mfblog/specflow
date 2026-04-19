@@ -59,10 +59,7 @@ func BuildAll(repoRoot string, targets []Target) (BuildResult, error) {
 	for _, target := range targets {
 		outputName := BinaryName(target.GOOS, target.GOARCH)
 		outputPath := filepath.Join(binDir, outputName)
-		ldflags := fmt.Sprintf(
-			"-s -w -X github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness.BuildFingerprint=%s",
-			fingerprint,
-		)
+		ldflags := ldflagsForFingerprint(fingerprint)
 		cmd := exec.Command("go", "build", "-trimpath", "-ldflags="+ldflags, "-o", outputPath, "./cmd/specflowctl")
 		cmd.Dir = filepath.Join(repoRoot, "specflow/tooling")
 		cmd.Env = append(os.Environ(),
@@ -79,4 +76,11 @@ func BuildAll(repoRoot string, targets []Target) (BuildResult, error) {
 	}
 
 	return result, nil
+}
+
+func ldflagsForFingerprint(fingerprint string) string {
+	return fmt.Sprintf(
+		"-s -w -buildid= -X github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness.BuildFingerprint=%s",
+		fingerprint,
+	)
 }
