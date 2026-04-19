@@ -52,6 +52,10 @@ Before execution:
 8. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
 9. if the round may create, update, or delete any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 10. if the round may create or update any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply
+11. if the request may create or update a candidate-layer file for a `shared_contract_id` that already has a stable-layer sibling, build the repository-wide affected-module review set for that already-stable shared object from current repository truth before owner selection:
+   - start from the formal module set recorded in `_status.md`
+   - read every additional current-layer module main file needed to judge which modules currently bind that stable-layer sibling or its current candidate-layer sibling through `shared_contract_refs`
+   - do not treat only the user-named modules or currently obvious consumers as sufficient when other modules may still bind that already-stable shared object
 
 If the request names modules that do not yet have current-layer Spec files and the user intent is explicitly "design shared truth first", do not block on that absence.
 
@@ -69,18 +73,27 @@ If the request names modules that do not yet have current-layer Spec files and t
 4. decide the target shared object boundary:
    - one shared object per shared file
    - do not merge unrelated shared topics into one file
-5. if the request is to continue evolving an already-independent shared object that currently has only a stable-layer file, create or update the sibling candidate-layer `shared_contract` for the same `shared_contract_id`, set its `shared_version` to the intended next stable version according to Shared Contract semantic version rules, and write exactly one `promotion_owner_module` into that candidate-layer shared file:
-   - the owner must be a formal module name
+5. if the round may create or update a candidate-layer file for a `shared_contract_id` that already has a stable-layer sibling, resolve the repository-wide affected-module set for that already-stable shared object from current repository truth before owner selection:
+   - derive that set from module `shared_contract_refs` rather than from `bound_modules`
+   - include modules that currently bind the stable-layer sibling and modules that already bind its current candidate-layer sibling when that sibling exists
+   - if current repository truth is insufficient to derive that affected-module set safely, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+   - if that affected-module set is empty, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing a lifecycle owner with no current formal consumer set
+6. if the request is to continue evolving an already-independent shared object that currently has only a stable-layer file, create or update the sibling candidate-layer `shared_contract` for the same `shared_contract_id`, set its `shared_version` to the intended next stable version according to Shared Contract semantic version rules, and write exactly one `promotion_owner_module` into that candidate-layer shared file:
+   - the owner must be one formal module from the repository-wide affected-module set resolved in Step 5
    - that owner is the module round that must later bind or retarget legally to this candidate-layer shared file before it may land as the next stable-layer Shared Contract file
    - the owner module may still remain formally bound to the current stable-layer shared sibling until a later legal module candidate round rewrites its `shared_contract_refs`
    - if current repository truth is insufficient to name one stable promotion owner module, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
-6. otherwise create or update the target candidate-layer `shared_contract`
-7. if Step 6 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
-8. if no consumer module formally binds the shared truth yet:
+7. otherwise create or update the target candidate-layer `shared_contract`
+8. if Step 7 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
+9. if the target candidate-layer shared file has a stable-layer sibling after Steps 6 to 8, validate that the resulting candidate-layer file still carries exactly one valid `promotion_owner_module`:
+   - if Step 6 already wrote the owner, confirm that the resulting file still keeps that owner
+   - if Step 7 updated an already-existing candidate-layer file with a stable-layer sibling, preserve or rewrite `promotion_owner_module` so the resulting file still names one formal module from the repository-wide affected-module set resolved in Step 5
+   - if current repository truth is insufficient to keep one stable promotion owner without guessing, stop this flow and return control to `shared_escape` through `shared_ops`
+10. if no consumer module formally binds the shared truth yet:
    - keep `bound_modules=none`
    - record expected future consumers only as planning text in the shared file body
-9. if the same truth still remains duplicated as formal module truth elsewhere, stop and report that boundary closure is incomplete
-10. after any write to `docs/specs/shared_contracts/**`, execute `shared_sync` before claiming closure, even when the affected-module set is currently empty
+11. if the same truth still remains duplicated as formal module truth elsewhere, stop and report that boundary closure is incomplete
+12. after any write to `docs/specs/shared_contracts/**`, execute `shared_sync` before claiming closure, even when the affected-module set is currently empty
 
 ---
 
@@ -94,7 +107,7 @@ Stop when one of the following is true:
 4. current repository truth is insufficient to rule out duplicate formal truth or alternate formal landing points, so control has returned to `shared_escape` through `shared_ops`
 5. the request is really a pure module retarget or shared impact-check request and must be re-routed to another shared flow
 6. the request has crossed into `system_constraints_change_proposal` and must stop at a `shared_ops` checkpoint instead of continuing here
-7. a next-round candidate for an already-stable shared object would be opened, but no stable `promotion_owner_module` can be named from current repository truth
+7. a next-round candidate-layer shared file for an already-stable shared object would exist after this round, but no stable `promotion_owner_module` can be named from current repository truth
 
 ---
 
@@ -110,8 +123,9 @@ The output must include at least:
 6. whether any named modules already bind that truth formally
 7. whether duplicate module-local formal truth was found, or whether the flow had to return to `shared_escape` because that judgment could not be stabilized safely
 8. the `shared_sync` result, including whether any modules were affected
-9. when the round opened the next candidate-layer file for an already-stable shared object, the written `promotion_owner_module` and whether that owner still needs a later module-side binding retarget before promotion
-10. the git close-out result when governance files or commit-triggering files were changed
+9. when the resulting candidate-layer shared file has a stable-layer sibling, the repository-wide affected-module set used for owner selection
+10. when the resulting candidate-layer shared file has a stable-layer sibling, the written or validated `promotion_owner_module` and whether that owner still needs a later module-side binding retarget before promotion
+11. the git close-out result when governance files or commit-triggering files were changed
 
 ---
 

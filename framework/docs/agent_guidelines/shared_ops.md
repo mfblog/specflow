@@ -88,6 +88,7 @@ Before routing a `shared_ops` request:
 8. if the request names modules that do not yet have current-layer Spec files, do not block on that absence before routing
 9. read the relevant `shared_contract` files if the request names shared truth directly
 10. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross the boundary into global-default-rule promotion
+11. if the request may route to `shared_sync`, inspect the directly affected current-round Shared Contract files needed to judge whether any of those files changed only in `bound_modules`
 
 The executor must not route by keyword alone when the named files already show a different formal situation.
 
@@ -195,13 +196,18 @@ This is mandatory, not optional.
    - read named `shared_contract` files when shared truth is named directly
    - read `s_system_constraints.md` when the request may cross the shared/system boundary
 3. test whether the request belongs to exactly one of `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, or `shared_sync`
-4. if exactly one standard shared flow applies, route to that flow
-5. if routing is not stable, enter `shared_escape`
-6. if the routed flow changes shared truth or module shared bindings, do not claim closure until required reconciliation through `shared_sync` is complete
+4. if routing to `shared_sync`, decide whether any directly affected current-round Shared Contract file is provably `bound_modules`-only:
+   - derive that judgment from current repository truth and the current-round changed shared files
+   - treat a file as `bound_modules`-only only when the current round can explicitly prove that no other frontmatter field, body text, layer target, version target, or binding target changed for that file
+   - if one or more files satisfy that proof, pass execution-local `bound_modules_only_shared_file_refs=<comma-separated-file-refs>` into `shared_sync` with the exact repository paths for those files
+   - if current repository truth is insufficient to prove that a directly affected file is `bound_modules`-only, do not pass that file under the metadata-only exception
+5. if exactly one standard shared flow applies, route to that flow
+6. if routing is not stable, enter `shared_escape`
+7. if the routed flow changes shared truth or module shared bindings, do not claim closure until required reconciliation through `shared_sync` is complete
    - if that routed work makes a touched shared file lose its last formal binding, do not claim closure until the owner of that binding/topology change has either resolved that file's terminal state or returned control to `shared_escape`
-7. if a module-side command such as `cand_promote` stops because post-promotion Shared Contract topology is unclear, re-enter shared governance through `shared_ops` from current repository truth instead of guessing a module-local-only continuation
-8. if the request crosses into `system_constraints_change_proposal`, stop through `shared_escape` and raise a checkpoint instead of inventing a shared-side continuation
-9. if `shared_escape` emitted a `remaining_steps_contract`, do not claim `shared_ops` closure until every listed step has finished under that contract
+8. if a module-side command such as `cand_promote` stops because post-promotion Shared Contract topology is unclear, re-enter shared governance through `shared_ops` from current repository truth instead of guessing a module-local-only continuation
+9. if the request crosses into `system_constraints_change_proposal`, stop through `shared_escape` and raise a checkpoint instead of inventing a shared-side continuation
+10. if `shared_escape` emitted a `remaining_steps_contract`, do not claim `shared_ops` closure until every listed step has finished under that contract
 
 ## 7. Internal Flow Contracts
 
@@ -227,6 +233,7 @@ Fixed closure rules:
 7. if `shared_escape` emits a `remaining_steps_contract`, finishing only the first routed flow does not close `shared_ops`
 8. if a routed internal shared flow later discovers that repository truth is insufficient to continue stably, it must stop that flow and return control to `shared_escape` instead of inventing a flow-local checkpoint
 9. if a routed internal shared flow changes bindings or topology so a touched shared file would have no formal bindings remaining, that same handling round must resolve the touched file's terminal state or return control to `shared_escape`; `shared_ops` must not leave cleanup ownership implicit
+10. when `shared_ops` routes a current-round impact-check request into `shared_sync`, it must pass execution-local `bound_modules_only_shared_file_refs` for every directly affected Shared Contract file whose current-round delta is provably `bound_modules`-only, and it must not invent that metadata-only proof for any other file
 
 ---
 
