@@ -198,18 +198,21 @@ Shared reading, invalidation, and cleanup rules:
 4. if a bound Shared Contract's effective truth changes, all module candidate-side process files still carrying the old snapshot become invalid and fall back to `cand_check`
 5. a module promotion may generate or update a stable-layer Shared Contract while the candidate-layer Shared Contract for the same `shared_contract_id` remains in place for other candidate-layer modules
 6. promoted stable modules must not keep binding candidate-layer Shared Contract files after promotion
-7. if the current round cannot determine the post-promotion stable/candidate Shared Contract topology from repository truth, promotion or shared governance must stop instead of guessing
-8. if the only delta is `bound_modules`, do not invalidate candidate-side process files on that basis alone; report governance drift instead
-9. if a stable Shared Contract changes, any previously established claim that a module still aligns with `stable` must be re-read and re-judged
-10. the exception to Rule 9 is a still-closing `cand_promote` round for the same module:
+7. when a current round opens or rewrites the next candidate-layer Shared Contract file for a shared object that already has a stable-layer sibling, that candidate-layer file must record exactly one `promotion_owner_module`
+8. `promotion_owner_module` means the formal module name whose later legal module round must retarget or bind to that candidate-layer Shared Contract file and whose later `cand_promote` is allowed to land that candidate shared truth as the next stable-layer Shared Contract file
+9. recording `promotion_owner_module` does not itself change any current module binding; modules may remain formally bound to the current stable-layer Shared Contract sibling until a later legal module candidate round rewrites `shared_contract_refs`
+10. if the current round cannot determine the post-promotion stable/candidate Shared Contract topology or cannot name one stable `promotion_owner_module` where Rule 7 applies, promotion or shared governance must stop instead of guessing
+11. if the only delta is `bound_modules`, do not invalidate candidate-side process files on that basis alone; report governance drift instead
+12. if a stable Shared Contract changes, any previously established claim that a module still aligns with `stable` must be re-read and re-judged
+13. the exception to Rule 12 is a still-closing `cand_promote` round for the same module:
    - when that same promotion round wrote the module's new stable truth together with the module's current stable Shared Contract binding, treat that module's stable landing as owned by `cand_promote` rather than as a stale prior alignment claim for `shared_sync` invalidation
-11. Shared Contract files are not cleaned up merely because one module finished promotion; they may be cleaned only when no module still binds them, when they are replaced by newer shared files, or when their stable conclusions have been fully absorbed into the formal global baseline
-12. candidate-layer Shared Contract files must not be deleted merely because a stable-layer file for the same `shared_contract_id` was generated in one module's promotion; they may be deleted only after no candidate-layer module still binds them
-13. when a command or shared flow changes bindings or topology so a touched Shared Contract file would have no formal bindings remaining, that same command or flow owns resolving the terminal state of that file in the same round instead of leaving orphaned shared truth for later guesswork
-14. if no module still binds a touched Shared Contract file and the current round does not explicitly keep it as independently authored shared truth, the owner of the binding or topology change must delete that now-unbound file when Rules 11 and 12 allow that cleanup
-15. if a touched Shared Contract file gains or regains one or more formal bindings in a later round, that same round must remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from the resulting bound file state
-16. if `bound_modules` diverges from the real set implied by module `shared_contract_refs`, that is governance drift and must be repaired by the command responsible for the binding change
-17. any task that changes `docs/specs/shared_contracts/**` or any module's `shared_contract_refs` must complete Shared Contract state reconciliation before claiming the state is closed
+14. Shared Contract files are not cleaned up merely because one module finished promotion; they may be cleaned only when no module still binds them, when they are replaced by newer shared files, or when their stable conclusions have been fully absorbed into the formal global baseline
+15. candidate-layer Shared Contract files must not be deleted merely because a stable-layer file for the same `shared_contract_id` was generated in one module's promotion; they may be deleted only after no candidate-layer module still binds them
+16. when a command or shared flow changes bindings or topology so a touched Shared Contract file would have no formal bindings remaining, that same command or flow owns resolving the terminal state of that file in the same round instead of leaving orphaned shared truth for later guesswork
+17. if no module still binds a touched Shared Contract file and the current round does not explicitly keep it as independently authored shared truth, the owner of the binding or topology change must delete that now-unbound file when Rules 14 and 15 allow that cleanup
+18. if a touched Shared Contract file gains or regains one or more formal bindings in a later round, that same round must remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from the resulting bound file state
+19. if `bound_modules` diverges from the real set implied by module `shared_contract_refs`, that is governance drift and must be repaired by the command responsible for the binding change
+20. any task that changes `docs/specs/shared_contracts/**` or any module's `shared_contract_refs` must complete Shared Contract state reconciliation before claiming the state is closed
 
 Shared frontmatter should include at least:
 
@@ -218,23 +221,26 @@ Shared frontmatter should include at least:
 3. `shared_version: <semver>`
 4. `bound_modules`
 5. `system_constraints_stable_ref`
-6. `unbound_retention` when a touched now-unbound Shared Contract is intentionally kept
-7. `unbound_retention_reason` when `unbound_retention` is present
-8. `unbound_retention_owner` when `unbound_retention` is present
+6. `promotion_owner_module` when a candidate-layer Shared Contract file is the next-round draft of a shared object that already has a stable-layer sibling
+7. `unbound_retention` when a touched now-unbound Shared Contract is intentionally kept
+8. `unbound_retention_reason` when `unbound_retention` is present
+9. `unbound_retention_owner` when `unbound_retention` is present
 
 Additional rules:
 
 1. if no module formally binds the shared truth yet, `bound_modules` may be `none`
 2. expected future consumers should be recorded as body-level planning text rather than being treated as formal bindings before `shared_contract_refs` exists
 3. `shared_version` must follow the Shared Contract semantic version rules defined in `specflow/framework/docs/agent_guidelines/git_policy.md`
-4. if a touched Shared Contract file is intentionally kept after losing all formal bindings, the only durable writeback location for that decision is the Shared Contract file itself
-5. that intentional-unbound keep result must be written in frontmatter as:
+4. when a candidate-layer Shared Contract file is the next-round draft of a shared object that already has a stable-layer sibling, `promotion_owner_module` must be present and must equal one formal module name
+5. do not use `promotion_owner_module` for architecture-first candidate shared authoring that does not yet have a stable-layer sibling
+6. if a touched Shared Contract file is intentionally kept after losing all formal bindings, the only durable writeback location for that decision is the Shared Contract file itself
+7. that intentional-unbound keep result must be written in frontmatter as:
    - `unbound_retention: intentional`
    - `unbound_retention_reason: <why this file remains independent shared truth now>`
    - `unbound_retention_owner: <command_or_flow_name>`
-6. chat output, command summaries, and temporary planning notes do not count as intentional-unbound writeback
-7. do not use the intentional-unbound retention fields for architecture-first shared authoring that has not yet had any formal module binding; that case is governed by `bound_modules=none` plus body-level planning text
-8. if a later round rebinds or deletes that file, remove or stop carrying the intentional-unbound retention fields in the resulting file state
+8. chat output, command summaries, and temporary planning notes do not count as intentional-unbound writeback
+9. do not use the intentional-unbound retention fields for architecture-first shared authoring that has not yet had any formal module binding; that case is governed by `bound_modules=none` plus body-level planning text
+10. if a later round rebinds or deletes that file, remove or stop carrying the intentional-unbound retention fields in the resulting file state
 
 ### 2.6 What Counts As Touching Formal Behavior Truth
 

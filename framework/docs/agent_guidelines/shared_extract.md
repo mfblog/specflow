@@ -79,14 +79,19 @@ Before execution:
 6. create or update the target candidate-layer `shared_contract`
 7. if Step 6 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
 8. if Step 6 reopened an already-stable shared object at the candidate layer, set the candidate `shared_version` to the intended next stable version according to Shared Contract semantic version rules
-9. rewrite every source module candidate side so the extracted truth is no longer duplicated as module-local formal truth
-10. rewrite every additional writeback-required involved consumer module candidate-side reference and behavior explanation required by the extraction result
+9. if Step 6 reopened an already-stable shared object at the candidate layer, also write exactly one `promotion_owner_module` into that candidate-layer shared file:
+   - the owner must be chosen from the writeback-required involved-module subset for this round
+   - that owner is the module round that must later land this candidate-layer shared file as the next stable-layer Shared Contract file
+   - the owner module may still remain formally bound to the current stable-layer shared sibling until a later legal module candidate round rewrites its `shared_contract_refs`
+   - if current repository truth is insufficient to name one stable owner without guessing, stop this flow and return control to `shared_escape` through `shared_ops`
+10. rewrite every source module candidate side so the extracted truth is no longer duplicated as module-local formal truth
+11. rewrite every additional writeback-required involved consumer module candidate-side reference and behavior explanation required by the extraction result
    - any written `shared_contract_refs` must use the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
-11. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
-12. if the target shared file now has one or more formal bound modules after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-13. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
-14. if any involved module that should now consume the extracted truth was not fully reviewed and rewritten where required, stop and report consumer-coverage failure
-15. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
+12. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
+13. if the target shared file now has one or more formal bound modules after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
+14. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
+15. if any involved module that should now consume the extracted truth was not fully reviewed and rewritten where required, stop and report consumer-coverage failure
+16. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
 
 ---
 
@@ -102,6 +107,7 @@ Stop when one of the following is true:
 4. module-private truth versus shared truth is still not stably separable
 5. involved consumer coverage is still incomplete or uncertain, so the flow cannot claim extraction closure yet
 6. the request has crossed into `system_constraints_change_proposal` and must stop at a `shared_ops` checkpoint instead of continuing here
+7. a reopened candidate-layer file for an already-stable shared object would exist, but no stable `promotion_owner_module` can be named from the writeback-required involved-module subset
 
 ---
 
@@ -118,8 +124,9 @@ The output must include at least:
 7. the module candidate-side rewrite result and whether duplicate formal truth was fully removed
 8. whether involved consumer coverage is complete for the current repository truth
 9. the target shared file `bound_modules` reconciliation result
-10. the `shared_sync` result, including affected modules and fallback if any
-11. the git close-out result when governance files or commit-triggering files were changed
+10. when the round reopened an already-stable shared object at the candidate layer, the written `promotion_owner_module`
+11. the `shared_sync` result, including affected modules and fallback if any
+12. the git close-out result when governance files or commit-triggering files were changed
 
 ---
 

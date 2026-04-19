@@ -78,11 +78,12 @@ Versions use `MAJOR.MINOR.PATCH`.
 1. `shared_version` uses `MAJOR.MINOR.PATCH`
 2. the first candidate-layer file for a brand-new shared object should normally start at `0.1.0`
 3. when a current round opens the next candidate-layer file for a shared object that already has a stable-layer file, that candidate file must already carry the intended next stable `shared_version`
-4. `MAJOR`
+4. when Rule 3 applies, that candidate file must also record the exact `promotion_owner_module` required by `specflow/framework/docs/agent_guidelines/spec_policy.md`
+5. `MAJOR`
    - incompatible change to the formally bound shared semantics, required consumer interpretation, or cross-module contract shape
-5. `MINOR`
+6. `MINOR`
    - compatible shared-truth extension, additional reusable capability, or compatible topology evolution that requires consumer awareness but not contract breakage
-6. `PATCH`
+7. `PATCH`
    - wording-only clarification, compatible tightening, or alignment-only update that does not change the required consumer interpretation
 
 Notes:
