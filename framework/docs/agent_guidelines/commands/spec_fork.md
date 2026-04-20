@@ -18,6 +18,11 @@ By default it handles:
 2. deriving candidate truth from formal truth
 3. initializing the current round's `system_constraints_stable_ref`
 
+### 2.1 Lifecycle-State Advance Inheritance
+
+When this command advances `_status.md`, that advancement inherits the centralized authoritative-run and non-authoritative-follow-up rules from `specflow/framework/docs/agent_guidelines/command_policy.md` Section 8 Rules 27-30.
+Only a new independent full-scope run of `spec_fork` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+
 ## 3. Preconditions
 
 1. complete required pre-checks

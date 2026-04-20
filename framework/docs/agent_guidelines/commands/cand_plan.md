@@ -15,6 +15,11 @@ By default it handles:
 5. keeping plan bindings aligned with the current candidate, current formal global baseline state, and current Shared Contract snapshot
 6. stopping at a structured decision checkpoint only when key implementation direction is still not locked
 
+### 2.1 Lifecycle-State Advance Inheritance
+
+When this command advances `_status.md`, that advancement inherits the centralized authoritative-run and non-authoritative-follow-up rules from `specflow/framework/docs/agent_guidelines/command_policy.md` Section 8 Rules 27-30.
+Only a new independent full-scope run of `cand_plan` may produce that advancing result; later local confirmation, research-side reassessment, or scoped follow-up review must not advance lifecycle state.
+
 ## 3. Preconditions
 
 1. complete required pre-checks

@@ -13,6 +13,11 @@ By default it handles:
 3. writing progress back into `_plans/{module}.md`
 4. consuming the `cand_plan -> cand_impl` handoff only when gate and plan bindings both still hold
 
+### 2.1 Lifecycle-State Advance Inheritance
+
+When this command advances `_status.md`, that advancement inherits the centralized authoritative-run and non-authoritative-follow-up rules from `specflow/framework/docs/agent_guidelines/command_policy.md` Section 8 Rules 27-30.
+Only a new independent full-scope run of `cand_impl` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+
 ## 3. Preconditions
 
 1. complete required pre-checks

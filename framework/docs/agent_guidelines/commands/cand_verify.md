@@ -16,6 +16,11 @@ By default it handles:
 6. stopping at a `human_verify` checkpoint only when automation is still insufficient to close confidence
 7. confirming that any `system_constraints_change_proposal` claimed by the current candidate is actually reflected in implementation evidence
 
+### 2.1 Lifecycle-State Advance Inheritance
+
+When this command advances `_status.md`, that advancement inherits the centralized authoritative-run and non-authoritative-follow-up rules from `specflow/framework/docs/agent_guidelines/command_policy.md` Section 8 Rules 27-30.
+Only a new independent full-scope run of `cand_verify` may produce that advancing result; later local confirmation, narrowed evidence refresh, or scoped follow-up review must not advance lifecycle state.
+
 ## 3. Preconditions
 
 1. complete required pre-checks
