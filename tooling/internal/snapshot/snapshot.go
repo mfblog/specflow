@@ -56,7 +56,7 @@ type ProcessSnapshotData struct {
 	SharedContractSnapshot []SharedContractEntry
 }
 
-var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
+var relativeMarkdownPathPattern = regexp.MustCompile(`(?:\./|\.\./)[^ \t\r\n<>"')\]` + "`" + `]+\.md`)
 
 var requiredProcessSnapshotFields = map[string][]string{
 	"check": {
@@ -266,11 +266,8 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 	}
 	seen := map[string]bool{}
 	entries := []AppendixEntry{}
-	for _, match := range markdownLinkPattern.FindAllStringSubmatch(body, -1) {
-		if len(match) != 2 {
-			continue
-		}
-		destination := strings.TrimSpace(match[1])
+	for _, destination := range relativeMarkdownPathPattern.FindAllString(body, -1) {
+		destination = strings.TrimSpace(destination)
 		if destination == "" || strings.HasPrefix(destination, "/") || strings.Contains(destination, "://") {
 			continue
 		}
@@ -280,7 +277,7 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 			return nil, err
 		}
 		relWithinLayerRoot = filepath.ToSlash(relWithinLayerRoot)
-		if strings.HasPrefix(relWithinLayerRoot, "../") || relWithinLayerRoot == ".." || filepath.Ext(relWithinLayerRoot) != ".md" || filepath.Dir(relWithinLayerRoot) == "." {
+		if strings.HasPrefix(relWithinLayerRoot, "../") || relWithinLayerRoot == ".." || filepath.Ext(relWithinLayerRoot) != ".md" {
 			continue
 		}
 		relPath, err := filepath.Rel(repoRoot, absPath)
@@ -288,6 +285,12 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 			return nil, err
 		}
 		relPath = filepath.ToSlash(relPath)
+		if relPath == mainSpecRef {
+			continue
+		}
+		if filepath.Dir(relWithinLayerRoot) == "." {
+			return nil, fmt.Errorf("%s: module-local supporting file %s remains in the layer root; this is directory drift", mainSpecRef, relPath)
+		}
 		if seen[relPath] {
 			continue
 		}

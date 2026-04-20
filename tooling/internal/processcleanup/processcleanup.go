@@ -54,6 +54,15 @@ var rules = map[string]map[string]cleanupRule{
 		"binding_drift":         {NextCommand: "cand_check", FileKinds: []string{"check", "plan", "verify"}},
 		"baseline_drift":        {NextCommand: "cand_check", FileKinds: []string{"check", "plan", "verify"}},
 		"shared_contract_drift": {NextCommand: "cand_check", FileKinds: []string{"check", "plan", "verify"}},
+		"implementation_deviation": {
+			NextCommand: "cand_impl",
+			FileKinds:   []string{"verify"},
+		},
+		"evidence_incomplete": {
+			NextCommand: "cand_verify",
+			FileKinds:   []string{"verify"},
+		},
+		"truth_incomplete": {NextCommand: "cand_check", FileKinds: []string{"check", "plan", "verify"}},
 	},
 	"cand_promote": {
 		"truth_drift":           {NextCommand: "cand_check", FileKinds: []string{"check", "plan", "verify"}},

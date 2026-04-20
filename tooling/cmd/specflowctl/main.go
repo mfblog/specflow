@@ -183,9 +183,9 @@ func runEntry(args []string, stdout, stderr io.Writer) error {
 		if inspection.SuggestedSource != "" {
 			fmt.Fprintf(stdout, "Suggested source: %s\n", inspection.SuggestedSource)
 		}
-		if len(inspection.StagedChanged) > 0 {
-			fmt.Fprintln(stdout, "Registered entry files changed in index:")
-			for _, path := range inspection.StagedChanged {
+		if len(inspection.CurrentRoundChanged) > 0 {
+			fmt.Fprintln(stdout, "Registered entry files changed in current round:")
+			for _, path := range inspection.CurrentRoundChanged {
 				fmt.Fprintf(stdout, "- %s\n", path)
 			}
 		}
