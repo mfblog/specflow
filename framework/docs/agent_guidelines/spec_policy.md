@@ -122,6 +122,12 @@ Rules:
 4. once explicitly referenced by the main module body, they enter the truth-reading surface of that layer
 5. executors must not read the main file while skipping an explicitly referenced supporting file
 
+Explicit-reference form rules:
+
+1. for governance reading, binding, snapshot rebuild, or drift checks, a main Spec explicitly references a module-local supporting file only when the main Spec body contains a Markdown link whose destination is a relative `.md` path resolving to that supporting file
+2. plain path literals, code spans, natural-language mentions, or other non-link text do not count as explicit references
+3. if a supporting file is intended to be formally bound but the main Spec body does not use that link form, the first command or governance flow that requires the binding must stop instead of guessing
+
 Directory rules:
 
 1. candidate supporting files belong under `docs/specs/modules/candidate/appendix/` or an equivalent dedicated subdirectory

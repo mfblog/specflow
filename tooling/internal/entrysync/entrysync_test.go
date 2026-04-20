@@ -99,6 +99,64 @@ func TestInspectSuggestsOnlyCurrentRoundChangedRegisteredFile(t *testing.T) {
 	}
 }
 
+func TestInspectTreatsUntrackedRegisteredEntryFileAsCurrentRoundChanged(t *testing.T) {
+	repoRoot := t.TempDir()
+
+	registryDir := filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines")
+	if err := os.MkdirAll(registryDir, 0o755); err != nil {
+		t.Fatalf("mkdir registry dir: %v", err)
+	}
+	initialRegistry := `# Entry Index Registry
+
+## Registered Entry Index Files
+
+- ` + "`AGENTS.md`" + `
+- ` + "`GEMINI.md`" + `
+- ` + "`CLAUDE.md`" + `
+`
+	if err := os.WriteFile(filepath.Join(registryDir, "entry_index_registry.md"), []byte(initialRegistry), 0o644); err != nil {
+		t.Fatalf("write initial registry: %v", err)
+	}
+
+	for _, name := range []string{"AGENTS.md", "GEMINI.md", "CLAUDE.md"} {
+		if err := os.WriteFile(filepath.Join(repoRoot, name), []byte("<!-- SPECFLOW:BEGIN -->\nmanaged base\n<!-- SPECFLOW:END -->\n"), 0o644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+
+	initGitRepo(t, repoRoot)
+
+	updatedRegistry := `# Entry Index Registry
+
+## Registered Entry Index Files
+
+- ` + "`AGENTS.md`" + `
+- ` + "`GEMINI.md`" + `
+- ` + "`CLAUDE.md`" + `
+- ` + "`GUIDE.md`" + `
+`
+	if err := os.WriteFile(filepath.Join(registryDir, "entry_index_registry.md"), []byte(updatedRegistry), 0o644); err != nil {
+		t.Fatalf("write updated registry: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(repoRoot, "GUIDE.md"), []byte("<!-- SPECFLOW:BEGIN -->\nmanaged guide\n<!-- SPECFLOW:END -->\n"), 0o644); err != nil {
+		t.Fatalf("write GUIDE.md: %v", err)
+	}
+
+	inspection, err := Inspect(repoRoot)
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+	if inspection.Consistent {
+		t.Fatalf("expected inspection to be inconsistent")
+	}
+	if inspection.SuggestedSource != "GUIDE.md" {
+		t.Fatalf("expected GUIDE.md as suggested source, got %q", inspection.SuggestedSource)
+	}
+	if len(inspection.CurrentRoundChanged) != 1 || inspection.CurrentRoundChanged[0] != "GUIDE.md" {
+		t.Fatalf("unexpected current-round changed files: %v", inspection.CurrentRoundChanged)
+	}
+}
+
 func initGitRepo(t *testing.T, repoRoot string) {
 	t.Helper()
 	runGit(t, repoRoot, "init")

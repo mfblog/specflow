@@ -180,7 +180,7 @@ version: 1.1.0
 	}
 }
 
-func TestRebuildCurrentCollectsAppendixFromPlainRelativePathLiteral(t *testing.T) {
+func TestRebuildCurrentRejectsRawAppendixPathLiteral(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
@@ -193,9 +193,9 @@ func TestRebuildCurrentCollectsAppendixFromPlainRelativePathLiteral(t *testing.T
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
-id: module_demo
-layer: candidate
-version: 0.1.0
+	id: module_demo
+	layer: candidate
+	version: 0.1.0
 ---
 
 # Demo
@@ -217,15 +217,9 @@ spec_version_ref: c_module_demo@0.1.0
 # Appendix
 `)
 
-	result, err := RebuildCurrent(repoRoot, "module_demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrent: %v", err)
-	}
-	if len(result.ModuleAppendixSnapshot) != 1 {
-		t.Fatalf("expected one appendix snapshot entry, got %d", len(result.ModuleAppendixSnapshot))
-	}
-	if result.ModuleAppendixSnapshot[0].FileRef != "docs/specs/modules/candidate/appendix/c_module_demo_prompt.md" {
-		t.Fatalf("unexpected appendix file ref: %s", result.ModuleAppendixSnapshot[0].FileRef)
+	_, err = RebuildCurrent(repoRoot, "module_demo")
+	if err == nil || !strings.Contains(err.Error(), "must use a Markdown link") {
+		t.Fatalf("expected markdown-link error, got %v", err)
 	}
 }
 
