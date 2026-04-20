@@ -45,7 +45,17 @@ Result semantics for non-pass conclusions are fixed:
 2. `fix_required`
    - use when the executor can already identify a concrete truth-side repair inside the current candidate, appendix, or explicit binding surface
    - no extra user choice is needed before that repair work starts
-   - after the repair, the module reruns `cand_check` instead of skipping forward
+   - after the repair, the module must return to `cand_check` rather than skipping forward
+
+Authoritative rerun boundary:
+
+1. a new formal `cand_check` rerun may be entered either by explicit command syntax or by a later natural-language request that command routing correctly resolves to a fresh full-scope `cand_check` run for the current module
+2. truth repair performed after a `blocked` or `fix_required` result is not itself that rerun
+3. any repair-side reassessment or scoped follow-up review performed after such repair is non-authoritative:
+   - it may report only whether the reported findings appear resolved within the checked scope
+   - it must not be labeled a formal `cand_check pass`
+   - it must not write `docs/specs/_check_result/{module}.md`
+   - it must not advance `_status.md` to `cand_plan`
 
 Project-local review extension contract:
 
@@ -148,10 +158,13 @@ Project-local review extension contract:
 18. if the result is `pass`, create or update `docs/specs/_check_result/{module}.md`
    - when a supported project-local review extension surface was consumed and this file allows project-side extension write-back for that surface, write the corresponding `project_review_extensions` items together with the pass gate
 19. if the result is not `pass`, do not write a failed `_check_result/{module}.md`; delete an old pass gate if it is no longer valid
-20. update `_status.md`:
+20. if the result is `blocked` or `fix_required`, close the current `cand_check` run after writing any required findings:
+   - any later truth repair belongs to follow-up work, not to a still-open `cand_check`
+   - any later repair-side reassessment or scoped follow-up review remains non-authoritative unless a new fresh full-scope `cand_check` run is entered through command routing
+21. update `_status.md`:
    - if pass -> `Next Command=cand_plan`
    - otherwise -> `Next Command=cand_check`
-21. perform git close-out if required
+22. perform git close-out if required
 
 ## 5. Stop Conditions
 
@@ -160,6 +173,7 @@ Project-local review extension contract:
 3. if the round does not pass, no invalid old pass gate remains
 4. `_status.md` is updated
 5. if a supported project-local review extension surface was consumed and the round passes, its allowed project extension write-back is clear
+6. no repair-side reassessment or scoped follow-up review has been mistaken for a formal `cand_check pass`
 
 ## 6. Output Contract
 
@@ -184,6 +198,7 @@ The output should include:
    - which `surface` matched
    - which registered project-local standard file was used
    - how that surface affected `progressability`, `content completeness`, or structured findings
+13. when follow-up work only confirmed local repair or ran a scoped review instead of a new formal rerun, that this result was non-authoritative and did not change lifecycle state
 
 When the result is `blocked` or `fix_required`, findings must be structured and must not be reduced to vague summaries.
 

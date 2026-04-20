@@ -239,21 +239,25 @@ The rules below are shared gates. Every command follows them by default:
 24. When `cand_check` does not pass, it must not write a failed `_check_result/{module}.md`. If an old pass gate is no longer valid, delete it and keep or fall back `Next Command` to `cand_check`.
 25. `cand_check` does not directly rewrite candidate truth by default. The only allowed automatic correction is a mechanical update of `system_constraints_stable_ref` when the candidate is still compatible with the current formal global baseline, or correction to `none` when no formal global baseline exists yet.
 26. A blocking checkpoint is not a pass result and must not be treated as permission to continue to the next command.
-27. When a command resumes after a checkpoint, it must re-judge the required bindings and gate conditions instead of assuming the checkpoint answer already fixed them.
-28. Candidate-side fallback, blocking, and resume outputs must report the standardized `fallback_reason_code` defined by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md` before any free-form explanation.
-29. When `cand_verify` or `stable_verify` needs to judge whether `partial` or `not_checked` items may still support a narrower safe conclusion, it must use `specflow/framework/docs/agent_guidelines/downgrade_policy.md` instead of executor invention.
-30. Commands must not consume project-local standards unless those standards are registered in `docs/project_standards/_registry.md` and the command explicitly supports that consumption surface.
-31. Project-local standards may tighten or clarify framework baseline rules, but must not weaken them.
-32. A command must not treat the presence of a project-local standard as permission to skip its framework-baseline review.
-33. When a command consumes project-local standards, it must first complete the framework-baseline judgment and then merge project-local results only on the command-defined supported `surface`.
-34. The final command conclusion must still stay inside the framework-defined result set of that command.
-35. A downstream command must not consume a project-side extension field unless that downstream command explicitly declares that consumption contract.
-36. Shared-governance requests must enter through `shared_ops:{natural-language request}` rather than by asking the user to pre-select an internal shared flow.
-37. A direct implementation request must be classified through `specflow/framework/docs/agent_guidelines/implementation_change_policy.md` before repo-tracked code is modified.
-38. `implementation_only` does not bypass `Next Command`.
-39. If a direct implementation request is classified as `truth_writeback_required` or `boundary_unclear`, the executor must not modify code before the required truth-side writeback or routing step has completed.
-40. For `implementation_only` on `Active Layer=candidate`, code modification is allowed only when `_status.md` currently says `Next Command=cand_impl`.
-41. For `implementation_only` on `Active Layer=stable`, code modification may proceed only inside current stable truth, and `stable_verify` is required before stable alignment may be claimed again.
+27. A formal pass gate, formal verification pass, or lifecycle-state advance may be produced only by a new independent full-scope run of the corresponding command.
+28. The identity of that full-scope run is determined by command routing, not by literal command syntax alone. A user may enter the run through explicit command form or through a new natural-language request that is correctly resolved to that command.
+29. After a command ends with any non-pass result other than a checkpoint that the command file explicitly allows to stay resumable, any later truth repair, repair-side reassessment, or scoped follow-up review is non-authoritative for lifecycle progression.
+30. Rule 29 means that such follow-up work may report only what was rechecked inside its actual scope. It must not be treated as a formal rerun of the prior command, must not write a new pass gate, and must not advance `_status.md`.
+31. When a command resumes after a checkpoint, it must re-judge the required bindings and gate conditions instead of assuming the checkpoint answer already fixed them.
+32. Candidate-side fallback, blocking, and resume outputs must report the standardized `fallback_reason_code` defined by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md` before any free-form explanation.
+33. When `cand_verify` or `stable_verify` needs to judge whether `partial` or `not_checked` items may still support a narrower safe conclusion, it must use `specflow/framework/docs/agent_guidelines/downgrade_policy.md` instead of executor invention.
+34. Commands must not consume project-local standards unless those standards are registered in `docs/project_standards/_registry.md` and the command explicitly supports that consumption surface.
+35. Project-local standards may tighten or clarify framework baseline rules, but must not weaken them.
+36. A command must not treat the presence of a project-local standard as permission to skip its framework-baseline review.
+37. When a command consumes project-local standards, it must first complete the framework-baseline judgment and then merge project-local results only on the command-defined supported `surface`.
+38. The final command conclusion must still stay inside the framework-defined result set of that command.
+39. A downstream command must not consume a project-side extension field unless that downstream command explicitly declares that consumption contract.
+40. Shared-governance requests must enter through `shared_ops:{natural-language request}` rather than by asking the user to pre-select an internal shared flow.
+41. A direct implementation request must be classified through `specflow/framework/docs/agent_guidelines/implementation_change_policy.md` before repo-tracked code is modified.
+42. `implementation_only` does not bypass `Next Command`.
+43. If a direct implementation request is classified as `truth_writeback_required` or `boundary_unclear`, the executor must not modify code before the required truth-side writeback or routing step has completed.
+44. For `implementation_only` on `Active Layer=candidate`, code modification is allowed only when `_status.md` currently says `Next Command=cand_impl`.
+45. For `implementation_only` on `Active Layer=stable`, code modification may proceed only inside current stable truth, and `stable_verify` is required before stable alignment may be claimed again.
 
 ---
 
