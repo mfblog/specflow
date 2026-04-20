@@ -25,6 +25,11 @@ It does not handle:
 3. creating `candidate` directly
 4. onboarding a historical module by first writing duplicated module-local formal truth when the real task is unresolved cross-module shared-truth governance
 
+### 2.1 Lifecycle-State Advance Inheritance
+
+When this command advances `_status.md`, that advancement inherits the centralized authoritative-run and non-authoritative-follow-up rules from `specflow/framework/docs/agent_guidelines/command_policy.md` Section 8 Rules 27-30.
+Only a new independent full-scope run of `spec_init` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+
 ## 3. Preconditions
 
 Before execution:

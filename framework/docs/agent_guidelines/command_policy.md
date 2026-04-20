@@ -296,3 +296,4 @@ Additional requirements:
 10. If the command may raise a checkpoint, it must define the allowed checkpoint types, trigger conditions, and resume rules.
 11. If the command may fall back or block, it must define which standardized `fallback_reason_code` values it may emit instead of leaving fallback wording to executor invention.
 12. If the command grades findings or deviations by severity, it must use one explicitly referenced centralized severity contract instead of redefining severity meanings locally.
+13. If the command may advance `_status.md` to a later lifecycle step, it must explicitly state that such advancement inherits the centralized authoritative-run and non-authoritative-follow-up rules from Section 8 Rules 27-30 instead of redefining a second advancement contract locally.
