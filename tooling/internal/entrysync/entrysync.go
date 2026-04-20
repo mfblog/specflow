@@ -22,10 +22,10 @@ const (
 var registeredEntryPattern = regexp.MustCompile("^- `([^`]*)`$")
 
 type Inspection struct {
-	RegisteredFiles []string
-	Consistent      bool
-	SuggestedSource string
-	StagedChanged   []string
+	RegisteredFiles     []string
+	Consistent          bool
+	SuggestedSource     string
+	CurrentRoundChanged []string
 }
 
 type SyncResult struct {
@@ -62,13 +62,13 @@ func Inspect(repoRoot string) (Inspection, error) {
 		return inspection, nil
 	}
 
-	stagedChanged, err := inferStagedChanged(repoRoot, registeredFiles)
+	currentRoundChanged, err := inferCurrentRoundChanged(repoRoot, registeredFiles)
 	if err != nil {
 		return inspection, err
 	}
-	inspection.StagedChanged = stagedChanged
-	if len(stagedChanged) == 1 {
-		inspection.SuggestedSource = stagedChanged[0]
+	inspection.CurrentRoundChanged = currentRoundChanged
+	if len(currentRoundChanged) == 1 {
+		inspection.SuggestedSource = currentRoundChanged[0]
 	}
 	return inspection, nil
 }
@@ -230,14 +230,43 @@ func replaceManagedBlock(content, replacement string) (string, error) {
 	return strings.Join(updated, "\n"), nil
 }
 
-func inferStagedChanged(repoRoot string, registeredFiles []string) ([]string, error) {
-	args := append([]string{"-C", repoRoot, "diff", "--cached", "--name-only", "--"}, registeredFiles...)
+func inferCurrentRoundChanged(repoRoot string, registeredFiles []string) ([]string, error) {
+	changed := map[string]bool{}
+	for _, cached := range []bool{false, true} {
+		paths, err := diffChangedFiles(repoRoot, registeredFiles, cached)
+		if err != nil {
+			return nil, err
+		}
+		for _, path := range paths {
+			changed[path] = true
+		}
+	}
+
+	result := make([]string, 0, len(changed))
+	for _, relPath := range registeredFiles {
+		if changed[relPath] {
+			result = append(result, relPath)
+		}
+	}
+	return result, nil
+}
+
+func diffChangedFiles(repoRoot string, registeredFiles []string, cached bool) ([]string, error) {
+	args := []string{"-C", repoRoot, "diff"}
+	if cached {
+		args = append(args, "--cached")
+	}
+	args = append(args, "--name-only", "--")
+	args = append(args, registeredFiles...)
 	cmd := exec.Command("git", args...)
 	output, err := cmd.Output()
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			return nil, fmt.Errorf("git diff --cached failed: %s", bytes.TrimSpace(exitErr.Stderr))
+			if cached {
+				return nil, fmt.Errorf("git diff --cached failed: %s", bytes.TrimSpace(exitErr.Stderr))
+			}
+			return nil, fmt.Errorf("git diff failed: %s", bytes.TrimSpace(exitErr.Stderr))
 		}
 		return nil, nil
 	}

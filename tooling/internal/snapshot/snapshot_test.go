@@ -180,6 +180,98 @@ version: 1.1.0
 	}
 }
 
+func TestRebuildCurrentCollectsAppendixFromPlainRelativePathLiteral(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
+
+	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `no` | `yes` | `candidate` | `cand_check` | note |\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
+id: module_demo
+layer: candidate
+version: 0.1.0
+---
+
+# Demo
+
+Use appendix path `+"`./appendix/c_module_demo_prompt.md`"+` for detailed prompts.
+
+## Global Constraint Alignment
+
+1. system_constraints_stable_ref: none
+2. shared_contract_refs: none
+`)
+
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_module_demo_prompt.md"), `---
+module: module_demo
+layer: candidate
+spec_version_ref: c_module_demo@0.1.0
+---
+
+# Appendix
+`)
+
+	result, err := RebuildCurrent(repoRoot, "module_demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	if len(result.ModuleAppendixSnapshot) != 1 {
+		t.Fatalf("expected one appendix snapshot entry, got %d", len(result.ModuleAppendixSnapshot))
+	}
+	if result.ModuleAppendixSnapshot[0].FileRef != "docs/specs/modules/candidate/appendix/c_module_demo_prompt.md" {
+		t.Fatalf("unexpected appendix file ref: %s", result.ModuleAppendixSnapshot[0].FileRef)
+	}
+}
+
+func TestRebuildCurrentRejectsRootDirectoryAppendixDrift(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
+
+	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `no` | `yes` | `candidate` | `cand_check` | note |\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
+id: module_demo
+layer: candidate
+version: 0.1.0
+---
+
+# Demo
+
+See [support](./c_module_demo_prompt.md).
+
+## Global Constraint Alignment
+
+1. system_constraints_stable_ref: none
+2. shared_contract_refs: none
+`)
+
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "c_module_demo_prompt.md"), `---
+module: module_demo
+layer: candidate
+spec_version_ref: c_module_demo@0.1.0
+---
+
+# Drift
+`)
+
+	_, err = RebuildCurrent(repoRoot, "module_demo")
+	if err == nil || !strings.Contains(err.Error(), "directory drift") {
+		t.Fatalf("expected directory drift error, got %v", err)
+	}
+}
+
 func TestValidateProcessFileRejectsMissingRequiredSnapshotField(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
