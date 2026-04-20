@@ -56,6 +56,7 @@ type ProcessSnapshotData struct {
 	SharedContractSnapshot []SharedContractEntry
 }
 
+var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
 var relativeMarkdownPathPattern = regexp.MustCompile(`(?:\./|\.\./)[^ \t\r\n<>"')\]` + "`" + `]+\.md`)
 
 var requiredProcessSnapshotFields = map[string][]string{
@@ -266,12 +267,15 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 	}
 	seen := map[string]bool{}
 	entries := []AppendixEntry{}
-	for _, destination := range relativeMarkdownPathPattern.FindAllString(body, -1) {
-		destination = strings.TrimSpace(destination)
-		if destination == "" || strings.HasPrefix(destination, "/") || strings.Contains(destination, "://") {
+	for _, destination := range markdownLinkPattern.FindAllStringSubmatch(body, -1) {
+		if len(destination) != 2 {
 			continue
 		}
-		absPath := filepath.Clean(filepath.Join(mainDir, filepath.FromSlash(destination)))
+		linkDestination := strings.TrimSpace(destination[1])
+		if linkDestination == "" || strings.HasPrefix(linkDestination, "/") || strings.Contains(linkDestination, "://") {
+			continue
+		}
+		absPath := filepath.Clean(filepath.Join(mainDir, filepath.FromSlash(linkDestination)))
 		relWithinLayerRoot, err := filepath.Rel(mainDir, absPath)
 		if err != nil {
 			return nil, err
@@ -319,6 +323,38 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 			AppendixRef: appendixRef,
 			Fingerprint: hashNormalizedText(string(content)),
 		})
+	}
+
+	bodyWithoutMarkdownLinks := markdownLinkPattern.ReplaceAllString(body, " ")
+	for _, destination := range relativeMarkdownPathPattern.FindAllString(bodyWithoutMarkdownLinks, -1) {
+		destination = strings.TrimSpace(destination)
+		if destination == "" || strings.HasPrefix(destination, "/") || strings.Contains(destination, "://") {
+			continue
+		}
+		absPath := filepath.Clean(filepath.Join(mainDir, filepath.FromSlash(destination)))
+		relWithinLayerRoot, err := filepath.Rel(mainDir, absPath)
+		if err != nil {
+			return nil, err
+		}
+		relWithinLayerRoot = filepath.ToSlash(relWithinLayerRoot)
+		if strings.HasPrefix(relWithinLayerRoot, "../") || relWithinLayerRoot == ".." || filepath.Ext(relWithinLayerRoot) != ".md" {
+			continue
+		}
+		relPath, err := filepath.Rel(repoRoot, absPath)
+		if err != nil {
+			return nil, err
+		}
+		relPath = filepath.ToSlash(relPath)
+		if relPath == mainSpecRef {
+			continue
+		}
+		if _, err := os.Stat(absPath); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, fmt.Errorf("stat appendix candidate %s: %w", relPath, err)
+		}
+		return nil, fmt.Errorf("%s: module-local supporting file reference %s must use a Markdown link", mainSpecRef, relPath)
 	}
 
 	sort.Slice(entries, func(i, j int) bool {

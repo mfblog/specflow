@@ -67,6 +67,8 @@ Rules:
 3. do not include Shared Contract files from `shared_contract_refs`
 4. if no module-local appendix file is explicitly referenced by the current-layer main Spec file, use literal `none`
 5. do not use an empty list, `null`, omitted field, or natural-language placeholder text
+6. "explicitly referenced" uses the explicit-reference form from `specflow/framework/docs/agent_guidelines/spec_policy.md`
+7. do not infer appendix binding from plain path literals, code spans, or other non-link text
 
 Item meanings:
 

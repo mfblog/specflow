@@ -241,6 +241,13 @@ func inferCurrentRoundChanged(repoRoot string, registeredFiles []string) ([]stri
 			changed[path] = true
 		}
 	}
+	untrackedPaths, err := untrackedRegisteredFiles(repoRoot, registeredFiles)
+	if err != nil {
+		return nil, err
+	}
+	for _, path := range untrackedPaths {
+		changed[path] = true
+	}
 
 	result := make([]string, 0, len(changed))
 	for _, relPath := range registeredFiles {
@@ -279,6 +286,38 @@ func diffChangedFiles(repoRoot string, registeredFiles []string, cached bool) ([
 		}
 		if contains(registeredFiles, filepath.ToSlash(line)) {
 			result = append(result, filepath.ToSlash(line))
+		}
+	}
+	sort.Strings(result)
+	return result, nil
+}
+
+func untrackedRegisteredFiles(repoRoot string, registeredFiles []string) ([]string, error) {
+	args := []string{"-C", repoRoot, "status", "--porcelain", "--untracked-files=all", "--"}
+	args = append(args, registeredFiles...)
+	cmd := exec.Command("git", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return nil, fmt.Errorf("git status --porcelain failed: %s", bytes.TrimSpace(exitErr.Stderr))
+		}
+		return nil, nil
+	}
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	result := []string{}
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "?? ") {
+			continue
+		}
+		path := strings.TrimSpace(strings.TrimPrefix(line, "?? "))
+		if path == "" {
+			continue
+		}
+		path = filepath.ToSlash(path)
+		if contains(registeredFiles, path) {
+			result = append(result, path)
 		}
 	}
 	sort.Strings(result)

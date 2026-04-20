@@ -108,7 +108,7 @@ Each command below is present because it satisfies the tooling necessity contrac
 5. `entry check`
    - necessary because registered entry managed-block consistency is a deterministic comparison
    - fixed input: repository root and the registered entry-file set
-   - fixed output: consistent or inconsistent status plus the staged-change context
+   - fixed output: consistent or inconsistent status plus the current-round change context
    - not responsible for: deciding whether entry-file wording is semantically correct
 6. `entry sync`
    - necessary because managed-block alignment is deterministic once the source entry file is known
@@ -132,7 +132,7 @@ Each command below is present because it satisfies the tooling necessity contrac
    - not responsible for: deciding whether fallback should happen in the first place
 10. `snapshot rebuild`
     - necessary because process snapshots are deterministic derivatives of current formal truth
-    - fixed input: module name and the bound truth-reading surface
+    - fixed input: module name and the bound truth-reading surface, including only module-local appendix files explicitly referenced through the governance-defined Markdown-link form
     - fixed output: rebuilt current snapshot data
     - not responsible for: deciding whether the truth itself is sufficient
 11. `snapshot validate-process`
