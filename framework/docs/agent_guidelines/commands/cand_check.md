@@ -30,6 +30,11 @@ By default this command reviews:
 8. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
 9. whether any registered project-local review standard applies on a `cand_check`-owned generic review extension surface and tightens the closure decision for the current candidate
 
+### 2.1 Lifecycle-State Advance Inheritance
+
+When this command advances `_status.md`, that advancement inherits the centralized authoritative-run and non-authoritative-follow-up rules from `specflow/framework/docs/agent_guidelines/command_policy.md` Section 8 Rules 27-30.
+Only a new independent full-scope run of `cand_check` may produce that advancing result; later local confirmation, repair-side reassessment, or scoped follow-up review must not advance lifecycle state.
+
 `cand_check` is not a "minimum can-move-forward review."
 `cand_check pass` always means:
 
@@ -48,6 +53,8 @@ Result semantics for non-pass conclusions are fixed:
    - after the repair, the module must return to `cand_check` rather than skipping forward
 
 Authoritative rerun boundary:
+
+This section is the `cand_check`-local elaboration of the centralized authoritative-run and non-authoritative-follow-up rules inherited above.
 
 1. a new formal `cand_check` rerun may be entered either by explicit command syntax or by a later natural-language request that command routing correctly resolves to a fresh full-scope `cand_check` run for the current module
 2. truth repair performed after a `blocked` or `fix_required` result is not itself that rerun
