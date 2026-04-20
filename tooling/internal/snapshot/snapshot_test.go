@@ -180,7 +180,7 @@ version: 1.1.0
 	}
 }
 
-func TestRebuildCurrentRejectsRawAppendixPathLiteral(t *testing.T) {
+func TestRebuildCurrentIgnoresRawAppendixPathLiteral(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
@@ -214,12 +214,15 @@ layer: candidate
 spec_version_ref: c_module_demo@0.1.0
 ---
 
-# Appendix
+	# Appendix
 `)
 
-	_, err = RebuildCurrent(repoRoot, "module_demo")
-	if err == nil || !strings.Contains(err.Error(), "must use a Markdown link") {
-		t.Fatalf("expected markdown-link error, got %v", err)
+	result, err := RebuildCurrent(repoRoot, "module_demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	if len(result.ModuleAppendixSnapshot) != 0 {
+		t.Fatalf("expected raw path literal to be ignored, got %+v", result.ModuleAppendixSnapshot)
 	}
 }
 
