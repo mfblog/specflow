@@ -57,12 +57,21 @@ Authoritative rerun boundary:
 This section is the `cand_check`-local elaboration of the centralized authoritative-run and non-authoritative-follow-up rules inherited above.
 
 1. a new formal `cand_check` rerun may be entered either by explicit command syntax or by a later natural-language request that command routing correctly resolves to a fresh full-scope `cand_check` run for the current module
-2. truth repair performed after a `blocked` or `fix_required` result is not itself that rerun
-3. any repair-side reassessment or scoped follow-up review performed after such repair is non-authoritative:
+   - after a prior `cand_check` ended as `blocked` or `fix_required`, that natural-language request must make rerun intent explicit enough to distinguish "rerun `cand_check` now" from "repair the candidate", "continue follow-up work", or "recheck only the reported blocker"
+   - generic repair-oriented wording such as "fix it", "continue", "close this up", or equivalent wording does not by itself authorize a fresh authoritative `cand_check` rerun
+2. for `cand_check`, a fresh full-scope run means rerunning the command's full mandatory closure surface for the current module:
+   - reread the current candidate main file plus all required appendix and Shared Contract files
+   - reread the current formal global baseline input when it exists
+   - rerun the framework-baseline closure checks, including `progressability`, `content completeness`, binding checks, and baseline-alignment checks
+   - rerun any applicable registered project-local review surface consumed by `cand_check`
+   - re-judge the overall gate conclusion for the current candidate instead of confirming only the previously reported finding
+3. truth repair performed after a `blocked` or `fix_required` result is not itself that rerun
+4. any repair-side reassessment or scoped follow-up review performed after such repair is non-authoritative:
    - it may report only whether the reported findings appear resolved within the checked scope
    - it must not be labeled a formal `cand_check pass`
    - it must not write `docs/specs/_check_result/{module}.md`
    - it must not advance `_status.md` to `cand_plan`
+   - checking only the repaired truth fragment, only the previously reported blocker, or any other narrowed review slice does not count as a fresh full-scope `cand_check` rerun
 
 Project-local review extension contract:
 
