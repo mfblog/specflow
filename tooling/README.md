@@ -152,7 +152,7 @@ Each command below is present because it satisfies the tooling necessity contrac
     - not responsible for: deciding whether promotion or fork semantics are correct
 14. `shared sync-impact`
    - necessary because comparing shared truth, bindings, and process snapshots is deterministic after the relevant scope is fixed
-   - fixed input: scoped modules, scoped shared refs or ids, current bindings, current shared truth, execution-local `stable_landing_module`, and execution-local `bound_modules_only_shared_file_refs`
+   - fixed input: scoped modules, scoped shared refs or ids, current bindings, current shared truth, governance-side execution-local `current_stable_landing_module` carried through the CLI as `--stable-landing-module`, and execution-local `bound_modules_only_shared_file_refs`
    - fixed output: candidate invalidation, stable reroute, or metadata-drift reporting according to the existing shared-governance rules
    - not responsible for: deciding shared boundary semantics or inferring caller-only facts that must be provided explicitly
 15. `shared reconcile-bound-modules`
