@@ -544,6 +544,56 @@ func runStatus(args []string, stdout, stderr io.Writer) error {
 	}
 
 	switch args[0] {
+	case "set-object":
+		fs := flag.NewFlagSet("status set-object", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		objectType := fs.String("type", "", "object type")
+		object := fs.String("object", "", "formal object id")
+		stable := fs.String("stable", "", "yes | no")
+		candidate := fs.String("candidate", "", "yes | no")
+		activeLayer := fs.String("active-layer", "", "stable | candidate")
+		nextCommand := fs.String("next-command", "", "next command")
+		notes := fs.String("notes", "", "notes text")
+		create := fs.Bool("create", false, "create row when missing")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" || strings.TrimSpace(*stable) == "" || strings.TrimSpace(*candidate) == "" || strings.TrimSpace(*activeLayer) == "" || strings.TrimSpace(*nextCommand) == "" {
+			writeStatusUsage(stderr)
+			return errors.New("type, object, stable, candidate, active-layer, and next-command are required")
+		}
+		if *stable != "yes" && *stable != "no" {
+			return fmt.Errorf("stable must be yes or no")
+		}
+		if *candidate != "yes" && *candidate != "no" {
+			return fmt.Errorf("candidate must be yes or no")
+		}
+		if *activeLayer != "stable" && *activeLayer != "candidate" {
+			return fmt.Errorf("active-layer must be stable or candidate")
+		}
+
+		updated, err := statusfile.UpsertObjectStatus(mustAbs(*repoRoot), statusfile.ObjectStatus{
+			ObjectType:  strings.TrimSpace(*objectType),
+			Object:      strings.TrimSpace(*object),
+			Stable:      strings.TrimSpace(*stable),
+			Candidate:   strings.TrimSpace(*candidate),
+			ActiveLayer: strings.TrimSpace(*activeLayer),
+			NextCommand: strings.TrimSpace(*nextCommand),
+			Notes:       strings.TrimSpace(*notes),
+		}, *create)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "Status row upserted: %t\n", updated)
+		fmt.Fprintf(stdout, "Object Type: %s\n", strings.TrimSpace(*objectType))
+		fmt.Fprintf(stdout, "Object: %s\n", strings.TrimSpace(*object))
+		fmt.Fprintf(stdout, "Stable: %s\n", strings.TrimSpace(*stable))
+		fmt.Fprintf(stdout, "Candidate: %s\n", strings.TrimSpace(*candidate))
+		fmt.Fprintf(stdout, "Active Layer: %s\n", strings.TrimSpace(*activeLayer))
+		fmt.Fprintf(stdout, "Next Command: %s\n", strings.TrimSpace(*nextCommand))
+		fmt.Fprintf(stdout, "Notes: %s\n", noneIfEmpty(strings.TrimSpace(*notes)))
+		return nil
 	case "set-module":
 		fs := flag.NewFlagSet("status set-module", flag.ContinueOnError)
 		fs.SetOutput(stderr)
@@ -654,6 +704,7 @@ func writeSnapshotUsage(w io.Writer) {
 
 func writeStatusUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl status set-object --type project|flow|module --object OBJECT --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl status set-module --module MODULE --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
 }
 

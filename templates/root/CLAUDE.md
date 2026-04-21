@@ -30,10 +30,23 @@ When a request hits any of the following, handle it with `specFlow` rules:
    - `cand_impl:{module}`
    - `cand_verify:{module}`
    - `cand_promote:{module}`
+   - `flow_new:{flow}`
+   - `flow_stable_verify:{flow}`
+   - `flow_fork:{flow}`
+   - `flow_check:{flow}`
+   - `flow_verify:{flow}`
+   - `flow_promote:{flow}`
+   - `project_init`
+   - `project_new`
+   - `project_stable_verify`
+   - `project_fork`
+   - `project_check`
+   - `project_verify`
+   - `project_promote`
 2. Governance review entries:
    - `spec_flow_review`
    - `shared_ops:{natural-language request}`
-3. Requests involving module Specs, state progression, candidate closure, formal promotion, Shared Contract, shared_ops routing, or system constraints.
+3. Requests involving `module`, `flow`, or `project` truth, state progression, candidate closure, formal promotion, Shared Contract, shared_ops routing, or system constraints.
 4. Requests involving registered project-local standards under `docs/project_standards/`.
 5. Requests to create, register, or tighten a project-local standard for the current project.
 6. Direct implementation requests that would modify repo-tracked code or other repo-tracked implementation-side files.
@@ -49,10 +62,12 @@ If none of the above is hit, continue following the host agent's other rules.
 
 ### 2. Standard Commands
 
-Standard command format:
+Standard command forms:
 
 ```text
-{command}:{module}
+module  -> {command}:{module}
+flow    -> {command}:{flow}
+project -> {command}
 ```
 
 See the command policy:
@@ -63,17 +78,33 @@ See the command files:
 
 - `specflow/framework/docs/agent_guidelines/commands/`
 
-The standard commands are:
+The standard commands are grouped by object family:
 
-1. `spec_init:{module}`
-2. `stable_verify:{module}`
-3. `spec_new:{module}`
-4. `spec_fork:{module}`
-5. `cand_check:{module}`
-6. `cand_plan:{module}`
-7. `cand_impl:{module}`
-8. `cand_verify:{module}`
-9. `cand_promote:{module}`
+1. `module`
+   - `spec_init:{module}`
+   - `stable_verify:{module}`
+   - `spec_new:{module}`
+   - `spec_fork:{module}`
+   - `cand_check:{module}`
+   - `cand_plan:{module}`
+   - `cand_impl:{module}`
+   - `cand_verify:{module}`
+   - `cand_promote:{module}`
+2. `flow`
+   - `flow_new:{flow}`
+   - `flow_stable_verify:{flow}`
+   - `flow_fork:{flow}`
+   - `flow_check:{flow}`
+   - `flow_verify:{flow}`
+   - `flow_promote:{flow}`
+3. `project`
+   - `project_init`
+   - `project_new`
+   - `project_stable_verify`
+   - `project_fork`
+   - `project_check`
+   - `project_verify`
+   - `project_promote`
 
 Governance review entries are:
 
@@ -82,28 +113,35 @@ Governance review entries are:
 
 Additional rules:
 
-1. `spec_flow_review` and `shared_ops:{natural-language request}` are not standard module commands in `{command}:{module}` form.
+1. `spec_flow_review` and `shared_ops:{natural-language request}` are not standard object-lifecycle commands.
 2. `shared_topology` and `shared_sync` are internal shared flows used after Shared Contract topology, binding, or lifecycle changes; users should enter shared work through `shared_ops`.
-3. `project_standard_create` is not a standard user-facing command. It is an internal flow the agent may use when the user asks to create a project-local standard.
-4. plain `spec_flow_review` means the default governance-baseline review defined in `specflow/framework/docs/agent_guidelines/spec_flow_review.md` unless the user explicitly narrows the scope.
-5. that default `spec_flow_review` must cover the shared-governance rule set, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`, even when the user did not mention shared governance explicitly.
-6. that default `spec_flow_review` must also cover the tooling execution contract set, at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, and the in-scope tooling source files under `specflow/tooling/`.
-7. if the review output does not explicitly report shared-governance coverage, tooling coverage, and their results, the `spec_flow_review` is not complete and must not be treated as a `pass`.
+3. `impact_sync` is an internal generic impact-reconciliation flow, not a user-facing command.
+4. `project_standard_create` is not a standard user-facing command. It is an internal flow the agent may use when the user asks to create a project-local standard.
+5. plain `spec_flow_review` means the default governance-baseline review defined in `specflow/framework/docs/agent_guidelines/spec_flow_review.md` unless the user explicitly narrows the scope.
+6. that default `spec_flow_review` must cover the shared-governance rule set, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`, even when the user did not mention shared governance explicitly.
+7. that default `spec_flow_review` must also cover the impact-reconciliation rule set, at minimum `impact_sync_policy.md`, `process_snapshot_contract.md`, `recovery_policy.md`, template `_status.md`, and the process README files.
+8. that default `spec_flow_review` must also cover the tooling execution contract set, at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, and the in-scope tooling source files under `specflow/tooling/`.
+9. if the review output does not explicitly report shared-governance coverage, impact-reconciliation coverage, tooling coverage, and their results, the `spec_flow_review` is not complete and must not be treated as a `pass`.
 
-### 3. How To Resolve Modules And Files
+### 3. How To Resolve Objects And Files
 
-`{module}` refers to the formal module name, not a concrete file name.
+`module`, `flow`, and `project` are formal object names, not concrete file names.
 
-If the user says only a module name such as `module_example`, read this first:
+If the user names an object but not a concrete file, read this first:
 
 - `docs/specs/_status.md`
 
-Then resolve the actual target from `Active Layer`:
+Then resolve the actual target from `Object Type` and `Active Layer`:
 
-1. If `Active Layer=stable`
-   - Default target: `docs/specs/modules/stable/s_{module}.md`
-2. If `Active Layer=candidate`
-   - Default target: `docs/specs/modules/candidate/c_{module}.md`
+1. `module`
+   - `stable` -> `docs/specs/modules/stable/s_{module}.md`
+   - `candidate` -> `docs/specs/modules/candidate/c_{module}.md`
+2. `flow`
+   - `stable` -> `docs/specs/flows/stable/s_flow_{name}.md`
+   - `candidate` -> `docs/specs/flows/candidate/c_flow_{name}.md`
+3. `project`
+   - `stable` -> `docs/specs/project/stable/s_project.md`
+   - `candidate` -> `docs/specs/project/candidate/c_project.md`
 
 If the user gives a concrete file prefix, treat it as a file reference:
 
@@ -111,6 +149,14 @@ If the user gives a concrete file prefix, treat it as a file reference:
    - Refers to the `stable` main file
 2. `c_module_xxx`
    - Refers to the `candidate` main file
+3. `s_flow_xxx`
+   - Refers to the `stable` flow file
+4. `c_flow_xxx`
+   - Refers to the `candidate` flow file
+5. `s_project`
+   - Refers to the stable project file
+6. `c_project`
+   - Refers to the candidate project file
 
 ### 4. Read Order For Non-Command Requests
 
@@ -118,17 +164,17 @@ If a request is inside the `specFlow` scope but is not a standard command, handl
 
 1. If the request directly asks to modify repo-tracked code or other implementation-side files, read `specflow/framework/docs/agent_guidelines/implementation_change_policy.md` first.
 2. Then determine whether the request targets:
-   - a module behavior object
+   - a command-target truth object
    - or a governance object / governance flow
 3. If it targets a governance object or governance flow:
    - read the governance file that defines that flow's scope, preconditions, and procedure first
    - follow that file's declared read scope instead of automatically starting from `docs/specs/_status.md`
    - if the flow is plain `spec_flow_review`, do not narrow it to main command-chain files, recent edits, or non-shared rules only unless the user explicitly narrows it that way
-   - before issuing any `pass` conclusion for plain `spec_flow_review`, confirm that both the shared-governance rule set and the tooling execution contract set required by `spec_flow_review.md` have been read and are explicitly reported in the review output
-4. If it targets a module behavior object:
-   - read `docs/specs/_status.md` to confirm the target module's current `Active Layer` and `Next Command`
-5. If the module task touches module behavior truth, read the main Spec for the current layer.
-6. If the main Spec explicitly references appendix files or Shared Contract files, read them too.
+   - before issuing any `pass` conclusion for plain `spec_flow_review`, confirm that the shared-governance rule set, the impact-reconciliation rule set, and the tooling execution contract set required by `spec_flow_review.md` have all been read and are explicitly reported in the review output
+4. If it targets a command-target truth object:
+   - read `docs/specs/_status.md` to confirm the target object's current `Active Layer` and `Next Command`
+5. Then read the current-layer main truth file for that object.
+6. If that truth file explicitly references appendix files or Shared Contract files, read them too.
 7. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
    - `docs/specs/system/stable/s_system_constraints.md`
 8. Then decide whether the current action is:
@@ -144,8 +190,9 @@ If a request is inside the `specFlow` scope but is not a standard command, handl
 2. If you are unsure whether a change is a behavior change, treat it as a behavior change.
 3. Behavior changes must not start from code. Follow `specflow/framework/docs/agent_guidelines/spec_policy.md` first.
 4. Direct implementation requests must first be classified through `specflow/framework/docs/agent_guidelines/implementation_change_policy.md`. `truth_writeback_required` and `boundary_unclear` must not start from code.
-5. A brand-new module may start with `candidate`; its first `stable` is created later by `cand_promote`.
+5. A brand-new module or flow may start with `candidate`; its first `stable` is created later by `cand_promote:{module}` or `flow_promote:{flow}`.
 6. A historical module entering governance for the first time must begin with `spec_init:{module}` to create its first `stable`.
+7. A historical project entering governance for the first time must begin with `project_init` to create its first `stable`.
 7. Under `docs/specs/`, every Spec file except `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` is a behavior source of truth and should normally enter git history.
 8. `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` are draft-layer artifacts, but draft-layer status does not block commits. When a round reaches a reviewable checkpoint, those files should normally be committed together with the linked process or code changes of that checkpoint.
 9. Changes to `specflow/framework/docs/agent_guidelines/*.md` should normally be committed in the current task.
@@ -173,7 +220,7 @@ If the task falls inside the `specFlow` scope, at minimum you should know what t
 4. `specflow/framework/docs/agent_guidelines/git_policy.md`
    - Defines which changes normally require commits and which do not
 5. `docs/specs/_status.md`
-   - Records each formal module's current status, active layer, and default next command
+   - Records each formal object's current status, active layer, and default next command
 
 Do not blindly read everything at once. Read only what the current task actually needs.
 <!-- SPECFLOW:END -->

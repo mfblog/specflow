@@ -1,38 +1,40 @@
 # Candidate Verify Results
 
-This directory stores candidate-implementation verification result files.
+This directory stores candidate verification results for formal command-target objects.
 
 Rules:
 
-1. Each module in the candidate upgrade chain normally has one `_verify_result/{module}.md`.
+1. `_verify_result/{object}.md` should exist only for formal objects whose current `verify` result still covers current truth and current verification scope.
 2. These files are not formal Specs and are not behavior sources of truth.
-3. Each file carries the latest `cand_verify` result for the current candidate.
-4. `Verify Result Snapshot` must use fixed fields:
+3. The current round allows only these command-target object types here:
+   - `module`
+   - `flow`
+   - `project`
+4. `Verify Result Snapshot` must use at least these fixed fields:
+   - `object_type`
+   - `object_ref`
    - `gate`
    - `decision`
    - `allow_next`
    - `next_command`
    - `blocking_summary`
    - `coverage_summary`
-   - `spec_layer_ref`
-   - `spec_file_ref`
-   - `spec_version_ref`
-   - `spec_fingerprint`
-   - `module_appendix_snapshot`
+   - `truth_layer_ref`
+   - `truth_file_ref`
+   - `truth_version_ref`
+   - `truth_fingerprint`
    - `verification_scope_ref`
    - `system_constraints_stable_file_ref`
    - `system_constraints_stable_version_ref`
    - `system_constraints_stable_fingerprint`
-   - `shared_contract_snapshot`
-5. `gate` is always `cand_verify`.
-6. `next_command` may only be `cand_promote`, `cand_verify`, `cand_impl`, or `cand_check`.
-7. `cand_verify` creates the file if it does not exist and later overwrites it instead of appending review noise.
-8. If candidate truth changes, or implementation changes after verification, the file becomes outdated.
-9. It also becomes outdated when formal global baseline bindings or Shared Contract bindings drift.
-10. `spec_fork` must delete the previous round's `_verify_result/{module}.md`.
-11. `cand_promote` must delete the corresponding `_verify_result/{module}.md`.
-12. Consumers must validate bindings, not just existence.
-13. This README is also constrained by `specflow/framework/docs/agent_guidelines/candidate_handoff_contract.md`.
-14. Snapshot fields in this file must use the fixed definitions from `specflow/framework/docs/agent_guidelines/process_snapshot_contract.md`.
-15. The fixed snapshot fields above do not expand in this round.
-16. When commands explain why verification must continue, fall back to implementation, or fall back to closure, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.
+5. Object-owned snapshot extensions are fixed by object type:
+   - `module` additionally records `module_appendix_snapshot` and `shared_contract_snapshot`
+   - `flow` additionally records `module_snapshot` and `shared_contract_snapshot`
+   - `project` additionally records `flow_snapshot`, `module_snapshot`, and `shared_contract_snapshot`
+6. `gate` must equal the formal `verify` command for the current object family.
+7. If current candidate truth, current implementation, or current bound snapshots change after verification, the file becomes outdated.
+8. Consumers must validate bindings, not just existence.
+9. Snapshot fields in this file must use the fixed definitions from `specflow/framework/docs/agent_guidelines/process_snapshot_contract.md`.
+10. `verification_scope_ref` minimally means that the current verify result still covers current candidate truth plus the current object state that was verified in that round.
+11. `flow_verify` must report `affected_modules`, but those modules do not become implicitly repaired or complete from that report alone.
+12. When commands explain why verification must continue, fall back, or reroute, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.
