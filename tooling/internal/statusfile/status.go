@@ -9,7 +9,18 @@ import (
 
 const relativeStatusPath = "docs/specs/_status.md"
 
+type ObjectStatus struct {
+	ObjectType  string
+	Object      string
+	Stable      string
+	Candidate   string
+	ActiveLayer string
+	NextCommand string
+	Notes       string
+}
+
 type ModuleStatus struct {
+	ObjectType  string
 	Module      string
 	Stable      string
 	Candidate   string
@@ -18,14 +29,33 @@ type ModuleStatus struct {
 	Notes       string
 }
 
+type tableShape struct {
+	ObjectTypeColumn bool
+}
+
 var allowedNextCommands = map[string]bool{
-	"spec_fork":     true,
-	"stable_verify": true,
-	"cand_check":    true,
-	"cand_plan":     true,
-	"cand_impl":     true,
-	"cand_verify":   true,
-	"cand_promote":  true,
+	"spec_init":             true,
+	"spec_new":              true,
+	"spec_fork":             true,
+	"stable_verify":         true,
+	"cand_check":            true,
+	"cand_plan":             true,
+	"cand_impl":             true,
+	"cand_verify":           true,
+	"cand_promote":          true,
+	"project_new":           true,
+	"project_init":          true,
+	"project_fork":          true,
+	"project_check":         true,
+	"project_verify":        true,
+	"project_promote":       true,
+	"project_stable_verify": true,
+	"flow_new":              true,
+	"flow_fork":             true,
+	"flow_check":            true,
+	"flow_verify":           true,
+	"flow_promote":          true,
+	"flow_stable_verify":    true,
 }
 
 func LoadModules(repoRoot string) ([]string, error) {
@@ -41,26 +71,45 @@ func LoadModules(repoRoot string) ([]string, error) {
 	return modules, nil
 }
 
-func LoadModuleStatuses(repoRoot string) ([]ModuleStatus, error) {
+func LoadObjectStatuses(repoRoot string) ([]ObjectStatus, error) {
 	path := filepath.Join(repoRoot, relativeStatusPath)
 	lines, _, err := readLines(path)
 	if err != nil {
 		return nil, err
 	}
 
-	start, end, err := findFormalModuleTable(lines)
+	start, end, shape, err := findStatusTable(lines)
 	if err != nil {
 		return nil, err
 	}
 
-	statuses := make([]ModuleStatus, 0, end-start)
+	statuses := make([]ObjectStatus, 0, end-start)
 	for idx := start; idx < end; idx++ {
 		cells, ok := parseTableLine(lines[idx])
-		if !ok || len(cells) < 6 {
+		if !ok {
 			continue
 		}
-		statuses = append(statuses, ModuleStatus{
-			Module:      stripCodeSpan(cells[0]),
+		if shape.ObjectTypeColumn {
+			if len(cells) < 7 {
+				continue
+			}
+			statuses = append(statuses, ObjectStatus{
+				ObjectType:  stripCodeSpan(cells[0]),
+				Object:      stripCodeSpan(cells[1]),
+				Stable:      stripCodeSpan(cells[2]),
+				Candidate:   stripCodeSpan(cells[3]),
+				ActiveLayer: stripCodeSpan(cells[4]),
+				NextCommand: stripCodeSpan(cells[5]),
+				Notes:       strings.TrimSpace(cells[6]),
+			})
+			continue
+		}
+		if len(cells) < 6 {
+			continue
+		}
+		statuses = append(statuses, ObjectStatus{
+			ObjectType:  "module",
+			Object:      stripCodeSpan(cells[0]),
 			Stable:      stripCodeSpan(cells[1]),
 			Candidate:   stripCodeSpan(cells[2]),
 			ActiveLayer: stripCodeSpan(cells[3]),
@@ -71,17 +120,57 @@ func LoadModuleStatuses(repoRoot string) ([]ModuleStatus, error) {
 	return statuses, nil
 }
 
-func LookupModuleStatus(repoRoot, module string) (ModuleStatus, error) {
-	statuses, err := LoadModuleStatuses(repoRoot)
+func LoadModuleStatuses(repoRoot string) ([]ModuleStatus, error) {
+	objectStatuses, err := LoadObjectStatuses(repoRoot)
 	if err != nil {
-		return ModuleStatus{}, err
+		return nil, err
+	}
+
+	statuses := make([]ModuleStatus, 0, len(objectStatuses))
+	for _, status := range objectStatuses {
+		if status.ObjectType != "module" {
+			continue
+		}
+		statuses = append(statuses, ModuleStatus{
+			ObjectType:  status.ObjectType,
+			Module:      status.Object,
+			Stable:      status.Stable,
+			Candidate:   status.Candidate,
+			ActiveLayer: status.ActiveLayer,
+			NextCommand: status.NextCommand,
+			Notes:       status.Notes,
+		})
+	}
+	return statuses, nil
+}
+
+func LookupObjectStatus(repoRoot, objectType, object string) (ObjectStatus, error) {
+	statuses, err := LoadObjectStatuses(repoRoot)
+	if err != nil {
+		return ObjectStatus{}, err
 	}
 	for _, status := range statuses {
-		if status.Module == module {
+		if status.ObjectType == objectType && status.Object == object {
 			return status, nil
 		}
 	}
-	return ModuleStatus{}, fmt.Errorf("module %q not found in %s", module, relativeStatusPath)
+	return ObjectStatus{}, fmt.Errorf("%s %q not found in %s", objectType, object, relativeStatusPath)
+}
+
+func LookupModuleStatus(repoRoot, module string) (ModuleStatus, error) {
+	status, err := LookupObjectStatus(repoRoot, "module", module)
+	if err != nil {
+		return ModuleStatus{}, err
+	}
+	return ModuleStatus{
+		ObjectType:  status.ObjectType,
+		Module:      status.Object,
+		Stable:      status.Stable,
+		Candidate:   status.Candidate,
+		ActiveLayer: status.ActiveLayer,
+		NextCommand: status.NextCommand,
+		Notes:       status.Notes,
+	}, nil
 }
 
 func UpdateNextCommand(repoRoot, module, nextCommand string) (bool, error) {
@@ -93,8 +182,8 @@ func UpdateNextCommand(repoRoot, module, nextCommand string) (bool, error) {
 	return UpsertModuleStatus(repoRoot, status, false)
 }
 
-func UpsertModuleStatus(repoRoot string, status ModuleStatus, createIfMissing bool) (bool, error) {
-	if err := validateModuleStatus(status); err != nil {
+func UpsertObjectStatus(repoRoot string, status ObjectStatus, createIfMissing bool) (bool, error) {
+	if err := validateObjectStatus(status); err != nil {
 		return false, err
 	}
 
@@ -104,30 +193,47 @@ func UpsertModuleStatus(repoRoot string, status ModuleStatus, createIfMissing bo
 		return false, err
 	}
 
-	start, end, err := findFormalModuleTable(lines)
+	start, end, shape, err := findStatusTable(lines)
 	if err != nil {
 		return false, err
+	}
+	if !shape.ObjectTypeColumn && status.ObjectType != "module" {
+		return false, fmt.Errorf("legacy status table cannot store non-module object type %q", status.ObjectType)
 	}
 
 	updated := false
 	for idx := start; idx < end; idx++ {
 		cells, ok := parseTableLine(lines[idx])
-		if !ok || len(cells) < 6 {
+		if !ok {
 			continue
 		}
-		if stripCodeSpan(cells[0]) != status.Module {
+		if shape.ObjectTypeColumn {
+			if len(cells) < 7 {
+				continue
+			}
+			if stripCodeSpan(cells[0]) != status.ObjectType || stripCodeSpan(cells[1]) != status.Object {
+				continue
+			}
+			lines[idx] = formatObjectStatusLine(status, shape)
+			updated = true
+			break
+		}
+		if len(cells) < 6 {
 			continue
 		}
-		lines[idx] = formatModuleStatusLine(status)
+		if stripCodeSpan(cells[0]) != status.Object {
+			continue
+		}
+		lines[idx] = formatObjectStatusLine(status, shape)
 		updated = true
 		break
 	}
 
 	if !updated {
 		if !createIfMissing {
-			return false, fmt.Errorf("module %q not found in %s", status.Module, relativeStatusPath)
+			return false, fmt.Errorf("%s %q not found in %s", status.ObjectType, status.Object, relativeStatusPath)
 		}
-		lines = append(lines[:end], append([]string{formatModuleStatusLine(status)}, lines[end:]...)...)
+		lines = append(lines[:end], append([]string{formatObjectStatusLine(status, shape)}, lines[end:]...)...)
 		updated = true
 	}
 
@@ -140,6 +246,22 @@ func UpsertModuleStatus(repoRoot string, status ModuleStatus, createIfMissing bo
 	}
 
 	return true, nil
+}
+
+func UpsertModuleStatus(repoRoot string, status ModuleStatus, createIfMissing bool) (bool, error) {
+	objectType := strings.TrimSpace(status.ObjectType)
+	if objectType == "" {
+		objectType = "module"
+	}
+	return UpsertObjectStatus(repoRoot, ObjectStatus{
+		ObjectType:  objectType,
+		Object:      status.Module,
+		Stable:      status.Stable,
+		Candidate:   status.Candidate,
+		ActiveLayer: status.ActiveLayer,
+		NextCommand: status.NextCommand,
+		Notes:       status.Notes,
+	}, createIfMissing)
 }
 
 func readLines(path string) ([]string, bool, error) {
@@ -156,29 +278,37 @@ func readLines(path string) ([]string, bool, error) {
 	return strings.Split(text, "\n"), hadTrailingNewline, nil
 }
 
-func findFormalModuleTable(lines []string) (int, int, error) {
+func findStatusTable(lines []string) (int, int, tableShape, error) {
 	for idx := range lines {
 		cells, ok := parseTableLine(lines[idx])
-		if !ok || len(cells) < 6 {
+		if !ok {
 			continue
 		}
-		if cells[0] != "Module" || cells[4] != "Next Command" {
-			continue
+		switch {
+		case len(cells) >= 7 && cells[0] == "Object Type" && cells[5] == "Next Command":
+			start, end, _, err := tableRange(lines, idx)
+			return start, end, tableShape{ObjectTypeColumn: true}, err
+		case len(cells) >= 6 && cells[0] == "Module" && cells[4] == "Next Command":
+			start, end, _, err := tableRange(lines, idx)
+			return start, end, tableShape{ObjectTypeColumn: false}, err
 		}
-		if idx+1 >= len(lines) {
-			return 0, 0, fmt.Errorf("missing separator row in %s", relativeStatusPath)
-		}
-		start := idx + 2
-		end := start
-		for end < len(lines) {
-			if _, ok := parseTableLine(lines[end]); !ok {
-				break
-			}
-			end++
-		}
-		return start, end, nil
 	}
-	return 0, 0, fmt.Errorf("formal module table not found in %s", relativeStatusPath)
+	return 0, 0, tableShape{}, fmt.Errorf("status table not found in %s", relativeStatusPath)
+}
+
+func tableRange(lines []string, headerIndex int) (int, int, tableShape, error) {
+	if headerIndex+1 >= len(lines) {
+		return 0, 0, tableShape{}, fmt.Errorf("missing separator row in %s", relativeStatusPath)
+	}
+	start := headerIndex + 2
+	end := start
+	for end < len(lines) {
+		if _, ok := parseTableLine(lines[end]); !ok {
+			break
+		}
+		end++
+	}
+	return start, end, tableShape{}, nil
 }
 
 func parseTableLine(line string) ([]string, bool) {
@@ -201,9 +331,20 @@ func formatTableLine(cells []string) string {
 	return "| " + strings.Join(cells, " | ") + " |"
 }
 
-func formatModuleStatusLine(status ModuleStatus) string {
+func formatObjectStatusLine(status ObjectStatus, shape tableShape) string {
+	if shape.ObjectTypeColumn {
+		return formatTableLine([]string{
+			fmt.Sprintf("`%s`", status.ObjectType),
+			fmt.Sprintf("`%s`", status.Object),
+			fmt.Sprintf("`%s`", status.Stable),
+			fmt.Sprintf("`%s`", status.Candidate),
+			fmt.Sprintf("`%s`", status.ActiveLayer),
+			fmt.Sprintf("`%s`", status.NextCommand),
+			status.Notes,
+		})
+	}
 	return formatTableLine([]string{
-		fmt.Sprintf("`%s`", status.Module),
+		fmt.Sprintf("`%s`", status.Object),
 		fmt.Sprintf("`%s`", status.Stable),
 		fmt.Sprintf("`%s`", status.Candidate),
 		fmt.Sprintf("`%s`", status.ActiveLayer),
@@ -220,7 +361,13 @@ func stripCodeSpan(value string) string {
 	return value
 }
 
-func validateModuleStatus(status ModuleStatus) error {
+func validateObjectStatus(status ObjectStatus) error {
+	if strings.TrimSpace(status.ObjectType) == "" {
+		return fmt.Errorf("object type is required")
+	}
+	if strings.TrimSpace(status.Object) == "" {
+		return fmt.Errorf("object is required")
+	}
 	if !allowedNextCommands[strings.TrimSpace(status.NextCommand)] {
 		return fmt.Errorf("next command %q is not a supported status value", status.NextCommand)
 	}
