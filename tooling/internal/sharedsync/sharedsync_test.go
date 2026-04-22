@@ -1,6 +1,7 @@
 package sharedsync
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"os/exec"
@@ -796,6 +797,50 @@ func TestSyncImpactIncludesCandidateModuleWhenSelectedBindingWasRemovedFromCurre
 	}
 }
 
+func TestSyncImpactIgnoresIncompleteRemovedBindingEvidenceForModule(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: module_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo",
+		"",
+		"## Global Constraint Alignment",
+		"",
+		"1. system_constraints_stable_ref: none",
+		"2. shared_contract_refs: none",
+		"",
+	}, "\n"))
+	writeProcessFile(t, repoRoot, "check", strings.Join([]string{
+		"shared_contract_snapshot:",
+		"  - shared_contract_id: shared_demo",
+		"    layer: candidate",
+		"    file_ref: docs/specs/shared_contracts/candidate/c_shared_demo.md",
+		"    version_ref: c_shared_demo@0.1.0",
+		"    fingerprint: demo",
+	}, "\n"))
+
+	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ScopedModules) != 0 {
+		t.Fatalf("expected incomplete module evidence to be ignored, got %+v", result.ScopedModules)
+	}
+	if len(result.ModuleResults) != 0 {
+		t.Fatalf("expected no module fallback from incomplete evidence, got %+v", result.ModuleResults)
+	}
+}
+
 func TestSyncImpactRejectsEmptySharedContractRefsList(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupCandidateSharedRepo(t, repoRoot)
@@ -905,35 +950,21 @@ func TestSyncImpactIncludesCandidateFlowWhenSelectedBindingWasRemovedFromCurrent
 		"",
 		"# Demo Flow",
 		"",
-		"## Shared Contracts",
+		"## Bindings",
 		"",
-		"1. shared_contract_refs: none",
+		"1. project_ref: c_project@0.1.0",
+		"2. module_refs: none",
+		"3. shared_contract_refs: none",
+		"4. system_constraints_stable_ref: none",
 		"",
 	}, "\n"))
-	writeNamedProcessFile(t, repoRoot, "check", "flow_demo", strings.Join([]string{
-		"object_type: flow",
-		"object_ref: flow_demo",
-		"gate: flow_check",
-		"decision: pass",
-		"allow_next: true",
-		"next_command: flow_verify",
-		"blocking_summary: none",
-		"coverage_summary: current candidate",
-		"truth_layer_ref: candidate",
-		"truth_file_ref: docs/specs/flows/candidate/c_flow_flow_demo.md",
-		"truth_version_ref: c_flow_flow_demo@0.1.0",
-		"truth_fingerprint: demo",
-		"system_constraints_stable_file_ref: docs/specs/system/stable/s_system_constraints.md",
-		"system_constraints_stable_version_ref: s_system_constraints@1.0.0",
-		"system_constraints_stable_fingerprint: system-demo",
-		"module_snapshot: none",
-		"shared_contract_snapshot:",
-		"  - shared_contract_id: shared_demo",
-		"    layer: candidate",
-		"    file_ref: docs/specs/shared_contracts/candidate/c_shared_demo.md",
-		"    version_ref: c_shared_demo@0.1.0",
-		"    fingerprint: demo",
-	}, "\n"))
+	writeNamedProcessFile(t, repoRoot, "check", "flow_demo", renderFlowProcessSnapshotForTest(t, repoRoot, "check", "flow_demo", false, []string{
+		"shared_contract_id: shared_demo",
+		"layer: candidate",
+		"file_ref: docs/specs/shared_contracts/candidate/c_shared_demo.md",
+		"version_ref: c_shared_demo@0.1.0",
+		"fingerprint: demo",
+	}, nil))
 
 	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
 	if err != nil {
@@ -967,36 +998,21 @@ func TestSyncImpactIncludesCandidateProjectWhenSelectedBindingWasRemovedFromCurr
 		"",
 		"# Demo Project",
 		"",
-		"## Shared Contracts",
+		"## Bindings",
 		"",
-		"1. shared_contract_refs: none",
+		"1. flow_refs: none",
+		"2. module_refs: none",
+		"3. shared_contract_refs: none",
+		"4. system_constraints_stable_ref: none",
 		"",
 	}, "\n"))
-	writeNamedProcessFile(t, repoRoot, "check", "project", strings.Join([]string{
-		"object_type: project",
-		"object_ref: project",
-		"gate: project_check",
-		"decision: pass",
-		"allow_next: true",
-		"next_command: project_verify",
-		"blocking_summary: none",
-		"coverage_summary: current candidate",
-		"truth_layer_ref: candidate",
-		"truth_file_ref: docs/specs/project/candidate/c_project.md",
-		"truth_version_ref: c_project@0.1.0",
-		"truth_fingerprint: demo",
-		"system_constraints_stable_file_ref: docs/specs/system/stable/s_system_constraints.md",
-		"system_constraints_stable_version_ref: s_system_constraints@1.0.0",
-		"system_constraints_stable_fingerprint: system-demo",
-		"flow_snapshot: none",
-		"module_snapshot: none",
-		"shared_contract_snapshot:",
-		"  - shared_contract_id: shared_demo",
-		"    layer: candidate",
-		"    file_ref: docs/specs/shared_contracts/candidate/c_shared_demo.md",
-		"    version_ref: c_shared_demo@0.1.0",
-		"    fingerprint: demo",
-	}, "\n"))
+	writeNamedProcessFile(t, repoRoot, "check", "project", renderProjectProcessSnapshotForTest(t, repoRoot, "check", "project", false, []string{
+		"shared_contract_id: shared_demo",
+		"layer: candidate",
+		"file_ref: docs/specs/shared_contracts/candidate/c_shared_demo.md",
+		"version_ref: c_shared_demo@0.1.0",
+		"fingerprint: demo",
+	}, nil, nil))
 
 	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
 	if err != nil {
@@ -1043,9 +1059,12 @@ func TestSyncImpactIgnoresIncompleteRemovedBindingEvidenceForFlow(t *testing.T) 
 		"",
 		"# Demo Flow",
 		"",
-		"## Shared Contracts",
+		"## Bindings",
 		"",
-		"1. shared_contract_refs: none",
+		"1. project_ref: c_project@0.1.0",
+		"2. module_refs: none",
+		"3. shared_contract_refs: none",
+		"4. system_constraints_stable_ref: none",
 		"",
 	}, "\n"))
 	writeNamedProcessFile(t, repoRoot, "check", "flow_demo", strings.Join([]string{
@@ -1066,6 +1085,102 @@ func TestSyncImpactIgnoresIncompleteRemovedBindingEvidenceForFlow(t *testing.T) 
 	}
 	if len(result.FlowResults) != 0 {
 		t.Fatalf("expected no flow fallback from incomplete evidence, got %+v", result.FlowResults)
+	}
+}
+
+func TestSyncImpactIgnoresFlowEvidenceWithMismatchedModuleSnapshot(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateFlowSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("flow", "candidate", "flow_demo")
+	if err != nil {
+		t.Fatalf("ObjectMainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: flow_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo Flow",
+		"",
+		"## Bindings",
+		"",
+		"1. project_ref: c_project@0.1.0",
+		"2. module_refs: none",
+		"3. shared_contract_refs: none",
+		"4. system_constraints_stable_ref: none",
+		"",
+	}, "\n"))
+	writeNamedProcessFile(t, repoRoot, "check", "flow_demo", renderFlowProcessSnapshotForTest(t, repoRoot, "check", "flow_demo", false, []string{
+		"shared_contract_id: shared_demo",
+		"layer: candidate",
+		"file_ref: docs/specs/shared_contracts/candidate/c_shared_demo.md",
+		"version_ref: c_shared_demo@0.1.0",
+		"fingerprint: demo",
+	}, []string{
+		"module: module_wrong",
+		"layer: candidate",
+		"file_ref: docs/specs/modules/candidate/c_module_wrong.md",
+		"version_ref: c_module_wrong@0.1.0",
+		"fingerprint: wrong",
+	}))
+
+	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ScopedFlows) != 0 {
+		t.Fatalf("expected mismatched module snapshot to be rejected, got %+v", result.ScopedFlows)
+	}
+	if len(result.FlowResults) != 0 {
+		t.Fatalf("expected no flow fallback from mismatched module snapshot, got %+v", result.FlowResults)
+	}
+}
+
+func TestSyncImpactAcceptsMarkdownBulletRemovedBindingEvidenceForFlow(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateFlowSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("flow", "candidate", "flow_demo")
+	if err != nil {
+		t.Fatalf("ObjectMainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: flow_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo Flow",
+		"",
+		"## Bindings",
+		"",
+		"1. project_ref: c_project@0.1.0",
+		"2. module_refs: none",
+		"3. shared_contract_refs: none",
+		"4. system_constraints_stable_ref: none",
+		"",
+	}, "\n"))
+	writeNamedProcessFile(t, repoRoot, "check", "flow_demo", renderFlowProcessSnapshotForTest(t, repoRoot, "check", "flow_demo", true, []string{
+		"shared_contract_id: shared_demo",
+		"layer: candidate",
+		"file_ref: docs/specs/shared_contracts/candidate/c_shared_demo.md",
+		"version_ref: c_shared_demo@0.1.0",
+		"fingerprint: demo",
+	}, nil))
+
+	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ScopedFlows) != 1 || result.ScopedFlows[0] != "flow_demo" {
+		t.Fatalf("expected markdown bullet flow evidence to remain valid, got %+v", result.ScopedFlows)
+	}
+	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "binding_drift" {
+		t.Fatalf("expected markdown bullet flow evidence to trigger fallback, got %+v", result.FlowResults)
 	}
 }
 
@@ -1310,10 +1425,13 @@ func setupCandidateFlowSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"# Demo Flow",
 		"",
-		"## Shared Contracts",
+		"## Bindings",
 		"",
-		"1. shared_contract_refs:",
+		"1. project_ref: c_project@0.1.0",
+		"2. module_refs: none",
+		"3. shared_contract_refs:",
 		"   - c_shared_demo@0.1.0",
+		"4. system_constraints_stable_ref: none",
 		"",
 	}, "\n"))
 
@@ -1363,10 +1481,13 @@ func setupStableProjectSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"# Demo Project",
 		"",
-		"## Shared Contracts",
+		"## Bindings",
 		"",
-		"1. shared_contract_refs:",
+		"1. flow_refs: none",
+		"2. module_refs: none",
+		"3. shared_contract_refs:",
 		"   - s_shared_demo@1.0.0",
+		"4. system_constraints_stable_ref: none",
 		"",
 	}, "\n"))
 
@@ -1416,10 +1537,13 @@ func setupCandidateProjectSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"# Demo Project",
 		"",
-		"## Shared Contracts",
+		"## Bindings",
 		"",
-		"1. shared_contract_refs:",
+		"1. flow_refs: none",
+		"2. module_refs: none",
+		"3. shared_contract_refs:",
 		"   - c_shared_demo@0.1.0",
+		"4. system_constraints_stable_ref: none",
 		"",
 	}, "\n"))
 
@@ -1496,4 +1620,135 @@ func mustWriteFile(t *testing.T, path, content string) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
+}
+
+func renderFlowProcessSnapshotForTest(t *testing.T, repoRoot, processKind, object string, bulletFormat bool, sharedLines, moduleLines []string) string {
+	t.Helper()
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("flow", "candidate", object)
+	if err != nil {
+		t.Fatalf("ObjectMainSpecFileRef: %v", err)
+	}
+	truthFingerprint := fingerprintForTest(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)))
+	scalars := []string{
+		"object_type: flow",
+		"object_ref: " + object,
+		"gate: " + map[string]string{"check": "flow_check", "verify": "flow_verify"}[processKind],
+		"decision: pass",
+		"allow_next: true",
+		"next_command: " + map[string]string{"check": "flow_verify", "verify": "flow_promote"}[processKind],
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
+		"truth_layer_ref: candidate",
+		"truth_file_ref: " + mainSpecRef,
+		"truth_version_ref: c_flow_" + object + "@0.1.0",
+		"truth_fingerprint: " + truthFingerprint,
+		"system_constraints_stable_file_ref: none",
+		"system_constraints_stable_version_ref: none",
+		"system_constraints_stable_fingerprint: none",
+	}
+	if processKind == "verify" {
+		scalars = append(scalars, "verification_scope_ref: current candidate")
+	}
+	lists := [][]string{
+		append([]string{"module_snapshot: " + noneOrBlank(moduleLines)}, prefixNestedList(moduleLines)...),
+		append([]string{"shared_contract_snapshot: " + noneOrBlank(sharedLines)}, prefixNestedList(sharedLines)...),
+	}
+	return renderSnapshotBodyForTest(scalars, lists, bulletFormat)
+}
+
+func renderProjectProcessSnapshotForTest(t *testing.T, repoRoot, processKind, object string, bulletFormat bool, sharedLines, moduleLines, flowLines []string) string {
+	t.Helper()
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("project", "candidate", object)
+	if err != nil {
+		t.Fatalf("ObjectMainSpecFileRef: %v", err)
+	}
+	truthFingerprint := fingerprintForTest(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)))
+	scalars := []string{
+		"object_type: project",
+		"object_ref: " + object,
+		"gate: " + map[string]string{"check": "project_check", "verify": "project_verify"}[processKind],
+		"decision: pass",
+		"allow_next: true",
+		"next_command: " + map[string]string{"check": "project_verify", "verify": "project_promote"}[processKind],
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
+		"truth_layer_ref: candidate",
+		"truth_file_ref: " + mainSpecRef,
+		"truth_version_ref: c_project@0.1.0",
+		"truth_fingerprint: " + truthFingerprint,
+		"system_constraints_stable_file_ref: none",
+		"system_constraints_stable_version_ref: none",
+		"system_constraints_stable_fingerprint: none",
+	}
+	if processKind == "verify" {
+		scalars = append(scalars, "verification_scope_ref: current candidate")
+	}
+	lists := [][]string{
+		append([]string{"flow_snapshot: " + noneOrBlank(flowLines)}, prefixNestedList(flowLines)...),
+		append([]string{"module_snapshot: " + noneOrBlank(moduleLines)}, prefixNestedList(moduleLines)...),
+		append([]string{"shared_contract_snapshot: " + noneOrBlank(sharedLines)}, prefixNestedList(sharedLines)...),
+	}
+	return renderSnapshotBodyForTest(scalars, lists, bulletFormat)
+}
+
+func renderSnapshotBodyForTest(scalars []string, lists [][]string, bulletFormat bool) string {
+	lines := []string{}
+	for _, scalar := range scalars {
+		if bulletFormat {
+			key, value, _ := strings.Cut(scalar, ": ")
+			lines = append(lines, fmt.Sprintf("- `%s`: `%s`", key, value))
+			continue
+		}
+		lines = append(lines, scalar)
+	}
+	for _, list := range lists {
+		header := list[0]
+		items := list[1:]
+		if bulletFormat {
+			key, value, _ := strings.Cut(header, ": ")
+			if value == "none" {
+				lines = append(lines, fmt.Sprintf("- `%s`: `none`", key))
+				continue
+			}
+			lines = append(lines, fmt.Sprintf("- `%s`:", key))
+			for _, item := range items {
+				trimmed := strings.TrimSpace(item)
+				trimmed = strings.TrimPrefix(trimmed, "- ")
+				key, value, _ := strings.Cut(trimmed, ": ")
+				lines = append(lines, fmt.Sprintf("  - `%s`: `%s`", key, value))
+			}
+			continue
+		}
+		lines = append(lines, header)
+		lines = append(lines, items...)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func noneOrBlank(lines []string) string {
+	if len(lines) == 0 {
+		return "none"
+	}
+	return ""
+}
+
+func prefixNestedList(lines []string) []string {
+	result := make([]string, 0, len(lines))
+	for _, line := range lines {
+		result = append(result, "  - "+line)
+	}
+	return result
+}
+
+func fingerprintForTest(t *testing.T, path string) string {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	text := strings.ReplaceAll(string(content), "\r\n", "\n")
+	text = strings.TrimSuffix(text, "\n")
+	text += "\n"
+	sum := sha256.Sum256([]byte(text))
+	return fmt.Sprintf("%x", sum)
 }
