@@ -28,6 +28,14 @@ type SharedContractEntry struct {
 	Fingerprint      string
 }
 
+type ObjectSnapshotEntry struct {
+	ObjectRef   string
+	Layer       string
+	FileRef     string
+	VersionRef  string
+	Fingerprint string
+}
+
 type Snapshot struct {
 	Module                             string
 	SpecFileRef                        string
@@ -51,8 +59,11 @@ type ValidationResult struct {
 type ProcessSnapshotData struct {
 	ProcessKind            string
 	ProcessFile            string
+	PresentFields          map[string]bool
 	Scalars                map[string]string
 	ModuleAppendixSnapshot []AppendixEntry
+	ModuleSnapshot         []ObjectSnapshotEntry
+	FlowSnapshot           []ObjectSnapshotEntry
 	SharedContractSnapshot []SharedContractEntry
 }
 
@@ -234,8 +245,11 @@ func LoadProcessSnapshot(repoRoot, module, processKind string) (ProcessSnapshotD
 	return ProcessSnapshotData{
 		ProcessKind:            processKind,
 		ProcessFile:            processFile,
+		PresentFields:          copyStringBoolMap(parsed.presentFields),
 		Scalars:                scalars,
 		ModuleAppendixSnapshot: append([]AppendixEntry(nil), parsed.appendixEntries...),
+		ModuleSnapshot:         append([]ObjectSnapshotEntry(nil), parsed.moduleEntries...),
+		FlowSnapshot:           append([]ObjectSnapshotEntry(nil), parsed.flowEntries...),
 		SharedContractSnapshot: append([]SharedContractEntry(nil), parsed.sharedEntries...),
 	}, nil
 }
@@ -559,6 +573,10 @@ type processSnapshot struct {
 	scalars         map[string]string
 	appendixEntries []AppendixEntry
 	appendixPresent bool
+	moduleEntries   []ObjectSnapshotEntry
+	modulePresent   bool
+	flowEntries     []ObjectSnapshotEntry
+	flowPresent     bool
 	sharedEntries   []SharedContractEntry
 	sharedPresent   bool
 }
@@ -594,6 +612,12 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 				case "module_appendix_snapshot":
 					result.appendixPresent = true
 					currentList = key
+				case "module_snapshot":
+					result.modulePresent = true
+					currentList = key
+				case "flow_snapshot":
+					result.flowPresent = true
+					currentList = key
 				case "shared_contract_snapshot":
 					result.sharedPresent = true
 					currentList = key
@@ -616,6 +640,18 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 					currentIndex = len(result.appendixEntries) - 1
 				}
 				assignAppendixField(&result.appendixEntries[currentIndex], key, value)
+			case "module_snapshot":
+				if currentIndex < 0 || key == "module" {
+					result.moduleEntries = append(result.moduleEntries, ObjectSnapshotEntry{})
+					currentIndex = len(result.moduleEntries) - 1
+				}
+				assignObjectSnapshotField(&result.moduleEntries[currentIndex], key, value)
+			case "flow_snapshot":
+				if currentIndex < 0 || key == "flow" {
+					result.flowEntries = append(result.flowEntries, ObjectSnapshotEntry{})
+					currentIndex = len(result.flowEntries) - 1
+				}
+				assignObjectSnapshotField(&result.flowEntries[currentIndex], key, value)
 			case "shared_contract_snapshot":
 				if currentIndex < 0 || key == "shared_contract_id" {
 					result.sharedEntries = append(result.sharedEntries, SharedContractEntry{})
@@ -634,6 +670,10 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 			switch currentList {
 			case "module_appendix_snapshot":
 				assignAppendixField(&result.appendixEntries[currentIndex], key, value)
+			case "module_snapshot":
+				assignObjectSnapshotField(&result.moduleEntries[currentIndex], key, value)
+			case "flow_snapshot":
+				assignObjectSnapshotField(&result.flowEntries[currentIndex], key, value)
 			case "shared_contract_snapshot":
 				assignSharedField(&result.sharedEntries[currentIndex], key, value)
 			}
@@ -643,6 +683,14 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 	if raw, ok := result.scalars["module_appendix_snapshot"]; ok && raw == "none" {
 		result.appendixPresent = true
 		result.appendixEntries = nil
+	}
+	if raw, ok := result.scalars["module_snapshot"]; ok && raw == "none" {
+		result.modulePresent = true
+		result.moduleEntries = nil
+	}
+	if raw, ok := result.scalars["flow_snapshot"]; ok && raw == "none" {
+		result.flowPresent = true
+		result.flowEntries = nil
 	}
 	if raw, ok := result.scalars["shared_contract_snapshot"]; ok && raw == "none" {
 		result.sharedPresent = true
@@ -710,6 +758,21 @@ func assignSharedField(entry *SharedContractEntry, key, value string) {
 	}
 }
 
+func assignObjectSnapshotField(entry *ObjectSnapshotEntry, key, value string) {
+	switch key {
+	case "module", "flow":
+		entry.ObjectRef = value
+	case "layer":
+		entry.Layer = value
+	case "file_ref":
+		entry.FileRef = value
+	case "version_ref":
+		entry.VersionRef = value
+	case "fingerprint":
+		entry.Fingerprint = value
+	}
+}
+
 func compareScalar(result *ValidationResult, field, actual, expected string) {
 	if actual == "" {
 		return
@@ -759,6 +822,14 @@ func normalizeSharedList(entries []SharedContractEntry) string {
 		parts = append(parts, fmt.Sprintf("%s|%s|%s|%s|%s", item.SharedContractID, item.Layer, item.FileRef, item.VersionRef, item.Fingerprint))
 	}
 	return strings.Join(parts, ";")
+}
+
+func copyStringBoolMap(source map[string]bool) map[string]bool {
+	result := make(map[string]bool, len(source))
+	for key, value := range source {
+		result[key] = value
+	}
+	return result
 }
 
 func renderAppendixLines(entries []AppendixEntry) []string {
