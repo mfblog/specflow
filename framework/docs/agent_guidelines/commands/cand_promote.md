@@ -48,17 +48,20 @@ Only a new independent full-scope run of `cand_promote` may produce that advanci
      - fall back to `cand_impl`
    - if another required binding of `_verify_result/{module}.md` no longer matches the current round:
      - delete `_check_result/{module}.md`
-     - delete `_plans/{module}.md`
+     - delete `_plans/draft/{module}.md`
+     - delete `_plans/active/{module}.md`
      - delete `_verify_result/{module}.md`
      - use `fallback_reason_code=binding_drift` and fall back to `cand_check`
    - if bound Shared Contract truth, layer, version, or snapshot drifted:
      - delete `_check_result/{module}.md`
-     - delete `_plans/{module}.md`
+     - delete `_plans/draft/{module}.md`
+     - delete `_plans/active/{module}.md`
      - delete `_verify_result/{module}.md`
      - use `fallback_reason_code=shared_contract_drift` and fall back to `cand_check`
    - if candidate truth or formal global baseline changed:
      - delete `_check_result/{module}.md`
-     - delete `_plans/{module}.md`
+     - delete `_plans/draft/{module}.md`
+     - delete `_plans/active/{module}.md`
      - delete `_verify_result/{module}.md`
      - fall back to `cand_check`
 5. continue only when bindings, coverage, and gate fields all remain valid
@@ -111,7 +114,8 @@ Only a new independent full-scope run of `cand_promote` may produce that advanci
    - `docs/specs/modules/candidate/c_{module}.md`
    - current-round candidate appendix files
    - `_check_result/{module}.md`
-   - `_plans/{module}.md`
+   - `_plans/draft/{module}.md`
+   - `_plans/active/{module}.md`
    - `_verify_result/{module}.md`
    - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --module {module} --mode cand_promote`
 17. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success

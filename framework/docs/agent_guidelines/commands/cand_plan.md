@@ -11,9 +11,10 @@ By default it handles:
 1. reading the current valid candidate pass gate
 2. optionally running research preflight when implementation-critical unknowns still block a stable plan
 3. deriving a stable-to-candidate change surface with `git diff` when the module already has `stable`
-4. generating or updating `_plans/{module}.md`
-5. keeping plan bindings aligned with the current candidate, current formal global baseline state, and current Shared Contract snapshot
-6. stopping at a structured decision checkpoint only when key implementation direction is still not locked
+4. generating or updating `_plans/active/{module}.md`
+5. writing or updating `_plans/draft/{module}.md` when planning cannot yet produce a consumable active plan
+6. keeping active-plan bindings aligned with the current candidate, current formal global baseline state, and current Shared Contract snapshot
+7. stopping at a structured decision checkpoint only when key implementation direction is still not locked
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
@@ -38,7 +39,8 @@ Only a new independent full-scope run of `cand_plan` may produce that advancing 
 4. verify the pass gate bindings are still valid
 5. if the pass gate is invalid, stop immediately:
    - delete `_check_result/{module}.md`
-   - delete `_plans/{module}.md` if it exists
+   - delete `_plans/draft/{module}.md` if it exists
+   - delete `_plans/active/{module}.md` if it exists
    - delete `_verify_result/{module}.md` if it exists
    - fall back `_status.md` to `cand_check`
 6. if the module already has `stable`, derive a planning-aid change surface before judging the round:
@@ -61,17 +63,20 @@ Only a new independent full-scope run of `cand_plan` may produce that advancing 
 10. `decision-checkpoint` is a distinct result shape:
    - use it only when a `decision` checkpoint is actually raised because implementation direction is still unresolved
    - do not merge it into `plan-blocked`, because unresolved direction and missing implementation facts are different blocking causes
-   - do not create or update `docs/specs/_plans/{module}.md`
+   - do not create or update `docs/specs/_plans/active/{module}.md`
    - keep `_status.md` at `cand_plan` unless the checkpoint answer must first be written back into candidate truth or appendix truth
 11. if the result is `truth-fallback`:
    - delete `_check_result/{module}.md`
-   - delete `_plans/{module}.md` if it exists
+   - delete `_plans/draft/{module}.md` if it exists
+   - delete `_plans/active/{module}.md` if it exists
    - delete `_verify_result/{module}.md` if it exists
-   - do not create or update `docs/specs/_plans/{module}.md`
+   - do not create or update `docs/specs/_plans/active/{module}.md`
    - update `_status.md` to `cand_check`
    - report `fallback_reason_code=truth_incomplete`
 12. if the result is `plan-blocked`:
-   - do not create or update `docs/specs/_plans/{module}.md`
+   - create or update `docs/specs/_plans/draft/{module}.md`
+   - do not create or update `docs/specs/_plans/active/{module}.md`
+   - if an old `active/{module}.md` still exists for the same round, revalidate whether it remains consumable; if not, delete it rather than leaving a stale active plan available to downstream commands
    - keep `_status.md` at `cand_plan`
    - report `fallback_reason_code=implementation_unknown`
    - record the blocking point, the missing condition, and the exact resume signal
@@ -81,12 +86,16 @@ Only a new independent full-scope run of `cand_plan` may produce that advancing 
    - do not treat the checkpoint as permission to continue without that writeback
 14. if a `decision` checkpoint is raised:
    - set the result shape to `decision-checkpoint`
-   - do not create or update `docs/specs/_plans/{module}.md`
+   - create or update `docs/specs/_plans/draft/{module}.md`
+   - do not create or update `docs/specs/_plans/active/{module}.md`
+   - if an old `active/{module}.md` still exists for the same round, revalidate whether it remains consumable; if not, delete it rather than leaving a stale active plan available to downstream commands
    - keep `_status.md` at `cand_plan` when the unresolved decision is implementation-direction only
    - report `fallback_reason_code=direction_unresolved`
    - use `resume_next_step=cand_check` only when the checkpoint answer must first be written back into candidate truth or appendix truth
-15. create or update `docs/specs/_plans/{module}.md` only when no checkpoint blocks planning and the result is `plan-ready`
-16. ensure the plan records:
+15. create or update `docs/specs/_plans/active/{module}.md` only when no checkpoint blocks planning and the result is `plan-ready`
+16. if `docs/specs/_plans/draft/{module}.md` exists for the same round and the round is now `plan-ready`, extract only the stabilized planning content into `active/{module}.md`; do not rename the draft file in place
+17. after a successful active-plan write for the current round, delete `docs/specs/_plans/draft/{module}.md` if it exists
+18. ensure the active plan records:
    - execution slices rather than one undifferentiated implementation block
    - for each slice: objective, file scope, dependencies, verification action, done condition, and current status
    - progress, blockers, and verification focus for this round
@@ -98,36 +107,37 @@ Only a new independent full-scope run of `cand_plan` may produce that advancing 
    - `system_constraints_stable_version_ref`
    - `system_constraints_stable_fingerprint`
    - `shared_contract_snapshot`
-17. update `_status.md`:
+19. update `_status.md`:
    - if the candidate is now ready for implementation -> `Next Command=cand_impl`
    - if candidate truth drift was discovered -> `Next Command=cand_check`
    - if research preflight found candidate truth gaps -> `Next Command=cand_check`
    - if research preflight is blocked on implementation-critical unknowns but no truth rewrite is pending -> keep `Next Command=cand_plan`
    - if the result is `decision-checkpoint` and no truth writeback is pending -> keep `Next Command=cand_plan`
    - if a `decision` checkpoint stopped planning and no truth writeback is pending -> keep `Next Command=cand_plan`
-18. perform git close-out if required
+20. perform git close-out if required
 
 ## 5. Stop Conditions
 
-1. either a valid plan file exists for the current candidate truth, or planning stopped with no consumable plan artifact because of fallback, bounded blocking, or checkpoint
+1. either a valid active plan file exists for the current candidate truth, or planning stopped with no consumable active plan artifact because of fallback, bounded blocking, or checkpoint
 2. `_status.md` points to the real next step
 
 ## 6. Output Contract
 
 1. planning conclusion
-2. whether a plan file was written, updated, or intentionally not created because planning stopped at fallback, bounded blocking, or a checkpoint
-3. plan binding result
-4. stable-to-candidate change-surface review result when `stable` exists
-5. research preflight result when research preflight was used
-6. `handoff validation result`
-7. cleanup result when planning fell back to `cand_check`
-8. `checkpoint result` when a checkpoint stop was raised
+2. whether an active plan file was written, updated, or intentionally not created because planning stopped at fallback, bounded blocking, or a checkpoint
+3. whether a draft plan file was written, updated, deleted, or intentionally omitted
+4. plan binding result
+5. stable-to-candidate change-surface review result when `stable` exists
+6. research preflight result when research preflight was used
+7. `handoff validation result`
+8. cleanup result when planning fell back to `cand_check`
+9. `checkpoint result` when a checkpoint stop was raised
    - when present, it must satisfy the fixed checkpoint fields defined by `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
-9. `fallback_reason_code` for fallback, blocking, or checkpoint stops
-10. blocking reason and resume signal when planning stayed at `cand_plan` without fallback
-11. git close-out result
-12. `_status.md` update result
-13. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
+10. `fallback_reason_code` for fallback, blocking, or checkpoint stops
+11. blocking reason and resume signal when planning stayed at `cand_plan` without fallback
+12. git close-out result
+13. `_status.md` update result
+14. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - when a checkpoint was raised or planning stayed blocked at `cand_plan`, also report `resume signal`
    - if `Next Command=cand_plan`, `why this next step` must explicitly state whether planning is waiting on implementation facts, unresolved direction, or truth writeback

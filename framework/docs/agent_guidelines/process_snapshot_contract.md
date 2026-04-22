@@ -22,7 +22,7 @@ This contract governs process files for:
 
 1. `module`
    - `docs/specs/_check_result/{module}.md`
-   - `docs/specs/_plans/{module}.md`
+   - `docs/specs/_plans/active/{module}.md`
    - `docs/specs/_verify_result/{module}.md`
 2. `flow`
    - `docs/specs/_check_result/{flow}.md`
@@ -73,11 +73,11 @@ Rules:
 2. executors must not substitute `spec_fingerprint` for gate-bearing files
 3. if a file correctly binds no system constraints, all three system-constraints fields must use literal `none`
 
-### 3.2 Module Plan Files
+### 3.2 Module Active Plan Files
 
-`docs/specs/_plans/{module}.md` is governed by the same snapshot contract but it is not a gate-bearing file.
+`docs/specs/_plans/active/{module}.md` is governed by the same snapshot contract but it is not a gate-bearing file.
 
-Every module plan file must record:
+Every module active plan file must record:
 
 1. `spec_file_ref`
    - the exact candidate-layer module truth file used by that plan
@@ -98,10 +98,42 @@ Every module plan file must record:
 
 Rules:
 
-1. `_plans/{module}.md` does not carry `gate`, `decision`, `allow_next`, or `next_command`
-2. `_plans/{module}.md` still records the exact candidate module truth and exact current global-binding snapshot it was written against
-3. if a plan correctly binds no appendix or shared files, `module_appendix_snapshot` or `shared_contract_snapshot` must use literal `none`
-4. if a plan correctly binds no system constraints, all three system-constraints fields must use literal `none`
+1. `active/{module}.md` does not carry `gate`, `decision`, `allow_next`, or `next_command`
+2. `active/{module}.md` still records the exact candidate module truth and exact current global-binding snapshot it was written against
+3. if an active plan correctly binds no appendix or shared files, `module_appendix_snapshot` or `shared_contract_snapshot` must use literal `none`
+4. if an active plan correctly binds no system constraints, all three system-constraints fields must use literal `none`
+
+### 3.3 Module Draft Plan Files
+
+`docs/specs/_plans/draft/{module}.md` is a planning working artifact.
+
+It is not:
+
+1. a gate-bearing file
+2. a consumable downstream handoff artifact
+3. a substitute for `active/{module}.md`
+
+If a draft plan records snapshot anchors, it may record only:
+
+1. `object_ref`
+2. `truth_file_ref`
+3. `truth_version_ref`
+4. `truth_fingerprint`
+
+It may additionally record planning-local fields such as:
+
+1. `fallback_reason_code`
+2. `blocking_summary`
+3. `resume_signal`
+4. `known_findings`
+5. `open_unknowns`
+6. `research_notes`
+
+Rules:
+
+1. draft plan files must never be treated as valid inputs for `cand_impl` or `cand_verify`
+2. draft plan files do not inherit the active-plan binding revalidation contract
+3. draft plan files may be deleted whenever the current round falls back, forks, promotes, or closes candidate state
 
 ## 4. Object-Specific Snapshot Fields
 

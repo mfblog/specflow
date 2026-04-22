@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This command advances code implementation according to the current `candidate` and `_plans/{module}.md`.
+This command advances code implementation according to the current `candidate` and `_plans/active/{module}.md`.
 
 ## 2. Scope
 
@@ -10,7 +10,7 @@ By default it handles:
 
 1. implementing according to plan slices
 2. adding necessary tests or verification actions
-3. writing progress back into `_plans/{module}.md`
+3. writing progress back into `_plans/active/{module}.md`
 4. consuming the `cand_plan -> cand_impl` handoff only when gate and plan bindings both still hold
 
 ### 2.1 Lifecycle-State Advance Inheritance
@@ -23,7 +23,7 @@ Only a new independent full-scope run of `cand_impl` may produce that advancing 
 1. complete required pre-checks
 2. `_status.md` says `Next Command=cand_impl`
 3. a current valid `docs/specs/_check_result/{module}.md` exists
-4. a current valid `docs/specs/_plans/{module}.md` exists
+4. a current valid `docs/specs/_plans/active/{module}.md` exists
 5. the candidate still aligns with the current formal global baseline state
 6. read required candidate appendix files and bound Shared Contract files
 7. read the git policy before implementation work
@@ -33,16 +33,18 @@ Only a new independent full-scope run of `cand_impl` may produce that advancing 
 1. read the candidate Spec and all required appendix or Shared Contract files
 2. read `s_system_constraints.md` if it exists
 3. read the current `_check_result/{module}.md`
-4. read the current `_plans/{module}.md`
+4. read the current `_plans/active/{module}.md`
 5. validate all required bindings of the pass gate and plan file according to the candidate handoff contract
 6. if any binding is invalid, stop immediately:
    - delete `_check_result/{module}.md`
-   - delete `_plans/{module}.md`
+   - delete `_plans/draft/{module}.md`
+   - delete `_plans/active/{module}.md`
    - delete `_verify_result/{module}.md` if it exists
    - fall back `_status.md` to `cand_check`
 7. if `system_constraints_stable_ref` no longer matches the current formal global baseline state, stop immediately:
    - delete `_check_result/{module}.md`
-   - delete `_plans/{module}.md`
+   - delete `_plans/draft/{module}.md`
+   - delete `_plans/active/{module}.md`
    - delete `_verify_result/{module}.md` if it exists
    - fall back to `cand_check`
 8. only when both pass gate and plan are still valid may implementation continue
@@ -50,7 +52,7 @@ Only a new independent full-scope run of `cand_impl` may produce that advancing 
 10. for each slice, use the recorded objective, file scope, dependencies, verification action, and done condition as the execution boundary
 11. do not collapse a blocked slice into a vague whole-module status; record clearly which slice is complete, blocked, or still pending
 12. run necessary verification for the slices advanced in this round, or record clearly what could not be run
-13. write slice completion status, blockers, and verification results back into `_plans/{module}.md`
+13. write slice completion status, blockers, and verification results back into `_plans/active/{module}.md`
 14. update `_status.md`:
    - if implementation is ready for verification -> `Next Command=cand_verify`
    - if implementation is still blocked -> keep `Next Command=cand_impl`
