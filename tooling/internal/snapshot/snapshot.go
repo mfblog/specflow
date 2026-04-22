@@ -74,6 +74,12 @@ var requiredProcessSnapshotFields = map[string][]string{
 	"check": {
 		"object_type",
 		"object_ref",
+		"gate",
+		"decision",
+		"allow_next",
+		"next_command",
+		"blocking_summary",
+		"coverage_summary",
 		"truth_layer_ref",
 		"truth_file_ref",
 		"truth_version_ref",
@@ -87,6 +93,12 @@ var requiredProcessSnapshotFields = map[string][]string{
 	"plan": {
 		"object_type",
 		"object_ref",
+		"gate",
+		"decision",
+		"allow_next",
+		"next_command",
+		"blocking_summary",
+		"coverage_summary",
 		"truth_layer_ref",
 		"truth_file_ref",
 		"truth_version_ref",
@@ -100,6 +112,12 @@ var requiredProcessSnapshotFields = map[string][]string{
 	"verify": {
 		"object_type",
 		"object_ref",
+		"gate",
+		"decision",
+		"allow_next",
+		"next_command",
+		"blocking_summary",
+		"coverage_summary",
 		"truth_layer_ref",
 		"truth_file_ref",
 		"truth_version_ref",
@@ -203,11 +221,24 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 		if !actual.presentFields[field] {
 			result.Valid = false
 			result.Mismatches = append(result.Mismatches, fmt.Sprintf("missing required field: %s", field))
+			continue
+		}
+		if actualValue, ok := actual.scalars[field]; ok && strings.TrimSpace(actualValue) == "" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s must not be empty", field))
 		}
 	}
 
+	expectedGate, expectedNextCommand, err := expectedModuleProcessRouting(processKind)
+	if err != nil {
+		return ValidationResult{}, err
+	}
 	compareScalar(&result, "object_type", actual.scalars["object_type"], "module")
 	compareScalar(&result, "object_ref", actual.scalars["object_ref"], expected.Module)
+	compareScalar(&result, "gate", actual.scalars["gate"], expectedGate)
+	compareScalar(&result, "decision", actual.scalars["decision"], "pass")
+	compareScalar(&result, "allow_next", actual.scalars["allow_next"], "true")
+	compareScalar(&result, "next_command", actual.scalars["next_command"], expectedNextCommand)
 	compareScalar(&result, "truth_layer_ref", actual.scalars["truth_layer_ref"], expected.TruthLayerRef)
 	compareScalar(&result, "truth_file_ref", actual.scalars["truth_file_ref"], expected.SpecFileRef)
 	compareScalar(&result, "truth_version_ref", actual.scalars["truth_version_ref"], expected.SpecVersionRef)
@@ -234,6 +265,19 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 	}
 
 	return result, nil
+}
+
+func expectedModuleProcessRouting(processKind string) (string, string, error) {
+	switch processKind {
+	case "check":
+		return "cand_check", "cand_plan", nil
+	case "plan":
+		return "cand_plan", "cand_impl", nil
+	case "verify":
+		return "cand_verify", "cand_promote", nil
+	default:
+		return "", "", fmt.Errorf("unsupported process kind %q", processKind)
+	}
 }
 
 func LoadProcessSnapshot(repoRoot, module, processKind string) (ProcessSnapshotData, error) {

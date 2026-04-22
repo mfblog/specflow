@@ -443,7 +443,7 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
-	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_demo.md"), snapshot.Render(snap))
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_demo.md"), renderImpactCheckProcessSnapshot(snap))
 	return "docs/specs/shared_contracts/candidate/c_shared_demo.md"
 }
 
@@ -459,4 +459,43 @@ func mustWriteImpactFile(t *testing.T, path, content string) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
+}
+
+func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
+	lines := []string{
+		"# check",
+		"",
+		"```yaml",
+		"object_type: module",
+		"object_ref: " + snap.Module,
+		"gate: cand_check",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: cand_plan",
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
+		"truth_layer_ref: " + snap.TruthLayerRef,
+		"truth_file_ref: " + snap.SpecFileRef,
+		"truth_version_ref: " + snap.SpecVersionRef,
+		"truth_fingerprint: " + snap.SpecFingerprint,
+		"system_constraints_stable_file_ref: " + snap.SystemConstraintsStableFileRef,
+		"system_constraints_stable_version_ref: " + snap.SystemConstraintsStableVersionRef,
+		"system_constraints_stable_fingerprint: " + snap.SystemConstraintsStableFingerprint,
+		"module_appendix_snapshot: none",
+		"shared_contract_snapshot:",
+	}
+	for _, entry := range snap.SharedContractSnapshot {
+		lines = append(lines,
+			"  - shared_contract_id: "+entry.SharedContractID,
+			"    layer: "+entry.Layer,
+			"    file_ref: "+entry.FileRef,
+			"    version_ref: "+entry.VersionRef,
+			"    fingerprint: "+entry.Fingerprint,
+		)
+	}
+	if len(snap.SharedContractSnapshot) == 0 {
+		lines[len(lines)-1] = "shared_contract_snapshot: none"
+	}
+	lines = append(lines, "```", "")
+	return strings.Join(lines, "\n")
 }
