@@ -69,6 +69,7 @@ For shared-change reconciliation, the current mechanical entry remains `shared s
    - write one unified object row in `_status.md`
 15. `shared sync-impact`
    - compute shared-specific scope, resolve shared-only exceptions into generic impact input, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
+   - when stable landing self-exemption is needed, the caller must pass both `--stable-landing-module` and exact `--stable-landing-shared-refs`
 16. `shared reconcile-bound-modules`
    - rewrite Shared Contract `bound_modules` metadata from current formal bindings
 

@@ -118,8 +118,9 @@ Only a new independent full-scope run of `cand_promote` may produce that advanci
 18. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer and Step 15 has written the surviving shared-file metadata, even when no additional affected module is known yet
    - this post-promotion `shared_sync` closes external affected-module fallout and shared-state reconciliation; it must not overturn the promoted module's own successful stable landing merely because the same promotion round also wrote the stable Shared Contract file or stable binding that the promoted module now legally uses
    - pass execution-local `current_stable_landing_module={module}` into that `shared_sync` run
+   - pass execution-local `stable_landing_shared_refs=<exact-shared-ref-list-written-by-this-landing>` into that same `shared_sync` run; `current_stable_landing_module` alone is not sufficient
    - if any surviving touched shared file changed only in `bound_modules` during this round, also pass execution-local `bound_modules_only_shared_file_refs` with the exact file refs for those files
-   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --modules {module} --stable-landing-module {module}` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
+   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --modules {module} --stable-landing-module {module} --stable-landing-shared-refs <exact-stable-landing-shared-ref-list>` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
    - if that post-promotion `shared_sync` returns control because repository truth is still insufficient to continue safely, do not claim promotion success:
      - immediately run incomplete promotion recovery according to `recovery_policy.md`
      - after recovery, require rerouting through `shared_ops:{natural-language request}` from the restored candidate-layer repository truth
@@ -160,10 +161,11 @@ Only a new independent full-scope run of `cand_promote` may produce that advanci
 16. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
 17. recovery-state explanation if incomplete promotion occurred
 18. when post-promotion `shared_sync` was executed, the passed `current_stable_landing_module` value
-19. when post-promotion `shared_sync` was executed, the passed `bound_modules_only_shared_file_refs` value when present
-20. when promotion stopped because post-promotion Shared Contract topology, retained candidate next-round draft shape, `promotion_owner_module`, unbound-file terminal state, or post-promotion `shared_sync` uncertainty was unclear, the required next step through `shared_ops`
-21. git close-out result
-22. follow-up state explanation
+19. when post-promotion `shared_sync` was executed, the passed `stable_landing_shared_refs` value
+20. when post-promotion `shared_sync` was executed, the passed `bound_modules_only_shared_file_refs` value when present
+21. when promotion stopped because post-promotion Shared Contract topology, retained candidate next-round draft shape, `promotion_owner_module`, unbound-file terminal state, or post-promotion `shared_sync` uncertainty was unclear, the required next step through `shared_ops`
+22. git close-out result
+23. follow-up state explanation
    - when promotion succeeds, the follow-up state must explicitly confirm:
      - `Stable=yes`
      - `Candidate=no`

@@ -17,6 +17,7 @@ type Options struct {
 	SharedRefs                     []string
 	SharedIDs                      []string
 	StableLandingModule            string
+	StableLandingSharedRefs        []string
 	BoundModulesOnlySharedFileRefs []string
 }
 
@@ -27,6 +28,7 @@ type Result struct {
 	ScopedSharedRefs               []string
 	ScopedSharedIDs                []string
 	StableLandingModule            string
+	StableLandingSharedRefs        []string
 	BoundModulesOnlySharedFileRefs []string
 	ModuleResults                  []ModuleResult
 	FlowResults                    []ObjectResult
@@ -81,6 +83,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		SharedRefs:                     normalizeStrings(options.SharedRefs),
 		SharedIDs:                      normalizeStrings(options.SharedIDs),
 		StableLandingModule:            strings.TrimSpace(options.StableLandingModule),
+		StableLandingSharedRefs:        normalizeStrings(options.StableLandingSharedRefs),
 		BoundModulesOnlySharedFileRefs: normalizeStrings(options.BoundModulesOnlySharedFileRefs),
 	}
 	if len(normalized.SharedRefs) == 0 && len(normalized.SharedIDs) == 0 {
@@ -125,9 +128,28 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		}
 	}
 	if normalized.StableLandingModule != "" {
-		if _, ok := moduleBindings[normalized.StableLandingModule]; !ok {
+		binding, ok := moduleBindings[normalized.StableLandingModule]
+		if !ok {
 			return Result{}, fmt.Errorf("stable landing module %q is not registered in docs/specs/_status.md", normalized.StableLandingModule)
 		}
+		if len(normalized.StableLandingSharedRefs) == 0 {
+			return Result{}, fmt.Errorf("stable landing shared refs are required when stable landing module %q is set", normalized.StableLandingModule)
+		}
+		if binding.Status.ActiveLayer != "stable" {
+			return Result{}, fmt.Errorf("stable landing module %q must currently be at active layer stable", normalized.StableLandingModule)
+		}
+		landingSelectedRefs := selectedSharedRefsForObject(binding.SharedRefs, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByRef)
+		landingSelectedRefSet := makeStringSet(landingSelectedRefs)
+		for _, ref := range normalized.StableLandingSharedRefs {
+			if _, ok := sharedFilesByRef[ref]; !ok {
+				return Result{}, fmt.Errorf("stable landing shared ref %q is not present under docs/specs/shared_contracts/", ref)
+			}
+			if !landingSelectedRefSet[ref] {
+				return Result{}, fmt.Errorf("stable landing shared ref %q is not selected for stable landing module %q in this shared sync scope", ref, normalized.StableLandingModule)
+			}
+		}
+	} else if len(normalized.StableLandingSharedRefs) > 0 {
+		return Result{}, fmt.Errorf("stable landing shared refs require stable landing module")
 	}
 
 	boundModulesOnlyFileRefs := map[string]bool{}
@@ -164,6 +186,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		ScopedSharedRefs:               normalized.SharedRefs,
 		ScopedSharedIDs:                normalized.SharedIDs,
 		StableLandingModule:            normalized.StableLandingModule,
+		StableLandingSharedRefs:        normalized.StableLandingSharedRefs,
 		BoundModulesOnlySharedFileRefs: normalized.BoundModulesOnlySharedFileRefs,
 		ModuleResults:                  impactResult.ModuleResults,
 		FlowResults:                    impactResult.FlowResults,
@@ -387,13 +410,14 @@ func buildScopeModules(moduleBindings map[string]moduleBinding, sharedFilesByRef
 
 func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]moduleBinding, options Options, sharedFilesByRef map[string]sharedFile, boundModulesOnlyFileRefs map[string]bool) []impactsync.ScopedModule {
 	result := make([]impactsync.ScopedModule, 0, len(scopeModules))
+	stableLandingSharedRefSet := makeStringSet(options.StableLandingSharedRefs)
 	for _, module := range scopeModules {
 		binding := moduleBindings[module]
 		selectedSharedRefs := selectedSharedRefsForObject(binding.SharedRefs, options.SharedRefs, options.SharedIDs, sharedFilesByRef)
 		invalidatingSharedRefs := filterInvalidatingSharedRefs(selectedSharedRefs, sharedFilesByRef, boundModulesOnlyFileRefs)
 		explicitFallbackScope := contains(options.Modules, module)
 		if binding.Status.ActiveLayer == "stable" && options.StableLandingModule == module {
-			invalidatingSharedRefs = nil
+			invalidatingSharedRefs = subtractStringSet(invalidatingSharedRefs, stableLandingSharedRefSet)
 			explicitFallbackScope = false
 		}
 		result = append(result, impactsync.ScopedModule{
@@ -510,6 +534,30 @@ func allowedSharedSnapshotMismatchFileRefs(selectedRefs []string, sharedFilesByR
 		}
 	}
 	return normalizeStrings(result)
+}
+
+func subtractStringSet(values []string, excluded map[string]bool) []string {
+	if len(values) == 0 || len(excluded) == 0 {
+		return normalizeStrings(values)
+	}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if !excluded[value] {
+			result = append(result, value)
+		}
+	}
+	return normalizeStrings(result)
+}
+
+func makeStringSet(values []string) map[string]bool {
+	result := make(map[string]bool, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			result[value] = true
+		}
+	}
+	return result
 }
 
 func parseSharedFile(relPath, content string) (sharedFile, error) {

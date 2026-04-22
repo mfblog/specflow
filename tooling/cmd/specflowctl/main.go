@@ -392,6 +392,7 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 		sharedRefs := fs.String("shared-refs", "", "comma-separated shared version refs")
 		sharedIDs := fs.String("shared-ids", "", "comma-separated shared contract ids")
 		stableLandingModule := fs.String("stable-landing-module", "", "formal module whose same-round stable landing should not invalidate itself")
+		stableLandingSharedRefs := fs.String("stable-landing-shared-refs", "", "comma-separated exact shared refs written by the same-round stable landing")
 		boundModulesOnlySharedFileRefs := fs.String("bound-modules-only-shared-file-refs", "", "comma-separated shared file refs proven to be bound_modules-only deltas")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
@@ -402,6 +403,7 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 			SharedRefs:                     parseCSV(*sharedRefs),
 			SharedIDs:                      parseCSV(*sharedIDs),
 			StableLandingModule:            strings.TrimSpace(*stableLandingModule),
+			StableLandingSharedRefs:        parseCSV(*stableLandingSharedRefs),
 			BoundModulesOnlySharedFileRefs: parseCSV(*boundModulesOnlySharedFileRefs),
 		})
 		if err != nil {
@@ -414,6 +416,7 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 		writeList(stdout, "Scoped shared refs", result.ScopedSharedRefs)
 		writeList(stdout, "Scoped shared ids", result.ScopedSharedIDs)
 		fmt.Fprintf(stdout, "Stable landing module: %s\n", noneIfEmpty(result.StableLandingModule))
+		writeList(stdout, "Stable landing shared refs", result.StableLandingSharedRefs)
 		writeList(stdout, "Bound-modules-only shared file refs", result.BoundModulesOnlySharedFileRefs)
 		fmt.Fprintf(stdout, "Module results (%d):\n", len(result.ModuleResults))
 		if len(result.ModuleResults) == 0 {
@@ -725,7 +728,7 @@ func writeProcessUsage(w io.Writer) {
 
 func writeSharedUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl shared sync-impact (--shared-refs c_shared_x@0.1.0 | --shared-ids shared_x) [--modules module_a,module_b] [--stable-landing-module module_a] [--bound-modules-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_x.md] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl shared sync-impact (--shared-refs c_shared_x@0.1.0 | --shared-ids shared_x) [--modules module_a,module_b] [--stable-landing-module module_a --stable-landing-shared-refs s_shared_x@1.0.0] [--bound-modules-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_x.md] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl shared reconcile-bound-modules [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--repo-root PATH]")
 }
 

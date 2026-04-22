@@ -64,7 +64,11 @@ Execution-local caller inputs may include:
 
 1. `current_stable_landing_module`
    - use only when the same round has just landed stable truth and must not invalidate that same landing merely because the new stable shared file now exists
-2. `bound_modules_only_shared_file_refs`
+   - this input declares only which stable module may use the landing exception
+2. `stable_landing_shared_refs`
+   - use only when the caller can name the exact shared refs written by that same landing round
+   - this input is required whenever `current_stable_landing_module` is present
+3. `bound_modules_only_shared_file_refs`
    - use only when the caller has already proven that the current-round delta for those exact Shared Contract files is limited to `bound_modules` metadata
 
 `shared_sync` must not invent either input when the caller did not provide it.
@@ -113,7 +117,8 @@ Execution-local caller inputs may include:
 1. `bound_modules`-only exception
    - if a changed Shared Contract file is explicitly declared in `bound_modules_only_shared_file_refs`, do not treat that metadata-only delta as downstream invalidation by itself
 2. current stable landing exception
-   - if `current_stable_landing_module` is present and the only reason to invalidate that same module would be the stable shared target written by the same landing round, do not invalidate that just-landed module on that basis alone
+   - if `current_stable_landing_module` is present, apply the exception only to the exact shared refs explicitly listed in `stable_landing_shared_refs`
+   - if any other selected shared ref still invalidates that same module, do not suppress that invalidation
 
 `shared_sync` must not infer either exception from fingerprint difference alone.
 
@@ -133,7 +138,7 @@ After the affected downstream object set and exception set are fixed:
 
 `shared_sync` remains responsible for the scope and exception judgment.
 `impact_sync` remains responsible for the generic fallback execution.
-`impact_sync` must not receive raw `current_stable_landing_module` or raw `bound_modules_only_shared_file_refs`.
+`impact_sync` must not receive raw `current_stable_landing_module`, raw `stable_landing_shared_refs`, or raw `bound_modules_only_shared_file_refs`.
 
 ## 5. Output Contract
 
