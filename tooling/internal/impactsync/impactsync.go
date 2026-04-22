@@ -36,6 +36,7 @@ type ObjectBinding struct {
 type ScopedObject struct {
 	Binding                ObjectBinding
 	InvalidatingSharedRefs []string
+	ExplicitFallbackScope  bool
 }
 
 type Input struct {
@@ -299,6 +300,8 @@ func reconcileObject(repoRoot string, scoped ScopedObject) (ObjectResult, error)
 		fallbackReason = "binding_drift"
 	case len(scoped.InvalidatingSharedRefs) > 0:
 		fallbackReason = "shared_contract_drift"
+	case scoped.ExplicitFallbackScope:
+		fallbackReason = "binding_drift"
 	default:
 		return result, nil
 	}
