@@ -475,9 +475,10 @@ Body changed.
 `)
 
 	result, err := SyncImpact(repoRoot, Options{
-		Modules:             []string{"module_demo"},
-		SharedRefs:          []string{sharedRef},
-		StableLandingModule: "module_demo",
+		Modules:                 []string{"module_demo"},
+		SharedRefs:              []string{sharedRef},
+		StableLandingModule:     "module_demo",
+		StableLandingSharedRefs: []string{sharedRef},
 	})
 	if err != nil {
 		t.Fatalf("SyncImpact: %v", err)
@@ -491,6 +492,69 @@ Body changed.
 	}
 	if moduleResult.NextCommand != "spec_fork" {
 		t.Fatalf("expected next command spec_fork, got %s", moduleResult.NextCommand)
+	}
+}
+
+func TestSyncImpactStableLandingModuleStillReroutesOnUnrelatedSharedDrift(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupStableSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("stable", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: module_demo",
+		"layer: stable",
+		"version: 1.0.0",
+		"---",
+		"",
+		"# Demo",
+		"",
+		"## Global Constraint Alignment",
+		"",
+		"1. system_constraints_stable_ref: none",
+		"2. shared_contract_refs:",
+		"   - s_shared_demo@1.0.0",
+		"   - s_shared_extra@1.1.0",
+		"",
+	}, "\n"))
+
+	writeSharedFileAtPath(t, repoRoot, "docs/specs/shared_contracts/stable/s_shared_extra.md", `---
+shared_contract_id: shared_extra
+layer: stable
+shared_version: 1.1.0
+bound_modules:
+  - module_demo
+---
+
+# Shared
+
+Body changed.
+`)
+
+	result, err := SyncImpact(repoRoot, Options{
+		Modules:                 []string{"module_demo"},
+		SharedRefs:              []string{sharedRef, "s_shared_extra@1.1.0"},
+		StableLandingModule:     "module_demo",
+		StableLandingSharedRefs: []string{sharedRef},
+	})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ModuleResults) != 1 {
+		t.Fatalf("expected one module result, got %d", len(result.ModuleResults))
+	}
+	moduleResult := result.ModuleResults[0]
+	if moduleResult.Outcome != "rerouted" {
+		t.Fatalf("expected rerouted outcome for unrelated shared drift, got %+v", moduleResult)
+	}
+	if moduleResult.FallbackReasonCode != "shared_contract_drift" {
+		t.Fatalf("expected shared_contract_drift, got %+v", moduleResult)
+	}
+	if moduleResult.NextCommand != "stable_verify" {
+		t.Fatalf("expected next command stable_verify, got %s", moduleResult.NextCommand)
 	}
 }
 
@@ -712,6 +776,74 @@ func TestSyncImpactRejectsModulesOnlyScope(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "at least one of shared refs or shared ids is required") {
 		t.Fatalf("expected modules-only scope to be rejected, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsStableLandingModuleWithoutStableLandingSharedRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupStableSharedRepo(t, repoRoot)
+
+	_, err := SyncImpact(repoRoot, Options{
+		SharedRefs:          []string{sharedRef},
+		StableLandingModule: "module_demo",
+	})
+	if err == nil || !strings.Contains(err.Error(), "stable landing shared refs are required") {
+		t.Fatalf("expected missing stable landing shared refs error, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsUnknownStableLandingSharedRef(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupStableSharedRepo(t, repoRoot)
+
+	_, err := SyncImpact(repoRoot, Options{
+		SharedRefs:              []string{sharedRef},
+		StableLandingModule:     "module_demo",
+		StableLandingSharedRefs: []string{"s_shared_missing@9.9.9"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "stable landing shared ref") {
+		t.Fatalf("expected unknown stable landing shared ref error, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsNonStableStableLandingModule(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateSharedRepo(t, repoRoot)
+
+	_, err := SyncImpact(repoRoot, Options{
+		SharedRefs:              []string{sharedRef},
+		StableLandingModule:     "module_demo",
+		StableLandingSharedRefs: []string{sharedRef},
+	})
+	if err == nil || !strings.Contains(err.Error(), "must currently be at active layer stable") {
+		t.Fatalf("expected non-stable stable landing module error, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsStableLandingSharedRefOutsideSelectedScope(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupStableSharedRepo(t, repoRoot)
+
+	writeSharedFileAtPath(t, repoRoot, "docs/specs/shared_contracts/stable/s_shared_extra.md", `---
+shared_contract_id: shared_extra
+layer: stable
+shared_version: 1.1.0
+bound_modules:
+  - module_demo
+---
+
+# Shared
+
+Body stays the same.
+`)
+
+	_, err := SyncImpact(repoRoot, Options{
+		SharedRefs:              []string{"s_shared_demo@1.0.0"},
+		StableLandingModule:     "module_demo",
+		StableLandingSharedRefs: []string{"s_shared_extra@1.1.0"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "is not selected for stable landing module") {
+		t.Fatalf("expected stable landing shared ref outside scope error, got %v", err)
 	}
 }
 
