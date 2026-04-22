@@ -39,9 +39,11 @@ It also governs any internal flow that revalidates those files, including:
 It does not define object truth.
 It defines only how process files record the truth they were written against.
 
-## 3. Common Snapshot Fields
+## 3. Common Snapshot Field Families
 
-Every process file covered by this contract must record:
+### 3.1 Gate-Bearing Process Files
+
+Every gate-bearing process file covered by this contract must record:
 
 1. `object_type`
    - one of `module`, `flow`, `project`
@@ -60,11 +62,41 @@ Every process file covered by this contract must record:
 8. `system_constraints_stable_fingerprint`
    - the fingerprint of the currently bound stable system-constraints file, or `none`
 
+Gate-bearing process files are:
+
+1. `docs/specs/_check_result/{object}.md`
+2. `docs/specs/_verify_result/{object}.md`
+
 Rules:
 
 1. the field names above are fixed
-2. executors must not substitute `spec_fingerprint` for non-module objects
+2. executors must not substitute `spec_fingerprint` for gate-bearing files
 3. if a file correctly binds no system constraints, all three system-constraints fields must use literal `none`
+
+### 3.2 Module Plan Files
+
+`docs/specs/_plans/{module}.md` is governed by the same snapshot contract but it is not a gate-bearing file.
+
+Every module plan file must record:
+
+1. `spec_file_ref`
+   - the exact candidate-layer module truth file used by that plan
+2. `spec_version_ref`
+   - `<file_prefix>@<version>`
+3. `spec_fingerprint`
+   - the Section 6 fingerprint of `spec_file_ref`
+4. `system_constraints_stable_file_ref`
+   - the currently bound stable system-constraints file, or `none`
+5. `system_constraints_stable_version_ref`
+   - the currently bound stable system-constraints version, or `none`
+6. `system_constraints_stable_fingerprint`
+   - the fingerprint of the currently bound stable system-constraints file, or `none`
+
+Rules:
+
+1. `_plans/{module}.md` does not carry `gate`, `decision`, `allow_next`, or `next_command`
+2. `_plans/{module}.md` still records the exact candidate module truth and exact current global-binding snapshot it was written against
+3. if a plan correctly binds no system constraints, all three system-constraints fields must use literal `none`
 
 ## 4. Object-Specific Snapshot Fields
 
@@ -212,10 +244,11 @@ When a command or internal governance flow revalidates a process file, it must r
 
 At minimum:
 
-1. rebuild the common `truth_*` fields
-2. rebuild the currently bound `system_constraints_stable_*` fields
-3. rebuild the object-specific snapshot fields allowed for that object type
-4. compare stored and rebuilt values exactly
+1. for gate-bearing files, rebuild the common `truth_*` fields
+2. for module plan files, rebuild `spec_file_ref`, `spec_version_ref`, and `spec_fingerprint`
+3. rebuild the currently bound `system_constraints_stable_*` fields
+4. rebuild the object-specific snapshot fields allowed for that object type
+5. compare stored and rebuilt values exactly
 
 Shared-specific exception rule:
 

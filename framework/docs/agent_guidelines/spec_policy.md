@@ -202,6 +202,8 @@ Rules:
 3. candidate-layer command-target objects may bind stable-layer or candidate-layer shared truth, but the bound layer must be explicit
 4. `bound_modules` is declarative metadata only; it does not replace the command-target object's formal binding source
 5. a `bound_modules`-only delta does not by itself invalidate downstream process files
+6. when `shared_contract_refs` is written as a markdown list, executors must normalize the ref order by exact shared ref string in ascending lexical order
+7. the ordering contract applies to the underlying shared ref values, not to whether a list item is rendered with backticks
 
 ### 6.2 Dependency Direction Contract
 
