@@ -85,18 +85,23 @@ Every module plan file must record:
    - `<file_prefix>@<version>`
 3. `spec_fingerprint`
    - the Section 6 fingerprint of `spec_file_ref`
-4. `system_constraints_stable_file_ref`
+4. `module_appendix_snapshot`
+   - the normalized appendix snapshot of the current candidate-layer module truth, or `none`
+5. `system_constraints_stable_file_ref`
    - the currently bound stable system-constraints file, or `none`
-5. `system_constraints_stable_version_ref`
+6. `system_constraints_stable_version_ref`
    - the currently bound stable system-constraints version, or `none`
-6. `system_constraints_stable_fingerprint`
+7. `system_constraints_stable_fingerprint`
    - the fingerprint of the currently bound stable system-constraints file, or `none`
+8. `shared_contract_snapshot`
+   - the normalized shared snapshot of the current candidate-layer module truth, or `none`
 
 Rules:
 
 1. `_plans/{module}.md` does not carry `gate`, `decision`, `allow_next`, or `next_command`
 2. `_plans/{module}.md` still records the exact candidate module truth and exact current global-binding snapshot it was written against
-3. if a plan correctly binds no system constraints, all three system-constraints fields must use literal `none`
+3. if a plan correctly binds no appendix or shared files, `module_appendix_snapshot` or `shared_contract_snapshot` must use literal `none`
+4. if a plan correctly binds no system constraints, all three system-constraints fields must use literal `none`
 
 ## 4. Object-Specific Snapshot Fields
 
@@ -189,11 +194,12 @@ The hash algorithm is fixed:
 This same fingerprint contract applies to:
 
 1. `truth_fingerprint`
-2. appendix file fingerprints
-3. `module_snapshot` item fingerprints
-4. `flow_snapshot` item fingerprints
-5. `shared_contract_snapshot` item fingerprints
-6. `system_constraints_stable_fingerprint`
+2. `spec_fingerprint`
+3. appendix file fingerprints
+4. `module_snapshot` item fingerprints
+5. `flow_snapshot` item fingerprints
+6. `shared_contract_snapshot` item fingerprints
+7. `system_constraints_stable_fingerprint`
 
 ## 7. Text Normalization Rules
 

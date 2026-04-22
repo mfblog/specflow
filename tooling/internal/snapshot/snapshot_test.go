@@ -180,6 +180,61 @@ version: 1.1.0
 	}
 }
 
+func TestRebuildCurrentRejectsUnsortedSharedContractRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
+
+	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `no` | `yes` | `candidate` | `cand_check` | note |\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
+id: module_demo
+layer: candidate
+version: 0.1.0
+---
+
+# Demo
+
+## Global Constraint Alignment
+
+1. system_constraints_stable_ref: none
+2. shared_contract_refs:
+   - c_shared_zeta@0.1.0
+   - c_shared_alpha@0.1.0
+`)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate/c_shared_alpha.md"), `---
+shared_contract_id: shared_alpha
+layer: candidate
+shared_version: 0.1.0
+bound_modules:
+  - module_demo
+---
+
+# Shared Alpha
+`)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate/c_shared_zeta.md"), `---
+shared_contract_id: shared_zeta
+layer: candidate
+shared_version: 0.1.0
+bound_modules:
+  - module_demo
+---
+
+# Shared Zeta
+`)
+
+	_, err = RebuildCurrent(repoRoot, "module_demo")
+	if err == nil || !strings.Contains(err.Error(), "shared_contract_refs must be sorted") {
+		t.Fatalf("expected unsorted shared_contract_refs error, got %v", err)
+	}
+}
+
 func TestRebuildCurrentIgnoresRawAppendixPathLiteral(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))

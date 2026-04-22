@@ -1042,6 +1042,75 @@ func TestSyncImpactRejectsAmbiguousRemovedBindingSharedID(t *testing.T) {
 	}
 }
 
+func TestSyncImpactRejectsAmbiguousCurrentBindingSharedID(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupCandidateSharedRepo(t, repoRoot)
+
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/stable"))
+	writeSharedFileAtPath(t, repoRoot, "docs/specs/shared_contracts/stable/s_shared_demo.md", `---
+shared_contract_id: shared_demo
+layer: stable
+shared_version: 1.0.0
+bound_modules:
+  - module_demo
+---
+
+# Shared
+
+Stable body.
+`)
+
+	_, err := SyncImpact(repoRoot, Options{SharedIDs: []string{"shared_demo"}})
+	if err == nil || !strings.Contains(err.Error(), "multiple current shared layers exist") {
+		t.Fatalf("expected ambiguous current-binding shared-id error, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsUnsortedSharedContractRefsInCurrentTruth(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupCandidateSharedRepo(t, repoRoot)
+
+	writeSharedFileAtPath(t, repoRoot, "docs/specs/shared_contracts/candidate/c_shared_alpha.md", `---
+shared_contract_id: shared_alpha
+layer: candidate
+shared_version: 0.1.0
+bound_modules:
+  - module_demo
+---
+
+# Shared Alpha
+
+Body stays the same.
+`)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: module_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo",
+		"",
+		"## Global Constraint Alignment",
+		"",
+		"1. system_constraints_stable_ref: none",
+		"2. shared_contract_refs:",
+		"   - c_shared_demo@0.1.0",
+		"   - c_shared_alpha@0.1.0",
+		"",
+	}, "\n"))
+
+	_, err = SyncImpact(repoRoot, Options{SharedRefs: []string{"c_shared_demo@0.1.0"}})
+	if err == nil || !strings.Contains(err.Error(), "shared_contract_refs must be sorted") {
+		t.Fatalf("expected unsorted shared_contract_refs error, got %v", err)
+	}
+}
+
 func TestSyncImpactIncludesRemovedBindingWhenSharedIDIsUnambiguous(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupCandidateSharedRepo(t, repoRoot)
