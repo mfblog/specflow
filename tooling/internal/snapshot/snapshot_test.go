@@ -276,6 +276,12 @@ func TestValidateProcessFileRejectsMissingRequiredSnapshotField(t *testing.T) {
 	writeCheckProcessFile(t, repoRoot, strings.Join([]string{
 		"object_type: module",
 		"object_ref: module_demo",
+		"gate: cand_check",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: cand_plan",
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
 		"truth_layer_ref: candidate",
 		"truth_file_ref: docs/specs/modules/candidate/c_module_demo.md",
 		"truth_version_ref: c_module_demo@0.1.0",
@@ -307,19 +313,7 @@ func TestValidateProcessFileAcceptsExplicitNoneSnapshots(t *testing.T) {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 
-	writeCheckProcessFile(t, repoRoot, strings.Join([]string{
-		"object_type: module",
-		"object_ref: " + expected.Module,
-		"truth_layer_ref: " + expected.TruthLayerRef,
-		"truth_file_ref: " + expected.SpecFileRef,
-		"truth_version_ref: " + expected.SpecVersionRef,
-		"truth_fingerprint: " + expected.SpecFingerprint,
-		"module_appendix_snapshot: none",
-		"system_constraints_stable_file_ref: none",
-		"system_constraints_stable_version_ref: none",
-		"system_constraints_stable_fingerprint: none",
-		"shared_contract_snapshot: none",
-	}, "\n"))
+	writeCheckProcessFile(t, repoRoot, renderFormalCheckProcessBody(expected))
 
 	result, err := ValidateProcessFile(repoRoot, "module_demo", "check")
 	if err != nil {
@@ -342,17 +336,7 @@ func TestValidateProcessFileAcceptsSnapshotFieldsWithoutYAMLFence(t *testing.T) 
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_demo.md"), strings.Join([]string{
 		"# check",
 		"",
-		"object_type: module",
-		"object_ref: " + expected.Module,
-		"truth_layer_ref: " + expected.TruthLayerRef,
-		"truth_file_ref: " + expected.SpecFileRef,
-		"truth_version_ref: " + expected.SpecVersionRef,
-		"truth_fingerprint: " + expected.SpecFingerprint,
-		"module_appendix_snapshot: none",
-		"system_constraints_stable_file_ref: none",
-		"system_constraints_stable_version_ref: none",
-		"system_constraints_stable_fingerprint: none",
-		"shared_contract_snapshot: none",
+		renderFormalCheckProcessBody(expected),
 		"",
 	}, "\n"))
 
@@ -410,6 +394,12 @@ spec_version_ref: c_module_demo@0.1.0
 		"",
 		"- `object_type`: `module`",
 		"- `object_ref`: `" + expected.Module + "`",
+		"- `gate`: `cand_check`",
+		"- `decision`: `pass`",
+		"- `allow_next`: `true`",
+		"- `next_command`: `cand_plan`",
+		"- `blocking_summary`: `none`",
+		"- `coverage_summary`: `current candidate`",
 		"- `truth_layer_ref`: `" + expected.TruthLayerRef + "`",
 		"- `truth_file_ref`: `" + expected.SpecFileRef + "`",
 		"- `truth_version_ref`: `" + expected.SpecVersionRef + "`",
@@ -431,6 +421,29 @@ spec_version_ref: c_module_demo@0.1.0
 	}
 	if !result.Valid {
 		t.Fatalf("expected valid result, got mismatches %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsUnexpectedGate(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "module_demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	writeCheckProcessFile(t, repoRoot, strings.Replace(renderFormalCheckProcessBody(expected), "gate: cand_check", "gate: cand_plan", 1))
+
+	result, err := ValidateProcessFile(repoRoot, "module_demo", "check")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "gate mismatch: actual=cand_plan expected=cand_check") {
+		t.Fatalf("expected gate mismatch, got %+v", result.Mismatches)
 	}
 }
 
@@ -648,6 +661,28 @@ func writeCheckProcessFile(t *testing.T, repoRoot, yamlBody string) {
 	t.Helper()
 	content := "# check\n\n```yaml\n" + yamlBody + "\n```\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_demo.md"), content)
+}
+
+func renderFormalCheckProcessBody(expected Snapshot) string {
+	return strings.Join([]string{
+		"object_type: module",
+		"object_ref: " + expected.Module,
+		"gate: cand_check",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: cand_plan",
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
+		"truth_layer_ref: " + expected.TruthLayerRef,
+		"truth_file_ref: " + expected.SpecFileRef,
+		"truth_version_ref: " + expected.SpecVersionRef,
+		"truth_fingerprint: " + expected.SpecFingerprint,
+		"module_appendix_snapshot: none",
+		"system_constraints_stable_file_ref: none",
+		"system_constraints_stable_version_ref: none",
+		"system_constraints_stable_fingerprint: none",
+		"shared_contract_snapshot: none",
+	}, "\n")
 }
 
 func containsMismatch(mismatches []string, target string) bool {
