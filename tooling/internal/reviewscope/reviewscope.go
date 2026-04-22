@@ -22,7 +22,6 @@ type SpecFlowScope struct {
 	ToolingContractFiles       []string
 	ToolingSourceFiles         []string
 	ActiveProjectStandardFiles []string
-	MatchedOverlayFiles        []string
 }
 
 func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
@@ -100,25 +99,9 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	}
 
 	activeStandardFiles := make([]string, 0, len(validation.ValidEntries))
-	overlayFiles := []string{}
-	overlaySet := map[string]bool{}
 	for _, entry := range validation.ValidEntries {
 		if strings.TrimSpace(entry.File) != "" {
 			activeStandardFiles = append(activeStandardFiles, entry.File)
-		}
-
-		if entry.ConsumedBy != "spec_flow_review" || entry.Surface != "governance_baseline_review" {
-			continue
-		}
-		selector, err := projectstandards.ParseAppliesTo(entry.AppliesTo)
-		if err != nil {
-			continue
-		}
-		matched := selector.Kind == "all_targets_on_surface" ||
-			(selector.Kind == "review_scenario" && len(selector.Values) == 1 && selector.Values[0] == scope.Scenario)
-		if matched && !overlaySet[entry.File] {
-			overlaySet[entry.File] = true
-			overlayFiles = append(overlayFiles, entry.File)
 		}
 	}
 
@@ -131,7 +114,6 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	scope.ToolingContractFiles = toolingContractFiles
 	scope.ToolingSourceFiles = sortAndDedupe(toolingSourceFiles)
 	scope.ActiveProjectStandardFiles = sortAndDedupe(activeStandardFiles)
-	scope.MatchedOverlayFiles = sortAndDedupe(overlayFiles)
 	return scope, nil
 }
 

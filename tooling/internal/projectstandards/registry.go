@@ -67,24 +67,6 @@ var contracts = map[string]map[string]surfaceContract{
 			AllowAllOnSurface: true,
 		},
 	},
-	"spec_flow_review": {
-		"governance_baseline_review": {
-			StandardType: "review_standard",
-			AllowedEffects: map[string]bool{
-				"clarify": true,
-				"tighten": true,
-			},
-			AllowedKinds: map[string]bool{
-				"all_targets_on_surface": true,
-				"review_scenario":        true,
-			},
-			AllowedScenarios: map[string]bool{
-				"default_governance_baseline": true,
-				"narrowed_governance_scope":   true,
-			},
-			AllowAllOnSurface: true,
-		},
-	},
 }
 
 func RegistryPath(repoRoot string) string {

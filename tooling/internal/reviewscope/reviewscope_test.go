@@ -50,12 +50,9 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if len(scope.ActiveProjectStandardFiles) != 0 {
 		t.Fatalf("expected invalid entry to be excluded from active standard files, got %+v", scope.ActiveProjectStandardFiles)
 	}
-	if len(scope.MatchedOverlayFiles) != 0 {
-		t.Fatalf("expected no matched overlay files, got %+v", scope.MatchedOverlayFiles)
-	}
 }
 
-func TestCollectDefaultSpecFlowScopeExcludesMalformedOverlayEntry(t *testing.T) {
+func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_review.md"), "# review\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/tooling_execution_policy.md"), "# tooling\n")
@@ -97,10 +94,7 @@ func TestCollectDefaultSpecFlowScopeExcludesMalformedOverlayEntry(t *testing.T) 
 		t.Fatalf("CollectDefaultSpecFlowScope: %v", err)
 	}
 	if len(scope.ActiveProjectStandardFiles) != 0 {
-		t.Fatalf("expected malformed overlay entry to be excluded from active standard files, got %+v", scope.ActiveProjectStandardFiles)
-	}
-	if len(scope.MatchedOverlayFiles) != 0 {
-		t.Fatalf("expected no matched overlay files, got %+v", scope.MatchedOverlayFiles)
+		t.Fatalf("expected unsupported spec_flow_review entry to be excluded from active standard files, got %+v", scope.ActiveProjectStandardFiles)
 	}
 }
 

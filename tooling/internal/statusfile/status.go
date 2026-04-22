@@ -182,6 +182,15 @@ func UpdateNextCommand(repoRoot, module, nextCommand string) (bool, error) {
 	return UpsertModuleStatus(repoRoot, status, false)
 }
 
+func UpdateObjectNextCommand(repoRoot, objectType, object, nextCommand string) (bool, error) {
+	status, err := LookupObjectStatus(repoRoot, objectType, object)
+	if err != nil {
+		return false, err
+	}
+	status.NextCommand = nextCommand
+	return UpsertObjectStatus(repoRoot, status, false)
+}
+
 func UpsertObjectStatus(repoRoot string, status ObjectStatus, createIfMissing bool) (bool, error) {
 	if err := validateObjectStatus(status); err != nil {
 		return false, err

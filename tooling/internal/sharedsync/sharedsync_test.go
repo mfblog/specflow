@@ -96,6 +96,16 @@ Body stays the same.
 	}
 }
 
+func TestSyncImpactRejectsMissingExplicitScope(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupCandidateSharedRepo(t, repoRoot)
+
+	_, err := SyncImpact(repoRoot, Options{})
+	if err == nil || !strings.Contains(err.Error(), "at least one of modules, shared refs, or shared ids is required") {
+		t.Fatalf("expected missing-scope error, got %v", err)
+	}
+}
+
 func TestSyncImpactInvalidatesCandidateOnSharedTruthDrift(t *testing.T) {
 	repoRoot := t.TempDir()
 	sharedRef := setupCandidateSharedRepo(t, repoRoot)
@@ -185,8 +195,105 @@ func TestSyncImpactFailsClosedForSharedIDWhenBindingsPointToDeletedSharedRef(t *
 	if err == nil {
 		t.Fatalf("expected shared-id sync to fail closed when shared ref is unresolved")
 	}
-	if !strings.Contains(err.Error(), "cannot determine affected modules safely") {
+	if !strings.Contains(err.Error(), "cannot determine affected downstream objects safely") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSyncImpactKeepsCandidateFlowWhenOnlyBoundModulesChanged(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateFlowSharedRepo(t, repoRoot)
+
+	writeSharedFile(t, repoRoot, `---
+shared_contract_id: shared_demo
+layer: candidate
+shared_version: 0.1.0
+bound_modules:
+  - module_other
+---
+
+# Shared
+
+Body stays the same.
+`)
+
+	result, err := SyncImpact(repoRoot, Options{
+		SharedRefs:                     []string{sharedRef},
+		BoundModulesOnlySharedFileRefs: []string{"docs/specs/shared_contracts/candidate/c_shared_demo.md"},
+	})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.FlowResults) != 1 {
+		t.Fatalf("expected one flow result, got %d", len(result.FlowResults))
+	}
+	flowResult := result.FlowResults[0]
+	if flowResult.Outcome != "unchanged" {
+		t.Fatalf("expected unchanged outcome, got %+v", flowResult)
+	}
+	if flowResult.NextCommand != "flow_verify" {
+		t.Fatalf("expected next command flow_verify, got %s", flowResult.NextCommand)
+	}
+	for _, relPath := range []string{
+		"docs/specs/_check_result/flow_demo.md",
+		"docs/specs/_verify_result/flow_demo.md",
+	} {
+		if _, err := os.Stat(filepath.Join(repoRoot, relPath)); err != nil {
+			t.Fatalf("expected %s to remain, stat err=%v", relPath, err)
+		}
+	}
+}
+
+func TestSyncImpactInvalidatesCandidateFlowOnSharedTruthDrift(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateFlowSharedRepo(t, repoRoot)
+
+	writeSharedFile(t, repoRoot, `---
+shared_contract_id: shared_demo
+layer: candidate
+shared_version: 0.1.0
+bound_modules: none
+---
+
+# Shared
+
+Body changed.
+`)
+
+	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.FlowResults) != 1 {
+		t.Fatalf("expected one flow result, got %d", len(result.FlowResults))
+	}
+	flowResult := result.FlowResults[0]
+	if flowResult.Object != "flow_demo" {
+		t.Fatalf("expected flow_demo, got %+v", flowResult)
+	}
+	if flowResult.Outcome != "invalidated" {
+		t.Fatalf("expected invalidated outcome, got %+v", flowResult)
+	}
+	if flowResult.FallbackReasonCode != "shared_contract_drift" {
+		t.Fatalf("expected shared_contract_drift, got %s", flowResult.FallbackReasonCode)
+	}
+	if flowResult.NextCommand != "flow_check" {
+		t.Fatalf("expected next command flow_check, got %s", flowResult.NextCommand)
+	}
+	statusData, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/_status.md"))
+	if err != nil {
+		t.Fatalf("read status: %v", err)
+	}
+	if !strings.Contains(string(statusData), "| `flow` | `flow_demo` | `no` | `yes` | `candidate` | `flow_check` | current round |") {
+		t.Fatalf("status row not updated:\n%s", string(statusData))
+	}
+	for _, relPath := range []string{
+		"docs/specs/_check_result/flow_demo.md",
+		"docs/specs/_verify_result/flow_demo.md",
+	} {
+		if _, err := os.Stat(filepath.Join(repoRoot, relPath)); !os.IsNotExist(err) {
+			t.Fatalf("expected %s to be deleted, stat err=%v", relPath, err)
+		}
 	}
 }
 
@@ -229,6 +336,51 @@ Body changed.
 		t.Fatalf("read status: %v", err)
 	}
 	if !strings.Contains(string(statusData), "| `module_demo` | `yes` | `no` | `stable` | `stable_verify` | stable round |") {
+		t.Fatalf("status row not updated:\n%s", string(statusData))
+	}
+}
+
+func TestSyncImpactReroutesStableProjectToProjectStableVerify(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupStableProjectSharedRepo(t, repoRoot)
+
+	writeStableSharedFile(t, repoRoot, `---
+shared_contract_id: shared_demo
+layer: stable
+shared_version: 1.0.0
+bound_modules: none
+---
+
+# Shared
+
+Body changed.
+`)
+
+	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ProjectResults) != 1 {
+		t.Fatalf("expected one project result, got %d", len(result.ProjectResults))
+	}
+	projectResult := result.ProjectResults[0]
+	if projectResult.Object != "project" {
+		t.Fatalf("expected project, got %+v", projectResult)
+	}
+	if projectResult.Outcome != "rerouted" {
+		t.Fatalf("expected rerouted outcome, got %+v", projectResult)
+	}
+	if projectResult.FallbackReasonCode != "shared_contract_drift" {
+		t.Fatalf("expected shared_contract_drift, got %s", projectResult.FallbackReasonCode)
+	}
+	if projectResult.NextCommand != "project_stable_verify" {
+		t.Fatalf("expected next command project_stable_verify, got %s", projectResult.NextCommand)
+	}
+	statusData, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/_status.md"))
+	if err != nil {
+		t.Fatalf("read status: %v", err)
+	}
+	if !strings.Contains(string(statusData), "| `project` | `project` | `yes` | `no` | `stable` | `project_stable_verify` | stable round |") {
 		t.Fatalf("status row not updated:\n%s", string(statusData))
 	}
 }
@@ -576,6 +728,112 @@ Body stays the same.
 `)
 
 	initGitRepo(t, repoRoot)
+	return "s_shared_demo@1.0.0"
+}
+
+func setupCandidateFlowSharedRepo(t *testing.T, repoRoot string) string {
+	t.Helper()
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateFlowDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `flow` | `flow_demo` | `no` | `yes` | `candidate` | `flow_verify` | current round |",
+	}, "\n")+"\n")
+
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("flow", "candidate", "flow_demo")
+	if err != nil {
+		t.Fatalf("ObjectMainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: flow_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo Flow",
+		"",
+		"## Shared Contracts",
+		"",
+		"1. shared_contract_refs:",
+		"   - c_shared_demo@0.1.0",
+		"",
+	}, "\n"))
+
+	writeSharedFile(t, repoRoot, `---
+shared_contract_id: shared_demo
+layer: candidate
+shared_version: 0.1.0
+bound_modules: none
+---
+
+# Shared
+
+Body stays the same.
+`)
+
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/flow_demo.md"), "check")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/flow_demo.md"), "verify")
+	return "c_shared_demo@0.1.0"
+}
+
+func setupStableProjectSharedRepo(t *testing.T, repoRoot string) string {
+	t.Helper()
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableProjectDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/stable"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
+	}, "\n")+"\n")
+
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("project", "stable", "project")
+	if err != nil {
+		t.Fatalf("ObjectMainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: project",
+		"layer: stable",
+		"version: 1.0.0",
+		"---",
+		"",
+		"# Demo Project",
+		"",
+		"## Shared Contracts",
+		"",
+		"1. shared_contract_refs:",
+		"   - s_shared_demo@1.0.0",
+		"",
+	}, "\n"))
+
+	writeStableSharedFile(t, repoRoot, `---
+shared_contract_id: shared_demo
+layer: stable
+shared_version: 1.0.0
+bound_modules: none
+---
+
+# Shared
+
+Body stays the same.
+`)
+
 	return "s_shared_demo@1.0.0"
 }
 
