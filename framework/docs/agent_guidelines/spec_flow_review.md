@@ -28,6 +28,8 @@ The default scope includes:
    - `specflow/templates/root/docs/specs/_status.md`
    - `specflow/templates/root/docs/specs/_check_result/README.md`
    - `specflow/templates/root/docs/specs/_plans/README.md`
+   - `specflow/templates/root/docs/specs/_plans/draft/README.md`
+   - `specflow/templates/root/docs/specs/_plans/active/README.md`
    - `specflow/templates/root/docs/specs/_verify_result/README.md`
 4. template entry files
    - `specflow/templates/root/AGENTS.md`
@@ -88,6 +90,8 @@ For the default governance-baseline review, the execution-local `review_plan` mu
    - `specflow/templates/root/docs/specs/_status.md`
    - `specflow/templates/root/docs/specs/_check_result/README.md`
    - `specflow/templates/root/docs/specs/_verify_result/README.md`
+   - `specflow/templates/root/docs/specs/_plans/draft/README.md`
+   - `specflow/templates/root/docs/specs/_plans/active/README.md`
 4. `process_and_state_contracts`
    - `candidate_handoff_contract.md`
    - `downgrade_policy.md`
@@ -96,6 +100,8 @@ For the default governance-baseline review, the execution-local `review_plan` mu
    - `specflow/templates/root/docs/specs/_status.md`
    - `specflow/templates/root/docs/specs/_check_result/README.md`
    - `specflow/templates/root/docs/specs/_plans/README.md`
+   - `specflow/templates/root/docs/specs/_plans/draft/README.md`
+   - `specflow/templates/root/docs/specs/_plans/active/README.md`
    - `specflow/templates/root/docs/specs/_verify_result/README.md`
 5. `entry_and_project_local_extension`
    - `entry_index_registry.md`

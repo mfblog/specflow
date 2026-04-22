@@ -77,7 +77,8 @@ Default candidate cleanup map:
 
 1. `module -> cand_check`
    - delete `_check_result/{module}.md`
-   - delete `_plans/{module}.md`
+   - delete `_plans/draft/{module}.md`
+   - delete `_plans/active/{module}.md`
    - delete `_verify_result/{module}.md`
 2. `flow -> flow_check`
    - delete `_check_result/{flow}.md`
@@ -124,7 +125,8 @@ Object-specific minimums:
    - `docs/specs/modules/candidate/c_{module}.md`
    - `docs/specs/modules/stable/s_{module}.md` when present
    - `_check_result/{module}.md`
-   - `_plans/{module}.md`
+   - `_plans/draft/{module}.md`
+   - `_plans/active/{module}.md`
    - `_verify_result/{module}.md`
 2. `flow_promote`
    - `docs/specs/flows/candidate/c_{flow}.md`

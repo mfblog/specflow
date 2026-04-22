@@ -115,7 +115,7 @@ Use only:
 `cand_impl` minimally requires both:
 
 1. a current valid `_check_result/{module}.md`
-2. a current valid `_plans/{module}.md`
+2. a current valid `_plans/active/{module}.md`
 
 ### 4.2 Required Re-Validation
 
@@ -155,7 +155,7 @@ Use only:
 `cand_verify` minimally requires both:
 
 1. a current valid `_check_result/{module}.md`
-2. a current valid `_plans/{module}.md`
+2. a current valid `_plans/active/{module}.md`
 
 ### 5.2 Required Re-Validation
 

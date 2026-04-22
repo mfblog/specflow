@@ -26,7 +26,7 @@ Only a new independent full-scope run of `cand_verify` may produce that advancin
 1. complete required pre-checks
 2. `_status.md` says `Next Command=cand_verify`
 3. a current valid `_check_result/{module}.md` exists
-4. a current valid `_plans/{module}.md` exists
+4. a current valid `_plans/active/{module}.md` exists
 5. the candidate still aligns with the current formal global baseline state
 6. read required candidate appendix files and bound Shared Contract files
 7. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
@@ -38,7 +38,8 @@ Only a new independent full-scope run of `cand_verify` may produce that advancin
 2. validate all required bindings
 3. if the pass gate or plan is invalid, stop immediately:
    - delete `_check_result/{module}.md`
-   - delete `_plans/{module}.md`
+   - delete `_plans/draft/{module}.md`
+   - delete `_plans/active/{module}.md`
    - delete `_verify_result/{module}.md` if it exists
    - fall back `_status.md` to `cand_check`
 4. verify current code against key protocols, main flow, error handling, acceptance criteria, and any explicit `system_constraints_change_proposal`
