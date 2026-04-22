@@ -378,6 +378,38 @@ func TestApplyKeepsCandidateModuleWhenCallerAllowsSharedSnapshotMismatch(t *test
 	}
 }
 
+func TestApplyKeepsCandidateModuleWhenPlanUsesPlanContract(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupImpactModuleSharedRepo(t, repoRoot)
+
+	snap, err := snapshot.RebuildCurrent(repoRoot, "module_demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_plans/module_demo.md"), renderImpactPlanProcessSnapshot(snap))
+
+	result, err := Apply(repoRoot, Input{
+		Modules: []ScopedModule{{
+			Binding: ModuleBinding{
+				Module:      "module_demo",
+				ActiveLayer: "candidate",
+				NextCommand: "cand_verify",
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	if len(result.ModuleResults) != 1 {
+		t.Fatalf("expected one module result, got %+v", result.ModuleResults)
+	}
+	moduleResult := result.ModuleResults[0]
+	if moduleResult.Outcome != "unchanged" || moduleResult.NextCommand != "cand_verify" {
+		t.Fatalf("expected unchanged module with valid plan contract, got %+v", moduleResult)
+	}
+}
+
 func setupImpactRepo(t *testing.T, repoRoot, statusContent string) {
 	t.Helper()
 	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs"))
@@ -392,6 +424,7 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 	mustMkdirImpactAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
 	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
 	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/_check_result"))
+	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/_plans"))
 	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
 		"# Spec Status",
 		"",
@@ -498,4 +531,27 @@ func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
 	}
 	lines = append(lines, "```", "")
 	return strings.Join(lines, "\n")
+}
+
+func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
+	return strings.Join([]string{
+		"# plan",
+		"",
+		"```yaml",
+		"spec_file_ref: " + snap.SpecFileRef,
+		"spec_version_ref: " + snap.SpecVersionRef,
+		"spec_fingerprint: " + snap.SpecFingerprint,
+		"module_appendix_snapshot: none",
+		"system_constraints_stable_file_ref: " + snap.SystemConstraintsStableFileRef,
+		"system_constraints_stable_version_ref: " + snap.SystemConstraintsStableVersionRef,
+		"system_constraints_stable_fingerprint: " + snap.SystemConstraintsStableFingerprint,
+		"shared_contract_snapshot:",
+		"  - shared_contract_id: " + snap.SharedContractSnapshot[0].SharedContractID,
+		"    layer: " + snap.SharedContractSnapshot[0].Layer,
+		"    file_ref: " + snap.SharedContractSnapshot[0].FileRef,
+		"    version_ref: " + snap.SharedContractSnapshot[0].VersionRef,
+		"    fingerprint: " + snap.SharedContractSnapshot[0].Fingerprint,
+		"```",
+		"",
+	}, "\n")
 }

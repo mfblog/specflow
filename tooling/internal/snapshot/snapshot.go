@@ -91,18 +91,9 @@ var requiredProcessSnapshotFields = map[string][]string{
 		"shared_contract_snapshot",
 	},
 	"plan": {
-		"object_type",
-		"object_ref",
-		"gate",
-		"decision",
-		"allow_next",
-		"next_command",
-		"blocking_summary",
-		"coverage_summary",
-		"truth_layer_ref",
-		"truth_file_ref",
-		"truth_version_ref",
-		"truth_fingerprint",
+		"spec_file_ref",
+		"spec_version_ref",
+		"spec_fingerprint",
 		"module_appendix_snapshot",
 		"system_constraints_stable_file_ref",
 		"system_constraints_stable_version_ref",
@@ -227,6 +218,33 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 			result.Valid = false
 			result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s must not be empty", field))
 		}
+	}
+
+	if processKind == "plan" {
+		compareScalar(&result, "spec_file_ref", actual.scalars["spec_file_ref"], expected.SpecFileRef)
+		compareScalar(&result, "spec_version_ref", actual.scalars["spec_version_ref"], expected.SpecVersionRef)
+		compareScalar(&result, "spec_fingerprint", actual.scalars["spec_fingerprint"], expected.SpecFingerprint)
+
+		if _, ok := actual.scalars["module_appendix_snapshot"]; ok || actual.appendixPresent {
+			actualAppendix := normalizeAppendixList(actual.appendixEntries)
+			expectedAppendix := normalizeAppendixList(expected.ModuleAppendixSnapshot)
+			if actualAppendix != expectedAppendix {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("module_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
+			}
+		}
+		if _, ok := actual.scalars["shared_contract_snapshot"]; ok || actual.sharedPresent {
+			actualShared := normalizeSharedList(actual.sharedEntries)
+			expectedShared := normalizeSharedList(expected.SharedContractSnapshot)
+			if actualShared != expectedShared {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("shared_contract_snapshot mismatch: actual=%s expected=%s", actualShared, expectedShared))
+			}
+		}
+		compareScalar(&result, "system_constraints_stable_file_ref", actual.scalars["system_constraints_stable_file_ref"], expected.SystemConstraintsStableFileRef)
+		compareScalar(&result, "system_constraints_stable_version_ref", actual.scalars["system_constraints_stable_version_ref"], expected.SystemConstraintsStableVersionRef)
+		compareScalar(&result, "system_constraints_stable_fingerprint", actual.scalars["system_constraints_stable_fingerprint"], expected.SystemConstraintsStableFingerprint)
+		return result, nil
 	}
 
 	expectedGate, expectedNextCommand, err := expectedModuleProcessRouting(processKind)

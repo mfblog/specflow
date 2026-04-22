@@ -447,6 +447,26 @@ func TestValidateProcessFileRejectsUnexpectedGate(t *testing.T) {
 	}
 }
 
+func TestValidateProcessFileAcceptsPlanSchemaWithoutGateFields(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "module_demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/module_demo.md"), "# plan\n\n```yaml\n"+renderFormalPlanProcessBody(expected)+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "module_demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if !result.Valid {
+		t.Fatalf("expected valid plan result, got mismatches %+v", result.Mismatches)
+	}
+}
+
 func TestRebuildCurrentRejectsEmptySharedContractRefsList(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
@@ -633,6 +653,7 @@ func setupSnapshotValidationRepo(t *testing.T, repoRoot string) {
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans"))
 
 	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `no` | `yes` | `candidate` | `cand_check` | note |\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
@@ -677,6 +698,19 @@ func renderFormalCheckProcessBody(expected Snapshot) string {
 		"truth_file_ref: " + expected.SpecFileRef,
 		"truth_version_ref: " + expected.SpecVersionRef,
 		"truth_fingerprint: " + expected.SpecFingerprint,
+		"module_appendix_snapshot: none",
+		"system_constraints_stable_file_ref: none",
+		"system_constraints_stable_version_ref: none",
+		"system_constraints_stable_fingerprint: none",
+		"shared_contract_snapshot: none",
+	}, "\n")
+}
+
+func renderFormalPlanProcessBody(expected Snapshot) string {
+	return strings.Join([]string{
+		"spec_file_ref: " + expected.SpecFileRef,
+		"spec_version_ref: " + expected.SpecVersionRef,
+		"spec_fingerprint: " + expected.SpecFingerprint,
 		"module_appendix_snapshot: none",
 		"system_constraints_stable_file_ref: none",
 		"system_constraints_stable_version_ref: none",

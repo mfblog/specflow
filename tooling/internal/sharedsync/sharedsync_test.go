@@ -1048,6 +1048,56 @@ func TestSyncImpactDoesNotTreatSharedIDOnlyAsRemovedBindingEvidence(t *testing.T
 	}
 }
 
+func TestSyncImpactIncludesRemovedBindingWhenSharedIDIsUnambiguous(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupCandidateSharedRepo(t, repoRoot)
+
+	processSnapshot, err := snapshot.LoadProcessSnapshot(repoRoot, "module_demo", "check")
+	if err != nil {
+		t.Fatalf("LoadProcessSnapshot: %v", err)
+	}
+	storedProcess := renderModuleProcessSnapshotForTest(
+		t,
+		repoRoot,
+		"check",
+		"module_demo",
+		processSnapshot.ModuleAppendixSnapshot,
+		processSnapshot.SharedContractSnapshot,
+	)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: module_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo",
+		"",
+		"## Global Constraint Alignment",
+		"",
+		"1. system_constraints_stable_ref: none",
+		"2. shared_contract_refs: none",
+		"",
+	}, "\n"))
+	writeProcessFile(t, repoRoot, "check", storedProcess)
+
+	result, err := SyncImpact(repoRoot, Options{SharedIDs: []string{"shared_demo"}})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ScopedModules) != 1 || result.ScopedModules[0] != "module_demo" {
+		t.Fatalf("expected unambiguous shared-id removed binding to remain in scope, got %+v", result.ScopedModules)
+	}
+	if len(result.ModuleResults) != 1 || result.ModuleResults[0].Outcome != "invalidated" || result.ModuleResults[0].NextCommand != "cand_check" {
+		t.Fatalf("expected removed-binding shared-id path to invalidate module, got %+v", result.ModuleResults)
+	}
+}
+
 func TestSyncImpactRejectsEmptySharedContractRefsList(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupCandidateSharedRepo(t, repoRoot)
@@ -1483,6 +1533,71 @@ func TestSyncImpactAcceptsMarkdownBulletRemovedBindingEvidenceForFlow(t *testing
 	}
 	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "binding_drift" {
 		t.Fatalf("expected markdown bullet flow evidence to trigger fallback, got %+v", result.FlowResults)
+	}
+}
+
+func TestSyncImpactAcceptsRemovedBindingEvidenceWhenTruthUsesBacktickedSharedRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateFlowSharedRepo(t, repoRoot)
+	sharedFingerprint := fingerprintForTest(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate/c_shared_demo.md"))
+
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("flow", "candidate", "flow_demo")
+	if err != nil {
+		t.Fatalf("ObjectMainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: flow_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo Flow",
+		"",
+		"## Bindings",
+		"",
+		"1. project_ref: c_project@0.1.0",
+		"2. module_refs: none",
+		"3. shared_contract_refs:",
+		"   - `c_shared_demo@0.1.0`",
+		"4. system_constraints_stable_ref: none",
+		"",
+	}, "\n"))
+	storedProcess := renderFlowProcessSnapshotForTest(t, repoRoot, "check", "flow_demo", false, []string{
+		"shared_contract_id: shared_demo",
+		"layer: candidate",
+		"file_ref: docs/specs/shared_contracts/candidate/c_shared_demo.md",
+		"version_ref: c_shared_demo@0.1.0",
+		"fingerprint: " + sharedFingerprint,
+	}, nil)
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: flow_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo Flow",
+		"",
+		"## Bindings",
+		"",
+		"1. project_ref: c_project@0.1.0",
+		"2. module_refs: none",
+		"3. shared_contract_refs: none",
+		"4. system_constraints_stable_ref: none",
+		"",
+	}, "\n"))
+	writeNamedProcessFile(t, repoRoot, "check", "flow_demo", storedProcess)
+
+	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ScopedFlows) != 1 || result.ScopedFlows[0] != "flow_demo" {
+		t.Fatalf("expected backticked old truth evidence to remain valid, got %+v", result.ScopedFlows)
+	}
+	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "binding_drift" {
+		t.Fatalf("expected backticked old truth evidence to trigger fallback, got %+v", result.FlowResults)
 	}
 }
 
