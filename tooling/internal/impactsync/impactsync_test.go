@@ -236,6 +236,100 @@ func TestApplyUsesResolvedSharedInvalidationForStableObjects(t *testing.T) {
 	}
 }
 
+func TestApplyUsesExplicitFallbackScopeForObjects(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupImpactRepo(t, repoRoot, strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `flow` | `flow_demo` | `no` | `yes` | `candidate` | `flow_verify` | current round |",
+		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
+	}, "\n")+"\n")
+	for _, relPath := range []string{
+		"docs/specs/_check_result/flow_demo.md",
+		"docs/specs/_verify_result/flow_demo.md",
+	} {
+		mustWriteImpactFile(t, filepath.Join(repoRoot, relPath), "# process\n")
+	}
+
+	result, err := Apply(repoRoot, Input{
+		Flows: []ScopedObject{{
+			Binding: ObjectBinding{
+				ObjectType:  "flow",
+				Object:      "flow_demo",
+				ActiveLayer: "candidate",
+				NextCommand: "flow_verify",
+			},
+			ExplicitFallbackScope: true,
+		}},
+		Projects: []ScopedObject{{
+			Binding: ObjectBinding{
+				ObjectType:  "project",
+				Object:      "project",
+				ActiveLayer: "stable",
+				NextCommand: "project_fork",
+			},
+			ExplicitFallbackScope: true,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "binding_drift" || result.FlowResults[0].NextCommand != "flow_check" {
+		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
+	}
+	if len(result.ProjectResults) != 1 || result.ProjectResults[0].FallbackReasonCode != "binding_drift" || result.ProjectResults[0].NextCommand != "project_stable_verify" {
+		t.Fatalf("unexpected project result: %+v", result.ProjectResults)
+	}
+}
+
+func TestApplyKeepsObjectsUnchangedWithoutFallbackInputs(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupImpactRepo(t, repoRoot, strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `flow` | `flow_demo` | `no` | `yes` | `candidate` | `flow_verify` | current round |",
+		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
+	}, "\n")+"\n")
+
+	result, err := Apply(repoRoot, Input{
+		Flows: []ScopedObject{{
+			Binding: ObjectBinding{
+				ObjectType:  "flow",
+				Object:      "flow_demo",
+				ActiveLayer: "candidate",
+				NextCommand: "flow_verify",
+			},
+		}},
+		Projects: []ScopedObject{{
+			Binding: ObjectBinding{
+				ObjectType:  "project",
+				Object:      "project",
+				ActiveLayer: "stable",
+				NextCommand: "project_fork",
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	if len(result.FlowResults) != 1 || result.FlowResults[0].Outcome != "unchanged" {
+		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
+	}
+	if len(result.ProjectResults) != 1 || result.ProjectResults[0].Outcome != "unchanged" {
+		t.Fatalf("unexpected project result: %+v", result.ProjectResults)
+	}
+}
+
 func TestApplyKeepsCandidateModuleWhenCallerAllowsSharedSnapshotMismatch(t *testing.T) {
 	repoRoot := t.TempDir()
 	allowedFileRef := setupImpactModuleSharedRepo(t, repoRoot)

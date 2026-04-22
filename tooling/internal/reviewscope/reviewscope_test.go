@@ -50,6 +50,9 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if len(scope.ActiveProjectStandardFiles) != 0 {
 		t.Fatalf("expected invalid entry to be excluded from active standard files, got %+v", scope.ActiveProjectStandardFiles)
 	}
+	if len(scope.RegistryDiagnostics) == 0 {
+		t.Fatalf("expected registry diagnostics, got none")
+	}
 }
 
 func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *testing.T) {
@@ -95,6 +98,9 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 	}
 	if len(scope.ActiveProjectStandardFiles) != 0 {
 		t.Fatalf("expected unsupported spec_flow_review entry to be excluded from active standard files, got %+v", scope.ActiveProjectStandardFiles)
+	}
+	if len(scope.RegistryDiagnostics) == 0 {
+		t.Fatalf("expected registry diagnostics, got none")
 	}
 }
 

@@ -19,6 +19,7 @@ type SpecFlowScope struct {
 	TemplateGovernanceFiles    []string
 	TemplateEntryFiles         []string
 	ProjectRegistryFiles       []string
+	RegistryDiagnostics        []string
 	ToolingContractFiles       []string
 	ToolingSourceFiles         []string
 	ActiveProjectStandardFiles []string
@@ -111,6 +112,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	scope.TemplateGovernanceFiles = templateGovernanceFiles
 	scope.TemplateEntryFiles = templateEntryFiles
 	scope.ProjectRegistryFiles = projectRegistryFiles
+	scope.RegistryDiagnostics = sortAndDedupe(validation.Diagnostics)
 	scope.ToolingContractFiles = toolingContractFiles
 	scope.ToolingSourceFiles = sortAndDedupe(toolingSourceFiles)
 	scope.ActiveProjectStandardFiles = sortAndDedupe(activeStandardFiles)

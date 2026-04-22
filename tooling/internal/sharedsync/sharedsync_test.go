@@ -59,6 +59,44 @@ Body stays the same.
 	}
 }
 
+func TestSyncImpactKeepsExplicitModuleScopeWhenOnlyBoundModulesChanged(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateSharedRepo(t, repoRoot)
+
+	writeSharedFile(t, repoRoot, `---
+shared_contract_id: shared_demo
+layer: candidate
+shared_version: 0.1.0
+bound_modules:
+  - module_demo
+  - module_other
+---
+
+# Shared
+
+Body stays the same.
+`)
+
+	result, err := SyncImpact(repoRoot, Options{
+		Modules:                        []string{"module_demo"},
+		SharedRefs:                     []string{sharedRef},
+		BoundModulesOnlySharedFileRefs: []string{"docs/specs/shared_contracts/candidate/c_shared_demo.md"},
+	})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ModuleResults) != 1 {
+		t.Fatalf("expected one module result, got %d", len(result.ModuleResults))
+	}
+	moduleResult := result.ModuleResults[0]
+	if moduleResult.Outcome != "unchanged" {
+		t.Fatalf("expected unchanged outcome, got %+v", moduleResult)
+	}
+	if moduleResult.FallbackReasonCode != "" {
+		t.Fatalf("expected no fallback reason, got %+v", moduleResult)
+	}
+}
+
 func TestSyncImpactInvalidatesCandidateWhenBoundModulesChangedWithoutExplicitDeclaration(t *testing.T) {
 	repoRoot := t.TempDir()
 	sharedRef := setupCandidateSharedRepo(t, repoRoot)
@@ -297,6 +335,48 @@ Body changed.
 	}
 }
 
+func TestSyncImpactInvalidatesExplicitCandidateFlowWhenSelectedBindingWasRemoved(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateFlowSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("flow", "candidate", "flow_demo")
+	if err != nil {
+		t.Fatalf("ObjectMainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: flow_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo Flow",
+		"",
+		"## Shared Contracts",
+		"",
+		"1. shared_contract_refs: none",
+		"",
+	}, "\n"))
+
+	result, err := SyncImpact(repoRoot, Options{
+		Flows:      []string{"flow_demo"},
+		SharedRefs: []string{sharedRef},
+	})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ScopedFlows) != 1 || result.ScopedFlows[0] != "flow_demo" {
+		t.Fatalf("expected explicit flow scope, got %+v", result.ScopedFlows)
+	}
+	if len(result.FlowResults) != 1 {
+		t.Fatalf("expected one flow result, got %d", len(result.FlowResults))
+	}
+	flowResult := result.FlowResults[0]
+	if flowResult.Outcome != "invalidated" || flowResult.FallbackReasonCode != "binding_drift" || flowResult.NextCommand != "flow_check" {
+		t.Fatalf("unexpected flow result: %+v", flowResult)
+	}
+}
+
 func TestSyncImpactReroutesStableModuleToStableVerify(t *testing.T) {
 	repoRoot := t.TempDir()
 	sharedRef := setupStableSharedRepo(t, repoRoot)
@@ -382,6 +462,48 @@ Body changed.
 	}
 	if !strings.Contains(string(statusData), "| `project` | `project` | `yes` | `no` | `stable` | `project_stable_verify` | stable round |") {
 		t.Fatalf("status row not updated:\n%s", string(statusData))
+	}
+}
+
+func TestSyncImpactReroutesExplicitStableProjectWhenSelectedBindingWasRemoved(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupStableProjectSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("project", "stable", "project")
+	if err != nil {
+		t.Fatalf("ObjectMainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: project",
+		"layer: stable",
+		"version: 1.0.0",
+		"---",
+		"",
+		"# Demo Project",
+		"",
+		"## Shared Contracts",
+		"",
+		"1. shared_contract_refs: none",
+		"",
+	}, "\n"))
+
+	result, err := SyncImpact(repoRoot, Options{
+		Projects:   []string{"project"},
+		SharedRefs: []string{sharedRef},
+	})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ScopedProjects) != 1 || result.ScopedProjects[0] != "project" {
+		t.Fatalf("expected explicit project scope, got %+v", result.ScopedProjects)
+	}
+	if len(result.ProjectResults) != 1 {
+		t.Fatalf("expected one project result, got %d", len(result.ProjectResults))
+	}
+	projectResult := result.ProjectResults[0]
+	if projectResult.Outcome != "rerouted" || projectResult.FallbackReasonCode != "binding_drift" || projectResult.NextCommand != "project_stable_verify" {
+		t.Fatalf("unexpected project result: %+v", projectResult)
 	}
 }
 
@@ -648,7 +770,7 @@ Body changed.
 	}
 }
 
-func TestSyncImpactFiltersModulesWithinSharedScope(t *testing.T) {
+func TestSyncImpactUsesExplicitModuleScopeWhenSelectedBindingWasRemoved(t *testing.T) {
 	repoRoot := t.TempDir()
 	sharedRef := setupCandidateSharedRepo(t, repoRoot)
 
@@ -684,6 +806,26 @@ func TestSyncImpactFiltersModulesWithinSharedScope(t *testing.T) {
 		"",
 	}, "\n"))
 
+	moduleDemoRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(moduleDemoRef)), strings.Join([]string{
+		"---",
+		"id: module_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo",
+		"",
+		"## Global Constraint Alignment",
+		"",
+		"1. system_constraints_stable_ref: none",
+		"2. shared_contract_refs: none",
+		"",
+	}, "\n"))
+
 	result, err := SyncImpact(repoRoot, Options{
 		Modules:    []string{"module_other"},
 		SharedRefs: []string{sharedRef},
@@ -691,11 +833,15 @@ func TestSyncImpactFiltersModulesWithinSharedScope(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SyncImpact: %v", err)
 	}
-	if len(result.ScopedModules) != 0 {
-		t.Fatalf("expected filtered module scope to stay empty, got %+v", result.ScopedModules)
+	if len(result.ScopedModules) != 1 || result.ScopedModules[0] != "module_other" {
+		t.Fatalf("expected explicit module scope, got %+v", result.ScopedModules)
 	}
-	if len(result.ModuleResults) != 0 {
-		t.Fatalf("expected no module results after filter, got %+v", result.ModuleResults)
+	if len(result.ModuleResults) != 1 {
+		t.Fatalf("expected one module result, got %+v", result.ModuleResults)
+	}
+	moduleResult := result.ModuleResults[0]
+	if moduleResult.Outcome != "invalidated" || moduleResult.FallbackReasonCode != "binding_drift" || moduleResult.NextCommand != "cand_check" {
+		t.Fatalf("unexpected module result: %+v", moduleResult)
 	}
 }
 
@@ -776,6 +922,19 @@ func TestSyncImpactRejectsModulesOnlyScope(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "at least one of shared refs or shared ids is required") {
 		t.Fatalf("expected modules-only scope to be rejected, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsFlowAndProjectScopeWithoutSharedTrigger(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupCandidateFlowSharedRepo(t, repoRoot)
+
+	_, err := SyncImpact(repoRoot, Options{
+		Flows:    []string{"flow_demo"},
+		Projects: []string{"project"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "at least one of shared refs or shared ids is required") {
+		t.Fatalf("expected flow/project-only scope to be rejected, got %v", err)
 	}
 }
 
