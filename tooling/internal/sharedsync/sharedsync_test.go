@@ -965,7 +965,7 @@ func TestSyncImpactIgnoresModuleEvidenceWhenCurrentTruthChangedBeyondRemovedBind
 	}
 }
 
-func TestSyncImpactDoesNotTreatSharedIDOnlyAsRemovedBindingEvidence(t *testing.T) {
+func TestSyncImpactRejectsAmbiguousRemovedBindingSharedID(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupCandidateSharedRepo(t, repoRoot)
 
@@ -1036,15 +1036,9 @@ func TestSyncImpactDoesNotTreatSharedIDOnlyAsRemovedBindingEvidence(t *testing.T
 	}, "\n"))
 	writeProcessFile(t, repoRoot, "check", storedProcess)
 
-	result, err := SyncImpact(repoRoot, Options{SharedIDs: []string{"shared_demo"}})
-	if err != nil {
-		t.Fatalf("SyncImpact: %v", err)
-	}
-	if len(result.ScopedModules) != 0 {
-		t.Fatalf("expected shared-id-only removed binding evidence to be ignored, got %+v", result.ScopedModules)
-	}
-	if len(result.ModuleResults) != 0 {
-		t.Fatalf("expected no module fallback from shared-id-only removed binding evidence, got %+v", result.ModuleResults)
+	_, err = SyncImpact(repoRoot, Options{SharedIDs: []string{"shared_demo"}})
+	if err == nil || !strings.Contains(err.Error(), "removed-binding scope is ambiguous") {
+		t.Fatalf("expected ambiguous shared-id removed-binding error, got %v", err)
 	}
 }
 

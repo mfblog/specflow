@@ -155,7 +155,11 @@ func processSnapshotContainsSelectedShared(repoRoot, objectType, object, activeL
 			continue
 		}
 		for _, entry := range processSnapshot.SharedContractSnapshot {
-			if refSet[entry.VersionRef] || matchesSelectedSharedIDEntry(entry, idSet, sharedFilesByID) {
+			matched, err := matchesSelectedSharedEntry(entry, refSet, idSet, sharedFilesByID)
+			if err != nil {
+				return false, err
+			}
+			if matched {
 				return true, nil
 			}
 		}
@@ -781,6 +785,8 @@ func sharedSnapshotMatchesRemovedBindingEvidence(stored, current []snapshot.Shar
 	if equalSharedSnapshotEntries(stored, current) {
 		return true, nil
 	}
+	refSet := makeStringSet(scopedRefs)
+	idSet := makeStringSet(scopedIDs)
 
 	currentSet := map[string]bool{}
 	for _, entry := range current {
@@ -800,31 +806,40 @@ func sharedSnapshotMatchesRemovedBindingEvidence(stored, current []snapshot.Shar
 		if currentSet[sharedSnapshotEntryKey(entry)] {
 			continue
 		}
-		if !matchesSelectedSharedEntry(entry, scopedRefs, scopedIDs, sharedFilesByID) {
+		matched, err := matchesSelectedSharedEntry(entry, refSet, idSet, sharedFilesByID)
+		if err != nil {
+			return false, err
+		}
+		if !matched {
 			return false, nil
 		}
 	}
 	return true, nil
 }
 
-func matchesSelectedSharedEntry(entry snapshot.SharedContractEntry, scopedRefs, scopedIDs []string, sharedFilesByID map[string][]sharedFile) bool {
-	refSet := makeStringSet(scopedRefs)
-	if refSet[entry.VersionRef] {
-		return true
+func matchesSelectedSharedEntry(entry snapshot.SharedContractEntry, scopedRefSet, scopedIDSet map[string]bool, sharedFilesByID map[string][]sharedFile) (bool, error) {
+	if scopedRefSet[entry.VersionRef] {
+		return true, nil
 	}
-	return matchesSelectedSharedIDEntry(entry, makeStringSet(scopedIDs), sharedFilesByID)
+	return matchesSelectedSharedIDEntry(entry, scopedIDSet, sharedFilesByID)
 }
 
-func matchesSelectedSharedIDEntry(entry snapshot.SharedContractEntry, scopedIDSet map[string]bool, sharedFilesByID map[string][]sharedFile) bool {
+func matchesSelectedSharedIDEntry(entry snapshot.SharedContractEntry, scopedIDSet map[string]bool, sharedFilesByID map[string][]sharedFile) (bool, error) {
 	if !scopedIDSet[entry.SharedContractID] {
-		return false
+		return false, nil
 	}
 	candidates := sharedFilesByID[entry.SharedContractID]
+	if len(candidates) > 1 {
+		return false, fmt.Errorf("shared_id %q resolves to multiple current shared files; removed-binding scope is ambiguous", entry.SharedContractID)
+	}
 	if len(candidates) != 1 {
-		return false
+		return false, nil
 	}
 	current := candidates[0]
-	return current.FileRef == entry.FileRef && current.Layer == entry.Layer
+	if current.FileRef == entry.FileRef && current.Layer == entry.Layer {
+		return true, nil
+	}
+	return false, nil
 }
 
 func sharedSnapshotEntryKey(entry snapshot.SharedContractEntry) string {
@@ -898,6 +913,7 @@ func reconstructTruthWithStoredSharedSnapshot(currentTruthContent string, stored
 	for _, entry := range storedShared {
 		refs = append(refs, strings.TrimSpace(entry.VersionRef))
 	}
+	sort.Strings(refs)
 	normalized := strings.ReplaceAll(currentTruthContent, "\r\n", "\n")
 	lines := strings.Split(normalized, "\n")
 	endIdx := -1
