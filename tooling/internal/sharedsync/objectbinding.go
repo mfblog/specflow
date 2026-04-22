@@ -77,30 +77,38 @@ func readObjectSharedRefs(repoRoot string, status statusfile.ObjectStatus) ([]st
 	return normalizeStrings(refs), nil
 }
 
-func buildScopeObjects(bindings map[string]objectBinding, sharedFilesByRef map[string]sharedFile, scopedRefs, scopedIDs []string, removedBindingScope map[string]bool) []string {
+func buildScopeObjects(bindings map[string]objectBinding, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile, scopedRefs, scopedIDs []string, removedBindingScope map[string]bool) ([]string, error) {
 	if len(scopedRefs) == 0 && len(scopedIDs) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	scope := map[string]bool{}
 	for object, binding := range bindings {
-		if len(selectedSharedRefsForObject(binding.SharedRefs, scopedRefs, scopedIDs, sharedFilesByRef)) > 0 {
+		selectedRefs, err := selectedSharedRefsForObject(binding.SharedRefs, scopedRefs, scopedIDs, sharedFilesByRef, sharedFilesByID)
+		if err != nil {
+			return nil, err
+		}
+		if len(selectedRefs) > 0 {
 			scope[object] = true
 		}
 	}
 	for object := range removedBindingScope {
 		scope[object] = true
 	}
-	return sortedKeys(scope)
+	return sortedKeys(scope), nil
 }
 
-func candidateObjectsWithRemovedSelectedBinding(repoRoot string, bindings map[string]objectBinding, scopedRefs, scopedIDs []string, sharedFilesByID map[string][]sharedFile) (map[string]bool, error) {
+func candidateObjectsWithRemovedSelectedBinding(repoRoot string, bindings map[string]objectBinding, scopedRefs, scopedIDs []string, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile) (map[string]bool, error) {
 	result := map[string]bool{}
 	for object, binding := range bindings {
 		if binding.Status.ActiveLayer != "candidate" {
 			continue
 		}
-		if len(selectedSharedRefsForObject(binding.SharedRefs, scopedRefs, scopedIDs, nil)) > 0 {
+		selectedRefs, err := selectedSharedRefsForObject(binding.SharedRefs, scopedRefs, scopedIDs, sharedFilesByRef, sharedFilesByID)
+		if err != nil {
+			return nil, err
+		}
+		if len(selectedRefs) > 0 {
 			continue
 		}
 		matched, err := processSnapshotContainsSelectedShared(

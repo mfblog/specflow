@@ -574,9 +574,26 @@ func parseSharedContractRefs(body string) ([]string, bool, error) {
 		if len(refs) == 0 {
 			return nil, false, fmt.Errorf("shared_contract_refs must not be an empty list")
 		}
+		if err := validateOrderedSharedContractRefs(refs); err != nil {
+			return nil, false, err
+		}
 		return refs, true, nil
 	}
 	return nil, false, nil
+}
+
+func validateOrderedSharedContractRefs(refs []string) error {
+	if len(refs) < 2 {
+		return nil
+	}
+	expected := append([]string(nil), refs...)
+	sort.Strings(expected)
+	for idx := range refs {
+		if refs[idx] != expected[idx] {
+			return fmt.Errorf("shared_contract_refs must be sorted by exact shared ref string in ascending lexical order")
+		}
+	}
+	return nil
 }
 
 func parseSystemConstraintsStableRef(body string) (string, bool, error) {
