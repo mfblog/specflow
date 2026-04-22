@@ -236,28 +236,28 @@ At minimum:
 
 ### 8.5 Authoritative And Non-Authoritative Result Contract
 
-生命周期推进只能来自一次新的、独立的、全范围命令运行。
+Lifecycle progression may only come from one new, independent, full-scope command run.
 
-规则：
+Rules:
 
-1. 只有当前命令的一次新 full-scope run，才可以产生 formal pass gate、formal verification pass、或推进 `_status.md` 的结果。
-2. 如果某个命令已经以 non-pass 结果结束，除非该命令文件明确允许某个 checkpoint 作为可恢复停点，否则后续 repair、local confirmation、scoped recheck、或 follow-up assessment 都属于 non-authoritative。
-3. non-authoritative follow-up 可以报告局部修复已经完成，但不得宣称新的生命周期推进、不得写入推进型 `_status.md` 更新、也不得把局部复核包装成新的 formal pass。
-4. 各命令文件可以在自己的边界内进一步收紧 rerun 条件，但不得放宽这里定义的 authoritative / non-authoritative 区分。
+1. Only one new full-scope run of the current command may produce a formal pass gate, a formal verification pass, or an advancing `_status.md` result.
+2. Once a command has ended with a non-pass result, every later repair, local confirmation, scoped recheck, or follow-up assessment is non-authoritative unless that command file explicitly allows a checkpoint as a resumable stop.
+3. A non-authoritative follow-up may report that local repair is complete, but it must not claim new lifecycle progression, write advancing `_status.md` updates, or repackage a local recheck as a new formal pass.
+4. Individual command files may tighten rerun conditions within their own boundary, but they must not weaken the authoritative / non-authoritative distinction defined here.
 
 ### 8.6 User-Facing Close-Out Block Contract
 
-每次正式命令输出都必须包含 `user-facing close-out block`。
+Every formal command output must include a `user-facing close-out block`.
 
-这个 block 至少必须报告：
+This block must report at least:
 
 1. `round conclusion`
 2. `current state`
 3. `next step`
 4. `why this next step`
 5. `next-stage entry gap`
-6. 当命令进入 checkpoint 或其他明确可恢复停点时，还必须报告 `resume signal`
-7. 各命令文件可以追加更严格的字段或措辞要求，但不得删除这里固定的字段
+6. when the command enters a checkpoint or another explicit resumable stop, it must also report `resume signal`
+7. individual command files may add stricter fields or wording requirements, but they must not delete the fixed fields defined here
 
 ## 9. Direct Implementation Request Gate
 

@@ -26,7 +26,7 @@ It does not:
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
-当本命令推进 `_status.md` 时，这个推进继承 `specflow/framework/docs/agent_guidelines/command_policy.md` 第 8.5 节定义的 authoritative / non-authoritative 中心契约。
+When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
 Only a new independent full-scope run of `stable_verify` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
 
 ## 3. Preconditions
@@ -100,7 +100,7 @@ Only a new independent full-scope run of `stable_verify` may produce that advanc
    - `spec_fork:{module}` may be suggested only as a later follow-up after stable alignment has been restored
 9. git close-out result
 10. `_status.md` update result
-11. `specflow/framework/docs/agent_guidelines/command_policy.md` 第 8.6 节要求的 `user-facing close-out block`
+11. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - `current state` must explicitly confirm `Active Layer=stable` and the written `Next Command`
    - if `Next Command=stable_verify`, `why this next step` must explicitly state that alignment is not yet restored rather than implying a no-op rerun

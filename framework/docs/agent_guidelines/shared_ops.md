@@ -32,12 +32,12 @@ shared_ops:{natural-language request}
 Examples:
 
 ```text
-shared_ops:我一开始就要设计一个给 agent 和 assistant 共用的结构化输出 fallback 共享契约
-shared_ops:把 module_ai 和 module_memory 里共用的 app config topology 抽成 shared contract
-shared_ops:module_skill 需要复用 shared_app_config_topology
-shared_ops:给 shared_app_config_topology 开下一轮 candidate 继续演进
-shared_ops:我刚改了 structured_output_fallback，帮我检查影响哪些模块
-shared_ops:把 shared_runtime_model 拆成两个 shared contract，并决定旧 shared 是否退场
+shared_ops:I want to design a structured-output fallback shared contract for both agent and assistant from the start
+shared_ops:extract the app config topology shared by module_ai and module_memory into one shared contract
+shared_ops:module_skill needs to reuse shared_app_config_topology
+shared_ops:open the next candidate round for shared_app_config_topology
+shared_ops:I just changed structured_output_fallback, help me check which modules are affected
+shared_ops:split shared_runtime_model into two shared contracts and decide whether the old shared should be retired
 ```
 
 Rules:
@@ -106,11 +106,11 @@ Use `shared_new` only when the request clearly means:
 
 Typical signals:
 
-1. "一开始就要设计成共享"
-2. "先规划一个多个模块共用的正式协议"
-3. "这部分本来就不属于单模块"
-4. "给已有 shared 开下一轮 candidate"
-5. "继续演进 shared_xxx"
+1. "design it as shared from the start"
+2. "plan one formal protocol shared by multiple modules first"
+3. "this truth does not belong to one module"
+4. "open the next candidate for an existing shared"
+5. "continue evolving shared_xxx"
 
 ### 5.2 Route To `shared_extract`
 
@@ -122,10 +122,10 @@ Use `shared_extract` only when the request clearly means:
 
 Typical signals:
 
-1. "抽取"
-2. "提取"
-3. "从模块里拿出来"
-4. "现在多个模块都在写这一份真相"
+1. "extract"
+2. "pull it out"
+3. "move it out of the module"
+4. "multiple modules are now writing the same truth"
 
 ### 5.3 Route To `shared_bind`
 
@@ -137,9 +137,9 @@ Use `shared_bind` only when the request clearly means:
 
 Typical signals:
 
-1. "复用"
-2. "绑定"
-3. "接入已有 shared contract"
+1. "reuse"
+2. "bind"
+3. "connect to an existing shared contract"
 
 ### 5.4 Route To `shared_sync`
 
@@ -151,9 +151,9 @@ Use `shared_sync` only when the request clearly means:
 
 Typical signals:
 
-1. "改了 shared 后检查影响"
-2. "哪些模块要回退"
-3. "同步 shared 改动后的状态"
+1. "check impact after changing shared"
+2. "which modules must fall back"
+3. "sync state after a shared change"
 
 ### 5.5 Route To `shared_topology`
 
@@ -165,12 +165,12 @@ Use `shared_topology` only when the request clearly means:
 
 Typical signals:
 
-1. "拆分"
-2. "合并"
-3. "重命名"
-4. "退场"
-5. "替换旧 shared"
-6. "旧 shared 现在没人绑定了，该删还是保留"
+1. "split"
+2. "merge"
+3. "rename"
+4. "retire"
+5. "replace the old shared"
+6. "the old shared has no bindings now; should it be deleted or kept"
 
 ### 5.6 Route To `shared_escape`
 

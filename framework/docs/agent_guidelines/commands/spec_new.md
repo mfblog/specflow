@@ -26,7 +26,7 @@ It does not:
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
-当本命令推进 `_status.md` 时，这个推进继承 `specflow/framework/docs/agent_guidelines/command_policy.md` 第 8.5 节定义的 authoritative / non-authoritative 中心契约。
+When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
 Only a new independent full-scope run of `spec_new` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
 
 ## 3. Preconditions
@@ -96,7 +96,7 @@ Only a new independent full-scope run of `spec_new` may produce that advancing r
 8. Shared Contract reconciliation result when the round changed shared truth or bindings
 9. git close-out result
 10. remaining closure items
-11. `specflow/framework/docs/agent_guidelines/command_policy.md` 第 8.6 节要求的 `user-facing close-out block`
+11. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - `current state` must explicitly confirm `Active Layer=candidate` and `Next Command=cand_check`
    - `next-stage entry gap` must explicitly confirm that entry into the later different command `cand_check` is already satisfied after `spec_new` closes
