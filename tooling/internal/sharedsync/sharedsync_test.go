@@ -494,6 +494,96 @@ Body changed.
 	}
 }
 
+func TestSyncImpactMixedSharedRefsStillInvalidateOnNonExemptRef(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: module_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo",
+		"",
+		"## Global Constraint Alignment",
+		"",
+		"1. system_constraints_stable_ref: none",
+		"2. shared_contract_refs:",
+		"   - c_shared_demo@0.1.0",
+		"   - c_shared_extra@0.2.0",
+		"",
+	}, "\n"))
+
+	writeSharedFileAtPath(t, repoRoot, "docs/specs/shared_contracts/candidate/c_shared_extra.md", `---
+shared_contract_id: shared_extra
+layer: candidate
+shared_version: 0.2.0
+bound_modules:
+  - module_demo
+---
+
+# Shared
+
+Body stays the same.
+`)
+
+	snap, err := snapshot.RebuildCurrent(repoRoot, "module_demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	writeProcessFile(t, repoRoot, "check", snapshot.Render(snap))
+
+	writeSharedFile(t, repoRoot, `---
+shared_contract_id: shared_demo
+layer: candidate
+shared_version: 0.1.0
+bound_modules:
+  - module_demo
+  - module_other
+---
+
+# Shared
+
+Body stays the same.
+`)
+	writeSharedFileAtPath(t, repoRoot, "docs/specs/shared_contracts/candidate/c_shared_extra.md", `---
+shared_contract_id: shared_extra
+layer: candidate
+shared_version: 0.2.0
+bound_modules:
+  - module_demo
+---
+
+# Shared
+
+Body changed.
+`)
+
+	result, err := SyncImpact(repoRoot, Options{
+		SharedRefs:                     []string{sharedRef, "c_shared_extra@0.2.0"},
+		BoundModulesOnlySharedFileRefs: []string{"docs/specs/shared_contracts/candidate/c_shared_demo.md"},
+	})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ModuleResults) != 1 {
+		t.Fatalf("expected one module result, got %+v", result.ModuleResults)
+	}
+	moduleResult := result.ModuleResults[0]
+	if moduleResult.Outcome != "invalidated" {
+		t.Fatalf("expected invalidated outcome, got %+v", moduleResult)
+	}
+	if moduleResult.FallbackReasonCode != "shared_contract_drift" {
+		t.Fatalf("expected shared_contract_drift, got %+v", moduleResult)
+	}
+}
+
 func TestSyncImpactFiltersModulesWithinSharedScope(t *testing.T) {
 	repoRoot := t.TempDir()
 	sharedRef := setupCandidateSharedRepo(t, repoRoot)
@@ -773,6 +863,11 @@ Body stays the same.
 
 	initGitRepo(t, repoRoot)
 	return "s_shared_demo@1.0.0"
+}
+
+func writeSharedFileAtPath(t *testing.T, repoRoot, relPath, content string) {
+	t.Helper()
+	mustWriteFile(t, filepath.Join(repoRoot, relPath), content)
 }
 
 func setupCandidateFlowSharedRepo(t *testing.T, repoRoot string) string {

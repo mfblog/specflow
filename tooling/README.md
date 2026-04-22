@@ -68,7 +68,7 @@ For shared-change reconciliation, the current mechanical entry remains `shared s
 14. `status set-object`
    - write one unified object row in `_status.md`
 15. `shared sync-impact`
-   - compute shared-specific scope and exceptions, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
+   - compute shared-specific scope, resolve shared-only exceptions into generic impact input, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
 16. `shared reconcile-bound-modules`
    - rewrite Shared Contract `bound_modules` metadata from current formal bindings
 

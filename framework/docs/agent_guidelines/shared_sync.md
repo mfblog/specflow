@@ -36,7 +36,8 @@ It may:
 5. interpret shared-specific execution-local exceptions such as:
    - `current_stable_landing_module`
    - `bound_modules_only_shared_file_refs`
-6. pass the final affected object set to `impact_sync`
+6. convert those exceptions into exception-resolved downstream impact input
+7. pass the final affected object set to `impact_sync`
 
 It does not:
 
@@ -120,7 +121,11 @@ Execution-local caller inputs may include:
 
 After the affected downstream object set and exception set are fixed:
 
-1. pass the downstream object set to `impact_sync`
+1. convert shared-specific exceptions into already-resolved downstream impact input:
+   - final `invalidating_shared_refs`
+   - final `explicit_fallback_scope`
+   - final `allowed_shared_snapshot_mismatch_file_refs`
+2. pass that exception-resolved downstream object set to `impact_sync`
 2. let `impact_sync` perform:
    - candidate-side process cleanup
    - `_status.md` fallback writeback
@@ -128,6 +133,7 @@ After the affected downstream object set and exception set are fixed:
 
 `shared_sync` remains responsible for the scope and exception judgment.
 `impact_sync` remains responsible for the generic fallback execution.
+`impact_sync` must not receive raw `current_stable_landing_module` or raw `bound_modules_only_shared_file_refs`.
 
 ## 5. Output Contract
 

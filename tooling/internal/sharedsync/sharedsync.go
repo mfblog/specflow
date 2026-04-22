@@ -149,12 +149,9 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	scopeProjects := buildScopeObjects(projectBindings, sharedFilesByRef, normalized)
 
 	impactResult, err := impactsync.Apply(repoRoot, impactsync.Input{
-		Modules:                  scopedModulesForImpact(scopeModules, moduleBindings, normalized, sharedFilesByRef),
-		Flows:                    scopedObjectsForImpact("flow", scopeFlows, flowBindings, normalized, sharedFilesByRef),
-		Projects:                 scopedObjectsForImpact("project", scopeProjects, projectBindings, normalized, sharedFilesByRef),
-		SharedFilesByRef:         impactSharedFiles(sharedFilesByRef),
-		BoundModulesOnlyFileRefs: normalized.BoundModulesOnlySharedFileRefs,
-		StableLandingModule:      normalized.StableLandingModule,
+		Modules:  scopedModulesForImpact(scopeModules, moduleBindings, normalized, sharedFilesByRef, boundModulesOnlyFileRefs),
+		Flows:    scopedObjectsForImpact("flow", scopeFlows, flowBindings, normalized, sharedFilesByRef, boundModulesOnlyFileRefs),
+		Projects: scopedObjectsForImpact("project", scopeProjects, projectBindings, normalized, sharedFilesByRef, boundModulesOnlyFileRefs),
 	})
 	if err != nil {
 		return Result{}, err
@@ -388,53 +385,47 @@ func buildScopeModules(moduleBindings map[string]moduleBinding, sharedFilesByRef
 	return sortedKeys(scope)
 }
 
-func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]moduleBinding, options Options, sharedFilesByRef map[string]sharedFile) []impactsync.ScopedModule {
+func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]moduleBinding, options Options, sharedFilesByRef map[string]sharedFile, boundModulesOnlyFileRefs map[string]bool) []impactsync.ScopedModule {
 	result := make([]impactsync.ScopedModule, 0, len(scopeModules))
 	for _, module := range scopeModules {
 		binding := moduleBindings[module]
+		selectedSharedRefs := selectedSharedRefsForObject(binding.SharedRefs, options.SharedRefs, options.SharedIDs, sharedFilesByRef)
+		invalidatingSharedRefs := filterInvalidatingSharedRefs(selectedSharedRefs, sharedFilesByRef, boundModulesOnlyFileRefs)
+		explicitFallbackScope := contains(options.Modules, module)
+		if binding.Status.ActiveLayer == "stable" && options.StableLandingModule == module {
+			invalidatingSharedRefs = nil
+			explicitFallbackScope = false
+		}
 		result = append(result, impactsync.ScopedModule{
 			Binding: impactsync.ModuleBinding{
 				Module:        binding.Status.Module,
 				ActiveLayer:   binding.Status.ActiveLayer,
 				NextCommand:   binding.Status.NextCommand,
-				SharedRefs:    append([]string{}, binding.SharedRefs...),
 				BindingIssues: append([]string{}, binding.BindingIssues...),
 			},
-			RelevantSelectedRefs: selectedSharedRefsForObject(binding.SharedRefs, options.SharedRefs, options.SharedIDs, sharedFilesByRef),
-			ExplicitlyScoped:     contains(options.Modules, module),
+			InvalidatingSharedRefs:                invalidatingSharedRefs,
+			ExplicitFallbackScope:                 explicitFallbackScope,
+			AllowedSharedSnapshotMismatchFileRefs: allowedSharedSnapshotMismatchFileRefs(selectedSharedRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
 		})
 	}
 	return result
 }
 
-func scopedObjectsForImpact(objectType string, scopeObjects []string, bindings map[string]objectBinding, options Options, sharedFilesByRef map[string]sharedFile) []impactsync.ScopedObject {
+func scopedObjectsForImpact(objectType string, scopeObjects []string, bindings map[string]objectBinding, options Options, sharedFilesByRef map[string]sharedFile, boundModulesOnlyFileRefs map[string]bool) []impactsync.ScopedObject {
 	result := make([]impactsync.ScopedObject, 0, len(scopeObjects))
 	for _, object := range scopeObjects {
 		binding := bindings[object]
+		selectedSharedRefs := selectedSharedRefsForObject(binding.SharedRefs, options.SharedRefs, options.SharedIDs, sharedFilesByRef)
 		result = append(result, impactsync.ScopedObject{
 			Binding: impactsync.ObjectBinding{
 				ObjectType:    objectType,
 				Object:        binding.Status.Object,
 				ActiveLayer:   binding.Status.ActiveLayer,
 				NextCommand:   binding.Status.NextCommand,
-				SharedRefs:    append([]string{}, binding.SharedRefs...),
 				BindingIssues: append([]string{}, binding.BindingIssues...),
 			},
-			RelevantSelectedRefs: selectedSharedRefsForObject(binding.SharedRefs, options.SharedRefs, options.SharedIDs, sharedFilesByRef),
+			InvalidatingSharedRefs: filterInvalidatingSharedRefs(selectedSharedRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
 		})
-	}
-	return result
-}
-
-func impactSharedFiles(sharedFilesByRef map[string]sharedFile) map[string]impactsync.SharedFile {
-	result := make(map[string]impactsync.SharedFile, len(sharedFilesByRef))
-	for ref, shared := range sharedFilesByRef {
-		result[ref] = impactsync.SharedFile{
-			SharedContractID: shared.SharedContractID,
-			Layer:            shared.Layer,
-			FileRef:          shared.FileRef,
-			VersionRef:       shared.VersionRef,
-		}
 	}
 	return result
 }
@@ -494,6 +485,28 @@ func selectedSharedRefsForObject(objectRefs, scopedRefs, scopedIDs []string, sha
 		shared, ok := sharedFilesByRef[ref]
 		if ok && idSet[shared.SharedContractID] {
 			result = append(result, ref)
+		}
+	}
+	return normalizeStrings(result)
+}
+
+func filterInvalidatingSharedRefs(selectedRefs []string, sharedFilesByRef map[string]sharedFile, boundModulesOnlyFileRefs map[string]bool) []string {
+	result := make([]string, 0, len(selectedRefs))
+	for _, ref := range selectedRefs {
+		shared, ok := sharedFilesByRef[ref]
+		if !ok || !boundModulesOnlyFileRefs[shared.FileRef] {
+			result = append(result, ref)
+		}
+	}
+	return normalizeStrings(result)
+}
+
+func allowedSharedSnapshotMismatchFileRefs(selectedRefs []string, sharedFilesByRef map[string]sharedFile, boundModulesOnlyFileRefs map[string]bool) []string {
+	result := []string{}
+	for _, ref := range selectedRefs {
+		shared, ok := sharedFilesByRef[ref]
+		if ok && boundModulesOnlyFileRefs[shared.FileRef] {
+			result = append(result, shared.FileRef)
 		}
 	}
 	return normalizeStrings(result)
