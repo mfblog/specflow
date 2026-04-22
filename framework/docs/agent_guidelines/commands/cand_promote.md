@@ -16,7 +16,7 @@ By default it handles:
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
-当本命令推进 `_status.md` 时，这个推进继承 `specflow/framework/docs/agent_guidelines/command_policy.md` 第 8.5 节定义的 authoritative / non-authoritative 中心契约。
+When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
 Only a new independent full-scope run of `cand_promote` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
 
 ## 3. Preconditions
@@ -175,7 +175,7 @@ Only a new independent full-scope run of `cand_promote` may produce that advanci
      - `Active Layer=candidate`
      - `Next Command=cand_check`
      - `resume through shared_ops` before any later promotion retry
-23. `specflow/framework/docs/agent_guidelines/command_policy.md` 第 8.6 节要求的 `user-facing close-out block`
+23. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - when promotion recovery or shared-governance reroute occurred, also report `resume signal`
    - `current state` must match the post-promotion or post-recovery state actually restored in `_status.md`
