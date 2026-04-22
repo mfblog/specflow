@@ -300,7 +300,6 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		writeList(stdout, "Tooling contract files", scope.ToolingContractFiles)
 		writeList(stdout, "Tooling source files", scope.ToolingSourceFiles)
 		writeList(stdout, "Active project-local governance-input files", scope.ActiveProjectStandardFiles)
-		writeList(stdout, "Matched governance overlay files", scope.MatchedOverlayFiles)
 		return nil
 	case "-h", "--help", "help":
 		writeReviewUsage(stdout)
@@ -410,6 +409,8 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 		}
 
 		writeList(stdout, "Scoped modules", result.ScopedModules)
+		writeList(stdout, "Scoped flows", result.ScopedFlows)
+		writeList(stdout, "Scoped projects", result.ScopedProjects)
 		writeList(stdout, "Scoped shared refs", result.ScopedSharedRefs)
 		writeList(stdout, "Scoped shared ids", result.ScopedSharedIDs)
 		fmt.Fprintf(stdout, "Stable landing module: %s\n", noneIfEmpty(result.StableLandingModule))
@@ -433,12 +434,44 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 		fmt.Fprintf(stdout, "Bound-module drifts (%d):\n", len(result.BoundModuleDrifts))
 		if len(result.BoundModuleDrifts) == 0 {
 			fmt.Fprintln(stdout, "- none")
-			return nil
+		} else {
+			for _, drift := range result.BoundModuleDrifts {
+				fmt.Fprintf(stdout, "- %s | file=%s | version=%s | bound_modules_only_delta=%t\n", drift.SharedContractID, drift.FileRef, drift.VersionRef, drift.BoundModulesOnlyDelta)
+				fmt.Fprintf(stdout, "  declared=%s\n", strings.Join(defaultListValue(drift.DeclaredModules), ", "))
+				fmt.Fprintf(stdout, "  actual=%s\n", strings.Join(defaultListValue(drift.ActualModules), ", "))
+			}
 		}
-		for _, drift := range result.BoundModuleDrifts {
-			fmt.Fprintf(stdout, "- %s | file=%s | version=%s | bound_modules_only_delta=%t\n", drift.SharedContractID, drift.FileRef, drift.VersionRef, drift.BoundModulesOnlyDelta)
-			fmt.Fprintf(stdout, "  declared=%s\n", strings.Join(defaultListValue(drift.DeclaredModules), ", "))
-			fmt.Fprintf(stdout, "  actual=%s\n", strings.Join(defaultListValue(drift.ActualModules), ", "))
+		fmt.Fprintf(stdout, "Flow results (%d):\n", len(result.FlowResults))
+		if len(result.FlowResults) == 0 {
+			fmt.Fprintln(stdout, "- none")
+		}
+		for _, item := range result.FlowResults {
+			fmt.Fprintf(stdout, "- %s | layer=%s | outcome=%s | next=%s | reason=%s | status_updated=%t\n", item.Object, item.ActiveLayer, item.Outcome, item.NextCommand, noneIfEmpty(item.FallbackReasonCode), item.StatusUpdated)
+			for _, diagnostic := range item.Diagnostics {
+				fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)
+			}
+			for _, path := range item.DeletedFiles {
+				fmt.Fprintf(stdout, "  deleted: %s\n", path)
+			}
+			for _, path := range item.MissingFiles {
+				fmt.Fprintf(stdout, "  missing: %s\n", path)
+			}
+		}
+		fmt.Fprintf(stdout, "Project results (%d):\n", len(result.ProjectResults))
+		if len(result.ProjectResults) == 0 {
+			fmt.Fprintln(stdout, "- none")
+		}
+		for _, item := range result.ProjectResults {
+			fmt.Fprintf(stdout, "- %s | layer=%s | outcome=%s | next=%s | reason=%s | status_updated=%t\n", item.Object, item.ActiveLayer, item.Outcome, item.NextCommand, noneIfEmpty(item.FallbackReasonCode), item.StatusUpdated)
+			for _, diagnostic := range item.Diagnostics {
+				fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)
+			}
+			for _, path := range item.DeletedFiles {
+				fmt.Fprintf(stdout, "  deleted: %s\n", path)
+			}
+			for _, path := range item.MissingFiles {
+				fmt.Fprintf(stdout, "  missing: %s\n", path)
+			}
 		}
 		return nil
 	case "reconcile-bound-modules":

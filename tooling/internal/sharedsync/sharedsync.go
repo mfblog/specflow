@@ -9,7 +9,6 @@ import (
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/sharedbinding"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
@@ -23,11 +22,15 @@ type Options struct {
 
 type Result struct {
 	ScopedModules                  []string
+	ScopedFlows                    []string
+	ScopedProjects                 []string
 	ScopedSharedRefs               []string
 	ScopedSharedIDs                []string
 	StableLandingModule            string
 	BoundModulesOnlySharedFileRefs []string
 	ModuleResults                  []ModuleResult
+	FlowResults                    []ObjectResult
+	ProjectResults                 []ObjectResult
 	BoundModuleDrifts              []BoundModuleDrift
 }
 
@@ -89,6 +92,9 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		StableLandingModule:            strings.TrimSpace(options.StableLandingModule),
 		BoundModulesOnlySharedFileRefs: normalizeStrings(options.BoundModulesOnlySharedFileRefs),
 	}
+	if len(normalized.Modules) == 0 && len(normalized.SharedRefs) == 0 && len(normalized.SharedIDs) == 0 {
+		return Result{}, fmt.Errorf("at least one of modules, shared refs, or shared ids is required")
+	}
 
 	sharedFilesByRef, err := loadSharedFiles(repoRoot)
 	if err != nil {
@@ -101,12 +107,21 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	flowBindings, unresolvedFlowRefs, err := loadObjectBindings(repoRoot, "flow")
+	if err != nil {
+		return Result{}, err
+	}
+	projectBindings, unresolvedProjectRefs, err := loadObjectBindings(repoRoot, "project")
+	if err != nil {
+		return Result{}, err
+	}
+	allUnresolvedRefs := normalizeStrings(append(append(unresolvedSharedRefs, unresolvedFlowRefs...), unresolvedProjectRefs...))
 	for _, sharedID := range normalized.SharedIDs {
-		if len(unresolvedSharedRefs) > 0 {
+		if len(allUnresolvedRefs) > 0 {
 			return Result{}, fmt.Errorf(
-				"cannot determine affected modules safely for shared id %q because unresolved shared refs remain in module bindings: %s",
+				"cannot determine affected downstream objects safely for shared id %q because unresolved shared refs remain in downstream bindings: %s",
 				sharedID,
-				strings.Join(unresolvedSharedRefs, ", "),
+				strings.Join(allUnresolvedRefs, ", "),
 			)
 		}
 		if _, ok := sharedFilesByID[sharedID]; !ok {
@@ -139,6 +154,8 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	}
 
 	scopeModules := buildScopeModules(moduleBindings, sharedFilesByRef, normalized)
+	scopeFlows := buildScopeObjects(flowBindings, sharedFilesByRef, normalized)
+	scopeProjects := buildScopeObjects(projectBindings, sharedFilesByRef, normalized)
 	results := make([]ModuleResult, 0, len(scopeModules))
 	for _, module := range scopeModules {
 		binding := moduleBindings[module]
@@ -148,14 +165,46 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		}
 		results = append(results, moduleResult)
 	}
+	flowResults := make([]ObjectResult, 0, len(scopeFlows))
+	for _, flow := range scopeFlows {
+		binding := flowBindings[flow]
+		flowResult, err := reconcileObject(repoRoot, binding, selectedSharedRefsForObject(binding.SharedRefs, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByRef), sharedFilesByRef, boundModulesOnlyFileRefs, objectFamilyConfig{
+			ObjectType:            "flow",
+			CandidateNextCommand:  "flow_check",
+			StableNextCommand:     "flow_stable_verify",
+			CandidateProcessKinds: []string{"check", "verify"},
+		})
+		if err != nil {
+			return Result{}, err
+		}
+		flowResults = append(flowResults, flowResult)
+	}
+	projectResults := make([]ObjectResult, 0, len(scopeProjects))
+	for _, project := range scopeProjects {
+		binding := projectBindings[project]
+		projectResult, err := reconcileObject(repoRoot, binding, selectedSharedRefsForObject(binding.SharedRefs, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByRef), sharedFilesByRef, boundModulesOnlyFileRefs, objectFamilyConfig{
+			ObjectType:            "project",
+			CandidateNextCommand:  "project_check",
+			StableNextCommand:     "project_stable_verify",
+			CandidateProcessKinds: []string{"check", "verify"},
+		})
+		if err != nil {
+			return Result{}, err
+		}
+		projectResults = append(projectResults, projectResult)
+	}
 
 	return Result{
 		ScopedModules:                  scopeModules,
+		ScopedFlows:                    scopeFlows,
+		ScopedProjects:                 scopeProjects,
 		ScopedSharedRefs:               normalized.SharedRefs,
 		ScopedSharedIDs:                normalized.SharedIDs,
 		StableLandingModule:            normalized.StableLandingModule,
 		BoundModulesOnlySharedFileRefs: normalized.BoundModulesOnlySharedFileRefs,
 		ModuleResults:                  results,
+		FlowResults:                    flowResults,
+		ProjectResults:                 projectResults,
 		BoundModuleDrifts:              drifts,
 	}, nil
 }
@@ -229,7 +278,7 @@ func reconcileModule(repoRoot string, binding moduleBinding, options Options, sh
 	}
 
 	moduleExplicit := contains(options.Modules, binding.Status.Module)
-	relevantSelectedRefs := selectedSharedRefsForModule(binding.SharedRefs, options.SharedRefs, options.SharedIDs, sharedFilesByRef)
+	relevantSelectedRefs := selectedSharedRefsForObject(binding.SharedRefs, options.SharedRefs, options.SharedIDs, sharedFilesByRef)
 
 	bindingIssue := len(binding.BindingIssues) > 0
 	result.Diagnostics = append(result.Diagnostics, binding.BindingIssues...)
@@ -521,7 +570,6 @@ func loadModuleBindings(repoRoot string) (map[string]moduleBinding, map[string][
 
 func buildScopeModules(moduleBindings map[string]moduleBinding, sharedFilesByRef map[string]sharedFile, options Options) []string {
 	scope := map[string]bool{}
-	hasExplicitScope := len(options.Modules) > 0 || len(options.SharedRefs) > 0 || len(options.SharedIDs) > 0
 	scopedRefSet := map[string]bool{}
 	scopedIDSet := map[string]bool{}
 	for _, module := range options.Modules {
@@ -541,16 +589,6 @@ func buildScopeModules(moduleBindings map[string]moduleBinding, sharedFilesByRef
 			}
 			shared, ok := sharedFilesByRef[ref]
 			if ok && scopedIDSet[shared.SharedContractID] {
-				scope[module] = true
-			}
-		}
-	}
-	if hasExplicitScope && len(scope) == 0 {
-		return nil
-	}
-	if len(scope) == 0 {
-		for module, binding := range moduleBindings {
-			if binding.Status.ActiveLayer == "candidate" && len(binding.SharedRefs) > 0 {
 				scope[module] = true
 			}
 		}
@@ -590,7 +628,7 @@ func buildScopeSharedFiles(moduleBindings map[string]moduleBinding, sharedFilesB
 	return result
 }
 
-func selectedSharedRefsForModule(moduleRefs, scopedRefs, scopedIDs []string, sharedFilesByRef map[string]sharedFile) []string {
+func selectedSharedRefsForObject(objectRefs, scopedRefs, scopedIDs []string, sharedFilesByRef map[string]sharedFile) []string {
 	refSet := map[string]bool{}
 	for _, ref := range scopedRefs {
 		refSet[ref] = true
@@ -601,7 +639,7 @@ func selectedSharedRefsForModule(moduleRefs, scopedRefs, scopedIDs []string, sha
 	}
 
 	result := []string{}
-	for _, ref := range moduleRefs {
+	for _, ref := range objectRefs {
 		if refSet[ref] {
 			result = append(result, ref)
 			continue
@@ -787,23 +825,11 @@ func rewriteSharedBoundModules(repoRoot, fileRef string, modules []string) error
 }
 
 func readModuleSharedRefs(repoRoot string, status statusfile.ModuleStatus) ([]string, error) {
-	mainSpecRef, err := specpaths.MainSpecFileRef(status.ActiveLayer, status.Module)
-	if err != nil {
-		return nil, err
-	}
-	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)))
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", mainSpecRef, err)
-	}
-	_, body, err := parseFrontmatter(string(content))
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", mainSpecRef, err)
-	}
-	refs, _, err := parseSharedContractRefs(body)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", mainSpecRef, err)
-	}
-	return normalizeStrings(refs), nil
+	return readObjectSharedRefs(repoRoot, statusfile.ObjectStatus{
+		ObjectType:  "module",
+		Object:      status.Module,
+		ActiveLayer: status.ActiveLayer,
+	})
 }
 
 func parseFrontmatter(content string) (map[string]string, string, error) {
