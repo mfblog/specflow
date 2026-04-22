@@ -94,7 +94,7 @@ func buildScopeObjects(bindings map[string]objectBinding, sharedFilesByRef map[s
 	return sortedKeys(scope)
 }
 
-func candidateObjectsWithRemovedSelectedBinding(repoRoot string, bindings map[string]objectBinding, scopedRefs, scopedIDs []string) (map[string]bool, error) {
+func candidateObjectsWithRemovedSelectedBinding(repoRoot string, bindings map[string]objectBinding, scopedRefs, scopedIDs []string, sharedFilesByID map[string][]sharedFile) (map[string]bool, error) {
 	result := map[string]bool{}
 	for object, binding := range bindings {
 		if binding.Status.ActiveLayer != "candidate" {
@@ -111,6 +111,7 @@ func candidateObjectsWithRemovedSelectedBinding(repoRoot string, bindings map[st
 			[]string{"check", "verify"},
 			scopedRefs,
 			scopedIDs,
+			sharedFilesByID,
 		)
 		if err != nil {
 			return nil, err
@@ -122,9 +123,9 @@ func candidateObjectsWithRemovedSelectedBinding(repoRoot string, bindings map[st
 	return result, nil
 }
 
-func processSnapshotContainsSelectedShared(repoRoot, objectType, object, activeLayer string, processKinds, scopedRefs, scopedIDs []string) (bool, error) {
-	_ = scopedIDs
+func processSnapshotContainsSelectedShared(repoRoot, objectType, object, activeLayer string, processKinds, scopedRefs, scopedIDs []string, sharedFilesByID map[string][]sharedFile) (bool, error) {
 	refSet := makeStringSet(scopedRefs)
+	idSet := makeStringSet(scopedIDs)
 	for _, processKind := range processKinds {
 		processPath, err := snapshot.ProcessFilePath(object, processKind)
 		if err != nil {
@@ -143,9 +144,9 @@ func processSnapshotContainsSelectedShared(repoRoot, objectType, object, activeL
 		}
 		validEvidence := false
 		if objectType == "module" {
-			validEvidence, err = isValidModuleRemovedBindingEvidence(repoRoot, object, activeLayer, processKind, processSnapshot, scopedRefs, scopedIDs)
+			validEvidence, err = isValidModuleRemovedBindingEvidence(repoRoot, object, activeLayer, processKind, processSnapshot, scopedRefs, scopedIDs, sharedFilesByID)
 		} else {
-			validEvidence, err = isValidRemovedBindingEvidence(repoRoot, processSnapshot, objectType, object, activeLayer, processKind, scopedRefs, scopedIDs)
+			validEvidence, err = isValidRemovedBindingEvidence(repoRoot, processSnapshot, objectType, object, activeLayer, processKind, scopedRefs, scopedIDs, sharedFilesByID)
 		}
 		if err != nil {
 			return false, err
@@ -154,7 +155,7 @@ func processSnapshotContainsSelectedShared(repoRoot, objectType, object, activeL
 			continue
 		}
 		for _, entry := range processSnapshot.SharedContractSnapshot {
-			if refSet[entry.VersionRef] {
+			if refSet[entry.VersionRef] || matchesSelectedSharedIDEntry(entry, idSet, sharedFilesByID) {
 				return true, nil
 			}
 		}
@@ -162,7 +163,7 @@ func processSnapshotContainsSelectedShared(repoRoot, objectType, object, activeL
 	return false, nil
 }
 
-func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processKind string, processSnapshot snapshot.ProcessSnapshotData, scopedRefs, _ []string) (bool, error) {
+func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processKind string, processSnapshot snapshot.ProcessSnapshotData, scopedRefs, scopedIDs []string, sharedFilesByID map[string][]sharedFile) (bool, error) {
 	requiredScalars := []string{
 		"object_type",
 		"object_ref",
@@ -254,10 +255,12 @@ func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processK
 		processSnapshot.SharedContractSnapshot,
 		currentSnapshot.SharedContractSnapshot,
 		scopedRefs,
+		scopedIDs,
+		sharedFilesByID,
 	)
 }
 
-func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.ProcessSnapshotData, objectType, object, activeLayer, processKind string, scopedRefs, _ []string) (bool, error) {
+func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.ProcessSnapshotData, objectType, object, activeLayer, processKind string, scopedRefs, scopedIDs []string, sharedFilesByID map[string][]sharedFile) (bool, error) {
 	requiredScalars := []string{
 		"object_type",
 		"object_ref",
@@ -355,6 +358,8 @@ func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.Pro
 		processSnapshot.SharedContractSnapshot,
 		currentSnapshot.SharedContractSnapshot,
 		scopedRefs,
+		scopedIDs,
+		sharedFilesByID,
 	)
 }
 
@@ -770,7 +775,7 @@ func hashNormalizedText(content string) string {
 	return fmt.Sprintf("%x", sum)
 }
 
-func sharedSnapshotMatchesRemovedBindingEvidence(stored, current []snapshot.SharedContractEntry, scopedRefs []string) (bool, error) {
+func sharedSnapshotMatchesRemovedBindingEvidence(stored, current []snapshot.SharedContractEntry, scopedRefs []string, scopedIDs []string, sharedFilesByID map[string][]sharedFile) (bool, error) {
 	stored = normalizeSharedSnapshotEntries(stored)
 	current = normalizeSharedSnapshotEntries(current)
 	if equalSharedSnapshotEntries(stored, current) {
@@ -795,16 +800,31 @@ func sharedSnapshotMatchesRemovedBindingEvidence(stored, current []snapshot.Shar
 		if currentSet[sharedSnapshotEntryKey(entry)] {
 			continue
 		}
-		if !matchesSelectedSharedEntry(entry, scopedRefs) {
+		if !matchesSelectedSharedEntry(entry, scopedRefs, scopedIDs, sharedFilesByID) {
 			return false, nil
 		}
 	}
 	return true, nil
 }
 
-func matchesSelectedSharedEntry(entry snapshot.SharedContractEntry, scopedRefs []string) bool {
+func matchesSelectedSharedEntry(entry snapshot.SharedContractEntry, scopedRefs, scopedIDs []string, sharedFilesByID map[string][]sharedFile) bool {
 	refSet := makeStringSet(scopedRefs)
-	return refSet[entry.VersionRef]
+	if refSet[entry.VersionRef] {
+		return true
+	}
+	return matchesSelectedSharedIDEntry(entry, makeStringSet(scopedIDs), sharedFilesByID)
+}
+
+func matchesSelectedSharedIDEntry(entry snapshot.SharedContractEntry, scopedIDSet map[string]bool, sharedFilesByID map[string][]sharedFile) bool {
+	if !scopedIDSet[entry.SharedContractID] {
+		return false
+	}
+	candidates := sharedFilesByID[entry.SharedContractID]
+	if len(candidates) != 1 {
+		return false
+	}
+	current := candidates[0]
+	return current.FileRef == entry.FileRef && current.Layer == entry.Layer
 }
 
 func sharedSnapshotEntryKey(entry snapshot.SharedContractEntry) string {
@@ -845,40 +865,38 @@ func matchesRemovedBindingTruth(processSnapshot snapshot.ProcessSnapshotData, cu
 	if processSnapshot.Scalars["truth_file_ref"] != currentTruthFileRef {
 		return false, nil
 	}
-	reconstructedContent, err := reconstructTruthWithStoredSharedSnapshot(currentTruthContent, storedShared)
+	reconstructedContents, err := reconstructTruthWithStoredSharedSnapshot(currentTruthContent, storedShared)
 	if err != nil {
 		return false, err
 	}
-	frontmatter, _, err := parseFrontmatter(reconstructedContent)
-	if err != nil {
-		return false, err
+	for _, reconstructedContent := range reconstructedContents {
+		frontmatter, _, err := parseFrontmatter(reconstructedContent)
+		if err != nil {
+			return false, err
+		}
+		version := strings.TrimSpace(frontmatter["version"])
+		if version == "" {
+			return false, fmt.Errorf("%s: missing frontmatter.version", currentTruthFileRef)
+		}
+		reconstructedVersionRef := fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(currentTruthFileRef), ".md"), version)
+		if processSnapshot.Scalars["truth_version_ref"] != reconstructedVersionRef {
+			continue
+		}
+		if processSnapshot.Scalars["truth_fingerprint"] == hashNormalizedText(reconstructedContent) {
+			return true, nil
+		}
 	}
-	version := strings.TrimSpace(frontmatter["version"])
-	if version == "" {
-		return false, fmt.Errorf("%s: missing frontmatter.version", currentTruthFileRef)
-	}
-	reconstructedVersionRef := fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(currentTruthFileRef), ".md"), version)
-	if processSnapshot.Scalars["truth_version_ref"] != reconstructedVersionRef {
-		return false, nil
-	}
-	if processSnapshot.Scalars["truth_fingerprint"] != hashNormalizedText(reconstructedContent) {
-		return false, nil
-	}
-	return true, nil
+	return false, nil
 }
 
-func reconstructTruthWithStoredSharedSnapshot(currentTruthContent string, storedShared []snapshot.SharedContractEntry) (string, error) {
+func reconstructTruthWithStoredSharedSnapshot(currentTruthContent string, storedShared []snapshot.SharedContractEntry) ([]string, error) {
 	_, body, err := parseFrontmatter(currentTruthContent)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	refs := make([]string, 0, len(storedShared))
 	for _, entry := range storedShared {
 		refs = append(refs, strings.TrimSpace(entry.VersionRef))
-	}
-	rewrittenBody, err := rewriteSharedContractRefsInBody(body, refs)
-	if err != nil {
-		return "", err
 	}
 	normalized := strings.ReplaceAll(currentTruthContent, "\r\n", "\n")
 	lines := strings.Split(normalized, "\n")
@@ -890,14 +908,35 @@ func reconstructTruthWithStoredSharedSnapshot(currentTruthContent string, stored
 		}
 	}
 	if endIdx == -1 {
-		return "", fmt.Errorf("missing frontmatter end marker")
+		return nil, fmt.Errorf("missing frontmatter end marker")
 	}
-	rebuilt := append([]string{}, lines[:endIdx+1]...)
-	rebuilt = append(rebuilt, strings.Split(rewrittenBody, "\n")...)
-	return strings.Join(rebuilt, "\n"), nil
+	variants := []sharedRefRenderStyle{
+		{wrapWithBackticks: false},
+		{wrapWithBackticks: true},
+	}
+	rebuiltContents := []string{}
+	seen := map[string]bool{}
+	for _, style := range variants {
+		rewrittenBody, err := rewriteSharedContractRefsInBody(body, refs, style)
+		if err != nil {
+			return nil, err
+		}
+		rebuilt := append([]string{}, lines[:endIdx+1]...)
+		rebuilt = append(rebuilt, strings.Split(rewrittenBody, "\n")...)
+		content := strings.Join(rebuilt, "\n")
+		if !seen[content] {
+			seen[content] = true
+			rebuiltContents = append(rebuiltContents, content)
+		}
+	}
+	return rebuiltContents, nil
 }
 
-func rewriteSharedContractRefsInBody(body string, refs []string) (string, error) {
+type sharedRefRenderStyle struct {
+	wrapWithBackticks bool
+}
+
+func rewriteSharedContractRefsInBody(body string, refs []string, style sharedRefRenderStyle) (string, error) {
 	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 	for idx, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -936,7 +975,11 @@ func rewriteSharedContractRefsInBody(body string, refs []string) (string, error)
 			replacement = append(replacement, left+":")
 			indent := detectSharedContractRefIndent(line, lines[idx+1:end])
 			for _, ref := range refs {
-				replacement = append(replacement, indent+"- "+ref)
+				renderedRef := ref
+				if style.wrapWithBackticks {
+					renderedRef = "`" + ref + "`"
+				}
+				replacement = append(replacement, indent+"- "+renderedRef)
 			}
 		}
 		updated := append([]string{}, lines[:idx]...)

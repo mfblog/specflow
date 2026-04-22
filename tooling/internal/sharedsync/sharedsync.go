@@ -176,15 +176,15 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		return Result{}, err
 	}
 
-	removedBindingModules, err := candidateModulesWithRemovedSelectedBinding(repoRoot, moduleBindings, normalized.SharedRefs, normalized.SharedIDs)
+	removedBindingModules, err := candidateModulesWithRemovedSelectedBinding(repoRoot, moduleBindings, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByID)
 	if err != nil {
 		return Result{}, err
 	}
-	removedBindingFlows, err := candidateObjectsWithRemovedSelectedBinding(repoRoot, flowBindings, normalized.SharedRefs, normalized.SharedIDs)
+	removedBindingFlows, err := candidateObjectsWithRemovedSelectedBinding(repoRoot, flowBindings, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByID)
 	if err != nil {
 		return Result{}, err
 	}
-	removedBindingProjects, err := candidateObjectsWithRemovedSelectedBinding(repoRoot, projectBindings, normalized.SharedRefs, normalized.SharedIDs)
+	removedBindingProjects, err := candidateObjectsWithRemovedSelectedBinding(repoRoot, projectBindings, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByID)
 	if err != nil {
 		return Result{}, err
 	}
@@ -478,7 +478,7 @@ func scopedObjectsForImpact(objectType string, scopeObjects []string, bindings m
 	return result
 }
 
-func candidateModulesWithRemovedSelectedBinding(repoRoot string, moduleBindings map[string]moduleBinding, scopedRefs, scopedIDs []string) (map[string]bool, error) {
+func candidateModulesWithRemovedSelectedBinding(repoRoot string, moduleBindings map[string]moduleBinding, scopedRefs, scopedIDs []string, sharedFilesByID map[string][]sharedFile) (map[string]bool, error) {
 	result := map[string]bool{}
 	for module, binding := range moduleBindings {
 		if binding.Status.ActiveLayer != "candidate" {
@@ -495,6 +495,7 @@ func candidateModulesWithRemovedSelectedBinding(repoRoot string, moduleBindings 
 			[]string{"check", "plan", "verify"},
 			scopedRefs,
 			scopedIDs,
+			sharedFilesByID,
 		)
 		if err != nil {
 			return nil, err
