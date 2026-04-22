@@ -94,7 +94,16 @@ Rules:
 
 ## Usage Examples
 
-Run from the repository root using the matching platform binary, or use `go run` while developing the tooling itself.
+Run ordinary governance commands from the repository root using the matching platform binary.
+
+When developing the tooling itself, do not assume that ordinary commands may run through `go run`.
+The freshness gate requires an embedded build fingerprint for ordinary governance actions.
+The supported `go run` recovery and inspection surface remains:
+
+1. `build-release`
+2. `doctor`
+3. `help`
+4. the internal build-fingerprint query command
 
 Examples:
 
