@@ -911,6 +911,22 @@ func TestSyncImpactIncludesCandidateFlowWhenSelectedBindingWasRemovedFromCurrent
 		"",
 	}, "\n"))
 	writeNamedProcessFile(t, repoRoot, "check", "flow_demo", strings.Join([]string{
+		"object_type: flow",
+		"object_ref: flow_demo",
+		"gate: flow_check",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: flow_verify",
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
+		"truth_layer_ref: candidate",
+		"truth_file_ref: docs/specs/flows/candidate/c_flow_flow_demo.md",
+		"truth_version_ref: c_flow_flow_demo@0.1.0",
+		"truth_fingerprint: demo",
+		"system_constraints_stable_file_ref: docs/specs/system/stable/s_system_constraints.md",
+		"system_constraints_stable_version_ref: s_system_constraints@1.0.0",
+		"system_constraints_stable_fingerprint: system-demo",
+		"module_snapshot: none",
 		"shared_contract_snapshot:",
 		"  - shared_contract_id: shared_demo",
 		"    layer: candidate",
@@ -957,6 +973,23 @@ func TestSyncImpactIncludesCandidateProjectWhenSelectedBindingWasRemovedFromCurr
 		"",
 	}, "\n"))
 	writeNamedProcessFile(t, repoRoot, "check", "project", strings.Join([]string{
+		"object_type: project",
+		"object_ref: project",
+		"gate: project_check",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: project_verify",
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
+		"truth_layer_ref: candidate",
+		"truth_file_ref: docs/specs/project/candidate/c_project.md",
+		"truth_version_ref: c_project@0.1.0",
+		"truth_fingerprint: demo",
+		"system_constraints_stable_file_ref: docs/specs/system/stable/s_system_constraints.md",
+		"system_constraints_stable_version_ref: s_system_constraints@1.0.0",
+		"system_constraints_stable_fingerprint: system-demo",
+		"flow_snapshot: none",
+		"module_snapshot: none",
 		"shared_contract_snapshot:",
 		"  - shared_contract_id: shared_demo",
 		"    layer: candidate",
@@ -990,6 +1023,49 @@ func TestSyncImpactRejectsStableLandingModuleWithoutStableLandingSharedRefs(t *t
 	})
 	if err == nil || !strings.Contains(err.Error(), "stable landing shared refs are required") {
 		t.Fatalf("expected missing stable landing shared refs error, got %v", err)
+	}
+}
+
+func TestSyncImpactIgnoresIncompleteRemovedBindingEvidenceForFlow(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateFlowSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("flow", "candidate", "flow_demo")
+	if err != nil {
+		t.Fatalf("ObjectMainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: flow_demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo Flow",
+		"",
+		"## Shared Contracts",
+		"",
+		"1. shared_contract_refs: none",
+		"",
+	}, "\n"))
+	writeNamedProcessFile(t, repoRoot, "check", "flow_demo", strings.Join([]string{
+		"shared_contract_snapshot:",
+		"  - shared_contract_id: shared_demo",
+		"    layer: candidate",
+		"    file_ref: docs/specs/shared_contracts/candidate/c_shared_demo.md",
+		"    version_ref: c_shared_demo@0.1.0",
+		"    fingerprint: demo",
+	}, "\n"))
+
+	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ScopedFlows) != 0 {
+		t.Fatalf("expected incomplete flow evidence to be ignored, got %+v", result.ScopedFlows)
+	}
+	if len(result.FlowResults) != 0 {
+		t.Fatalf("expected no flow fallback from incomplete evidence, got %+v", result.FlowResults)
 	}
 }
 

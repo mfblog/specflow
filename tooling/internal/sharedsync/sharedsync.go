@@ -487,7 +487,15 @@ func candidateModulesWithRemovedSelectedBinding(repoRoot string, moduleBindings 
 		if len(selectedSharedRefsForObject(binding.SharedRefs, scopedRefs, scopedIDs, nil)) > 0 {
 			continue
 		}
-		matched, err := processSnapshotContainsSelectedShared(repoRoot, binding.Status.Module, []string{"check", "plan", "verify"}, scopedRefs, scopedIDs)
+		matched, err := processSnapshotContainsSelectedShared(
+			repoRoot,
+			"module",
+			binding.Status.Module,
+			binding.Status.ActiveLayer,
+			[]string{"check", "plan", "verify"},
+			scopedRefs,
+			scopedIDs,
+		)
 		if err != nil {
 			return nil, err
 		}
