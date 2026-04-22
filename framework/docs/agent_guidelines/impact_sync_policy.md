@@ -38,7 +38,7 @@ Before `impact_sync` runs, the caller must already know:
 
 1. which upstream object changed
 2. which downstream object set is in scope
-3. which exception set applies, if any
+3. which exception-resolved generic invalidation input applies, if any
 4. the current binding and snapshot state of those downstream objects
 
 `impact_sync` may consume:
@@ -46,7 +46,12 @@ Before `impact_sync` runs, the caller must already know:
 1. `_status.md`
 2. current object truth files
 3. current process files
-4. execution-local exception inputs passed from a caller such as `shared_sync`
+4. caller-resolved generic inputs such as:
+   - `invalidating_shared_refs`
+   - `explicit_fallback_scope`
+   - `allowed_shared_snapshot_mismatch_file_refs`
+
+`impact_sync` must not interpret raw shared-specific exception inputs.
 
 ## 4. Writeback Contract
 
@@ -73,7 +78,7 @@ Stable fallback rules:
 
 Responsibility split:
 
-1. `shared_sync` owns shared-specific impact discovery, shared-specific exception handling, and shared-governance stop conditions
+1. `shared_sync` owns shared-specific impact discovery, shared-specific exception handling, exception-to-generic-input conversion, and shared-governance stop conditions
 2. `impact_sync` owns the generic downstream invalidation and fallback execution once the affected object set is already fixed
 
 Therefore:

@@ -11,25 +11,18 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
-type SharedFile struct {
-	SharedContractID string
-	Layer            string
-	FileRef          string
-	VersionRef       string
-}
-
 type ModuleBinding struct {
 	Module        string
 	ActiveLayer   string
 	NextCommand   string
-	SharedRefs    []string
 	BindingIssues []string
 }
 
 type ScopedModule struct {
-	Binding              ModuleBinding
-	RelevantSelectedRefs []string
-	ExplicitlyScoped     bool
+	Binding                               ModuleBinding
+	InvalidatingSharedRefs                []string
+	ExplicitFallbackScope                 bool
+	AllowedSharedSnapshotMismatchFileRefs []string
 }
 
 type ObjectBinding struct {
@@ -37,22 +30,18 @@ type ObjectBinding struct {
 	Object        string
 	ActiveLayer   string
 	NextCommand   string
-	SharedRefs    []string
 	BindingIssues []string
 }
 
 type ScopedObject struct {
-	Binding              ObjectBinding
-	RelevantSelectedRefs []string
+	Binding                ObjectBinding
+	InvalidatingSharedRefs []string
 }
 
 type Input struct {
-	Modules                  []ScopedModule
-	Flows                    []ScopedObject
-	Projects                 []ScopedObject
-	SharedFilesByRef         map[string]SharedFile
-	BoundModulesOnlyFileRefs []string
-	StableLandingModule      string
+	Modules  []ScopedModule
+	Flows    []ScopedObject
+	Projects []ScopedObject
 }
 
 type Result struct {
@@ -92,16 +81,9 @@ type objectFamilyConfig struct {
 }
 
 func Apply(repoRoot string, input Input) (Result, error) {
-	boundModulesOnlyFileRefs := make(map[string]bool, len(input.BoundModulesOnlyFileRefs))
-	for _, fileRef := range input.BoundModulesOnlyFileRefs {
-		if strings.TrimSpace(fileRef) != "" {
-			boundModulesOnlyFileRefs[strings.TrimSpace(fileRef)] = true
-		}
-	}
-
 	moduleResults := make([]ModuleResult, 0, len(input.Modules))
 	for _, scoped := range input.Modules {
-		result, err := reconcileModule(repoRoot, scoped, input.SharedFilesByRef, boundModulesOnlyFileRefs, strings.TrimSpace(input.StableLandingModule))
+		result, err := reconcileModule(repoRoot, scoped)
 		if err != nil {
 			return Result{}, err
 		}
@@ -110,7 +92,7 @@ func Apply(repoRoot string, input Input) (Result, error) {
 
 	flowResults := make([]ObjectResult, 0, len(input.Flows))
 	for _, scoped := range input.Flows {
-		result, err := reconcileObject(repoRoot, scoped, input.SharedFilesByRef, boundModulesOnlyFileRefs)
+		result, err := reconcileObject(repoRoot, scoped)
 		if err != nil {
 			return Result{}, err
 		}
@@ -119,7 +101,7 @@ func Apply(repoRoot string, input Input) (Result, error) {
 
 	projectResults := make([]ObjectResult, 0, len(input.Projects))
 	for _, scoped := range input.Projects {
-		result, err := reconcileObject(repoRoot, scoped, input.SharedFilesByRef, boundModulesOnlyFileRefs)
+		result, err := reconcileObject(repoRoot, scoped)
 		if err != nil {
 			return Result{}, err
 		}
@@ -133,7 +115,7 @@ func Apply(repoRoot string, input Input) (Result, error) {
 	}, nil
 }
 
-func reconcileModule(repoRoot string, scoped ScopedModule, sharedFilesByRef map[string]SharedFile, boundModulesOnlyFileRefs map[string]bool, stableLandingModule string) (ModuleResult, error) {
+func reconcileModule(repoRoot string, scoped ScopedModule) (ModuleResult, error) {
 	binding := scoped.Binding
 	result := ModuleResult{
 		Module:      binding.Module,
@@ -147,18 +129,25 @@ func reconcileModule(repoRoot string, scoped ScopedModule, sharedFilesByRef map[
 
 	switch binding.ActiveLayer {
 	case "candidate":
-		return reconcileCandidate(repoRoot, binding, result, scoped.RelevantSelectedRefs, scoped.ExplicitlyScoped, bindingIssue, sharedFilesByRef, boundModulesOnlyFileRefs)
+		return reconcileCandidate(repoRoot, binding, result, scoped.InvalidatingSharedRefs, scoped.ExplicitFallbackScope, bindingIssue, scoped.AllowedSharedSnapshotMismatchFileRefs)
 	case "stable":
-		return reconcileStable(repoRoot, binding, result, scoped.RelevantSelectedRefs, scoped.ExplicitlyScoped, bindingIssue, sharedFilesByRef, boundModulesOnlyFileRefs, stableLandingModule)
+		return reconcileStable(repoRoot, binding, result, scoped.InvalidatingSharedRefs, scoped.ExplicitFallbackScope, bindingIssue)
 	default:
 		return ModuleResult{}, fmt.Errorf("unsupported active layer %q for module %s", binding.ActiveLayer, binding.Module)
 	}
 }
 
-func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleResult, relevantSelectedRefs []string, moduleExplicit, bindingIssue bool, sharedFilesByRef map[string]SharedFile, boundModulesOnlyFileRefs map[string]bool) (ModuleResult, error) {
+func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleResult, invalidatingSharedRefs []string, explicitFallbackScope, bindingIssue bool, allowedSharedSnapshotMismatchFileRefs []string) (ModuleResult, error) {
 	fallbackReason := ""
 	if bindingIssue {
 		fallbackReason = "binding_drift"
+	}
+
+	allowedSharedSnapshotMismatchFileRefSet := make(map[string]bool, len(allowedSharedSnapshotMismatchFileRefs))
+	for _, fileRef := range allowedSharedSnapshotMismatchFileRefs {
+		if strings.TrimSpace(fileRef) != "" {
+			allowedSharedSnapshotMismatchFileRefSet[strings.TrimSpace(fileRef)] = true
+		}
 	}
 
 	expectedSnapshot, err := snapshot.RebuildCurrent(repoRoot, binding.Module)
@@ -205,12 +194,12 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 			continue
 		}
 
-		equivalent, err := sharedSnapshotsEquivalentIgnoringBoundModules(processSnapshot.SharedContractSnapshot, expectedSnapshot.SharedContractSnapshot, boundModulesOnlyFileRefs)
+		equivalent, err := sharedSnapshotsEquivalentAllowingFileRefs(processSnapshot.SharedContractSnapshot, expectedSnapshot.SharedContractSnapshot, allowedSharedSnapshotMismatchFileRefSet)
 		if err != nil {
 			return ModuleResult{}, err
 		}
 		if equivalent {
-			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s snapshot differs only on bound_modules metadata", processKind))
+			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s snapshot differs only on caller-allowed shared file mismatch", processKind))
 			continue
 		}
 		sharedMismatch = true
@@ -223,9 +212,9 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 		fallbackReason = "truth_drift"
 	case sharedMismatch:
 		fallbackReason = "shared_contract_drift"
-	case !processFound && len(relevantSelectedRefs) > 0 && hasNonBoundModulesSelectedChange(relevantSelectedRefs, sharedFilesByRef, boundModulesOnlyFileRefs):
+	case !processFound && len(invalidatingSharedRefs) > 0:
 		fallbackReason = "shared_contract_drift"
-	case !processFound && moduleExplicit && binding.NextCommand != "cand_check":
+	case !processFound && explicitFallbackScope && binding.NextCommand != "cand_check":
 		fallbackReason = "binding_drift"
 	}
 
@@ -235,18 +224,15 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 	return applyCandidateFallback(repoRoot, result, fallbackReason)
 }
 
-func reconcileStable(repoRoot string, binding ModuleBinding, result ModuleResult, relevantSelectedRefs []string, moduleExplicit, bindingIssue bool, sharedFilesByRef map[string]SharedFile, boundModulesOnlyFileRefs map[string]bool, stableLandingModule string) (ModuleResult, error) {
+func reconcileStable(repoRoot string, binding ModuleBinding, result ModuleResult, invalidatingSharedRefs []string, explicitFallbackScope, bindingIssue bool) (ModuleResult, error) {
 	fallbackReason := ""
-	isStableLandingModule := stableLandingModule != "" && binding.Module == stableLandingModule
 	switch {
 	case bindingIssue:
 		fallbackReason = "binding_drift"
-	case moduleExplicit && len(relevantSelectedRefs) == 0 && !isStableLandingModule:
-		fallbackReason = "binding_drift"
-	case len(relevantSelectedRefs) > 0 && !isStableLandingModule && hasNonBoundModulesSelectedChange(relevantSelectedRefs, sharedFilesByRef, boundModulesOnlyFileRefs):
+	case len(invalidatingSharedRefs) > 0:
 		fallbackReason = "shared_contract_drift"
-	case moduleExplicit && len(relevantSelectedRefs) == 0:
-		result.Diagnostics = append(result.Diagnostics, "explicit module scope alone does not prove stable drift")
+	case explicitFallbackScope && len(invalidatingSharedRefs) == 0:
+		fallbackReason = "binding_drift"
 	}
 
 	if fallbackReason == "" {
@@ -297,7 +283,7 @@ func applyCandidateFallback(repoRoot string, result ModuleResult, fallbackReason
 	return result, nil
 }
 
-func reconcileObject(repoRoot string, scoped ScopedObject, sharedFilesByRef map[string]SharedFile, boundModulesOnlyFileRefs map[string]bool) (ObjectResult, error) {
+func reconcileObject(repoRoot string, scoped ScopedObject) (ObjectResult, error) {
 	binding := scoped.Binding
 	result := ObjectResult{
 		Object:      binding.Object,
@@ -311,7 +297,7 @@ func reconcileObject(repoRoot string, scoped ScopedObject, sharedFilesByRef map[
 	switch {
 	case len(binding.BindingIssues) > 0:
 		fallbackReason = "binding_drift"
-	case len(scoped.RelevantSelectedRefs) > 0 && hasNonBoundModulesSelectedChange(scoped.RelevantSelectedRefs, sharedFilesByRef, boundModulesOnlyFileRefs):
+	case len(scoped.InvalidatingSharedRefs) > 0:
 		fallbackReason = "shared_contract_drift"
 	default:
 		return result, nil
@@ -413,7 +399,7 @@ func hasNonSharedMismatch(mismatches []string) bool {
 	return false
 }
 
-func sharedSnapshotsEquivalentIgnoringBoundModules(actual, expected []snapshot.SharedContractEntry, boundModulesOnlyFileRefs map[string]bool) (bool, error) {
+func sharedSnapshotsEquivalentAllowingFileRefs(actual, expected []snapshot.SharedContractEntry, allowedFileRefs map[string]bool) (bool, error) {
 	actual = normalizeSharedEntries(actual)
 	expected = normalizeSharedEntries(expected)
 	if len(actual) != len(expected) {
@@ -429,24 +415,11 @@ func sharedSnapshotsEquivalentIgnoringBoundModules(actual, expected []snapshot.S
 		if actual[idx].Fingerprint == expected[idx].Fingerprint {
 			continue
 		}
-		if !boundModulesOnlyFileRefs[expected[idx].FileRef] {
+		if !allowedFileRefs[expected[idx].FileRef] {
 			return false, nil
 		}
 	}
 	return true, nil
-}
-
-func hasNonBoundModulesSelectedChange(refs []string, sharedFilesByRef map[string]SharedFile, boundModulesOnlyFileRefs map[string]bool) bool {
-	for _, ref := range refs {
-		shared, ok := sharedFilesByRef[ref]
-		if !ok {
-			return true
-		}
-		if !boundModulesOnlyFileRefs[shared.FileRef] {
-			return true
-		}
-	}
-	return false
 }
 
 func normalizeStrings(values []string) []string {

@@ -4,19 +4,39 @@
 
 `flow_stable_verify:{flow}` checks whether current repository truth still aligns with the stable flow truth.
 
-## 2. Preconditions
+## 2. Lifecycle-State Advance Inheritance
+
+当本命令推进 `_status.md` 时，这个推进继承 `specflow/framework/docs/agent_guidelines/command_policy.md` 第 8.5 节定义的 authoritative / non-authoritative 中心契约。
+Only a new independent full-scope run of `flow_stable_verify` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+
+## 3. Preconditions
 
 1. `_status.md` says `Object Type=flow`, `Active Layer=stable`, `Next Command=flow_stable_verify`
 2. current stable flow file exists
 
-## 3. Procedure
+## 4. Procedure
 
 1. read stable flow truth
 2. revalidate current bound modules, shared contracts, and stable baseline
 3. if still aligned, advance `Next Command=flow_fork`
 4. if drift exists, keep `Next Command=flow_stable_verify`
 
-## 4. Non-Goals
+## 5. Output Contract
+
+The output must report:
+
+1. stable alignment result
+2. whether any `_verify_result/{flow}.md` write, delete, or keep action occurred
+3. `_status.md` update result
+4. `round conclusion`
+5. `current state`
+6. `next step`
+7. `why this next step`
+8. `next-stage entry gap`
+9. the `user-facing close-out block` required by `specflow/framework/docs/agent_guidelines/command_policy.md` Section 8.6
+10. if a future extension introduces a checkpoint stop, the same close-out block must also report `resume signal`
+
+## 6. Non-Goals
 
 1. flow candidate authoring
 2. module implementation repair
