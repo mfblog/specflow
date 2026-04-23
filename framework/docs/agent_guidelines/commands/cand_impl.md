@@ -94,8 +94,8 @@ Only a new independent full-scope run of `cand_impl` may produce that advancing 
 7. blocked-slice result when implementation could not finish the current plan round
 8. `handoff validation result`
 9. cleanup result when implementation fell back to `cand_check`
-10. `fallback_reason_code` when the pass gate or plan was invalid
-11. fallback reason if the pass gate or plan was invalid
+10. `fallback_reason_code` when implementation fell back to `cand_check`
+11. fallback reason when implementation fell back to `cand_check`
 12. git close-out result
 13. `_status.md` update result
 14. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
@@ -115,6 +115,7 @@ Allowed `fallback_reason_code` values:
 3. `binding_drift`
 4. `baseline_drift`
 5. `shared_contract_drift`
+6. `truth_incomplete`
 
 ## 7. Non-Goals
 
