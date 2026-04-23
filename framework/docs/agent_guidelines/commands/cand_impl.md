@@ -10,8 +10,9 @@ By default it handles:
 
 1. implementing according to plan slices
 2. adding necessary tests or verification actions
-3. writing progress back into `_plans/active/{module}.md`
-4. consuming the `cand_plan -> cand_impl` handoff only when gate and plan bindings both still hold
+3. dynamically confirming which legacy dependencies have already stopped being required
+4. writing progress back into `_plans/active/{module}.md`
+5. consuming the `cand_plan -> cand_impl` handoff only when gate and plan bindings both still hold
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
@@ -51,17 +52,33 @@ Only a new independent full-scope run of `cand_impl` may produce that advancing 
 9. implement slice by slice in the order defined by the current plan unless the plan itself declares a dependency-safe different order
 10. for each slice, use the recorded objective, file scope, dependencies, verification action, and done condition as the execution boundary
 11. do not collapse a blocked slice into a vague whole-module status; record clearly which slice is complete, blocked, or still pending
-12. run necessary verification for the slices advanced in this round, or record clearly what could not be run
-13. write slice completion status, blockers, and verification results back into `_plans/active/{module}.md`
-14. update `_status.md`:
+12. treat a slice as truly advanced only when at least one of the following is now true:
+   - an execution surface has been cut over to its target path
+   - a named retirement target is now confirmed as no longer required
+13. when implementation discovers additional legacy paths, legacy helpers, legacy patches, or legacy wrappers that were not yet fully modeled:
+   - keep the work in `cand_impl` if the discovery only deepens implementation facts
+   - write the discovery back into the current active plan under the round's implementation-progress sections
+   - do not restart the round from `cand_plan` unless the discovery proves candidate truth itself is insufficient
+14. if implementation discovers that the active plan's convergence target cannot stand without a new behavior or boundary decision:
+   - stop treating the issue as implementation-only
+   - fall back to `cand_check`
+15. run necessary verification for the slices advanced in this round, or record clearly what could not be run
+16. write slice completion status, blockers, verification results, and retirement progression back into `_plans/active/{module}.md`
+17. ensure the active plan write-back records at minimum:
+   - `Takeover Progress`
+   - `Retirement Progress`
+   - `Newly Confirmed Legacy`
+   - `Residual Legacy Dependencies`
+   - for each advanced slice: `execution_surface`, `cutover_result`, `retirement_result`, and `verification_note`
+18. update `_status.md`:
    - if implementation is ready for verification -> `Next Command=cand_verify`
    - if implementation is still blocked -> keep `Next Command=cand_impl`
    - if candidate truth or formal global baseline drift means closure must restart -> `Next Command=cand_check`
-15. perform git close-out if required
+19. perform git close-out if required
 
 ## 5. Stop Conditions
 
-1. the current plan slices have advanced as far as feasible in this round
+1. the current plan slices have advanced as far as feasible in this round, and each claimed advance names either a target-path cutover or a retirement confirmation
 2. the plan file has been written back
 3. `_status.md` points to the real next executable step
 4. if the pass gate or plan became invalid, implementation was stopped and `_status.md` was fallen back to `cand_check`
@@ -71,19 +88,21 @@ Only a new independent full-scope run of `cand_impl` may produce that advancing 
 1. implementation progress result
 2. slice progress result
 3. tests or verification run, or explicit gaps
-4. plan write-back result
-5. blocked-slice result when implementation could not finish the current plan round
-6. `handoff validation result`
-7. cleanup result when implementation fell back to `cand_check`
-8. `fallback_reason_code` when the pass gate or plan was invalid
-9. fallback reason if the pass gate or plan was invalid
-10. git close-out result
-11. `_status.md` update result
-12. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
+4. takeover-progress result
+5. retirement-progress result
+6. plan write-back result
+7. blocked-slice result when implementation could not finish the current plan round
+8. `handoff validation result`
+9. cleanup result when implementation fell back to `cand_check`
+10. `fallback_reason_code` when the pass gate or plan was invalid
+11. fallback reason if the pass gate or plan was invalid
+12. git close-out result
+13. `_status.md` update result
+14. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - `current state` must explicitly confirm the written `Active Layer` and `Next Command`
    - if `Next Command=cand_impl`, `why this next step` must explicitly state that implementation progressed but candidate closure has not yet reached the `cand_verify` entry condition
-   - `next-stage entry gap` must name the unfinished implementation, verification, or closure surfaces that still block `cand_verify`
+   - `next-stage entry gap` must name the unfinished implementation, verification, closure, or retirement surfaces that still block `cand_verify`
 
 Allowed checkpoint types:
 
