@@ -53,9 +53,9 @@ Before execution:
 1. read `specflow/framework/docs/agent_guidelines/spec_policy.md`
 2. read `specflow/framework/docs/agent_guidelines/command_policy.md`
 3. read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
-4. read `docs/specs/_status.md` when the request names existing formal modules
-5. resolve every named existing module's current layer from `_status.md` before reading its main Spec
-6. read any current-layer module files, appendix files, and `shared_contract` files needed to judge the true boundary
+4. read `docs/specs/_status.md` when the request names existing formal units
+5. resolve every named existing unit's current layer from `_status.md` before reading its main Spec
+6. read any current-layer unit files, appendix files, and `shared_contract` files needed to judge the true boundary
 7. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
 
 ---
@@ -76,11 +76,11 @@ Before execution:
 7. if such a stable sequence exists, report that contract and route to the first legal flow only
 8. stop immediately and raise a checkpoint when any of the following holds:
    - the same truth has two or more plausible formal landing points
-   - the boundary between module-private truth and shared truth is unstable
+   - the boundary between unit-local truth and shared truth is unstable
    - the boundary between shared truth and `system_constraints_change_proposal` is unstable
    - the action order would change resulting formal truth
    - current repository truth is insufficient to support a stable decomposition
-9. when the request has crossed into `system_constraints_change_proposal`, require writeback into the responsible module candidate instead of inventing a new shared-side target
+9. when the request has crossed into `system_constraints_change_proposal`, require writeback into the responsible unit candidate instead of inventing a new shared-side target
 10. if the current `shared_ops` handling stops before all listed steps finish, require rerunning `shared_ops` from current repository truth rather than resuming an old `remaining_steps_contract`
 
 ---
@@ -91,7 +91,7 @@ Stop when one of the following is true:
 
 1. the request has been reduced to exactly one legal next shared flow and any required `remaining_steps_contract` has been emitted
 2. a checkpoint has been raised because automatic continuation would be unsafe
-3. the request has crossed out of shared-only governance and must return to module-side candidate truth writeback before resume
+3. the request has crossed out of shared-only governance and must return to unit-side candidate truth writeback before resume
 
 ---
 
@@ -121,7 +121,7 @@ The output must include at least:
    - `required_writeback_target`
    - `resume_signal`
    - `resume_next_step`
-8. when the boundary crosses into `system_constraints_change_proposal`, which module candidate must receive the writeback before `shared_ops` may resume
+8. when the boundary crosses into `system_constraints_change_proposal`, which unit candidate must receive the writeback before `shared_ops` may resume
 
 ---
 

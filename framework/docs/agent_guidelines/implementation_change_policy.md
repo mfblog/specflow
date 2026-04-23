@@ -21,12 +21,12 @@ This is a governance gate, not an independent command.
 By default this policy applies when all of the following are true:
 
 1. the user asks to modify repo-tracked code, tests, or other implementation-side files
-2. the request is not already entered as a standard module command
-3. the requested work may affect one or more formal modules, bound Shared Contract consumers, or implementation constrained by `system_constraints`
+2. the request is not already entered as a standard unit command
+3. the requested work may affect one or more formal units, bound Shared Contract consumers, or implementation constrained by `system_constraints`
 
 This policy does not replace:
 
-1. module command files
+1. unit command files
 2. shared-governance routing
 3. `unit_stable_verify`, `unit_check`, `unit_impl`, or any other lifecycle gate
 
@@ -44,11 +44,11 @@ Before classification:
 
 1. read `specflow/framework/docs/agent_guidelines/spec_policy.md`
 2. read `specflow/framework/docs/agent_guidelines/command_policy.md`
-3. if the request names an existing formal module, read `docs/specs/_status.md` and resolve the module's current `Active Layer` and `Next Command`
+3. if the request names an existing formal unit, read `docs/specs/_status.md` and resolve the unit's current `Active Layer` and `Next Command`
 4. read the current-layer main Spec and any explicitly referenced appendix truth needed to judge whether formal behavior truth changes
 5. read bound Shared Contract files when the relevant behavior depends on them
 6. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may affect shared mechanisms, global default rules, or explicit global exceptions
-7. if the request is for a brand-new module, confirm only that the module name is clear and non-conflicting before routing to `unit_new:{module}`
+7. if the request is for a brand-new unit, confirm only that the unit name is clear and non-conflicting before routing to `unit_new:{unit}`
 
 The executor must not classify from code shape alone when repository truth already exists.
 
@@ -74,7 +74,7 @@ Only these classification results are allowed:
 
 For this policy, a request touches formal behavior truth when it would create, remove, or change any formally acknowledged answer about:
 
-1. module goal and module boundary
+1. unit goal and unit boundary
 2. external protocols, field meanings, default values, validation rules, and error semantics
 3. main flow, state transitions, or branch convergence semantics
 4. acceptance criteria or testable success conditions
@@ -107,7 +107,7 @@ Use `truth_writeback_required` when current repository truth already shows that 
 1. external behavior changes
 2. field set, field meaning, default value, validation rule, or error-return changes
 3. state machine or main-flow changes
-4. module responsibility or ownership-boundary changes
+4. unit responsibility or ownership-boundary changes
 5. adding or modifying a Shared Contract
 6. adding or modifying a project-wide default rule
 
@@ -134,19 +134,19 @@ The smallest legal next step after classification is fixed as follows:
 
 | Current situation | Smallest legal next step |
 |---|---|
-| brand-new module, user directly asks to write code | `unit_new:{module}` |
-| existing `stable` module, and the requested change would alter formal behavior truth | `unit_fork:{module}` first, then write the new candidate truth before implementation |
-| existing `candidate` module, and the requested change would alter current candidate truth | write back into the current candidate main file, required appendix truth, or required Shared Contract truth first, then rerun `unit_check:{module}` |
-| request touches cross-module shared truth | `shared_ops:{natural-language request}` |
-| `implementation_only`, target module has `Active Layer=stable` | implementation may continue only within current stable truth; after code changes, the module must return to `unit_stable_verify:{module}` before stable alignment may be claimed again |
-| `implementation_only`, target module has `Active Layer=candidate` and `_status.md` says `Next Command=unit_impl` | implementation may continue, but only under `unit_impl` semantics |
-| `implementation_only`, target module has `Active Layer=candidate` and `_status.md` says any `Next Command` other than `unit_impl` | do not modify code; return to the currently recorded smallest legal next step first |
+| brand-new unit, user directly asks to write code | `unit_new:{unit}` |
+| existing `stable` unit, and the requested change would alter formal behavior truth | `unit_fork:{unit}` first, then write the new candidate truth before implementation |
+| existing `candidate` unit, and the requested change would alter current candidate truth | write back into the current candidate main file, required appendix truth, or required Shared Contract truth first, then rerun `unit_check:{unit}` |
+| request touches cross-unit shared truth | `shared_ops:{natural-language request}` |
+| `implementation_only`, target unit has `Active Layer=stable` | implementation may continue only within current stable truth; after code changes, the unit must return to `unit_stable_verify:{unit}` before stable alignment may be claimed again |
+| `implementation_only`, target unit has `Active Layer=candidate` and `_status.md` says `Next Command=unit_impl` | implementation may continue, but only under `unit_impl` semantics |
+| `implementation_only`, target unit has `Active Layer=candidate` and `_status.md` says any `Next Command` other than `unit_impl` | do not modify code; return to the currently recorded smallest legal next step first |
 
 Additional routing rules:
 
 1. `implementation_only` does not create permission to skip `Next Command`
-2. if the request touches both module-local truth and cross-module shared truth, route through `shared_ops` rather than guessing a local-only shortcut
-3. if classification would require guessing whether the target is module-local truth, Shared Contract truth, or global default-rule truth, the result must stay `boundary_unclear`
+2. if the request touches both unit-local truth and cross-unit shared truth, route through `shared_ops` rather than guessing a local-only shortcut
+3. if classification would require guessing whether the target is unit-local truth, Shared Contract truth, or global default-rule truth, the result must stay `boundary_unclear`
 
 ---
 

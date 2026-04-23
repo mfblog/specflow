@@ -28,7 +28,7 @@ It may reconcile:
 It does not:
 
 1. decide whether a change belongs to shared governance
-2. decide whether a boundary is still module-local or shared
+2. decide whether a boundary is still unit-local or shared
 3. rewrite object truth files
 4. judge semantic sufficiency of candidate closure
 

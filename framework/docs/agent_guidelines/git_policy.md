@@ -46,7 +46,7 @@ Rules:
 
 1. The commit must update or create the corresponding `stable`.
 2. The commit must delete the round's `docs/specs/units/candidate/c_unit_{unit}.md` and that unit's round-specific candidate appendix files under `docs/specs/units/candidate/appendix/` or an equivalent dedicated subdirectory. If the round also handled Shared Contract files, it must also resolve the corresponding `docs/specs/shared_contracts/candidate/*.md` or `docs/specs/shared_contracts/stable/*.md`.
-3. If `_check_result/{module}.md`, `_verify_result/{module}.md`, `_plans/draft/{module}.md`, or `_plans/active/{module}.md` exist for the round, they must be deleted in the same commit.
+3. If `_check_result/{unit}.md`, `_verify_result/{unit}.md`, `_plans/draft/{unit}.md`, or `_plans/active/{unit}.md` exist for the round, they must be deleted in the same commit.
 4. If the module candidate contains a closed `system_constraints_change_proposal` that is promoted in the same round, the same commit must also update `docs/specs/system_constraints/stable/s_system_constraints.md`.
 
 ---
@@ -78,9 +78,9 @@ Versions use `MAJOR.MINOR.PATCH`.
 1. `shared_version` uses `MAJOR.MINOR.PATCH`
 2. the first candidate-layer file for a brand-new shared object should normally start at `0.1.0`
 3. when a current round opens the next candidate-layer file for a shared object that already has a stable-layer file, that candidate file must already carry the intended next stable `shared_version`
-4. when Rule 3 applies, that candidate file must also record the exact `promotion_owner_module` required by `specflow/framework/docs/agent_guidelines/spec_policy.md`
+4. when Rule 3 applies, that candidate file must also record the exact `promotion_owner_unit` required by `specflow/framework/docs/agent_guidelines/spec_policy.md`
 5. `MAJOR`
-   - incompatible change to the formally bound shared semantics, required consumer interpretation, or cross-module contract shape
+   - incompatible change to the formally bound shared semantics, required consumer interpretation, or cross-unit contract shape
 6. `MINOR`
    - compatible shared-truth extension, additional reusable capability, or compatible topology evolution that requires consumer awareness but not contract breakage
 7. `PATCH`

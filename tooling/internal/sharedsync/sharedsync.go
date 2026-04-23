@@ -55,11 +55,12 @@ type moduleBinding struct {
 }
 
 type sharedFile struct {
-	SharedContractID string
-	Layer            string
-	FileRef          string
-	VersionRef       string
-	BoundObjects     []string
+	SharedContractID   string
+	Layer              string
+	FileRef            string
+	VersionRef         string
+	BoundObjects       []string
+	PromotionOwnerUnit string
 }
 
 type ReconcileBoundModulesOptions struct {
@@ -407,6 +408,9 @@ func loadSharedFiles(repoRoot string) (map[string]sharedFile, error) {
 			}
 			shared, err := parseSharedFile(relPath, string(content))
 			if err != nil {
+				return nil, err
+			}
+			if err := sharedbinding.ValidatePromotionOwnerUnit(repoRoot, shared.FileRef, shared.Layer, shared.SharedContractID, shared.PromotionOwnerUnit); err != nil {
 				return nil, err
 			}
 			if shared.Layer != root.layer {
@@ -782,6 +786,8 @@ func parseSharedFile(relPath, content string) (sharedFile, error) {
 			shared.Layer = value
 		case "shared_version":
 			shared.VersionRef = fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(relPath), ".md"), value)
+		case "promotion_owner_unit":
+			shared.PromotionOwnerUnit = value
 		}
 	}
 	if shared.SharedContractID == "" || shared.Layer == "" || shared.VersionRef == "" {

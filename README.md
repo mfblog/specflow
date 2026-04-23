@@ -11,7 +11,7 @@
 
 **English** · [简体中文](./README.zh-CN.md)
 
-[Add To Your Repository](#add-to-your-repository) · [Quick Start](#quick-start) · [How To Use It](#how-you-actually-use-it) · [Shared Truth](#when-work-stops-being-module-local) · [Advanced Usage](#advanced-usage)
+[Add To Your Repository](#add-to-your-repository) · [Quick Start](#quick-start) · [How To Use It](#how-you-actually-use-it) · [Shared Truth](#when-work-stops-being-unit-local) · [Advanced Usage](#advanced-usage)
 
 ---
 
@@ -411,7 +411,7 @@ There is also one stable-side maintenance step:
 unit_stable_verify
 ```
 
-Use `unit_stable_verify:{module}` only when the module is currently on `stable`, but you need to check whether the code still matches that accepted truth.
+Use `unit_stable_verify:{unit}` only when the module is currently on `stable`, but you need to check whether the code still matches that accepted truth.
 
 If you want one compact picture:
 
@@ -454,13 +454,13 @@ In normal use, `_status.md` is for reading state, not for manual scratch edits.
 
 ## When Work Stops Being Module-Local
 
-Most work should stay module-local for as long as possible.
+Most work should stay unit-local for as long as possible.
 
 There are three different places truth can live:
 
 - the module main spec
 - the module appendix
-- cross-module shared truth
+- cross-unit shared truth
 
 ```mermaid
 flowchart LR
@@ -508,7 +508,7 @@ The advanced part is mainly about four things:
 - understanding the document structure
 - knowing which files you should customize
 - adding project-local standards
-- knowing which governance flows exist beyond the standard module commands
+- knowing which governance flows exist beyond the standard unit commands
 
 ### The Project Structure
 
@@ -573,7 +573,7 @@ See [tooling/README.md](./tooling/README.md) for the full tooling surface.
 
 ### Advanced Flows
 
-Besides the standard module commands, `specFlow` also has advanced flows.
+Besides the standard unit commands, `specFlow` also has advanced flows.
 
 Two you should know exist are:
 

@@ -224,6 +224,8 @@ It does not own:
 4. not the whole project
 5. not the whole global baseline
 
+When a candidate-layer shared file already has a stable-layer sibling for the same `shared_contract_id`, that candidate file also owns the explicit next-landing owner for the reopened shared round.
+
 ## 5. Required Binding Fields
 
 ### 5.1 `unit`
@@ -252,6 +254,25 @@ Each current-layer project truth must record:
 2. `unit_refs`
 3. `shared_contract_refs`
 4. `system_constraints_stable_ref`
+
+### 5.4 `shared_contract`
+
+Each current-layer shared-contract file must record:
+
+1. `shared_contract_id`
+2. `layer`
+3. `shared_version`
+4. `bound_objects`
+5. `system_constraints_stable_ref`
+
+Conditional field:
+
+1. when a candidate-layer shared-contract file already has a stable-layer sibling for the same `shared_contract_id`, that candidate file must also record exactly one `promotion_owner_unit`
+   - it must be a bare unit id
+   - it must name one formal unit from current repository truth
+   - it is the only unit round allowed to land that candidate shared file as the next stable-layer Shared Contract file
+2. when a candidate-layer shared-contract file does not have a stable-layer sibling, `promotion_owner_unit` must not be recorded
+3. stable-layer shared-contract files must not record `promotion_owner_unit`
 
 ## 6. Binding Contracts
 

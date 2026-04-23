@@ -12,8 +12,8 @@ By default it handles:
 2. optionally running research preflight when implementation-critical unknowns still block a stable plan
 3. deriving a stable-to-candidate change surface with `git diff` when the module already has `stable`
 4. identifying the changed execution surfaces of this round and defining their convergence targets
-5. generating or updating `_plans/active/{module}.md`
-6. writing or updating `_plans/draft/{module}.md` when planning cannot yet produce a consumable active plan
+5. generating or updating `_plans/active/{unit}.md`
+6. writing or updating `_plans/draft/{unit}.md` when planning cannot yet produce a consumable active plan
 7. keeping active-plan bindings aligned with the current candidate, current formal global baseline state, and current Shared Contract snapshot
 8. stopping at a structured decision checkpoint only when key implementation direction is still not locked
 
@@ -26,7 +26,7 @@ Only a new independent full-scope run of `unit_plan` may produce that advancing 
 
 1. complete required pre-checks
 2. `_status.md` says `Next Command=unit_plan`
-3. a current valid `docs/specs/_check_result/{module}.md` exists
+3. a current valid `docs/specs/_check_result/{unit}.md` exists
 4. the current candidate still aligns with the current formal global baseline state
 5. read any explicitly referenced candidate appendix files and bound Shared Contract files
 6. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
@@ -36,13 +36,13 @@ Only a new independent full-scope run of `unit_plan` may produce that advancing 
 
 1. read the candidate Spec and all required appendix or Shared Contract files
 2. read `s_system_constraints.md` if it exists
-3. read `docs/specs/_check_result/{module}.md`
+3. read `docs/specs/_check_result/{unit}.md`
 4. verify the pass gate bindings are still valid
 5. if the pass gate is invalid, stop immediately:
-   - delete `_check_result/{module}.md`
-   - delete `_plans/draft/{module}.md` if it exists
-   - delete `_plans/active/{module}.md` if it exists
-   - delete `_verify_result/{module}.md` if it exists
+   - delete `_check_result/{unit}.md`
+   - delete `_plans/draft/{unit}.md` if it exists
+   - delete `_plans/active/{unit}.md` if it exists
+   - delete `_verify_result/{unit}.md` if it exists
    - fall back `_status.md` to `unit_check`
 6. if the module already has `stable`, derive a planning-aid change surface before judging the round:
    - use `git diff --no-index -- docs/specs/units/stable/s_unit_{unit}.md docs/specs/units/candidate/c_unit_{unit}.md`
@@ -64,20 +64,20 @@ Only a new independent full-scope run of `unit_plan` may produce that advancing 
 10. `decision-checkpoint` is a distinct result shape:
    - use it only when a `decision` checkpoint is actually raised because implementation direction is still unresolved
    - do not merge it into `plan-blocked`, because unresolved direction and missing implementation facts are different blocking causes
-   - do not create or update `docs/specs/_plans/active/{module}.md`
+   - do not create or update `docs/specs/_plans/active/{unit}.md`
    - keep `_status.md` at `unit_plan` unless the checkpoint answer must first be written back into candidate truth or appendix truth
 11. if the result is `truth-fallback`:
-   - delete `_check_result/{module}.md`
-   - delete `_plans/draft/{module}.md` if it exists
-   - delete `_plans/active/{module}.md` if it exists
-   - delete `_verify_result/{module}.md` if it exists
-   - do not create or update `docs/specs/_plans/active/{module}.md`
+   - delete `_check_result/{unit}.md`
+   - delete `_plans/draft/{unit}.md` if it exists
+   - delete `_plans/active/{unit}.md` if it exists
+   - delete `_verify_result/{unit}.md` if it exists
+   - do not create or update `docs/specs/_plans/active/{unit}.md`
    - update `_status.md` to `unit_check`
    - report `fallback_reason_code=truth_incomplete`
 12. if the result is `plan-blocked`:
-   - create or update `docs/specs/_plans/draft/{module}.md`
-   - do not create or update `docs/specs/_plans/active/{module}.md`
-   - if an old `active/{module}.md` still exists for the same round, revalidate whether it remains consumable; if not, delete it rather than leaving a stale active plan available to downstream commands
+   - create or update `docs/specs/_plans/draft/{unit}.md`
+   - do not create or update `docs/specs/_plans/active/{unit}.md`
+   - if an old `active/{unit}.md` still exists for the same round, revalidate whether it remains consumable; if not, delete it rather than leaving a stale active plan available to downstream commands
    - keep `_status.md` at `unit_plan`
    - report `fallback_reason_code=implementation_unknown`
    - record the blocking point, the missing condition, and the exact resume signal
@@ -87,15 +87,15 @@ Only a new independent full-scope run of `unit_plan` may produce that advancing 
    - do not treat the checkpoint as permission to continue without that writeback
 14. if a `decision` checkpoint is raised:
    - set the result shape to `decision-checkpoint`
-   - create or update `docs/specs/_plans/draft/{module}.md`
-   - do not create or update `docs/specs/_plans/active/{module}.md`
-   - if an old `active/{module}.md` still exists for the same round, revalidate whether it remains consumable; if not, delete it rather than leaving a stale active plan available to downstream commands
+   - create or update `docs/specs/_plans/draft/{unit}.md`
+   - do not create or update `docs/specs/_plans/active/{unit}.md`
+   - if an old `active/{unit}.md` still exists for the same round, revalidate whether it remains consumable; if not, delete it rather than leaving a stale active plan available to downstream commands
    - keep `_status.md` at `unit_plan` when the unresolved decision is implementation-direction only
    - report `fallback_reason_code=direction_unresolved`
    - use `resume_next_step=unit_check` only when the checkpoint answer must first be written back into candidate truth or appendix truth
-15. create or update `docs/specs/_plans/active/{module}.md` only when no checkpoint blocks planning and the result is `plan-ready`
-16. if `docs/specs/_plans/draft/{module}.md` exists for the same round and the round is now `plan-ready`, extract only the stabilized planning content into `active/{module}.md`; do not rename the draft file in place
-17. after a successful active-plan write for the current round, delete `docs/specs/_plans/draft/{module}.md` if it exists
+15. create or update `docs/specs/_plans/active/{unit}.md` only when no checkpoint blocks planning and the result is `plan-ready`
+16. if `docs/specs/_plans/draft/{unit}.md` exists for the same round and the round is now `plan-ready`, extract only the stabilized planning content into `active/{unit}.md`; do not rename the draft file in place
+17. after a successful active-plan write for the current round, delete `docs/specs/_plans/draft/{unit}.md` if it exists
 18. identify the changed execution surfaces of this round before finalizing either draft or active planning output:
    - define an execution surface as the concrete capability path that this round is actually changing inside the module
    - do not force one whole-module owner or one whole-module path when the round touches only a narrower capability slice
@@ -107,7 +107,7 @@ Only a new independent full-scope run of `unit_plan` may produce that advancing 
    - the first stable cutover slices that can advance now
 20. if current implementation facts are still insufficient to name a target path or retirement goal safely, but candidate truth still stands:
    - keep the round at `unit_plan`
-   - update `docs/specs/_plans/draft/{module}.md`
+   - update `docs/specs/_plans/draft/{unit}.md`
    - record the missing implementation fact under `open_modeling_unknowns`
 21. if planning discovers that the real blocker is missing behavior truth, missing boundary truth, or missing acceptance truth:
    - do not compensate inside plan text
