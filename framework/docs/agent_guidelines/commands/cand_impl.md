@@ -81,7 +81,7 @@ Only a new independent full-scope run of `cand_impl` may produce that advancing 
 1. the current plan slices have advanced as far as feasible in this round, and each claimed advance names either a target-path cutover or a retirement confirmation
 2. the plan file has been written back
 3. `_status.md` points to the real next executable step
-4. if the pass gate or plan became invalid, implementation was stopped and `_status.md` was fallen back to `cand_check`
+4. if the pass gate or plan became invalid, or implementation discovered that candidate truth itself must be re-closed, implementation was stopped and `_status.md` was fallen back to `cand_check`
 
 ## 6. Output Contract
 
