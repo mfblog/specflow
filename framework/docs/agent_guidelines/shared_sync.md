@@ -28,15 +28,15 @@ It may:
 
 1. resolve which `shared_contract` files changed or are explicitly in scope
 2. rebuild the repository-wide real binding set from downstream truth files
-3. detect `bound_modules` metadata drift
+3. detect `bound_objects` metadata drift
 4. determine the affected downstream object set for:
-   - `module`
-   - `flow`
+   - `unit`
+   - `scenario`
    - `project`
 5. interpret shared-specific execution-local exceptions such as:
-   - `current_stable_landing_module`
+   - `current_stable_landing_unit`
    - `stable_landing_shared_refs`
-   - `bound_modules_only_shared_file_refs`
+   - `bound_objects_only_shared_file_refs`
 6. convert those exceptions into exception-resolved downstream impact input
 7. pass the final affected object set to `impact_sync`
 
@@ -63,14 +63,14 @@ Before `shared_sync` runs:
 
 Execution-local caller inputs may include:
 
-1. `current_stable_landing_module`
+1. `current_stable_landing_unit`
    - use only when the same round has just landed stable truth and must not invalidate that same landing merely because the new stable shared file now exists
    - this input declares only which stable module may use the landing exception
 2. `stable_landing_shared_refs`
    - use only when the caller can name the exact shared refs written by that same landing round
-   - this input is required whenever `current_stable_landing_module` is present
-3. `bound_modules_only_shared_file_refs`
-   - use only when the caller has already proven that the current-round delta for those exact Shared Contract files is limited to `bound_modules` metadata
+   - this input is required whenever `current_stable_landing_unit` is present
+3. `bound_objects_only_shared_file_refs`
+   - use only when the caller has already proven that the current-round delta for those exact Shared Contract files is limited to `bound_objects` metadata
 
 `shared_sync` must not invent either input when the caller did not provide it.
 
@@ -85,7 +85,7 @@ Execution-local caller inputs may include:
    - `file_ref`
    - `version_ref`
    - current fingerprint
-   - declared `bound_modules`
+   - declared `bound_objects`
 
 ### 4.2 Rebuild Real Binding Set
 
@@ -95,7 +95,7 @@ Execution-local caller inputs may include:
    - `flow.shared_contract_refs`
    - `project.shared_contract_refs`
 3. treat downstream `shared_contract_refs` as the only formal source of which shared files are currently bound
-4. treat `bound_modules` only as declarative metadata
+4. treat `bound_objects` only as declarative metadata
 
 ### 4.3 Derive Affected Object Set
 
@@ -115,10 +115,10 @@ Execution-local caller inputs may include:
 
 `shared_sync` may apply only these shared-specific exception rules:
 
-1. `bound_modules`-only exception
-   - if a changed Shared Contract file is explicitly declared in `bound_modules_only_shared_file_refs`, do not treat that metadata-only delta as downstream invalidation by itself
+1. `bound_objects`-only exception
+   - if a changed Shared Contract file is explicitly declared in `bound_objects_only_shared_file_refs`, do not treat that metadata-only delta as downstream invalidation by itself
 2. current stable landing exception
-   - if `current_stable_landing_module` is present, apply the exception only to the exact shared refs explicitly listed in `stable_landing_shared_refs`
+   - if `current_stable_landing_unit` is present, apply the exception only to the exact shared refs explicitly listed in `stable_landing_shared_refs`
    - if any other selected shared ref still invalidates that same module, do not suppress that invalidation
 
 `shared_sync` must not infer either exception from fingerprint difference alone.
@@ -139,7 +139,7 @@ After the affected downstream object set and exception set are fixed:
 
 `shared_sync` remains responsible for the scope and exception judgment.
 `impact_sync` remains responsible for the generic fallback execution.
-`impact_sync` must not receive raw `current_stable_landing_module`, raw `stable_landing_shared_refs`, or raw `bound_modules_only_shared_file_refs`.
+`impact_sync` must not receive raw `current_stable_landing_unit`, raw `stable_landing_shared_refs`, or raw `bound_objects_only_shared_file_refs`.
 
 ## 5. Output Contract
 
@@ -147,10 +147,10 @@ The output must report at least:
 
 1. which `shared_contract` files or ids were treated as changed or in scope
 2. the affected downstream object set grouped by:
-   - `module`
-   - `flow`
+   - `unit`
+   - `scenario`
    - `project`
-3. any `bound_modules` metadata drift
+3. any `bound_objects` metadata drift
 4. which execution-local shared exceptions were applied
 5. whether control was passed to `impact_sync`
 6. whether control was returned to `shared_escape`

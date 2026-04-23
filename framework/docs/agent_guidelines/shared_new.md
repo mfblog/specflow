@@ -27,7 +27,7 @@ It may:
 3. update an existing candidate-layer `shared_contract` that is still the same shared object
 4. record expected future landing points in planning text when consumer modules do not yet have current-layer candidates
 5. trigger `shared_sync` after shared truth writeback
-6. declare the later `module_promote` owner when the round opens the next candidate-layer file for a shared object that already has a stable-layer sibling
+6. declare the later `unit_promote` owner when the round opens the next candidate-layer file for a shared object that already has a stable-layer sibling
 
 It does not:
 
@@ -49,7 +49,7 @@ Before execution:
 5. read any current-layer module main files already involved in the request
 6. read every additional current-layer module main file needed to judge whether the target truth already exists as module-local formal truth, is already duplicated across modules, or is already formalized as shared truth elsewhere
 7. read any relevant existing `shared_contract` files if the request names or overlaps them
-8. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
+8. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
 9. if the round may create, update, or delete any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 10. if the round may create or update any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply
 11. if the request may create or update a candidate-layer file for a `shared_contract_id` that already has a stable-layer sibling, build the repository-wide affected-module review set for that already-stable shared object from current repository truth before owner selection:
@@ -74,7 +74,7 @@ If the request names modules that do not yet have current-layer Spec files and t
    - one shared object per shared file
    - do not merge unrelated shared topics into one file
 5. if the round may create or update a candidate-layer file for a `shared_contract_id` that already has a stable-layer sibling, resolve the repository-wide affected-module set for that already-stable shared object from current repository truth before owner selection:
-   - derive that set from module `shared_contract_refs` rather than from `bound_modules`
+   - derive that set from module `shared_contract_refs` rather than from `bound_objects`
    - include modules that currently bind the stable-layer sibling and modules that already bind its current candidate-layer sibling when that sibling exists
    - if current repository truth is insufficient to derive that affected-module set safely, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
    - if that affected-module set is empty, continue only when current repository truth explicitly shows that the already-stable shared object is intentionally kept as independently authored shared truth with no current formal bindings; otherwise stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing a lifecycle owner with no current formal consumer set
@@ -91,7 +91,7 @@ If the request names modules that do not yet have current-layer Spec files and t
    - if Step 7 updated an already-existing candidate-layer file with a stable-layer sibling, preserve or rewrite `promotion_owner_module` so the resulting file still names one formal module from the repository-wide affected-module set resolved in Step 5
    - if current repository truth is insufficient to keep one stable promotion owner without guessing, stop this flow and return control to `shared_escape` through `shared_ops`
 10. if no consumer module formally binds the shared truth yet:
-   - keep `bound_modules=none`
+   - keep `bound_objects=none`
    - record expected future consumers only as planning text in the shared file body
 11. if the same truth still remains duplicated as formal module truth elsewhere, stop and report that boundary closure is incomplete
 12. after any write to `docs/specs/shared_contracts/**`, execute `shared_sync` before claiming closure, even when the affected-module set is currently empty

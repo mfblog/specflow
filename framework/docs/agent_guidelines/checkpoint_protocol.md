@@ -63,7 +63,7 @@ Every checkpoint must include all of the following fields:
 1. `type`
 2. `blocking`
 3. `command`
-4. `module`
+4. `unit`
 5. `question_or_action`
 6. `why_blocking`
 7. `required_writeback_target`
@@ -78,9 +78,9 @@ Field meanings:
    - always records whether the current command is fully blocked pending user input
 3. `command`
    - the active command or governance flow that raised the checkpoint
-4. `module`
-   - the formal module name
-   - use literal `none` only when the active governance flow is not bound to exactly one formal module, for example a cross-module `shared_ops` checkpoint
+4. `unit`
+   - the formal unit identifier
+   - use literal `none` only when the active governance flow is not bound to exactly one formal unit, for example a cross-unit `shared_ops` checkpoint
 5. `question_or_action`
    - the exact input or verification the user must provide
 6. `why_blocking`

@@ -215,7 +215,7 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 		fallbackReason = "shared_contract_drift"
 	case !processFound && len(invalidatingSharedRefs) > 0:
 		fallbackReason = "shared_contract_drift"
-	case !processFound && explicitFallbackScope && binding.NextCommand != "module_check":
+	case !processFound && explicitFallbackScope && binding.NextCommand != "unit_check":
 		fallbackReason = "binding_drift"
 	}
 
@@ -241,7 +241,7 @@ func reconcileStable(repoRoot string, binding ModuleBinding, result ModuleResult
 	}
 	result.FallbackReasonCode = fallbackReason
 	result.Outcome = "rerouted"
-	result.NextCommand = "module_stable_verify"
+	result.NextCommand = "unit_stable_verify"
 	updated, err := statusfile.UpdateNextCommand(repoRoot, binding.Module, result.NextCommand)
 	if err != nil {
 		return ModuleResult{}, err
@@ -253,7 +253,7 @@ func reconcileStable(repoRoot string, binding ModuleBinding, result ModuleResult
 func applyCandidateFallback(repoRoot string, result ModuleResult, fallbackReason string) (ModuleResult, error) {
 	result.FallbackReasonCode = fallbackReason
 	result.Outcome = "invalidated"
-	result.NextCommand = "module_check"
+	result.NextCommand = "unit_check"
 	for _, processKind := range []string{"check", "plan", "verify"} {
 		processPaths, err := snapshot.ProcessArtifactPaths(result.Module, processKind)
 		if err != nil {
@@ -320,10 +320,10 @@ func reconcileObject(repoRoot string, scoped ScopedObject) (ObjectResult, error)
 
 func objectFamilyConfigFor(objectType string) (objectFamilyConfig, error) {
 	switch objectType {
-	case "flow":
+	case "scenario":
 		return objectFamilyConfig{
-			CandidateNextCommand:  "flow_check",
-			StableNextCommand:     "flow_stable_verify",
+			CandidateNextCommand:  "scenario_check",
+			StableNextCommand:     "scenario_stable_verify",
 			CandidateProcessKinds: []string{"check", "verify"},
 		}, nil
 	case "project":

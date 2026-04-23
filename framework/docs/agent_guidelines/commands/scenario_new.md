@@ -2,12 +2,12 @@
 
 ## 1. Purpose
 
-`flow_new:{flow}` creates the first candidate truth for a brand-new formal flow object.
+`scenario_new:{flow}` creates the first candidate truth for a brand-new formal flow object.
 
 ## 2. Lifecycle-State Advance Inheritance
 
 When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
-Only a new independent full-scope run of `flow_new` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+Only a new independent full-scope run of `scenario_new` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
 
 ## 3. Preconditions
 
@@ -16,19 +16,19 @@ Only a new independent full-scope run of `flow_new` may produce that advancing r
 
 ## 4. Procedure
 
-1. create `docs/specs/flows/candidate/c_flow_{name}.md`
+1. create `docs/specs/scenarios/candidate/c_scenario_{name}.md`
 2. initialize:
    - `project_ref`
-   - `module_refs`
+   - `unit_refs`
    - `shared_contract_refs`
    - `system_constraints_stable_ref`
 3. write or upsert `_status.md` row:
-   - `Object Type=flow`
+   - `Object Type=scenario`
    - `Object=flow_{name}`
    - `Stable=no`
    - `Candidate=yes`
    - `Active Layer=candidate`
-   - `Next Command=flow_check`
+   - `Next Command=scenario_check`
 
 ## 5. Output Contract
 

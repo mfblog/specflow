@@ -2,29 +2,29 @@
 
 ## 1. Purpose
 
-`flow_promote:{flow}` promotes the current candidate flow into the new stable flow truth.
+`scenario_promote:{flow}` promotes the current candidate flow into the new stable flow truth.
 
 ## 2. Lifecycle-State Advance Inheritance
 
 When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
-Only a new independent full-scope run of `flow_promote` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+Only a new independent full-scope run of `scenario_promote` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
 
 ## 3. Preconditions
 
-1. `_status.md` says `Object Type=flow`, `Active Layer=candidate`, `Next Command=flow_promote`
+1. `_status.md` says `Object Type=scenario`, `Active Layer=candidate`, `Next Command=scenario_promote`
 2. current valid `_verify_result/{flow}.md` exists
 
 ## 4. Procedure
 
 1. revalidate current candidate flow truth and current verification coverage
-2. write `docs/specs/flows/stable/s_flow_{name}.md`
-3. delete `docs/specs/flows/candidate/c_flow_{name}.md`
+2. write `docs/specs/scenarios/stable/s_scenario_{name}.md`
+3. delete `docs/specs/scenarios/candidate/c_scenario_{name}.md`
 4. delete current-round flow `_check_result` and `_verify_result`
 5. write `_status.md`:
    - `Stable=yes`
    - `Candidate=no`
    - `Active Layer=stable`
-   - `Next Command=flow_fork`
+   - `Next Command=scenario_fork`
 
 ## 5. Output Contract
 

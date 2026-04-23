@@ -14,22 +14,34 @@ It answers five questions:
 
 ## 2. Object Definition
 
-`ProjectSpec` is the formal project-topology truth object.
+`ProjectSpec` is the formal project governance coordinate-system object.
 
-It answers:
+It must answer these five mandatory sections:
 
-1. what the project is
-2. which formal `module` objects currently belong to the project
-3. which formal `flow` objects currently belong to the project
-4. which formal `shared_contract` objects are formally reused by the project surface
-5. which stable `system_constraints` version currently constrains the project
-6. how those objects connect at the project-topology level
+1. `Governed Unit Definition`
+   - what qualifies as a formal `unit`
+   - what must be promoted into `shared_contract`
+   - what remains outside command-target truth
+2. `Support Surface Rules`
+   - which paths are governed support surfaces rather than command-target objects
+3. `Topology Mapping`
+   - governed roots
+   - ignore rules
+   - unit/shared/support ownership rules
+   - conflict resolution order
+4. `Current Formal Object Graph`
+   - current `unit_refs`
+   - current `scenario_refs`
+   - current `shared_contract_refs`
+   - the currently active relation graph among them
+5. `Global Constraint Alignment`
+   - which stable `system_constraints` version constrains the project now
 
 It does not answer:
 
-1. one module's internal behavior
-2. one flow's step-by-step business semantics
-3. one shared object's local protocol text
+1. one unit's local behavior
+2. one scenario's local chain semantics
+3. one shared-contract body's field-level rule text
 4. implementation planning or implementation ownership
 
 ## 3. Files
@@ -41,40 +53,43 @@ It does not answer:
 
 Additional rules:
 
-1. `ProjectSpec` is a command-target object, but it is not a module
+1. `ProjectSpec` is a command-target object, but it is not a unit
 2. it enters `docs/specs/_status.md` using `Object Type=project`
 3. there is exactly one current `ProjectSpec` per repository
-4. `project` is the stable command prefix for this object family
+4. `project` remains the stable command prefix for this object family
 
 ## 4. Required Bindings
 
 `ProjectSpec` must record at minimum:
 
-1. `flow_refs`
-2. `module_refs`
+1. `scenario_refs`
+2. `unit_refs`
 3. `shared_contract_refs`
 4. `system_constraints_stable_ref`
 
 Binding rules:
 
-1. `ProjectSpec` may bind stable or candidate `flow` objects only at the matching project layer
-2. `ProjectSpec stable` must not bind candidate-layer `flow` or candidate-layer `shared_contract` truth
-3. `ProjectSpec candidate` may bind candidate-layer `flow` or candidate-layer `shared_contract` truth, but the bound layer must be explicit
-4. `ProjectSpec` is downstream of `flow`, `module`, `shared_contract`, and `system_constraints`
+1. `ProjectSpec stable` must not bind candidate-layer `scenario` or candidate-layer `shared_contract` truth
+2. `ProjectSpec candidate` may bind candidate-layer `scenario` or candidate-layer `shared_contract` truth, but the bound layer must be explicit
+3. `ProjectSpec` is downstream of `scenario`, `unit`, `shared_contract`, and `system_constraints`
+4. `ProjectSpec` is the only formal object that may define support-surface ownership rules for the repository
 
 ## 5. Lifecycle Responsibility
 
 `ProjectSpec` owns:
 
-1. project-topology closure
-2. project-topology verification against current bound objects
-3. promotion of candidate project topology into stable project topology
+1. governed-unit-definition closure
+2. support-surface-rule closure
+3. topology-mapping closure
+4. current formal object-graph verification
+5. promotion of candidate project truth into stable project truth
 
 It does not own:
 
 1. code implementation
-2. module implementation planning
-3. module implementation verification
+2. unit implementation planning
+3. unit implementation verification
+4. scenario implementation repair
 
 Therefore:
 
@@ -86,10 +101,11 @@ Therefore:
 `ProjectSpec` process files become invalid when any current required binding changes, including:
 
 1. current `ProjectSpec` truth changes
-2. any bound `flow` truth, layer, version, or snapshot changes
-3. any bound `module` current truth identity set changes
+2. any bound `scenario` truth, layer, version, or snapshot changes
+3. any bound `unit` identity set, truth, or snapshot changes
 4. any bound `shared_contract` truth, layer, version, or snapshot changes
 5. `system_constraints_stable_ref` no longer matches the current stable global baseline
+6. the project's own topology mapping now resolves a governed path differently
 
 Fallback rules:
 
@@ -101,6 +117,6 @@ Fallback rules:
 This file does not:
 
 1. create a project-side implementation chain
-2. replace `flow` truth
-3. replace `module` truth
+2. replace `scenario` truth
+3. replace `unit` truth
 4. create an independent lifecycle for `shared_contract` or `system_constraints`

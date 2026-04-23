@@ -21,8 +21,8 @@ It is not a user-facing command entry and it is not a second lifecycle.
 
 It may reconcile:
 
-1. `module`
-2. `flow`
+1. `unit`
+2. `scenario`
 3. `project`
 
 It does not:
@@ -62,14 +62,14 @@ Before `impact_sync` runs, the caller must already know:
 
 Candidate fallback rules:
 
-1. invalid `module` -> `module_check`
-2. invalid `flow` -> `flow_check`
+1. invalid `unit` -> `unit_check`
+2. invalid `scenario` -> `scenario_check`
 3. invalid `project` -> `project_check`
 
 Stable fallback rules:
 
-1. invalid `module` -> `module_stable_verify`
-2. invalid `flow` -> `flow_stable_verify`
+1. invalid `unit` -> `unit_stable_verify`
+2. invalid `scenario` -> `scenario_stable_verify`
 3. invalid `project` -> `project_stable_verify`
 
 ## 5. Relationship To `shared_sync`
@@ -92,5 +92,5 @@ Therefore:
 
 1. create a new user-facing command
 2. replace `shared_ops`
-3. replace `module_check`, `flow_check`, or `project_check`
-4. replace `module_stable_verify`, `flow_stable_verify`, or `project_stable_verify`
+3. replace `unit_check`, `scenario_check`, or `project_check`
+4. replace `unit_stable_verify`, `scenario_stable_verify`, or `project_stable_verify`

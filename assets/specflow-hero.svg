@@ -1,6 +1,6 @@
 <svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">specFlow hero</title>
-  <desc id="desc">specFlow wordmark with module-oriented governance visual</desc>
+  <desc id="desc">specFlow wordmark with unit-governed governance visual</desc>
   <defs>
     <linearGradient id="bg" x1="80" y1="40" x2="1120" y2="320" gradientUnits="userSpaceOnUse">
       <stop stop-color="#0B1220"/>

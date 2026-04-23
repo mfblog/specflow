@@ -1,0 +1,120 @@
+# Scenario Policy
+
+## 1. Purpose
+
+This file defines what a formal `scenario` object is in this repository and how it differs from `unit`, `shared_contract`, and `ProjectSpec`.
+
+It answers five questions:
+
+1. what `scenario` formally owns
+2. which files carry `scenario`
+3. which bindings `scenario` must record
+4. what `scenario` verification means
+5. how `scenario` invalidation works
+
+## 2. Object Definition
+
+`scenario_xxx` is the formal trigger-to-outcome chain object.
+
+It answers:
+
+1. where the chain starts
+2. which units it traverses
+3. which shared contracts are reused along that chain
+4. what the success result is
+5. where failure is absorbed, surfaced, or rolled back
+6. how that chain is verified end to end
+
+It does not answer:
+
+1. unit-local state-machine detail
+2. shared-contract field-level body text
+3. project-wide mapping rules
+4. implementation ownership for code edits
+
+## 3. Files
+
+`scenario` uses two version layers:
+
+1. `docs/specs/scenarios/stable/s_scenario_{scenario}.md`
+2. `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
+
+Additional rules:
+
+1. `scenario` is a command-target object, but it is not a unit
+2. it enters `docs/specs/_status.md` using `Object Type=scenario`
+3. `scenario` uses a bare formal scenario ID in `_status.md`, for example `task_execution`
+
+## 4. Required Bindings
+
+Each `scenario` must record at minimum:
+
+1. `project_ref`
+2. `unit_refs`
+3. `shared_contract_refs`
+4. `system_constraints_stable_ref`
+
+Binding rules:
+
+1. `scenario` owns the formal `scenario -> unit` relation
+2. units do not record `scenario_refs` as a required formal binding field
+3. `scenario stable` must bind only stable-layer dependencies
+4. `scenario candidate` may bind candidate-layer dependencies, but the bound layer must be explicit
+5. `scenario` is downstream of `unit`, `shared_contract`, and `system_constraints`
+6. `ProjectSpec` is downstream of `scenario`
+
+## 5. Lifecycle Responsibility
+
+`scenario` owns:
+
+1. trigger-to-outcome closure
+2. end-to-end verification
+3. promotion of candidate scenario truth into stable scenario truth
+
+It does not own:
+
+1. implementation planning
+2. implementation editing
+3. unit-local repair
+
+Therefore:
+
+1. `scenario` command family has `new`, `stable_verify`, `fork`, `check`, `verify`, and `promote`
+2. `scenario` command family does not have `plan` or `impl`
+
+## 6. Verification Meaning
+
+`scenario_verify` means:
+
+1. current scenario truth has been read
+2. current required unit and shared bindings have been revalidated
+3. the claimed chain is actually wired from trigger to outcome
+4. the verification report names any `affected_units`
+
+Additional rules:
+
+1. reporting `affected_units` does not repair or advance those units automatically
+2. if implementation work is needed, those units must re-enter their own legal `unit` command chain
+
+## 7. Invalidation Rules
+
+`scenario` process files become invalid when any current required binding changes, including:
+
+1. current scenario truth changes
+2. any bound unit set or required unit identity changes
+3. any bound `shared_contract` truth, layer, version, or snapshot changes
+4. `system_constraints_stable_ref` no longer matches the current stable global baseline
+
+Fallback rules:
+
+1. invalid candidate `scenario` falls back to `scenario_check`
+2. invalid stable `scenario` falls back to `scenario_stable_verify`
+
+## 8. Non-Goals
+
+This file does not:
+
+1. create a second implementation chain outside `unit`
+2. redefine `shared_contract`
+3. redefine `ProjectSpec`
+4. create an independent lifecycle for `system_constraints`

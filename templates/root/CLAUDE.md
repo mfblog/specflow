@@ -21,21 +21,21 @@ Keep repository-specific rules outside the managed block. `specFlow` tooling may
 When a request hits any of the following, handle it with `specFlow` rules:
 
 1. Standard commands:
-   - `module_init:{module}`
-   - `module_stable_verify:{module}`
-   - `module_new:{module}`
-   - `module_fork:{module}`
-   - `module_check:{module}`
-   - `module_plan:{module}`
-   - `module_impl:{module}`
-   - `module_verify:{module}`
-   - `module_promote:{module}`
-   - `flow_new:{flow}`
-   - `flow_stable_verify:{flow}`
-   - `flow_fork:{flow}`
-   - `flow_check:{flow}`
-   - `flow_verify:{flow}`
-   - `flow_promote:{flow}`
+   - `unit_init:{unit}`
+   - `unit_stable_verify:{unit}`
+   - `unit_new:{unit}`
+   - `unit_fork:{unit}`
+   - `unit_check:{unit}`
+   - `unit_plan:{unit}`
+   - `unit_impl:{unit}`
+   - `unit_verify:{unit}`
+   - `unit_promote:{unit}`
+   - `scenario_new:{scenario}`
+   - `scenario_stable_verify:{scenario}`
+   - `scenario_fork:{scenario}`
+   - `scenario_check:{scenario}`
+   - `scenario_verify:{scenario}`
+   - `scenario_promote:{scenario}`
    - `project_init`
    - `project_new`
    - `project_stable_verify`
@@ -47,7 +47,7 @@ When a request hits any of the following, handle it with `specFlow` rules:
    - `spec_flow_review`
    - `spec_flow_design_review`
    - `shared_ops:{natural-language request}`
-3. Requests involving `module`, `flow`, or `project` truth, state progression, candidate closure, formal promotion, Shared Contract, shared_ops routing, or system constraints.
+3. Requests involving `unit`, `scenario`, or `project` truth, state progression, candidate closure, formal promotion, Shared Contract, shared_ops routing, or system constraints.
 4. Requests involving registered project-local standards under `docs/project_standards/`.
 5. Requests to create, register, or tighten a project-local standard for the current project.
 6. Direct implementation requests that would modify repo-tracked code or other repo-tracked implementation-side files.
@@ -66,9 +66,9 @@ If none of the above is hit, continue following the host agent's other rules.
 Standard command forms:
 
 ```text
-module  -> {command}:{module}
-flow    -> {command}:{flow}
-project -> {command}
+unit     -> {command}:{unit}
+scenario -> {command}:{scenario}
+project  -> {command}
 ```
 
 See the command policy:
@@ -81,23 +81,23 @@ See the command files:
 
 The standard commands are grouped by object family:
 
-1. `module`
-   - `module_init:{module}`
-   - `module_stable_verify:{module}`
-   - `module_new:{module}`
-   - `module_fork:{module}`
-   - `module_check:{module}`
-   - `module_plan:{module}`
-   - `module_impl:{module}`
-   - `module_verify:{module}`
-   - `module_promote:{module}`
-2. `flow`
-   - `flow_new:{flow}`
-   - `flow_stable_verify:{flow}`
-   - `flow_fork:{flow}`
-   - `flow_check:{flow}`
-   - `flow_verify:{flow}`
-   - `flow_promote:{flow}`
+1. `unit`
+   - `unit_init:{unit}`
+   - `unit_stable_verify:{unit}`
+   - `unit_new:{unit}`
+   - `unit_fork:{unit}`
+   - `unit_check:{unit}`
+   - `unit_plan:{unit}`
+   - `unit_impl:{unit}`
+   - `unit_verify:{unit}`
+   - `unit_promote:{unit}`
+2. `scenario`
+   - `scenario_new:{scenario}`
+   - `scenario_stable_verify:{scenario}`
+   - `scenario_fork:{scenario}`
+   - `scenario_check:{scenario}`
+   - `scenario_verify:{scenario}`
+   - `scenario_promote:{scenario}`
 3. `project`
    - `project_init`
    - `project_new`
@@ -130,7 +130,7 @@ Additional rules:
 
 ### 3. How To Resolve Objects And Files
 
-`module`, `flow`, and `project` are formal object names, not concrete file names.
+`unit`, `scenario`, and `project` are formal object names, not concrete file names.
 
 If the user names an object but not a concrete file, read this first:
 
@@ -138,25 +138,25 @@ If the user names an object but not a concrete file, read this first:
 
 Then resolve the actual target from `Object Type` and `Active Layer`:
 
-1. `module`
-   - `stable` -> `docs/specs/modules/stable/s_{module}.md`
-   - `candidate` -> `docs/specs/modules/candidate/c_{module}.md`
-2. `flow`
-   - `stable` -> `docs/specs/flows/stable/s_flow_{name}.md`
-   - `candidate` -> `docs/specs/flows/candidate/c_flow_{name}.md`
+1. `unit`
+   - `stable` -> `docs/specs/units/stable/s_unit_{unit}.md`
+   - `candidate` -> `docs/specs/units/candidate/c_unit_{unit}.md`
+2. `scenario`
+   - `stable` -> `docs/specs/scenarios/stable/s_scenario_{scenario}.md`
+   - `candidate` -> `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
 3. `project`
    - `stable` -> `docs/specs/project/stable/s_project.md`
    - `candidate` -> `docs/specs/project/candidate/c_project.md`
 
 If the user gives a concrete file prefix, treat it as a file reference:
 
-1. `s_module_xxx`
+1. `s_unit_xxx`
    - Refers to the `stable` main file
-2. `c_module_xxx`
+2. `c_unit_xxx`
    - Refers to the `candidate` main file
-3. `s_flow_xxx`
+3. `s_scenario_xxx`
    - Refers to the `stable` flow file
-4. `c_flow_xxx`
+4. `c_scenario_xxx`
    - Refers to the `candidate` flow file
 5. `s_project`
    - Refers to the stable project file
@@ -183,7 +183,7 @@ If a request is inside the `specFlow` scope but is not a standard command, handl
 5. Then read the current-layer main truth file for that object.
 6. If that truth file explicitly references appendix files or Shared Contract files, read them too.
 7. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
-   - `docs/specs/system/stable/s_system_constraints.md`
+   - `docs/specs/system_constraints/stable/s_system_constraints.md`
 8. Then decide whether the current action is:
    - explanation only
    - modifying `candidate`
@@ -197,8 +197,8 @@ If a request is inside the `specFlow` scope but is not a standard command, handl
 2. If you are unsure whether a change is a behavior change, treat it as a behavior change.
 3. Behavior changes must not start from code. Follow `specflow/framework/docs/agent_guidelines/spec_policy.md` first.
 4. Direct implementation requests must first be classified through `specflow/framework/docs/agent_guidelines/implementation_change_policy.md`. `truth_writeback_required` and `boundary_unclear` must not start from code.
-5. A brand-new module or flow may start with `candidate`; its first `stable` is created later by `module_promote:{module}` or `flow_promote:{flow}`.
-6. A historical module entering governance for the first time must begin with `module_init:{module}` to create its first `stable`.
+5. A brand-new module or flow may start with `candidate`; its first `stable` is created later by `unit_promote:{module}` or `scenario_promote:{flow}`.
+6. A historical module entering governance for the first time must begin with `unit_init:{module}` to create its first `stable`.
 7. A historical project entering governance for the first time must begin with `project_init` to create its first `stable`.
 7. Under `docs/specs/`, every Spec file except `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` is a behavior source of truth and should normally enter git history.
 8. `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` are draft-layer artifacts, but draft-layer status does not block commits. When a round reaches a reviewable checkpoint, those files should normally be committed together with the linked process or code changes of that checkpoint.

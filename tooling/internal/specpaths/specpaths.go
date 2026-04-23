@@ -3,41 +3,41 @@ package specpaths
 import "fmt"
 
 const (
-	ModulesRootDir                 = "docs/specs/modules"
+	ModulesRootDir                 = "docs/specs/units"
 	CandidateDir                   = ModulesRootDir + "/candidate"
 	StableDir                      = ModulesRootDir + "/stable"
 	CandidateAppendixDir           = CandidateDir + "/appendix"
 	StableAppendixDir              = StableDir + "/appendix"
-	FlowsRootDir                   = "docs/specs/flows"
+	FlowsRootDir                   = "docs/specs/scenarios"
 	CandidateFlowDir               = FlowsRootDir + "/candidate"
 	StableFlowDir                  = FlowsRootDir + "/stable"
 	ProjectRootDir                 = "docs/specs/project"
 	CandidateProjectDir            = ProjectRootDir + "/candidate"
 	StableProjectDir               = ProjectRootDir + "/stable"
-	SystemConstraintsStableFileRef = "docs/specs/system/stable/s_system_constraints.md"
+	SystemConstraintsStableFileRef = "docs/specs/system_constraints/stable/s_system_constraints.md"
 )
 
-func MainSpecFileRef(layer, module string) (string, error) {
-	return ObjectMainSpecFileRef("module", layer, module)
+func MainSpecFileRef(layer, unit string) (string, error) {
+	return ObjectMainSpecFileRef("unit", layer, unit)
 }
 
 func ObjectMainSpecFileRef(objectType, layer, object string) (string, error) {
 	switch layer {
 	case "candidate":
 		switch objectType {
-		case "module":
-			return fmt.Sprintf("%s/c_%s.md", CandidateDir, object), nil
-		case "flow":
-			return fmt.Sprintf("%s/c_flow_%s.md", CandidateFlowDir, object), nil
+		case "unit":
+			return fmt.Sprintf("%s/c_unit_%s.md", CandidateDir, object), nil
+		case "scenario":
+			return fmt.Sprintf("%s/c_scenario_%s.md", CandidateFlowDir, object), nil
 		case "project":
 			return fmt.Sprintf("%s/c_project.md", CandidateProjectDir), nil
 		}
 	case "stable":
 		switch objectType {
-		case "module":
-			return fmt.Sprintf("%s/s_%s.md", StableDir, object), nil
-		case "flow":
-			return fmt.Sprintf("%s/s_flow_%s.md", StableFlowDir, object), nil
+		case "unit":
+			return fmt.Sprintf("%s/s_unit_%s.md", StableDir, object), nil
+		case "scenario":
+			return fmt.Sprintf("%s/s_scenario_%s.md", StableFlowDir, object), nil
 		case "project":
 			return fmt.Sprintf("%s/s_project.md", StableProjectDir), nil
 		}
@@ -56,6 +56,6 @@ func AppendixDir(layer string) (string, error) {
 	}
 }
 
-func CandidateAppendixGlob(module string) string {
-	return fmt.Sprintf("%s/c_%s_*.md", CandidateAppendixDir, module)
+func CandidateAppendixGlob(unit string) string {
+	return fmt.Sprintf("%s/c_unit_%s_*.md", CandidateAppendixDir, unit)
 }

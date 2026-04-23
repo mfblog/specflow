@@ -20,11 +20,11 @@ Executors must not create per-command snapshot shapes.
 
 This contract governs process files for:
 
-1. `module`
+1. `unit`
    - `docs/specs/_check_result/{module}.md`
    - `docs/specs/_plans/active/{module}.md`
    - `docs/specs/_verify_result/{module}.md`
-2. `flow`
+2. `scenario`
    - `docs/specs/_check_result/{flow}.md`
    - `docs/specs/_verify_result/{flow}.md`
 3. `project`
@@ -46,9 +46,9 @@ It defines only how process files record the truth they were written against.
 Every gate-bearing process file covered by this contract must record:
 
 1. `object_type`
-   - one of `module`, `flow`, `project`
+   - one of `unit`, `scenario`, `project`
 2. `object_ref`
-   - the formal object identifier, for example `module_ai`, `flow_task_execution`, or `project`
+   - the bare formal object identifier, for example `ai`, `task_execution`, or `project`
 3. `truth_file_ref`
    - the exact current-layer truth file used by that process file
 4. `truth_version_ref`
@@ -73,19 +73,19 @@ Rules:
 2. executors must not substitute `spec_fingerprint` for gate-bearing files
 3. if a file correctly binds no system constraints, all three system-constraints fields must use literal `none`
 
-### 3.2 Module Active Plan Files
+### 3.2 Unit Active Plan Files
 
-`docs/specs/_plans/active/{module}.md` is governed by the same snapshot contract but it is not a gate-bearing file.
+`docs/specs/_plans/active/{unit}.md` is governed by the same snapshot contract but it is not a gate-bearing file.
 
-Every module active plan file must record:
+Every unit active plan file must record:
 
 1. `spec_file_ref`
-   - the exact candidate-layer module truth file used by that plan
+   - the exact candidate-layer unit truth file used by that plan
 2. `spec_version_ref`
    - `<file_prefix>@<version>`
 3. `spec_fingerprint`
    - the Section 6 fingerprint of `spec_file_ref`
-4. `module_appendix_snapshot`
+4. `unit_appendix_snapshot`
    - the normalized appendix snapshot of the current candidate-layer module truth, or `none`
 5. `system_constraints_stable_file_ref`
    - the currently bound stable system-constraints file, or `none`
@@ -100,12 +100,12 @@ Rules:
 
 1. `active/{module}.md` does not carry `gate`, `decision`, `allow_next`, or `next_command`
 2. `active/{module}.md` still records the exact candidate module truth and exact current global-binding snapshot it was written against
-3. if an active plan correctly binds no appendix or shared files, `module_appendix_snapshot` or `shared_contract_snapshot` must use literal `none`
+3. if an active plan correctly binds no appendix or shared files, `unit_appendix_snapshot` or `shared_contract_snapshot` must use literal `none`
 4. if an active plan correctly binds no system constraints, all three system-constraints fields must use literal `none`
 
 ### 3.3 Module Draft Plan Files
 
-`docs/specs/_plans/draft/{module}.md` is a planning working artifact.
+`docs/specs/_plans/draft/{unit}.md` is a planning working artifact.
 
 It is not:
 
@@ -131,20 +131,20 @@ It may additionally record planning-local fields such as:
 
 Rules:
 
-1. draft plan files must never be treated as valid inputs for `module_impl` or `module_verify`
+1. draft plan files must never be treated as valid inputs for `unit_impl` or `unit_verify`
 2. draft plan files do not inherit the active-plan binding revalidation contract
 3. draft plan files may be deleted whenever the current round falls back, forks, promotes, or closes candidate state
 
 ## 4. Object-Specific Snapshot Fields
 
-### 4.1 `module`
+### 4.1 `unit`
 
-`module` process files may additionally record:
+`unit` process files may additionally record:
 
-1. `module_appendix_snapshot`
+1. `unit_appendix_snapshot`
 2. `shared_contract_snapshot`
 
-`module_appendix_snapshot` has only two legal forms:
+`unit_appendix_snapshot` has only two legal forms:
 
 1. literal `none`
 2. a normalized ordered list where each item contains:
@@ -162,44 +162,44 @@ Rules:
    - `version_ref`
    - `fingerprint`
 
-### 4.2 `flow`
+### 4.2 `scenario`
 
-`flow` process files may additionally record:
+`scenario` process files may additionally record:
 
-1. `module_snapshot`
+1. `unit_snapshot`
 2. `shared_contract_snapshot`
 
-`module_snapshot` has only two legal forms:
+`unit_snapshot` has only two legal forms:
 
 1. literal `none`
 2. a normalized ordered list where each item contains:
-   - `module`
+   - `unit`
    - `layer`
    - `file_ref`
    - `version_ref`
    - `fingerprint`
 
-`shared_contract_snapshot` uses the same shape as `module`.
+`shared_contract_snapshot` uses the same shape as `unit`.
 
 ### 4.3 `project`
 
 `project` process files may additionally record:
 
-1. `flow_snapshot`
-2. `module_snapshot`
+1. `scenario_snapshot`
+2. `unit_snapshot`
 3. `shared_contract_snapshot`
 
-`flow_snapshot` has only two legal forms:
+`scenario_snapshot` has only two legal forms:
 
 1. literal `none`
 2. a normalized ordered list where each item contains:
-   - `flow`
+   - `scenario`
    - `layer`
    - `file_ref`
    - `version_ref`
    - `fingerprint`
 
-`module_snapshot` and `shared_contract_snapshot` use the shapes defined above.
+`unit_snapshot` and `shared_contract_snapshot` use the shapes defined above.
 
 ## 5. Binding And Inclusion Boundary
 
@@ -207,12 +207,12 @@ Snapshot inclusion must follow the formal binding contract, not heuristic scanni
 
 Rules:
 
-1. `module_appendix_snapshot` includes only appendix files explicitly referenced by the current-layer module truth
-2. `module_snapshot` includes only modules formally bound by current `flow` or `project` truth
-3. `flow_snapshot` includes only flows formally bound by current `project` truth
+1. `unit_appendix_snapshot` includes only appendix files explicitly referenced by the current-layer module truth
+2. `unit_snapshot` includes only modules formally bound by current `scenario` or `project` truth
+3. `scenario_snapshot` includes only flows formally bound by current `project` truth
 4. `shared_contract_snapshot` includes only currently bound shared files from formal `shared_contract_refs`
-5. `bound_modules` metadata is never a formal inclusion source
-6. a `bound_modules`-only delta does not by itself invalidate downstream process files
+5. `bound_objects` metadata is never a formal inclusion source
+6. a `bound_objects`-only delta does not by itself invalidate downstream process files
 
 ## 6. Fingerprint Contract
 
@@ -228,8 +228,8 @@ This same fingerprint contract applies to:
 1. `truth_fingerprint`
 2. `spec_fingerprint`
 3. appendix file fingerprints
-4. `module_snapshot` item fingerprints
-5. `flow_snapshot` item fingerprints
+4. `unit_snapshot` item fingerprints
+5. `scenario_snapshot` item fingerprints
 6. `shared_contract_snapshot` item fingerprints
 7. `system_constraints_stable_fingerprint`
 
@@ -258,15 +258,15 @@ Whenever a snapshot field uses a list, executors must normalize ordering before 
 
 Ordering rules:
 
-1. `module_appendix_snapshot`
+1. `unit_appendix_snapshot`
    - sort by `file_ref`
    - then by `appendix_ref`
-2. `module_snapshot`
-   - sort by `module`
+2. `unit_snapshot`
+   - sort by `unit`
    - then by `layer`
    - then by `file_ref`
-3. `flow_snapshot`
-   - sort by `flow`
+3. `scenario_snapshot`
+   - sort by `scenario`
    - then by `layer`
    - then by `file_ref`
 4. `shared_contract_snapshot`
@@ -290,8 +290,8 @@ At minimum:
 
 Shared-specific exception rule:
 
-1. if a shared file is explicitly declared by the active caller as `bound_modules`-only for the current round, a difference caused only by that metadata delta does not invalidate the process file on that basis alone
-2. executors must not infer a `bound_modules`-only delta from fingerprint difference alone
+1. if a shared file is explicitly declared by the active caller as `bound_objects`-only for the current round, a difference caused only by that metadata delta does not invalidate the process file on that basis alone
+2. executors must not infer a `bound_objects`-only delta from fingerprint difference alone
 
 If any required field differs after applying only allowed exceptions, the process file is invalid for downstream use.
 

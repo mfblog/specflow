@@ -61,37 +61,37 @@ Meaning rules:
 12. `direction_unresolved`
    - candidate truth still stands, but more than one materially different implementation direction remains viable and a user decision is required before a stable plan may be written
 13. `promotion_recovery`
-   - `module_promote` had already started mutating repository state and had to restore the module back to candidate semantics before the chain could continue
+   - `unit_promote` had already started mutating repository state and had to restore the module back to candidate semantics before the chain could continue
 
 Executors may add natural-language explanation, but the standardized code must appear first when a fallback or blocking reason is reported.
 
 ---
 
-## 3. Handoff: `module_check -> module_plan`
+## 3. Handoff: `unit_check -> unit_plan`
 
 ### 3.1 Minimum Upstream Artifact
 
-`module_plan` minimally requires a current valid `_check_result/{module}.md`.
+`unit_plan` minimally requires a current valid `_check_result/{module}.md`.
 
 ### 3.2 Required Re-Validation
 
-Before consumption, `module_plan` must re-validate:
+Before consumption, `unit_plan` must re-validate:
 
 1. `decision=pass`
 2. `allow_next=true`
-3. `next_command=module_plan`
+3. `next_command=unit_plan`
 4. current candidate file path, version ref, and fingerprint
-5. current `module_appendix_snapshot`
+5. current `unit_appendix_snapshot`
 6. current `system_constraints` binding fields
 7. current `shared_contract_snapshot`
 
 ### 3.3 Allowed Entry Condition
 
-`module_plan` may continue only when the pass gate still covers the current candidate round exactly.
+`unit_plan` may continue only when the pass gate still covers the current candidate round exactly.
 
 ### 3.4 Smallest Fallback
 
-If the handoff is invalid, the smallest fallback is `module_check`.
+If the handoff is invalid, the smallest fallback is `unit_check`.
 
 ### 3.5 Allowed Reason Codes
 
@@ -108,33 +108,33 @@ Use only:
 
 ---
 
-## 4. Handoff: `module_plan -> module_impl`
+## 4. Handoff: `unit_plan -> unit_impl`
 
 ### 4.1 Minimum Upstream Artifacts
 
-`module_impl` minimally requires both:
+`unit_impl` minimally requires both:
 
 1. a current valid `_check_result/{module}.md`
 2. a current valid `_plans/active/{module}.md`
 
 ### 4.2 Required Re-Validation
 
-Before consumption, `module_impl` must re-validate:
+Before consumption, `unit_impl` must re-validate:
 
 1. all required `_check_result` bindings from Section 3
 2. current plan file path and existence
 3. plan-bound candidate file path, version ref, and fingerprint
-4. plan-bound `module_appendix_snapshot`
+4. plan-bound `unit_appendix_snapshot`
 5. plan-bound `system_constraints` fields
 6. plan-bound `shared_contract_snapshot`
 
 ### 4.3 Allowed Entry Condition
 
-`module_impl` may continue only when both the pass gate and the plan still cover the same current candidate round.
+`unit_impl` may continue only when both the pass gate and the plan still cover the same current candidate round.
 
 ### 4.4 Smallest Fallback
 
-If either artifact is missing or invalid, the smallest fallback is `module_check`.
+If either artifact is missing or invalid, the smallest fallback is `unit_check`.
 
 ### 4.5 Allowed Reason Codes
 
@@ -148,18 +148,18 @@ Use only:
 
 ---
 
-## 5. Handoff: `module_impl -> module_verify`
+## 5. Handoff: `unit_impl -> unit_verify`
 
 ### 5.1 Minimum Upstream Artifacts
 
-`module_verify` minimally requires both:
+`unit_verify` minimally requires both:
 
 1. a current valid `_check_result/{module}.md`
 2. a current valid `_plans/active/{module}.md`
 
 ### 5.2 Required Re-Validation
 
-Before consumption, `module_verify` must re-validate:
+Before consumption, `unit_verify` must re-validate:
 
 1. all required gate bindings
 2. all required plan bindings
@@ -167,12 +167,12 @@ Before consumption, `module_verify` must re-validate:
 
 ### 5.3 Allowed Entry Condition
 
-`module_verify` may continue only when verification still targets the same candidate truth round that implementation used.
+`unit_verify` may continue only when verification still targets the same candidate truth round that implementation used.
 
 ### 5.4 Smallest Fallback
 
-If bindings drift, the smallest fallback is `module_check`.
-If candidate truth still stands but implementation diverged, the fallback is `module_impl`.
+If bindings drift, the smallest fallback is `unit_check`.
+If candidate truth still stands but implementation diverged, the fallback is `unit_impl`.
 
 ### 5.5 Allowed Reason Codes
 
@@ -189,34 +189,34 @@ Use only:
 
 ---
 
-## 6. Handoff: `module_verify -> module_promote`
+## 6. Handoff: `unit_verify -> unit_promote`
 
 ### 6.1 Minimum Upstream Artifact
 
-`module_promote` minimally requires a current valid `_verify_result/{module}.md`.
+`unit_promote` minimally requires a current valid `_verify_result/{module}.md`.
 
 ### 6.2 Required Re-Validation
 
-Before consumption, `module_promote` must re-validate:
+Before consumption, `unit_promote` must re-validate:
 
 1. `decision=pass`
 2. `allow_next=true`
-3. `next_command=module_promote`
+3. `next_command=unit_promote`
 4. current candidate file path, version ref, and fingerprint
-5. current `module_appendix_snapshot`
+5. current `unit_appendix_snapshot`
 6. current implementation still covered by `verification_scope_ref`
 7. current `system_constraints` binding fields
 8. current `shared_contract_snapshot`
 
 ### 6.3 Allowed Entry Condition
 
-`module_promote` may continue only when the verify result still covers current candidate truth, current implementation, and current baseline state together.
+`unit_promote` may continue only when the verify result still covers current candidate truth, current implementation, and current baseline state together.
 
 ### 6.4 Smallest Fallback
 
-If verification evidence is outdated or incomplete but candidate truth still stands, the smallest fallback is `module_verify`.
-If implementation no longer aligns with the candidate, the fallback is `module_impl`.
-If candidate truth or upstream bindings drifted, the fallback is `module_check`.
+If verification evidence is outdated or incomplete but candidate truth still stands, the smallest fallback is `unit_verify`.
+If implementation no longer aligns with the candidate, the fallback is `unit_impl`.
+If candidate truth or upstream bindings drifted, the fallback is `unit_check`.
 
 ### 6.5 Allowed Reason Codes
 

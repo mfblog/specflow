@@ -84,7 +84,7 @@ var requiredProcessSnapshotFields = map[string][]string{
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
-		"module_appendix_snapshot",
+		"unit_appendix_snapshot",
 		"system_constraints_stable_file_ref",
 		"system_constraints_stable_version_ref",
 		"system_constraints_stable_fingerprint",
@@ -94,7 +94,7 @@ var requiredProcessSnapshotFields = map[string][]string{
 		"spec_file_ref",
 		"spec_version_ref",
 		"spec_fingerprint",
-		"module_appendix_snapshot",
+		"unit_appendix_snapshot",
 		"system_constraints_stable_file_ref",
 		"system_constraints_stable_version_ref",
 		"system_constraints_stable_fingerprint",
@@ -113,7 +113,7 @@ var requiredProcessSnapshotFields = map[string][]string{
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
-		"module_appendix_snapshot",
+		"unit_appendix_snapshot",
 		"verification_scope_ref",
 		"system_constraints_stable_file_ref",
 		"system_constraints_stable_version_ref",
@@ -225,12 +225,12 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 		compareScalar(&result, "spec_version_ref", actual.scalars["spec_version_ref"], expected.SpecVersionRef)
 		compareScalar(&result, "spec_fingerprint", actual.scalars["spec_fingerprint"], expected.SpecFingerprint)
 
-		if _, ok := actual.scalars["module_appendix_snapshot"]; ok || actual.appendixPresent {
+		if _, ok := actual.scalars["unit_appendix_snapshot"]; ok || actual.appendixPresent {
 			actualAppendix := normalizeAppendixList(actual.appendixEntries)
 			expectedAppendix := normalizeAppendixList(expected.ModuleAppendixSnapshot)
 			if actualAppendix != expectedAppendix {
 				result.Valid = false
-				result.Mismatches = append(result.Mismatches, fmt.Sprintf("module_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
 			}
 		}
 		if _, ok := actual.scalars["shared_contract_snapshot"]; ok || actual.sharedPresent {
@@ -251,7 +251,7 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 	if err != nil {
 		return ValidationResult{}, err
 	}
-	compareScalar(&result, "object_type", actual.scalars["object_type"], "module")
+	compareScalar(&result, "object_type", actual.scalars["object_type"], "unit")
 	compareScalar(&result, "object_ref", actual.scalars["object_ref"], expected.Module)
 	compareScalar(&result, "gate", actual.scalars["gate"], expectedGate)
 	compareScalar(&result, "decision", actual.scalars["decision"], "pass")
@@ -265,12 +265,12 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 	compareScalar(&result, "system_constraints_stable_version_ref", actual.scalars["system_constraints_stable_version_ref"], expected.SystemConstraintsStableVersionRef)
 	compareScalar(&result, "system_constraints_stable_fingerprint", actual.scalars["system_constraints_stable_fingerprint"], expected.SystemConstraintsStableFingerprint)
 
-	if _, ok := actual.scalars["module_appendix_snapshot"]; ok || actual.appendixPresent {
+	if _, ok := actual.scalars["unit_appendix_snapshot"]; ok || actual.appendixPresent {
 		actualAppendix := normalizeAppendixList(actual.appendixEntries)
 		expectedAppendix := normalizeAppendixList(expected.ModuleAppendixSnapshot)
 		if actualAppendix != expectedAppendix {
 			result.Valid = false
-			result.Mismatches = append(result.Mismatches, fmt.Sprintf("module_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
 		}
 	}
 	if _, ok := actual.scalars["shared_contract_snapshot"]; ok || actual.sharedPresent {
@@ -288,11 +288,11 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 func expectedModuleProcessRouting(processKind string) (string, string, error) {
 	switch processKind {
 	case "check":
-		return "module_check", "module_plan", nil
+		return "unit_check", "unit_plan", nil
 	case "plan":
-		return "module_plan", "module_impl", nil
+		return "unit_plan", "unit_impl", nil
 	case "verify":
-		return "module_verify", "module_promote", nil
+		return "unit_verify", "unit_promote", nil
 	default:
 		return "", "", fmt.Errorf("unsupported process kind %q", processKind)
 	}
@@ -332,7 +332,7 @@ func LoadProcessSnapshot(repoRoot, module, processKind string) (ProcessSnapshotD
 
 func Render(snapshot Snapshot) string {
 	lines := []string{
-		"object_type: module",
+		"object_type: unit",
 		fmt.Sprintf("object_ref: %s", snapshot.Module),
 		fmt.Sprintf("truth_layer_ref: %s", snapshot.TruthLayerRef),
 		fmt.Sprintf("truth_file_ref: %s", snapshot.SpecFileRef),
@@ -341,7 +341,7 @@ func Render(snapshot Snapshot) string {
 		fmt.Sprintf("system_constraints_stable_file_ref: %s", snapshot.SystemConstraintsStableFileRef),
 		fmt.Sprintf("system_constraints_stable_version_ref: %s", snapshot.SystemConstraintsStableVersionRef),
 		fmt.Sprintf("system_constraints_stable_fingerprint: %s", snapshot.SystemConstraintsStableFingerprint),
-		"module_appendix_snapshot:",
+		"unit_appendix_snapshot:",
 	}
 	lines = append(lines, renderAppendixLines(snapshot.ModuleAppendixSnapshot)...)
 	lines = append(lines, "shared_contract_snapshot:")
@@ -402,7 +402,7 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 		if layer := strings.TrimSpace(frontmatter["layer"]); layer != "" && layer != currentLayer {
 			return nil, fmt.Errorf("%s: appendix layer %q does not match main spec layer %q", relPath, layer, currentLayer)
 		}
-		if module := strings.TrimSpace(frontmatter["module"]); module != "" && module != currentModule {
+		if module := strings.TrimSpace(frontmatter["unit"]); module != "" && module != currentModule {
 			return nil, fmt.Errorf("%s: appendix module %q does not match main spec module %q", relPath, module, currentModule)
 		}
 		appendixPrefix := strings.TrimSuffix(filepath.Base(relPath), ".md")
@@ -656,8 +656,10 @@ func mainSpecLayer(mainSpecRef string) string {
 func mainSpecModule(mainSpecRef string) (string, error) {
 	base := strings.TrimSuffix(filepath.Base(mainSpecRef), ".md")
 	switch {
-	case strings.HasPrefix(base, "c_"), strings.HasPrefix(base, "s_"):
-		return base[2:], nil
+	case strings.HasPrefix(base, "c_unit_"):
+		return strings.TrimPrefix(base, "c_unit_"), nil
+	case strings.HasPrefix(base, "s_unit_"):
+		return strings.TrimPrefix(base, "s_unit_"), nil
 	default:
 		return "", fmt.Errorf("unsupported main spec file ref %q", mainSpecRef)
 	}
@@ -704,13 +706,13 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 			result.presentFields[key] = true
 			if value == "" {
 				switch key {
-				case "module_appendix_snapshot":
+				case "unit_appendix_snapshot":
 					result.appendixPresent = true
 					currentList = key
-				case "module_snapshot":
+				case "unit_snapshot":
 					result.modulePresent = true
 					currentList = key
-				case "flow_snapshot":
+				case "scenario_snapshot":
 					result.flowPresent = true
 					currentList = key
 				case "shared_contract_snapshot":
@@ -729,20 +731,20 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 				continue
 			}
 			switch currentList {
-			case "module_appendix_snapshot":
+			case "unit_appendix_snapshot":
 				if currentIndex < 0 || key == "file_ref" {
 					result.appendixEntries = append(result.appendixEntries, AppendixEntry{})
 					currentIndex = len(result.appendixEntries) - 1
 				}
 				assignAppendixField(&result.appendixEntries[currentIndex], key, value)
-			case "module_snapshot":
-				if currentIndex < 0 || key == "module" {
+			case "unit_snapshot":
+				if currentIndex < 0 || key == "unit" {
 					result.moduleEntries = append(result.moduleEntries, ObjectSnapshotEntry{})
 					currentIndex = len(result.moduleEntries) - 1
 				}
 				assignObjectSnapshotField(&result.moduleEntries[currentIndex], key, value)
-			case "flow_snapshot":
-				if currentIndex < 0 || key == "flow" {
+			case "scenario_snapshot":
+				if currentIndex < 0 || key == "scenario" {
 					result.flowEntries = append(result.flowEntries, ObjectSnapshotEntry{})
 					currentIndex = len(result.flowEntries) - 1
 				}
@@ -763,11 +765,11 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 				continue
 			}
 			switch currentList {
-			case "module_appendix_snapshot":
+			case "unit_appendix_snapshot":
 				assignAppendixField(&result.appendixEntries[currentIndex], key, value)
-			case "module_snapshot":
+			case "unit_snapshot":
 				assignObjectSnapshotField(&result.moduleEntries[currentIndex], key, value)
-			case "flow_snapshot":
+			case "scenario_snapshot":
 				assignObjectSnapshotField(&result.flowEntries[currentIndex], key, value)
 			case "shared_contract_snapshot":
 				assignSharedField(&result.sharedEntries[currentIndex], key, value)
@@ -775,15 +777,15 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 		}
 	}
 
-	if raw, ok := result.scalars["module_appendix_snapshot"]; ok && raw == "none" {
+	if raw, ok := result.scalars["unit_appendix_snapshot"]; ok && raw == "none" {
 		result.appendixPresent = true
 		result.appendixEntries = nil
 	}
-	if raw, ok := result.scalars["module_snapshot"]; ok && raw == "none" {
+	if raw, ok := result.scalars["unit_snapshot"]; ok && raw == "none" {
 		result.modulePresent = true
 		result.moduleEntries = nil
 	}
-	if raw, ok := result.scalars["flow_snapshot"]; ok && raw == "none" {
+	if raw, ok := result.scalars["scenario_snapshot"]; ok && raw == "none" {
 		result.flowPresent = true
 		result.flowEntries = nil
 	}
@@ -855,7 +857,7 @@ func assignSharedField(entry *SharedContractEntry, key, value string) {
 
 func assignObjectSnapshotField(entry *ObjectSnapshotEntry, key, value string) {
 	switch key {
-	case "module", "flow":
+	case "unit", "scenario":
 		entry.ObjectRef = value
 	case "layer":
 		entry.Layer = value

@@ -28,7 +28,7 @@ func ResolveRef(repoRoot, moduleLayer, ref string) (ResolvedRef, error) {
 		return ResolvedRef{}, err
 	}
 	if moduleLayer == "stable" && layer != "stable" {
-		return ResolvedRef{}, fmt.Errorf("stable-layer module binding must use an s_ shared ref, got %q", versionRef)
+		return ResolvedRef{}, fmt.Errorf("stable-layer unit binding must use an s_ shared ref, got %q", versionRef)
 	}
 
 	fileRef := sharedFileRef(prefix, layer)

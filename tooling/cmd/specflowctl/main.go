@@ -322,7 +322,7 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("process cleanup-fallback", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		module := fs.String("module", "", "formal module name")
+		module := fs.String("unit", "", "formal unit name")
 		fromCommand := fs.String("from-command", "", "origin command")
 		reason := fs.String("reason", "", "fallback reason code")
 		if err := fs.Parse(args[1:]); err != nil {
@@ -330,7 +330,7 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		}
 		if strings.TrimSpace(*module) == "" || strings.TrimSpace(*fromCommand) == "" || strings.TrimSpace(*reason) == "" {
 			writeProcessUsage(stderr)
-			return errors.New("module, from-command, and reason are required")
+			return errors.New("unit, from-command, and reason are required")
 		}
 
 		result, err := processcleanup.ApplyFallback(mustAbs(*repoRoot), *module, *fromCommand, *reason)
@@ -350,14 +350,14 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("process cleanup-success", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		module := fs.String("module", "", "formal module name")
+		module := fs.String("unit", "", "formal unit name")
 		mode := fs.String("mode", "", "success cleanup mode")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 		if strings.TrimSpace(*module) == "" || strings.TrimSpace(*mode) == "" {
 			writeProcessUsage(stderr)
-			return errors.New("module and mode are required")
+			return errors.New("unit and mode are required")
 		}
 
 		result, err := processcleanup.ApplySuccessCleanup(mustAbs(*repoRoot), *module, *mode)
@@ -389,12 +389,12 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("shared sync-impact", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		modules := fs.String("modules", "", "comma-separated formal modules")
+		modules := fs.String("units", "", "comma-separated formal units")
 		sharedRefs := fs.String("shared-refs", "", "comma-separated shared version refs")
 		sharedIDs := fs.String("shared-ids", "", "comma-separated shared contract ids")
-		stableLandingModule := fs.String("stable-landing-module", "", "formal module whose same-round stable landing should not invalidate itself")
+		stableLandingUnit := fs.String("stable-landing-unit", "", "formal unit whose same-round stable landing should not invalidate itself")
 		stableLandingSharedRefs := fs.String("stable-landing-shared-refs", "", "comma-separated exact shared refs written by the same-round stable landing")
-		boundModulesOnlySharedFileRefs := fs.String("bound-modules-only-shared-file-refs", "", "comma-separated shared file refs proven to be bound_modules-only deltas")
+		boundObjectsOnlySharedFileRefs := fs.String("bound-objects-only-shared-file-refs", "", "comma-separated shared file refs proven to be bound_objects-only deltas")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -403,23 +403,23 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 			Modules:                        parseCSV(*modules),
 			SharedRefs:                     parseCSV(*sharedRefs),
 			SharedIDs:                      parseCSV(*sharedIDs),
-			StableLandingModule:            strings.TrimSpace(*stableLandingModule),
+			StableLandingModule:            strings.TrimSpace(*stableLandingUnit),
 			StableLandingSharedRefs:        parseCSV(*stableLandingSharedRefs),
-			BoundModulesOnlySharedFileRefs: parseCSV(*boundModulesOnlySharedFileRefs),
+			BoundObjectsOnlySharedFileRefs: parseCSV(*boundObjectsOnlySharedFileRefs),
 		})
 		if err != nil {
 			return err
 		}
 
-		writeList(stdout, "Scoped modules", result.ScopedModules)
-		writeList(stdout, "Scoped flows", result.ScopedFlows)
+		writeList(stdout, "Scoped units", result.ScopedModules)
+		writeList(stdout, "Scoped scenarios", result.ScopedFlows)
 		writeList(stdout, "Scoped projects", result.ScopedProjects)
 		writeList(stdout, "Scoped shared refs", result.ScopedSharedRefs)
 		writeList(stdout, "Scoped shared ids", result.ScopedSharedIDs)
-		fmt.Fprintf(stdout, "Stable landing module: %s\n", noneIfEmpty(result.StableLandingModule))
+		fmt.Fprintf(stdout, "Stable landing unit: %s\n", noneIfEmpty(result.StableLandingModule))
 		writeList(stdout, "Stable landing shared refs", result.StableLandingSharedRefs)
-		writeList(stdout, "Bound-modules-only shared file refs", result.BoundModulesOnlySharedFileRefs)
-		fmt.Fprintf(stdout, "Module results (%d):\n", len(result.ModuleResults))
+		writeList(stdout, "Bound-objects-only shared file refs", result.BoundObjectsOnlySharedFileRefs)
+		fmt.Fprintf(stdout, "Unit results (%d):\n", len(result.ModuleResults))
 		if len(result.ModuleResults) == 0 {
 			fmt.Fprintln(stdout, "- none")
 		}
@@ -435,14 +435,14 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 				fmt.Fprintf(stdout, "  missing: %s\n", path)
 			}
 		}
-		fmt.Fprintf(stdout, "Bound-module drifts (%d):\n", len(result.BoundModuleDrifts))
-		if len(result.BoundModuleDrifts) == 0 {
+		fmt.Fprintf(stdout, "Bound-object drifts (%d):\n", len(result.BoundObjectDrifts))
+		if len(result.BoundObjectDrifts) == 0 {
 			fmt.Fprintln(stdout, "- none")
 		} else {
-			for _, drift := range result.BoundModuleDrifts {
-				fmt.Fprintf(stdout, "- %s | file=%s | version=%s | bound_modules_only_delta=%t\n", drift.SharedContractID, drift.FileRef, drift.VersionRef, drift.BoundModulesOnlyDelta)
-				fmt.Fprintf(stdout, "  declared=%s\n", strings.Join(defaultListValue(drift.DeclaredModules), ", "))
-				fmt.Fprintf(stdout, "  actual=%s\n", strings.Join(defaultListValue(drift.ActualModules), ", "))
+			for _, drift := range result.BoundObjectDrifts {
+				fmt.Fprintf(stdout, "- %s | file=%s | version=%s | bound_objects_only_delta=%t\n", drift.SharedContractID, drift.FileRef, drift.VersionRef, drift.BoundObjectsOnlyDelta)
+				fmt.Fprintf(stdout, "  declared=%s\n", strings.Join(defaultListValue(drift.DeclaredObjects), ", "))
+				fmt.Fprintf(stdout, "  actual=%s\n", strings.Join(defaultListValue(drift.ActualObjects), ", "))
 			}
 		}
 		fmt.Fprintf(stdout, "Flow results (%d):\n", len(result.FlowResults))
@@ -478,11 +478,11 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 			}
 		}
 		return nil
-	case "reconcile-bound-modules":
-		fs := flag.NewFlagSet("shared reconcile-bound-modules", flag.ContinueOnError)
+	case "reconcile-bound-objects":
+		fs := flag.NewFlagSet("shared reconcile-bound-objects", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		modules := fs.String("modules", "", "comma-separated formal modules")
+		modules := fs.String("units", "", "comma-separated formal units")
 		sharedRefs := fs.String("shared-refs", "", "comma-separated shared version refs")
 		sharedIDs := fs.String("shared-ids", "", "comma-separated shared contract ids")
 		if err := fs.Parse(args[1:]); err != nil {
@@ -498,7 +498,7 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 
-		writeList(stdout, "Scoped modules", result.ScopedModules)
+		writeList(stdout, "Scoped units", result.ScopedModules)
 		writeList(stdout, "Scoped shared refs", result.ScopedSharedRefs)
 		writeList(stdout, "Scoped shared ids", result.ScopedSharedIDs)
 		writeList(stdout, "Touched shared files", result.TouchedFiles)
@@ -525,13 +525,13 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("snapshot rebuild", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		module := fs.String("module", "", "formal module name")
+		module := fs.String("unit", "", "formal unit name")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 		if strings.TrimSpace(*module) == "" {
 			writeSnapshotUsage(stderr)
-			return errors.New("module is required")
+			return errors.New("unit is required")
 		}
 		result, err := snapshot.RebuildCurrent(mustAbs(*repoRoot), *module)
 		if err != nil {
@@ -543,14 +543,14 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("snapshot validate-process", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		module := fs.String("module", "", "formal module name")
+		module := fs.String("unit", "", "formal unit name")
 		processKind := fs.String("process", "", "check | plan | verify")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 		if strings.TrimSpace(*module) == "" || strings.TrimSpace(*processKind) == "" {
 			writeSnapshotUsage(stderr)
-			return errors.New("module and process are required")
+			return errors.New("unit and process are required")
 		}
 		result, err := snapshot.ValidateProcessFile(mustAbs(*repoRoot), *module, *processKind)
 		if err != nil {
@@ -631,11 +631,11 @@ func runStatus(args []string, stdout, stderr io.Writer) error {
 		fmt.Fprintf(stdout, "Next Command: %s\n", strings.TrimSpace(*nextCommand))
 		fmt.Fprintf(stdout, "Notes: %s\n", noneIfEmpty(strings.TrimSpace(*notes)))
 		return nil
-	case "set-module":
-		fs := flag.NewFlagSet("status set-module", flag.ContinueOnError)
+	case "set-unit":
+		fs := flag.NewFlagSet("status set-unit", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		module := fs.String("module", "", "formal module name")
+		module := fs.String("unit", "", "formal unit name")
 		stable := fs.String("stable", "", "yes | no")
 		candidate := fs.String("candidate", "", "yes | no")
 		activeLayer := fs.String("active-layer", "", "stable | candidate")
@@ -647,7 +647,7 @@ func runStatus(args []string, stdout, stderr io.Writer) error {
 		}
 		if strings.TrimSpace(*module) == "" || strings.TrimSpace(*stable) == "" || strings.TrimSpace(*candidate) == "" || strings.TrimSpace(*activeLayer) == "" || strings.TrimSpace(*nextCommand) == "" {
 			writeStatusUsage(stderr)
-			return errors.New("module, stable, candidate, active-layer, and next-command are required")
+			return errors.New("unit, stable, candidate, active-layer, and next-command are required")
 		}
 		if *stable != "yes" && *stable != "no" {
 			return fmt.Errorf("stable must be yes or no")
@@ -671,7 +671,7 @@ func runStatus(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 		fmt.Fprintf(stdout, "Status row upserted: %t\n", updated)
-		fmt.Fprintf(stdout, "Module: %s\n", strings.TrimSpace(*module))
+		fmt.Fprintf(stdout, "Unit: %s\n", strings.TrimSpace(*module))
 		fmt.Fprintf(stdout, "Stable: %s\n", strings.TrimSpace(*stable))
 		fmt.Fprintf(stdout, "Candidate: %s\n", strings.TrimSpace(*candidate))
 		fmt.Fprintf(stdout, "Active Layer: %s\n", strings.TrimSpace(*activeLayer))
@@ -723,26 +723,26 @@ func writeReviewUsage(w io.Writer) {
 
 func writeProcessUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl process cleanup-fallback --module MODULE --from-command COMMAND --reason CODE [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl process cleanup-success --module MODULE --mode module_fork|module_promote [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl process cleanup-fallback --unit UNIT --from-command COMMAND --reason CODE [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl process cleanup-success --unit UNIT --mode unit_fork|unit_promote [--repo-root PATH]")
 }
 
 func writeSharedUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl shared sync-impact (--shared-refs c_shared_x@0.1.0 | --shared-ids shared_x) [--modules module_a,module_b] [--stable-landing-module module_a --stable-landing-shared-refs s_shared_x@1.0.0] [--bound-modules-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_x.md] [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl shared reconcile-bound-modules [--modules module_a,module_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl shared sync-impact (--shared-refs c_shared_x@0.1.0 | --shared-ids shared_x) [--units unit_a,unit_b] [--stable-landing-unit unit_a --stable-landing-shared-refs s_shared_x@1.0.0] [--bound-objects-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_x.md] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl shared reconcile-bound-objects [--units unit_a,unit_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--repo-root PATH]")
 }
 
 func writeSnapshotUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl snapshot rebuild --module MODULE [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl snapshot validate-process --module MODULE --process check|plan|verify [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl snapshot rebuild --unit UNIT [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl snapshot validate-process --unit UNIT --process check|plan|verify [--repo-root PATH]")
 }
 
 func writeStatusUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl status set-object --type project|flow|module --object OBJECT --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl status set-module --module MODULE --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl status set-object --type project|scenario|unit --object OBJECT --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl status set-unit --unit UNIT --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
 }
 
 func writeList(w io.Writer, title string, items []string) {

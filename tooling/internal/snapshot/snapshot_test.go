@@ -14,20 +14,20 @@ func TestRebuildCurrentCollectsAppendixAndSharedSnapshot(t *testing.T) {
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/system/stable"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable"))
 
-	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `no` | `yes` | `candidate` | `module_check` | note |\n"
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 
 	mainSpec := `---
-id: module_demo
+id: demo
 layer: candidate
 version: 0.1.0
 ---
 
 # Demo
 
-See [appendix](./appendix/c_module_demo_prompt.md).
+See [appendix](./appendix/c_unit_demo_prompt.md).
 
 ## Global Constraint Alignment
 
@@ -35,28 +35,28 @@ See [appendix](./appendix/c_module_demo_prompt.md).
 2. ` + "`shared_contract_refs`:" + `
    - ` + "`c_shared_demo@0.2.0`" + `
 `
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), mainSpec)
 
 	appendix := `---
-module: module_demo
+unit: demo
 layer: candidate
-spec_version_ref: c_module_demo@0.1.0
+spec_version_ref: c_unit_demo@0.1.0
 ---
 
 # Appendix
 `
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_module_demo_prompt.md"), appendix)
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_demo_prompt.md"), appendix)
 
 	shared := `---
 shared_contract_id: shared_demo
 layer: candidate
 shared_version: 0.2.0
-bound_modules:
-  - module_demo
+bound_objects:
+  - unit:demo
 system_constraints_stable_ref: s_system_constraints@1.1.0
 ---
 
@@ -70,22 +70,22 @@ version: 1.1.0
 
 # System
 `
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system/stable/s_system_constraints.md"), system)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable/s_system_constraints.md"), system)
 
-	result, err := RebuildCurrent(repoRoot, "module_demo")
+	result, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 	if result.SpecFileRef != mainSpecRef {
 		t.Fatalf("unexpected spec file ref: %s", result.SpecFileRef)
 	}
-	if result.SpecVersionRef != "c_module_demo@0.1.0" {
+	if result.SpecVersionRef != "c_unit_demo@0.1.0" {
 		t.Fatalf("unexpected spec version ref: %s", result.SpecVersionRef)
 	}
 	if len(result.ModuleAppendixSnapshot) != 1 {
 		t.Fatalf("expected one appendix snapshot entry, got %d", len(result.ModuleAppendixSnapshot))
 	}
-	if result.ModuleAppendixSnapshot[0].AppendixRef != "c_module_demo_prompt@c_module_demo@0.1.0" {
+	if result.ModuleAppendixSnapshot[0].AppendixRef != "c_unit_demo_prompt@c_unit_demo@0.1.0" {
 		t.Fatalf("unexpected appendix ref: %s", result.ModuleAppendixSnapshot[0].AppendixRef)
 	}
 	if result.SystemConstraintsStableVersionRef != "s_system_constraints@1.1.0" {
@@ -104,20 +104,20 @@ func TestRebuildCurrentCollectsEquivalentAppendixSubdirAndPlainFieldNames(t *tes
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "support"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/system/stable"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable"))
 
-	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `no` | `yes` | `candidate` | `module_check` | note |\n"
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 
 	mainSpec := `---
-id: module_demo
+id: demo
 layer: candidate
 version: 0.1.0
 ---
 
 # Demo
 
-See [support](./support/c_module_demo_prompt.md).
+See [support](./support/c_unit_demo_prompt.md).
 
 ## Global Constraint Alignment
 
@@ -125,28 +125,28 @@ See [support](./support/c_module_demo_prompt.md).
 2. shared_contract_refs:
    - c_shared_demo@0.2.0
 `
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), mainSpec)
 
 	appendix := `---
-module: module_demo
+unit: demo
 layer: candidate
-spec_version_ref: c_module_demo@0.1.0
+spec_version_ref: c_unit_demo@0.1.0
 ---
 
 # Appendix
 `
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "support", "c_module_demo_prompt.md"), appendix)
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "support", "c_unit_demo_prompt.md"), appendix)
 
 	shared := `---
 shared_contract_id: shared_demo
 layer: candidate
 shared_version: 0.2.0
-bound_modules:
-  - module_demo
+bound_objects:
+  - unit:demo
 system_constraints_stable_ref: s_system_constraints@1.1.0
 ---
 
@@ -160,16 +160,16 @@ version: 1.1.0
 
 # System
 `
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system/stable/s_system_constraints.md"), system)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable/s_system_constraints.md"), system)
 
-	result, err := RebuildCurrent(repoRoot, "module_demo")
+	result, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 	if len(result.ModuleAppendixSnapshot) != 1 {
 		t.Fatalf("expected one appendix snapshot entry, got %d", len(result.ModuleAppendixSnapshot))
 	}
-	if result.ModuleAppendixSnapshot[0].FileRef != "docs/specs/modules/candidate/support/c_module_demo_prompt.md" {
+	if result.ModuleAppendixSnapshot[0].FileRef != "docs/specs/units/candidate/support/c_unit_demo_prompt.md" {
 		t.Fatalf("unexpected appendix file ref: %s", result.ModuleAppendixSnapshot[0].FileRef)
 	}
 	if len(result.SharedContractSnapshot) != 1 || result.SharedContractSnapshot[0].VersionRef != "c_shared_demo@0.2.0" {
@@ -186,15 +186,15 @@ func TestRebuildCurrentRejectsUnsortedSharedContractRefs(t *testing.T) {
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
 
-	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `no` | `yes` | `candidate` | `module_check` | note |\n"
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
-id: module_demo
+id: demo
 layer: candidate
 version: 0.1.0
 ---
@@ -212,8 +212,8 @@ version: 0.1.0
 shared_contract_id: shared_alpha
 layer: candidate
 shared_version: 0.1.0
-bound_modules:
-  - module_demo
+bound_objects:
+  - unit:demo
 ---
 
 # Shared Alpha
@@ -222,14 +222,14 @@ bound_modules:
 shared_contract_id: shared_zeta
 layer: candidate
 shared_version: 0.1.0
-bound_modules:
-  - module_demo
+bound_objects:
+  - unit:demo
 ---
 
 # Shared Zeta
 `)
 
-	_, err = RebuildCurrent(repoRoot, "module_demo")
+	_, err = RebuildCurrent(repoRoot, "demo")
 	if err == nil || !strings.Contains(err.Error(), "shared_contract_refs must be sorted") {
 		t.Fatalf("expected unsorted shared_contract_refs error, got %v", err)
 	}
@@ -240,22 +240,22 @@ func TestRebuildCurrentIgnoresRawAppendixPathLiteral(t *testing.T) {
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
 
-	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `no` | `yes` | `candidate` | `module_check` | note |\n"
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
-	id: module_demo
+	id: demo
 	layer: candidate
 	version: 0.1.0
 ---
 
 # Demo
 
-Use appendix path `+"`./appendix/c_module_demo_prompt.md`"+` for detailed prompts.
+Use appendix path `+"`./appendix/c_unit_demo_prompt.md`"+` for detailed prompts.
 
 ## Global Constraint Alignment
 
@@ -263,16 +263,16 @@ Use appendix path `+"`./appendix/c_module_demo_prompt.md`"+` for detailed prompt
 2. shared_contract_refs: none
 `)
 
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_module_demo_prompt.md"), `---
-module: module_demo
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_demo_prompt.md"), `---
+unit: demo
 layer: candidate
-spec_version_ref: c_module_demo@0.1.0
+spec_version_ref: c_unit_demo@0.1.0
 ---
 
 	# Appendix
 `)
 
-	result, err := RebuildCurrent(repoRoot, "module_demo")
+	result, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
@@ -286,22 +286,22 @@ func TestRebuildCurrentRejectsRootDirectoryAppendixDrift(t *testing.T) {
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
 
-	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `no` | `yes` | `candidate` | `module_check` | note |\n"
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
-id: module_demo
+id: demo
 layer: candidate
 version: 0.1.0
 ---
 
 # Demo
 
-See [support](./c_module_demo_prompt.md).
+See [support](./c_unit_demo_prompt.md).
 
 ## Global Constraint Alignment
 
@@ -309,16 +309,16 @@ See [support](./c_module_demo_prompt.md).
 2. shared_contract_refs: none
 `)
 
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "c_module_demo_prompt.md"), `---
-module: module_demo
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "c_unit_demo_prompt.md"), `---
+unit: demo
 layer: candidate
-spec_version_ref: c_module_demo@0.1.0
+spec_version_ref: c_unit_demo@0.1.0
 ---
 
 # Drift
 `)
 
-	_, err = RebuildCurrent(repoRoot, "module_demo")
+	_, err = RebuildCurrent(repoRoot, "demo")
 	if err == nil || !strings.Contains(err.Error(), "directory drift") {
 		t.Fatalf("expected directory drift error, got %v", err)
 	}
@@ -329,25 +329,25 @@ func TestValidateProcessFileRejectsMissingRequiredSnapshotField(t *testing.T) {
 	setupSnapshotValidationRepo(t, repoRoot)
 
 	writeCheckProcessFile(t, repoRoot, strings.Join([]string{
-		"object_type: module",
-		"object_ref: module_demo",
-		"gate: module_check",
+		"object_type: unit",
+		"object_ref: demo",
+		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: module_plan",
+		"next_command: unit_plan",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: candidate",
-		"truth_file_ref: docs/specs/modules/candidate/c_module_demo.md",
-		"truth_version_ref: c_module_demo@0.1.0",
-		"module_appendix_snapshot: none",
+		"truth_file_ref: docs/specs/units/candidate/c_unit_demo.md",
+		"truth_version_ref: c_unit_demo@0.1.0",
+		"unit_appendix_snapshot: none",
 		"system_constraints_stable_file_ref: none",
 		"system_constraints_stable_version_ref: none",
 		"system_constraints_stable_fingerprint: none",
 		"shared_contract_snapshot: none",
 	}, "\n"))
 
-	result, err := ValidateProcessFile(repoRoot, "module_demo", "check")
+	result, err := ValidateProcessFile(repoRoot, "demo", "check")
 	if err != nil {
 		t.Fatalf("ValidateProcessFile: %v", err)
 	}
@@ -363,14 +363,14 @@ func TestValidateProcessFileAcceptsExplicitNoneSnapshots(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
 
-	expected, err := RebuildCurrent(repoRoot, "module_demo")
+	expected, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 
 	writeCheckProcessFile(t, repoRoot, renderFormalCheckProcessBody(expected))
 
-	result, err := ValidateProcessFile(repoRoot, "module_demo", "check")
+	result, err := ValidateProcessFile(repoRoot, "demo", "check")
 	if err != nil {
 		t.Fatalf("ValidateProcessFile: %v", err)
 	}
@@ -383,19 +383,19 @@ func TestValidateProcessFileAcceptsSnapshotFieldsWithoutYAMLFence(t *testing.T) 
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
 
-	expected, err := RebuildCurrent(repoRoot, "module_demo")
+	expected, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_demo.md"), strings.Join([]string{
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/demo.md"), strings.Join([]string{
 		"# check",
 		"",
 		renderFormalCheckProcessBody(expected),
 		"",
 	}, "\n"))
 
-	result, err := ValidateProcessFile(repoRoot, "module_demo", "check")
+	result, err := ValidateProcessFile(repoRoot, "demo", "check")
 	if err != nil {
 		t.Fatalf("ValidateProcessFile: %v", err)
 	}
@@ -409,57 +409,57 @@ func TestValidateProcessFileAcceptsMarkdownBulletSnapshotFormat(t *testing.T) {
 	setupSnapshotValidationRepo(t, repoRoot)
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
 
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
-id: module_demo
+id: demo
 layer: candidate
 version: 0.1.0
 ---
 
 # Demo
 
-See [appendix](./appendix/c_module_demo_prompt.md).
+See [appendix](./appendix/c_unit_demo_prompt.md).
 
 ## Global Constraint Alignment
 
 1. system_constraints_stable_ref: none
 2. shared_contract_refs: none
 `)
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_module_demo_prompt.md"), `---
-module: module_demo
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_demo_prompt.md"), `---
+unit: demo
 layer: candidate
-spec_version_ref: c_module_demo@0.1.0
+spec_version_ref: c_unit_demo@0.1.0
 ---
 
 # Appendix
 `)
 
-	expected, err := RebuildCurrent(repoRoot, "module_demo")
+	expected, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_demo.md"), strings.Join([]string{
-		"# module_demo module_check snapshot",
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/demo.md"), strings.Join([]string{
+		"# demo unit_check snapshot",
 		"",
 		"## Check Result Snapshot",
 		"",
-		"- `object_type`: `module`",
+		"- `object_type`: `unit`",
 		"- `object_ref`: `" + expected.Module + "`",
-		"- `gate`: `module_check`",
+		"- `gate`: `unit_check`",
 		"- `decision`: `pass`",
 		"- `allow_next`: `true`",
-		"- `next_command`: `module_plan`",
+		"- `next_command`: `unit_plan`",
 		"- `blocking_summary`: `none`",
 		"- `coverage_summary`: `current candidate`",
 		"- `truth_layer_ref`: `" + expected.TruthLayerRef + "`",
 		"- `truth_file_ref`: `" + expected.SpecFileRef + "`",
 		"- `truth_version_ref`: `" + expected.SpecVersionRef + "`",
 		"- `truth_fingerprint`: `" + expected.SpecFingerprint + "`",
-		"- `module_appendix_snapshot`:",
+		"- `unit_appendix_snapshot`:",
 		"  - `file_ref`: `" + expected.ModuleAppendixSnapshot[0].FileRef + "`",
 		"  - `appendix_ref`: `" + expected.ModuleAppendixSnapshot[0].AppendixRef + "`",
 		"  - `fingerprint`: `" + expected.ModuleAppendixSnapshot[0].Fingerprint + "`",
@@ -470,7 +470,7 @@ spec_version_ref: c_module_demo@0.1.0
 		"",
 	}, "\n"))
 
-	result, err := ValidateProcessFile(repoRoot, "module_demo", "check")
+	result, err := ValidateProcessFile(repoRoot, "demo", "check")
 	if err != nil {
 		t.Fatalf("ValidateProcessFile: %v", err)
 	}
@@ -483,21 +483,21 @@ func TestValidateProcessFileRejectsUnexpectedGate(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
 
-	expected, err := RebuildCurrent(repoRoot, "module_demo")
+	expected, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 
-	writeCheckProcessFile(t, repoRoot, strings.Replace(renderFormalCheckProcessBody(expected), "gate: module_check", "gate: module_plan", 1))
+	writeCheckProcessFile(t, repoRoot, strings.Replace(renderFormalCheckProcessBody(expected), "gate: unit_check", "gate: unit_plan", 1))
 
-	result, err := ValidateProcessFile(repoRoot, "module_demo", "check")
+	result, err := ValidateProcessFile(repoRoot, "demo", "check")
 	if err != nil {
 		t.Fatalf("ValidateProcessFile: %v", err)
 	}
 	if result.Valid {
 		t.Fatalf("expected invalid result, got valid")
 	}
-	if !containsMismatch(result.Mismatches, "gate mismatch: actual=module_plan expected=module_check") {
+	if !containsMismatch(result.Mismatches, "gate mismatch: actual=unit_plan expected=unit_check") {
 		t.Fatalf("expected gate mismatch, got %+v", result.Mismatches)
 	}
 }
@@ -506,14 +506,14 @@ func TestValidateProcessFileAcceptsPlanSchemaWithoutGateFields(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
 
-	expected, err := RebuildCurrent(repoRoot, "module_demo")
+	expected, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/module_demo.md"), "# plan\n\n```yaml\n"+renderFormalPlanProcessBody(expected)+"\n```\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+renderFormalPlanProcessBody(expected)+"\n```\n")
 
-	result, err := ValidateProcessFile(repoRoot, "module_demo", "plan")
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
 	if err != nil {
 		t.Fatalf("ValidateProcessFile: %v", err)
 	}
@@ -526,12 +526,12 @@ func TestRebuildCurrentRejectsEmptySharedContractRefsList(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
 
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
-id: module_demo
+id: demo
 layer: candidate
 version: 0.1.0
 ---
@@ -544,7 +544,7 @@ version: 0.1.0
 2. shared_contract_refs:
 `)
 
-	_, err = RebuildCurrent(repoRoot, "module_demo")
+	_, err = RebuildCurrent(repoRoot, "demo")
 	if err == nil || !strings.Contains(err.Error(), "must not be an empty list") {
 		t.Fatalf("expected empty-list error, got %v", err)
 	}
@@ -555,12 +555,12 @@ func TestRebuildCurrentRejectsDuplicateSharedContractRefs(t *testing.T) {
 	setupSnapshotValidationRepo(t, repoRoot)
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
 
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
-id: module_demo
+id: demo
 layer: candidate
 version: 0.1.0
 ---
@@ -578,14 +578,14 @@ version: 0.1.0
 shared_contract_id: shared_demo
 layer: candidate
 shared_version: 0.1.0
-bound_modules:
-  - module_demo
+bound_objects:
+  - unit:demo
 ---
 
 # Shared
 `)
 
-	_, err = RebuildCurrent(repoRoot, "module_demo")
+	_, err = RebuildCurrent(repoRoot, "demo")
 	if err == nil || !strings.Contains(err.Error(), "duplicate item") {
 		t.Fatalf("expected duplicate-item error, got %v", err)
 	}
@@ -596,12 +596,12 @@ func TestRebuildCurrentRejectsSharedVersionMismatch(t *testing.T) {
 	setupSnapshotValidationRepo(t, repoRoot)
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
 
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
-id: module_demo
+id: demo
 layer: candidate
 version: 0.1.0
 ---
@@ -618,14 +618,14 @@ version: 0.1.0
 shared_contract_id: shared_demo
 layer: candidate
 shared_version: 0.2.0
-bound_modules:
-  - module_demo
+bound_objects:
+  - unit:demo
 ---
 
 # Shared
 `)
 
-	_, err = RebuildCurrent(repoRoot, "module_demo")
+	_, err = RebuildCurrent(repoRoot, "demo")
 	if err == nil || !strings.Contains(err.Error(), "does not match frontmatter shared_version") {
 		t.Fatalf("expected shared-version mismatch error, got %v", err)
 	}
@@ -637,15 +637,15 @@ func TestRebuildCurrentRejectsStableModuleBindingCandidateShared(t *testing.T) {
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir)))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
 
-	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `yes` | `no` | `stable` | `module_fork` | note |\n"
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | note |\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 
-	mainSpecRef, err := specpaths.MainSpecFileRef("stable", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("stable", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
-id: module_demo
+id: demo
 layer: stable
 version: 1.0.0
 ---
@@ -662,15 +662,15 @@ version: 1.0.0
 shared_contract_id: shared_demo
 layer: candidate
 shared_version: 0.1.0
-bound_modules:
-  - module_demo
+bound_objects:
+  - unit:demo
 ---
 
 # Shared
 `)
 
-	_, err = RebuildCurrent(repoRoot, "module_demo")
-	if err == nil || !strings.Contains(err.Error(), "stable-layer module binding must use an s_ shared ref") {
+	_, err = RebuildCurrent(repoRoot, "demo")
+	if err == nil || !strings.Contains(err.Error(), "stable-layer unit binding must use an s_ shared ref") {
 		t.Fatalf("expected stable-layer binding error, got %v", err)
 	}
 }
@@ -678,7 +678,7 @@ bound_modules:
 func TestRebuildCurrentRespectsExplicitNoneSystemConstraintsBinding(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/system/stable"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable"))
 
 	system := `---
 version: 1.1.0
@@ -686,9 +686,9 @@ version: 1.1.0
 
 # System
 `
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system/stable/s_system_constraints.md"), system)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable/s_system_constraints.md"), system)
 
-	result, err := RebuildCurrent(repoRoot, "module_demo")
+	result, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
@@ -711,11 +711,11 @@ func setupSnapshotValidationRepo(t *testing.T, repoRoot string) {
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/active"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/draft"))
 
-	status := "# Spec Status\n\n## Formal Modules\n\n| Module | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|\n| `module_demo` | `no` | `yes` | `candidate` | `module_check` | note |\n"
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 
 	mainSpec := `---
-id: module_demo
+id: demo
 layer: candidate
 version: 0.1.0
 ---
@@ -727,7 +727,7 @@ version: 0.1.0
 1. system_constraints_stable_ref: none
 2. shared_contract_refs: none
 `
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
@@ -737,24 +737,24 @@ version: 0.1.0
 func writeCheckProcessFile(t *testing.T, repoRoot, yamlBody string) {
 	t.Helper()
 	content := "# check\n\n```yaml\n" + yamlBody + "\n```\n"
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_demo.md"), content)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/demo.md"), content)
 }
 
 func renderFormalCheckProcessBody(expected Snapshot) string {
 	return strings.Join([]string{
-		"object_type: module",
+		"object_type: unit",
 		"object_ref: " + expected.Module,
-		"gate: module_check",
+		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: module_plan",
+		"next_command: unit_plan",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: " + expected.TruthLayerRef,
 		"truth_file_ref: " + expected.SpecFileRef,
 		"truth_version_ref: " + expected.SpecVersionRef,
 		"truth_fingerprint: " + expected.SpecFingerprint,
-		"module_appendix_snapshot: none",
+		"unit_appendix_snapshot: none",
 		"system_constraints_stable_file_ref: none",
 		"system_constraints_stable_version_ref: none",
 		"system_constraints_stable_fingerprint: none",
@@ -767,7 +767,7 @@ func renderFormalPlanProcessBody(expected Snapshot) string {
 		"spec_file_ref: " + expected.SpecFileRef,
 		"spec_version_ref: " + expected.SpecVersionRef,
 		"spec_fingerprint: " + expected.SpecFingerprint,
-		"module_appendix_snapshot: none",
+		"unit_appendix_snapshot: none",
 		"system_constraints_stable_file_ref: none",
 		"system_constraints_stable_version_ref: none",
 		"system_constraints_stable_fingerprint: none",

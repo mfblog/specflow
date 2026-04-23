@@ -4,6 +4,6 @@
   <rect width="1200" height="220" fill="white"/>
   <text x="600" y="78" text-anchor="middle" fill="#111827" font-size="58" font-family="Segoe UI, Arial, sans-serif" font-weight="800" letter-spacing="-1.4">SpecFlow</text>
   <text x="600" y="125" text-anchor="middle" fill="#1F2937" font-size="28" font-family="Segoe UI, Arial, sans-serif" font-weight="700">Code is cheap, show me your design.</text>
-  <text x="600" y="167" text-anchor="middle" fill="#374151" font-size="22" font-family="Segoe UI, Arial, sans-serif" font-weight="600">A module-oriented governance layer for teams shipping through agentic runtimes.</text>
+  <text x="600" y="167" text-anchor="middle" fill="#374151" font-size="22" font-family="Segoe UI, Arial, sans-serif" font-weight="600">A unit-governed governance layer for teams shipping through agentic runtimes.</text>
   <text x="600" y="198" text-anchor="middle" fill="#6B7280" font-size="18" font-family="Georgia, Times New Roman, serif" font-style="italic">Design first. Code second. Verify before promotion.</text>
 </svg>

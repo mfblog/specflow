@@ -60,19 +60,19 @@ For shared-change reconciliation, the current mechanical entry remains `shared s
 10. `snapshot validate-process`
    - compare one process file against rebuilt current truth
 11. `process cleanup-fallback`
-   - execute deterministic module fallback cleanup
+   - execute deterministic unit fallback cleanup
 12. `process cleanup-success`
-   - execute deterministic module success cleanup
-13. `status set-module`
-   - write one legacy module row in `_status.md`
+   - execute deterministic unit success cleanup
+13. `status set-unit`
+   - write one deterministic `unit` row in `_status.md`
 14. `status set-object`
    - write one unified object row in `_status.md`
 15. `shared sync-impact`
    - compute shared-specific scope, resolve shared-only exceptions into generic impact input, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
-   - when stable landing self-exemption is needed, the caller must pass both `--stable-landing-module` and exact `--stable-landing-shared-refs`
-   - the caller may narrow the derived module subset with `--modules`, but at least one shared trigger input must still be provided through `--shared-refs` or `--shared-ids`
-16. `shared reconcile-bound-modules`
-   - rewrite Shared Contract `bound_modules` metadata from current formal bindings
+   - when stable landing self-exemption is needed, the caller must pass both `--stable-landing-unit` and exact `--stable-landing-shared-refs`
+   - the caller may narrow the derived unit subset with `--units`, but at least one shared trigger input must still be provided through `--shared-refs` or `--shared-ids`
+16. `shared reconcile-bound-objects`
+   - rewrite Shared Contract `bound_objects` metadata from current formal bindings
 
 ## Unified Status Table
 
@@ -89,7 +89,7 @@ For shared-change reconciliation, the current mechanical entry remains `shared s
 Rules:
 
 1. `status set-object` is the primary write surface for the unified table
-2. `status set-module` remains available for module-scoped deterministic writeback
+2. `status set-unit` remains available for unit-scoped deterministic writeback
 3. tooling must not infer the next command; callers must pass it explicitly
 
 ## Usage Examples
@@ -110,11 +110,11 @@ Examples:
 ```bash
 ./specflow/tooling/bin/specflowctl-linux-amd64 doctor
 ./specflow/tooling/bin/specflowctl-linux-amd64 review collect-default-scope
-./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --module module_ai
-./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --module module_ai --from-command module_promote --reason evidence_incomplete
-./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type flow --object flow_task_execution --stable yes --candidate no --active-layer stable --next-command flow_fork
-./specflow/tooling/bin/specflowctl-linux-amd64 shared sync-impact --shared-refs c_shared_app_config_topology@0.2.0 --modules module_ai
-./specflow/tooling/bin/specflowctl-linux-amd64 shared reconcile-bound-modules --shared-ids shared_app_config_topology
+./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --unit ai
+./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --unit ai --from-command unit_promote --reason evidence_incomplete
+./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type scenario --object task_execution --stable yes --candidate no --active-layer stable --next-command scenario_fork
+./specflow/tooling/bin/specflowctl-linux-amd64 shared sync-impact --shared-refs c_shared_app_config_topology@0.2.0 --units ai
+./specflow/tooling/bin/specflowctl-linux-amd64 shared reconcile-bound-objects --shared-ids shared_app_config_topology
 ```
 
 ## Freshness Rule

@@ -20,12 +20,12 @@ It defines the shared repository-restoration baseline.
 This policy covers:
 
 1. candidate-side recovery for:
-   - `module`
-   - `flow`
+   - `unit`
+   - `scenario`
    - `project`
 2. incomplete promotion recovery for:
-   - `module_promote`
-   - `flow_promote`
+   - `unit_promote`
+   - `scenario_promote`
    - `project_promote`
 
 Boundary:
@@ -69,18 +69,18 @@ For candidate-side invalidation:
 
 Default candidate fallback targets:
 
-1. invalid `module` candidate -> `module_check`
-2. invalid `flow` candidate -> `flow_check`
+1. invalid `unit` candidate -> `unit_check`
+2. invalid `scenario` candidate -> `scenario_check`
 3. invalid `project` candidate -> `project_check`
 
 Default candidate cleanup map:
 
-1. `module -> module_check`
+1. `module -> unit_check`
    - delete `_check_result/{module}.md`
    - delete `_plans/draft/{module}.md`
    - delete `_plans/active/{module}.md`
    - delete `_verify_result/{module}.md`
-2. `flow -> flow_check`
+2. `flow -> scenario_check`
    - delete `_check_result/{flow}.md`
    - delete `_verify_result/{flow}.md`
 3. `project -> project_check`
@@ -101,8 +101,8 @@ For stable-side invalidation:
 
 Default stable fallback targets:
 
-1. invalid `module` stable -> `module_stable_verify`
-2. invalid `flow` stable -> `flow_stable_verify`
+1. invalid `unit` stable -> `unit_stable_verify`
+2. invalid `scenario` stable -> `scenario_stable_verify`
 3. invalid `project` stable -> `project_stable_verify`
 
 ## 6. Incomplete Promotion Recovery
@@ -121,16 +121,16 @@ At minimum:
 
 Object-specific minimums:
 
-1. `module_promote`
-   - `docs/specs/modules/candidate/c_{module}.md`
-   - `docs/specs/modules/stable/s_{module}.md` when present
+1. `unit_promote`
+   - `docs/specs/units/candidate/c_unit_{unit}.md`
+   - `docs/specs/units/stable/s_unit_{unit}.md` when present
    - `_check_result/{module}.md`
    - `_plans/draft/{module}.md`
    - `_plans/active/{module}.md`
    - `_verify_result/{module}.md`
-2. `flow_promote`
-   - `docs/specs/flows/candidate/c_{flow}.md`
-   - `docs/specs/flows/stable/s_{flow}.md` when present
+2. `scenario_promote`
+   - `docs/specs/scenarios/candidate/c_{flow}.md`
+   - `docs/specs/scenarios/stable/s_{flow}.md` when present
    - `_check_result/{flow}.md`
    - `_verify_result/{flow}.md`
 3. `project_promote`
@@ -170,8 +170,8 @@ When incomplete promotion recovery is triggered:
    - keep `Candidate=yes`
    - keep `Active Layer=candidate`
    - set the smallest restart step to:
-     - `module -> module_check`
-     - `flow -> flow_check`
+     - `module -> unit_check`
+     - `flow -> scenario_check`
      - `project -> project_check`
 5. keep `Stable=yes|no` consistent with the pre-round state from the recovery baseline
 6. after repository restoration, delete candidate-side process files for that target object because they are no longer safe for reuse

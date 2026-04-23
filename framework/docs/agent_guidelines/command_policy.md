@@ -7,7 +7,7 @@ This file defines how formal commands work in this repository.
 It answers five questions:
 
 1. what a command is
-2. which formal object families commands operate on
+2. which object families commands operate on
 3. which commands are standard lifecycle commands
 4. which objects are not command targets
 5. which shared gate rules every command must follow
@@ -25,16 +25,16 @@ In plain words:
 
 This repository has three command-target object families:
 
-1. `module`
-2. `flow`
+1. `unit`
+2. `scenario`
 3. `project`
 
 Shared notes:
 
 1. all three families write state into `docs/specs/_status.md`
-2. all three families may use `stable` and `candidate` layers
-3. only `module` owns direct implementation responsibility
-4. `flow` and `project` are command targets, but they are not modules
+2. all three families may use `stable` and `candidate`
+3. only `unit` owns direct implementation responsibility
+4. `scenario` and `project` are command targets, but neither is a unit
 
 Non-command objects:
 
@@ -46,16 +46,16 @@ Non-command objects:
 
 This repository uses three user-facing command shapes:
 
-1. `module` command form:
+1. `unit` command form:
 
 ```text
-{command}:{module}
+{command}:{unit}
 ```
 
-2. `flow` command form:
+2. `scenario` command form:
 
 ```text
-{command}:{flow}
+{command}:{scenario}
 ```
 
 3. `project` command form:
@@ -73,26 +73,26 @@ Additional rules:
 
 ## 5. Standard Commands
 
-### 5.1 Module Commands
+### 5.1 Unit Commands
 
-1. `module_init:{module}`
-2. `module_stable_verify:{module}`
-3. `module_new:{module}`
-4. `module_fork:{module}`
-5. `module_check:{module}`
-6. `module_plan:{module}`
-7. `module_impl:{module}`
-8. `module_verify:{module}`
-9. `module_promote:{module}`
+1. `unit_init:{unit}`
+2. `unit_stable_verify:{unit}`
+3. `unit_new:{unit}`
+4. `unit_fork:{unit}`
+5. `unit_check:{unit}`
+6. `unit_plan:{unit}`
+7. `unit_impl:{unit}`
+8. `unit_verify:{unit}`
+9. `unit_promote:{unit}`
 
-### 5.2 Flow Commands
+### 5.2 Scenario Commands
 
-1. `flow_new:{flow}`
-2. `flow_stable_verify:{flow}`
-3. `flow_fork:{flow}`
-4. `flow_check:{flow}`
-5. `flow_verify:{flow}`
-6. `flow_promote:{flow}`
+1. `scenario_new:{scenario}`
+2. `scenario_stable_verify:{scenario}`
+3. `scenario_fork:{scenario}`
+4. `scenario_check:{scenario}`
+5. `scenario_verify:{scenario}`
+6. `scenario_promote:{scenario}`
 
 ### 5.3 Project Commands
 
@@ -120,66 +120,69 @@ Rules:
 
 ## 6. Responsibilities By Family
 
-### 6.1 Module
+### 6.1 Unit
 
-`module` commands own:
+`unit` commands own:
 
-1. module truth authoring
+1. unit truth authoring
 2. implementation planning
 3. implementation work
 4. implementation verification
-5. promotion into module stable truth
+5. promotion into stable unit truth
 
-### 6.2 Flow
+### 6.2 Scenario
 
-`flow` commands own:
+`scenario` commands own:
 
-1. business-chain truth authoring
-2. business-chain closure
-3. business-chain verification
-4. promotion into stable flow truth
+1. trigger-to-outcome chain truth authoring
+2. chain closure
+3. end-to-end verification
+4. promotion into stable scenario truth
 
-`flow` commands do not own:
+`scenario` commands do not own:
 
 1. implementation planning
 2. implementation editing
+3. unit-local repair
 
 ### 6.3 Project
 
 `project` commands own:
 
-1. project-topology truth authoring
-2. project-topology closure
-3. project-topology verification
-4. promotion into stable project truth
+1. governed-unit definition
+2. support-surface rules
+3. topology mapping
+4. current formal object-graph closure
+5. verification and promotion of project truth
 
 `project` commands do not own:
 
 1. implementation planning
 2. implementation editing
+3. unit-local behavior authoring
 
 ## 7. Default Lifecycle Order
 
-### 7.1 Module
+### 7.1 Unit
 
-1. `module_init`
-2. `module_stable_verify`
-3. `module_fork`
-4. `module_new`
-5. `module_check`
-6. `module_plan`
-7. `module_impl`
-8. `module_verify`
-9. `module_promote`
+1. `unit_init`
+2. `unit_stable_verify`
+3. `unit_fork`
+4. `unit_new`
+5. `unit_check`
+6. `unit_plan`
+7. `unit_impl`
+8. `unit_verify`
+9. `unit_promote`
 
-### 7.2 Flow
+### 7.2 Scenario
 
-1. `flow_new`
-2. `flow_stable_verify`
-3. `flow_fork`
-4. `flow_check`
-5. `flow_verify`
-6. `flow_promote`
+1. `scenario_new`
+2. `scenario_stable_verify`
+3. `scenario_fork`
+4. `scenario_check`
+5. `scenario_verify`
+6. `scenario_promote`
 
 ### 7.3 Project
 
@@ -200,7 +203,7 @@ These rules apply by default to every command family:
 3. a formal pass gate, formal verification pass, or lifecycle-state advance may be produced only by a new independent full-scope run of the corresponding command
 4. after a command ends with any non-pass result other than a resumable checkpoint explicitly allowed by that command file, later repair or scoped recheck is non-authoritative for lifecycle progression
 5. checkpoints are structured stops inside a command, not second lifecycles
-6. `shared_contract` and `system_constraints` are always upstream inputs, never the primary output of `flow` or `project` commands
+6. `shared_contract` and `system_constraints` are always upstream inputs, never the primary output of `scenario` or `project` commands
 
 ### 8.1 Binding Drift
 
@@ -208,8 +211,8 @@ Candidate-side process files become invalid when any current required binding ch
 
 At minimum:
 
-1. `module` candidate process files fall back to `module_check`
-2. `flow` candidate process files fall back to `flow_check`
+1. `unit` candidate process files fall back to `unit_check`
+2. `scenario` candidate process files fall back to `scenario_check`
 3. `project` candidate process files fall back to `project_check`
 
 ### 8.2 Stable Drift
@@ -218,15 +221,15 @@ Stable-layer alignment claims become invalid when any current required binding c
 
 At minimum:
 
-1. `module` stable alignment falls back to `module_stable_verify`
-2. `flow` stable alignment falls back to `flow_stable_verify`
+1. `unit` stable alignment falls back to `unit_stable_verify`
+2. `scenario` stable alignment falls back to `scenario_stable_verify`
 3. `project` stable alignment falls back to `project_stable_verify`
 
 ### 8.3 Shared And Baseline Inputs
 
 1. if a command depends on bound `shared_contract` truth, it must read the exact currently bound shared files
-2. if a command depends on the formal global baseline, it must read `docs/specs/system/stable/s_system_constraints.md`
-3. `bound_modules`-only metadata drift does not by itself invalidate downstream process files
+2. if a command depends on the formal global baseline, it must read `docs/specs/system_constraints/stable/s_system_constraints.md`
+3. `bound_objects`-only metadata drift does not by itself invalidate downstream process files
 
 ### 8.4 Impact Reconciliation
 
@@ -240,10 +243,10 @@ Lifecycle progression may only come from one new, independent, full-scope comman
 
 Rules:
 
-1. Only one new full-scope run of the current command may produce a formal pass gate, a formal verification pass, or an advancing `_status.md` result.
-2. Once a command has ended with a non-pass result, every later repair, local confirmation, scoped recheck, or follow-up assessment is non-authoritative unless that command file explicitly allows a checkpoint as a resumable stop.
-3. A non-authoritative follow-up may report that local repair is complete, but it must not claim new lifecycle progression, write advancing `_status.md` updates, or repackage a local recheck as a new formal pass.
-4. Individual command files may tighten rerun conditions within their own boundary, but they must not weaken the authoritative / non-authoritative distinction defined here.
+1. only one new full-scope run of the current command may produce a formal pass gate, a formal verification pass, or an advancing `_status.md` result
+2. once a command has ended with a non-pass result, every later repair, local confirmation, scoped recheck, or follow-up assessment is non-authoritative unless that command file explicitly allows a checkpoint as a resumable stop
+3. a non-authoritative follow-up may report that local repair is complete, but it must not claim new lifecycle progression, write advancing `_status.md` updates, or repackage a local recheck as a new formal pass
+4. individual command files may tighten rerun conditions within their own boundary, but they must not weaken the authoritative / non-authoritative distinction defined here
 
 ### 8.6 User-Facing Close-Out Block Contract
 
@@ -259,24 +262,11 @@ This block must report at least:
 6. when the command enters a checkpoint or another explicit resumable stop, it must also report `resume signal`
 7. individual command files may add stricter fields or wording requirements, but they must not delete the fixed fields defined here
 
-## 9. Direct Implementation Request Gate
-
-A direct implementation request means the user asks the executor to modify repo-tracked files without first entering a standard command.
-
-Rules:
-
-1. every direct implementation request must be classified first through `implementation_change_policy.md`
-2. the only legal classification results are:
-   - `implementation_only`
-   - `truth_writeback_required`
-   - `boundary_unclear`
-3. `implementation_only` does not permit skipping current lifecycle gates
-4. `truth_writeback_required` and `boundary_unclear` must not start from code
-
-## 10. Non-Goals
+## 9. Non-Goals
 
 This file does not:
 
 1. redefine object truth content in place of `spec_policy.md`
-2. create an independent lifecycle for `shared_contract`
-3. create an independent command chain for `system_constraints`
+2. create a separate lifecycle for `shared_contract`
+3. create a separate lifecycle for `system_constraints`
+4. replace project-local standards registration
