@@ -80,9 +80,9 @@ Default candidate cleanup map:
    - delete `_plans/draft/{unit}.md`
    - delete `_plans/active/{unit}.md`
    - delete `_verify_result/{unit}.md`
-2. `flow -> scenario_check`
-   - delete `_check_result/{flow}.md`
-   - delete `_verify_result/{flow}.md`
+2. `scenario -> scenario_check`
+   - delete `_check_result/{scenario}.md`
+   - delete `_verify_result/{scenario}.md`
 3. `project -> project_check`
    - delete `_check_result/project.md`
    - delete `_verify_result/project.md`
@@ -129,10 +129,10 @@ Object-specific minimums:
    - `_plans/active/{unit}.md`
    - `_verify_result/{unit}.md`
 2. `scenario_promote`
-   - `docs/specs/scenarios/candidate/c_{flow}.md`
-   - `docs/specs/scenarios/stable/s_{flow}.md` when present
-   - `_check_result/{flow}.md`
-   - `_verify_result/{flow}.md`
+   - `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
+   - `docs/specs/scenarios/stable/s_scenario_{scenario}.md` when present
+   - `_check_result/{scenario}.md`
+   - `_verify_result/{scenario}.md`
 3. `project_promote`
    - `docs/specs/project/candidate/c_project.md`
    - `docs/specs/project/stable/s_project.md` when present

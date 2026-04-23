@@ -1,8 +1,8 @@
-# Flow Promote Command
+# Scenario Promote Command
 
 ## 1. Purpose
 
-`scenario_promote:{flow}` promotes the current candidate flow into the new stable flow truth.
+`scenario_promote:{scenario}` promotes the current candidate scenario into the new stable scenario truth.
 
 ## 2. Lifecycle-State Advance Inheritance
 
@@ -12,14 +12,14 @@ Only a new independent full-scope run of `scenario_promote` may produce that adv
 ## 3. Preconditions
 
 1. `_status.md` says `Object Type=scenario`, `Active Layer=candidate`, `Next Command=scenario_promote`
-2. current valid `_verify_result/{flow}.md` exists
+2. current valid `_verify_result/{scenario}.md` exists
 
 ## 4. Procedure
 
-1. revalidate current candidate flow truth and current verification coverage
-2. write `docs/specs/scenarios/stable/s_scenario_{name}.md`
-3. delete `docs/specs/scenarios/candidate/c_scenario_{name}.md`
-4. delete current-round flow `_check_result` and `_verify_result`
+1. revalidate current candidate scenario truth and current verification coverage
+2. write `docs/specs/scenarios/stable/s_scenario_{scenario}.md`
+3. delete `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
+4. delete current-round scenario `_check_result` and `_verify_result`
 5. write `_status.md`:
    - `Stable=yes`
    - `Candidate=no`
@@ -32,7 +32,7 @@ The output must report:
 
 1. stable truth file write result
 2. candidate truth file delete result
-3. `_check_result/{flow}.md` and `_verify_result/{flow}.md` cleanup result
+3. `_check_result/{scenario}.md` and `_verify_result/{scenario}.md` cleanup result
 4. lifecycle-state transition result
 5. `_status.md` update result
 6. `round conclusion`
@@ -45,5 +45,5 @@ The output must report:
 
 ## 6. Non-Goals
 
-1. module promotion
+1. unit promotion
 2. project promotion

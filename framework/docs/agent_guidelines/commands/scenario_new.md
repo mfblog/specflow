@@ -1,8 +1,8 @@
-# Flow New Command
+# Scenario New Command
 
 ## 1. Purpose
 
-`scenario_new:{flow}` creates the first candidate truth for a brand-new formal flow object.
+`scenario_new:{scenario}` creates the first candidate truth for a brand-new formal scenario object.
 
 ## 2. Lifecycle-State Advance Inheritance
 
@@ -11,12 +11,12 @@ Only a new independent full-scope run of `scenario_new` may produce that advanci
 
 ## 3. Preconditions
 
-1. the flow name is clear and non-conflicting
-2. no current row for that flow exists in `_status.md`
+1. the scenario ID is clear and non-conflicting
+2. no current row for that scenario exists in `_status.md`
 
 ## 4. Procedure
 
-1. create `docs/specs/scenarios/candidate/c_scenario_{name}.md`
+1. create `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
 2. initialize:
    - `project_ref`
    - `unit_refs`
@@ -24,7 +24,7 @@ Only a new independent full-scope run of `scenario_new` may produce that advanci
    - `system_constraints_stable_ref`
 3. write or upsert `_status.md` row:
    - `Object Type=scenario`
-   - `Object=flow_{name}`
+   - `Object={scenario}`
    - `Stable=no`
    - `Candidate=yes`
    - `Active Layer=candidate`
@@ -47,5 +47,5 @@ The output must report:
 
 ## 6. Non-Goals
 
-1. creating stable flow truth
-2. editing module code
+1. creating stable scenario truth
+2. editing unit code

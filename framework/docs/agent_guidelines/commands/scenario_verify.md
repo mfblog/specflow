@@ -1,8 +1,8 @@
-# Flow Verify Command
+# Scenario Verify Command
 
 ## 1. Purpose
 
-`scenario_verify:{flow}` verifies whether the current candidate flow is actually wired from entry to outcome under the current bound object set.
+`scenario_verify:{scenario}` verifies whether the current candidate scenario is actually wired from trigger to outcome under the current bound object set.
 
 ## 2. Lifecycle-State Advance Inheritance
 
@@ -12,15 +12,15 @@ Only a new independent full-scope run of `scenario_verify` may produce that adva
 ## 3. Preconditions
 
 1. `_status.md` says `Object Type=scenario`, `Active Layer=candidate`, `Next Command=scenario_verify`
-2. current valid `_check_result/{flow}.md` exists
+2. current valid `_check_result/{scenario}.md` exists
 
 ## 4. Procedure
 
-1. read current candidate flow truth
-2. revalidate current bound module, shared, and baseline snapshots
-3. verify the business path from entry to claimed outcome
-4. report `affected_modules` when implementation work is still required downstream
-5. if pass, write `_verify_result/{flow}.md` and advance `Next Command=scenario_promote`
+1. read current candidate scenario truth
+2. revalidate current bound units, shared contracts, and baseline snapshots
+3. verify the declared trigger-to-outcome path from entry to claimed outcome
+4. report `affected_units` when implementation work is still required downstream
+5. if pass, write `_verify_result/{scenario}.md` and advance `Next Command=scenario_promote`
 6. if bindings drifted, fall back to `scenario_check`
 
 ## 5. Output Contract
@@ -28,9 +28,9 @@ Only a new independent full-scope run of `scenario_verify` may produce that adva
 The output must report:
 
 1. verification gate result
-2. `_verify_result/{flow}.md` write, delete, or keep result
+2. `_verify_result/{scenario}.md` write, delete, or keep result
 3. `_status.md` update result
-4. `affected_modules` when downstream implementation is still required
+4. `affected_units` when downstream implementation is still required
 5. `round conclusion`
 6. `current state`
 7. `next step`
@@ -41,5 +41,5 @@ The output must report:
 
 ## 6. Non-Goals
 
-1. replacing `unit_impl:{module}`
-2. implicitly repairing affected modules
+1. replacing `unit_impl:{unit}`
+2. implicitly repairing affected units
