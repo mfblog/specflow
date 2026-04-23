@@ -36,5 +36,5 @@ Rules:
 8. Consumers must validate bindings, not just existence.
 9. Snapshot fields in this file must use the fixed definitions from `specflow/framework/docs/agent_guidelines/process_snapshot_contract.md`.
 10. `verification_scope_ref` minimally means that the current verify result still covers current candidate truth plus the current object state that was verified in that round.
-11. `scenario_verify` must report `affected_modules`, but those modules do not become implicitly repaired or complete from that report alone.
+11. `scenario_verify` must report `affected_units`, but those units do not become implicitly repaired or complete from that report alone.
 12. When commands explain why verification must continue, fall back, or reroute, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.

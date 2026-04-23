@@ -1,8 +1,8 @@
-# Flow Check Command
+# Scenario Check Command
 
 ## 1. Purpose
 
-`scenario_check:{flow}` checks whether the current candidate flow truth is sufficiently closed to constrain later end-to-end verification.
+`scenario_check:{scenario}` checks whether the current candidate scenario truth is sufficiently closed to constrain later end-to-end verification.
 
 ## 2. Lifecycle-State Advance Inheritance
 
@@ -12,18 +12,18 @@ Only a new independent full-scope run of `scenario_check` may produce that advan
 ## 3. Preconditions
 
 1. `_status.md` says `Object Type=scenario`, `Active Layer=candidate`, `Next Command=scenario_check`
-2. current candidate flow file exists
+2. current candidate scenario file exists
 
 ## 4. Procedure
 
-1. read current candidate flow truth
+1. read current candidate scenario truth
 2. verify required bindings are explicit:
    - `project_ref`
    - `unit_refs`
    - `shared_contract_refs`
    - `system_constraints_stable_ref`
 3. verify entry, path, exit, and failure absorption are explicit enough to verify
-4. if pass, write `_check_result/{flow}.md` and advance `Next Command=scenario_verify`
+4. if pass, write `_check_result/{scenario}.md` and advance `Next Command=scenario_verify`
 5. if not pass, keep `Next Command=scenario_check`
 
 ## 5. Output Contract
@@ -31,7 +31,7 @@ Only a new independent full-scope run of `scenario_check` may produce that advan
 The output must report:
 
 1. `check gate result`
-2. `_check_result/{flow}.md` write, delete, or keep result
+2. `_check_result/{scenario}.md` write, delete, or keep result
 3. `_status.md` update result
 4. `round conclusion`
 5. `current state`

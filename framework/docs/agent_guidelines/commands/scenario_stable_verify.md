@@ -1,8 +1,8 @@
-# Flow Stable Verify Command
+# Scenario Stable Verify Command
 
 ## 1. Purpose
 
-`scenario_stable_verify:{flow}` checks whether current repository truth still aligns with the stable flow truth.
+`scenario_stable_verify:{scenario}` checks whether current repository truth still aligns with the stable scenario truth.
 
 ## 2. Lifecycle-State Advance Inheritance
 
@@ -12,12 +12,12 @@ Only a new independent full-scope run of `scenario_stable_verify` may produce th
 ## 3. Preconditions
 
 1. `_status.md` says `Object Type=scenario`, `Active Layer=stable`, `Next Command=scenario_stable_verify`
-2. current stable flow file exists
+2. current stable scenario file exists
 
 ## 4. Procedure
 
-1. read stable flow truth
-2. revalidate current bound modules, shared contracts, and stable baseline
+1. read stable scenario truth
+2. revalidate current bound units, shared contracts, and stable baseline
 3. if still aligned, advance `Next Command=scenario_fork`
 4. if drift exists, keep `Next Command=scenario_stable_verify`
 
@@ -26,7 +26,7 @@ Only a new independent full-scope run of `scenario_stable_verify` may produce th
 The output must report:
 
 1. stable alignment result
-2. whether any `_verify_result/{flow}.md` write, delete, or keep action occurred
+2. whether any `_verify_result/{scenario}.md` write, delete, or keep action occurred
 3. `_status.md` update result
 4. `round conclusion`
 5. `current state`
@@ -38,5 +38,5 @@ The output must report:
 
 ## 6. Non-Goals
 
-1. flow candidate authoring
-2. module implementation repair
+1. scenario candidate authoring
+2. unit implementation repair

@@ -25,8 +25,8 @@ This contract governs process files for:
    - `docs/specs/_plans/active/{unit}.md`
    - `docs/specs/_verify_result/{unit}.md`
 2. `scenario`
-   - `docs/specs/_check_result/{flow}.md`
-   - `docs/specs/_verify_result/{flow}.md`
+   - `docs/specs/_check_result/{scenario}.md`
+   - `docs/specs/_verify_result/{scenario}.md`
 3. `project`
    - `docs/specs/_check_result/project.md`
    - `docs/specs/_verify_result/project.md`
