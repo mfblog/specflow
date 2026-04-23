@@ -17,7 +17,7 @@ It answers six questions:
 6. whether a multi-step shared request still has unfinished formal follow-up
 
 This file defines the routing and stop rules for `shared_ops`.
-It does not replace module commands.
+It does not replace unit commands.
 
 ---
 
@@ -51,7 +51,7 @@ Rules:
 
 ## 3. Scope
 
-By default `shared_ops` handles only cross-module shared-truth governance.
+By default `shared_ops` handles only cross-unit shared-truth governance.
 
 It may route into one of five standard internal flows:
 
@@ -67,7 +67,7 @@ It may also route into:
 
 It does not:
 
-1. replace module command chains
+1. replace unit command chains
 2. replace `unit_check`, `unit_plan`, `unit_impl`, `unit_verify`, or `unit_promote`
 3. create an independent `system_constraints` command chain
 4. allow the executor to invent an ad hoc sixth standard shared flow outside the routing rules here
@@ -81,11 +81,11 @@ Before routing a `shared_ops` request:
 1. read `specflow/framework/docs/agent_guidelines/spec_policy.md`
 2. read `specflow/framework/docs/agent_guidelines/command_policy.md`
 3. read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md` because `shared_ops` may stop through a structured checkpoint
-4. read `docs/specs/_status.md` when the request names existing formal modules
-5. resolve each named existing module's current layer from `_status.md` before reading its main Spec
-6. read the current relevant module candidate or stable files after current-layer resolution
-7. read any explicitly referenced appendix truth needed to judge whether the real source truth is module-private, shared, or still boundary-unstable
-8. if the request names modules that do not yet have current-layer Spec files, do not block on that absence before routing
+4. read `docs/specs/_status.md` when the request names existing formal units
+5. resolve each named existing unit's current layer from `_status.md` before reading its main Spec
+6. read the current relevant unit candidate or stable files after current-layer resolution
+7. read any explicitly referenced appendix truth needed to judge whether the real source truth is unit-local, shared, or still boundary-unstable
+8. if the request names units that do not yet have current-layer Spec files, do not block on that absence before routing
 9. read the relevant `shared_contract` files if the request names shared truth directly
 10. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross the boundary into global-default-rule promotion
 11. if the request may route to `shared_sync`, inspect the directly affected current-round Shared Contract files needed to judge whether any of those files changed only in `bound_objects`
@@ -101,14 +101,14 @@ The executor must not route by keyword alone when the named files already show a
 Use `shared_new` only when the request clearly means:
 
 1. the user wants to design shared truth from the start, or open the next candidate-layer round for an already-independent shared object
-2. that truth is intended to exist independently rather than first living in one module appendix
-3. the main task is shaping shared truth itself rather than binding one module to it or only checking downstream impact
+2. that truth is intended to exist independently rather than first living in one unit appendix
+3. the main task is shaping shared truth itself rather than binding one unit to it or only checking downstream impact
 
 Typical signals:
 
 1. "design it as shared from the start"
 2. "plan one formal protocol shared by multiple modules first"
-3. "this truth does not belong to one module"
+3. "this truth does not belong to one unit"
 4. "open the next candidate for an existing shared"
 5. "continue evolving shared_xxx"
 
@@ -116,7 +116,7 @@ Typical signals:
 
 Use `shared_extract` only when the request clearly means:
 
-1. truth already exists inside one or more modules
+1. truth already exists inside one or more units
 2. that truth should now be extracted into one independent `shared_contract`
 3. the main task is the boundary extraction itself
 
@@ -133,7 +133,7 @@ Use `shared_bind` only when the request clearly means:
 
 1. a `shared_contract` already exists
 2. a module now needs to consume it
-3. the main task is binding and module-side explanation, not re-designing the shared truth itself
+3. the main task is binding and unit-side explanation, not re-designing the shared truth itself
 
 Typical signals:
 
@@ -146,7 +146,7 @@ Typical signals:
 Use `shared_sync` only when the request clearly means:
 
 1. a `shared_contract` changed
-2. the user wants to know which modules are affected
+2. the user wants to know which units are affected
 3. the main task is state fallback, snapshot invalidation, or impact closure
 
 Typical signals:
@@ -181,18 +181,18 @@ This is mandatory, not optional.
 `shared_escape` must be used when at least one of the following holds:
 
 1. one request simultaneously hits more than one standard shared flow and the action order matters to formal truth
-2. the request is really re-drawing the boundary between module-private truth and shared truth
+2. the request is really re-drawing the boundary between unit-local truth and shared truth
 3. the request simultaneously involves shared restructuring and `system_constraints_change_proposal`
-4. current repository truth is insufficient to stably judge which part belongs to shared and which part stays module-private
+4. current repository truth is insufficient to stably judge which part belongs to shared and which part stays unit-local
 
 ---
 
 ## 6. Procedure
 
-1. confirm the request really belongs to cross-module shared-truth governance
+1. confirm the request really belongs to cross-unit shared-truth governance
 2. resolve the relevant repository truth before routing:
-   - use `_status.md` to resolve current layer for any named existing formal module
-   - read current-layer appendix truth whenever the routing decision depends on where the formal truth currently lives or whether module-private versus shared boundary is already stable
+   - use `_status.md` to resolve current layer for any named existing formal unit
+   - read current-layer appendix truth whenever the routing decision depends on where the formal truth currently lives or whether unit-local versus shared boundary is already stable
    - read named `shared_contract` files when shared truth is named directly
    - read `s_system_constraints.md` when the request may cross the shared/system boundary
 3. test whether the request belongs to exactly one of `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, or `shared_sync`
@@ -203,9 +203,9 @@ This is mandatory, not optional.
    - if current repository truth is insufficient to prove that a directly affected file is `bound_objects`-only, do not pass that file under the metadata-only exception
 5. if exactly one standard shared flow applies, route to that flow
 6. if routing is not stable, enter `shared_escape`
-7. if the routed flow changes shared truth or module shared bindings, do not claim closure until required reconciliation through `shared_sync` is complete
+7. if the routed flow changes shared truth or unit shared bindings, do not claim closure until required reconciliation through `shared_sync` is complete
    - if that routed work makes a touched shared file lose its last formal binding, do not claim closure until the owner of that binding/topology change has either resolved that file's terminal state or returned control to `shared_escape`
-8. if a module-side command such as `unit_promote` stops because post-promotion Shared Contract topology is unclear, re-enter shared governance through `shared_ops` from current repository truth instead of guessing a module-local-only continuation
+8. if a unit-side command such as `unit_promote` stops because post-promotion Shared Contract topology is unclear, re-enter shared governance through `shared_ops` from current repository truth instead of guessing a unit-local-only continuation
 9. if the request crosses into `system_constraints_change_proposal`, stop through `shared_escape` and raise a checkpoint instead of inventing a shared-side continuation
 10. if `shared_escape` emitted a `remaining_steps_contract`, do not claim `shared_ops` closure until every listed step has finished under that contract
 
@@ -225,11 +225,11 @@ Routing targets must follow these formal files:
 Fixed closure rules:
 
 1. if `shared_new` or `shared_extract` writes `docs/specs/shared_contracts/**`, it must not claim closure until `shared_sync` has completed
-2. if `shared_bind` changes any module `shared_contract_refs`, it must not claim closure until `shared_sync` has completed
-3. if `shared_topology` changes any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, it must not claim closure until `shared_sync` has completed
+2. if `shared_bind` changes any unit `shared_contract_refs`, it must not claim closure until `shared_sync` has completed
+3. if `shared_topology` changes any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, it must not claim closure until `shared_sync` has completed
 4. if a routed request crosses into `system_constraints_change_proposal`, the shared flow must stop through `shared_escape` and raise a `shared_ops` checkpoint rather than inventing a shared-side continuation
-5. no internal shared flow may guess the module current layer without resolving it from `_status.md` first when the named module already exists
-6. no internal shared flow may modify module `stable` truth directly; if a shared request needs module truth writeback and the target module is currently at `stable`, the flow must stop at a `shared_ops` checkpoint and require `unit_fork:{module}` first
+5. no internal shared flow may guess the unit current layer without resolving it from `_status.md` first when the named unit already exists
+6. no internal shared flow may modify unit `stable` truth directly; if a shared request needs unit truth writeback and the target unit is currently at `stable`, the flow must stop at a `shared_ops` checkpoint and require `unit_fork:{unit}` first
 7. if `shared_escape` emits a `remaining_steps_contract`, finishing only the first routed flow does not close `shared_ops`
 8. if a routed internal shared flow later discovers that repository truth is insufficient to continue stably, it must stop that flow and return control to `shared_escape` instead of inventing a flow-local checkpoint
 9. if a routed internal shared flow changes bindings or topology so a touched shared file would have no formal bindings remaining, that same handling round must resolve the touched file's terminal state or return control to `shared_escape`; `shared_ops` must not leave cleanup ownership implicit
@@ -245,7 +245,7 @@ Stop when one of the following is true:
 2. the request has been decomposed by `shared_escape`, every step listed in `remaining_steps_contract` has finished, and all closure requirements of the final step are complete
 3. the request has been routed into `shared_escape` and a checkpoint has been raised
 4. a previously routed internal shared flow has raised a `shared_ops` checkpoint directly and the current request is blocked pending that checkpoint's declared prerequisite, clarification, or decision
-5. the request is outside shared-truth governance and must return to module-side truth handling before resume
+5. the request is outside shared-truth governance and must return to unit-side truth handling before resume
 
 ## 9. Escape And Checkpoint Rules
 
@@ -277,11 +277,11 @@ Allowed checkpoint types:
 A checkpoint is mandatory when any one of the following holds:
 
 1. the same truth has two or more plausible formal landing points
-2. the boundary between shared truth and module-private truth is unstable
+2. the boundary between shared truth and unit-local truth is unstable
 3. the boundary between shared truth and `system_constraints_change_proposal` is unstable
 4. the execution order of multiple shared actions would change the resulting formal truth
 5. current repository truth is insufficient to support a stable decomposition
-6. the current flow cannot continue legally until an upstream command such as `unit_fork:{module}` has created the required writeback target
+6. the current flow cannot continue legally until an upstream command such as `unit_fork:{unit}` has created the required writeback target
 
 ### 9.3 Shared Checkpoint Output
 
@@ -321,7 +321,7 @@ The output must include at least:
 1. the recognized intent from the user request
 2. the routed target flow and why that flow owns the request
 3. the repository truth inputs used to make the routing decision
-4. whether the request required direct module truth writeback and whether any target module first had to stop for `unit_fork:{module}`
+4. whether the request required direct unit truth writeback and whether any target unit first had to stop for `unit_fork:{unit}`
 5. whether reconciliation through `shared_sync` was required and whether it has completed
 6. if `shared_escape` emitted a `remaining_steps_contract`, that contract, the current completion position, and the fact that the contract is execution-local rather than durable truth
 7. if a checkpoint stopped the request, whether that checkpoint came from `shared_escape` or from a previously routed internal shared flow
@@ -330,7 +330,7 @@ The output must include at least:
 10. a leading `user-facing close-out block`
    - it must appear before routing detail or repository-truth evidence
    - it must use the same semantic slots and localized-label rule defined by `specflow/framework/docs/agent_guidelines/command_policy.md`
-   - for `next-stage entry gap`, use the non-lifecycle governance-flow meaning defined there rather than the module-lifecycle meaning
+   - for `next-stage entry gap`, use the non-lifecycle governance-flow meaning defined there rather than the unit-lifecycle meaning
    - `current state` must explicitly report whether `shared_ops` is closed or blocked and which routed internal flow currently owns the request
    - when the request is blocked or checkpointed, it must also include `resume signal`
 
@@ -339,16 +339,16 @@ The output must include at least:
 ### 11.1 Boundary Against Module Commands
 
 1. `unit` keeps the full lifecycle command chain
-2. `shared_ops` handles only cross-module shared-truth governance
-3. if the real task is still single-module candidate closure, do not route into `shared_ops`
-4. if the needed truth writeback target is a module currently at `stable`, `shared_ops` must stop for module-side `unit_fork` rather than writing stable directly
+2. `shared_ops` handles only cross-unit shared-truth governance
+3. if the real task is still single-unit candidate closure, do not route into `shared_ops`
+4. if the needed truth writeback target is a unit currently at `stable`, `shared_ops` must stop for unit-side `unit_fork` rather than writing stable directly
 
 ### 11.2 Boundary Against `system_constraints_change_proposal`
 
-1. `system_constraints_change_proposal` remains inside module candidate truth
+1. `system_constraints_change_proposal` remains inside unit candidate truth
 2. `shared_ops` must not create an independent system command chain
 3. if the user's true intent has already become "promote a global default rule," `shared_ops` must report that the task has crossed out of shared-only governance
-4. `shared_ops` may read `system_constraints_change_proposal` as boundary input, but must not replace the module-side proposal flow
+4. `shared_ops` may read `system_constraints_change_proposal` as boundary input, but must not replace the unit-side proposal flow
 
 ---
 
@@ -356,9 +356,9 @@ The output must include at least:
 
 `shared_ops` does not:
 
-1. replace module lifecycle commands
+1. replace unit lifecycle commands
 2. guarantee that every shared request can continue without a checkpoint
-3. allow the executor to guess through unstable shared/system/module boundaries
-4. define a new independent lifecycle object parallel to modules
+3. allow the executor to guess through unstable shared/system/unit boundaries
+4. define a new independent lifecycle object parallel to units
 5. treat a partially executed multi-step sequence as a closed shared request
 6. treat `remaining_steps_contract` as durable truth that may be resumed later without rerunning `shared_ops` from current repository truth

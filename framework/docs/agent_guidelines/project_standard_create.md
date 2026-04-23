@@ -11,7 +11,7 @@ It answers four questions:
 3. how the new standard is registered
 4. how this flow avoids inventing hidden rules outside the formal registry
 
-This flow is not a standard module command, is not in `{command}:{module}` form, and is not a user-facing command name.
+This flow is not a standard unit command, is not in `{command}:{unit}` form, and is not a user-facing command name.
 It is an internal agent flow that may be triggered from user intent.
 
 ---
@@ -98,4 +98,4 @@ This flow does not:
 1. create a new framework baseline rule automatically
 2. allow project-local standards to weaken framework gates
 3. create unregistered files that affect command behavior
-4. replace module candidate closure
+4. replace unit candidate closure

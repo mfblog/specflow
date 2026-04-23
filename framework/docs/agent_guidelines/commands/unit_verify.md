@@ -12,7 +12,7 @@ By default it handles:
 2. goal-backward verification from acceptance claims into implementation evidence
 3. structured verification evidence generation
 4. structural convergence verification for the changed execution surfaces of the round
-5. writing `_verify_result/{module}.md`
+5. writing `_verify_result/{unit}.md`
 6. deciding whether the module may enter `unit_promote`
 7. stopping at a `human_verify` checkpoint only when automation is still insufficient to close confidence
 8. confirming that any `system_constraints_change_proposal` claimed by the current candidate is actually reflected in implementation evidence
@@ -26,8 +26,8 @@ Only a new independent full-scope run of `unit_verify` may produce that advancin
 
 1. complete required pre-checks
 2. `_status.md` says `Next Command=unit_verify`
-3. a current valid `_check_result/{module}.md` exists
-4. a current valid `_plans/active/{module}.md` exists
+3. a current valid `_check_result/{unit}.md` exists
+4. a current valid `_plans/active/{unit}.md` exists
 5. the candidate still aligns with the current formal global baseline state
 6. read required candidate appendix files and bound Shared Contract files
 7. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
@@ -38,10 +38,10 @@ Only a new independent full-scope run of `unit_verify` may produce that advancin
 1. read the candidate Spec, required appendix files, Shared Contract files, pass gate, and plan
 2. validate all required bindings
 3. if the pass gate or plan is invalid, stop immediately:
-   - delete `_check_result/{module}.md`
-   - delete `_plans/draft/{module}.md`
-   - delete `_plans/active/{module}.md`
-   - delete `_verify_result/{module}.md` if it exists
+   - delete `_check_result/{unit}.md`
+   - delete `_plans/draft/{unit}.md`
+   - delete `_plans/active/{unit}.md`
+   - delete `_verify_result/{unit}.md` if it exists
    - fall back `_status.md` to `unit_check`
 4. verify current code against key protocols, main flow, error handling, acceptance criteria, and any explicit `system_constraints_change_proposal`
 5. perform goal-backward verification for each key acceptance claim instead of stopping at artifact existence
@@ -77,7 +77,7 @@ Only a new independent full-scope run of `unit_verify` may produce that advancin
    - if `fail` exists, do not enter `unit_promote`
    - if `partial` or `not_checked` exists, promotion is allowed only if `specflow/framework/docs/agent_guidelines/downgrade_policy.md` allows downgrade for the current evidence state
    - if key deviations are cleared, retirement targets are satisfied, and evidence is complete, promotion may proceed
-17. write or update `docs/specs/_verify_result/{module}.md`
+17. write or update `docs/specs/_verify_result/{unit}.md`
 18. update `_status.md`:
    - if ready to promote -> `Next Command=unit_promote`
    - if implementation has deviations but candidate truth still stands -> `Next Command=unit_impl`

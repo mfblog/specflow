@@ -984,6 +984,19 @@ func TestSyncImpactRejectsAmbiguousRemovedBindingSharedID(t *testing.T) {
 		"Stable body.",
 		"",
 	}, "\n"))
+	writeSharedFile(t, repoRoot, `---
+shared_contract_id: shared_demo
+layer: candidate
+shared_version: 0.1.0
+promotion_owner_unit: demo
+bound_objects:
+  - unit:demo
+---
+
+# Shared
+
+Body stays the same.
+`)
 
 	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
@@ -1058,6 +1071,19 @@ bound_objects:
 # Shared
 
 Stable body.
+`)
+	writeSharedFile(t, repoRoot, `---
+shared_contract_id: shared_demo
+layer: candidate
+shared_version: 0.1.0
+promotion_owner_unit: demo
+bound_objects:
+  - unit:demo
+---
+
+# Shared
+
+Body stays the same.
 `)
 
 	_, err := SyncImpact(repoRoot, Options{SharedIDs: []string{"shared_demo"}})

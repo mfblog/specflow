@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This command advances code implementation according to the current `candidate` and `_plans/active/{module}.md`.
+This command advances code implementation according to the current `candidate` and `_plans/active/{unit}.md`.
 
 ## 2. Scope
 
@@ -11,7 +11,7 @@ By default it handles:
 1. implementing according to plan slices
 2. adding necessary tests or verification actions
 3. dynamically confirming which legacy dependencies have already stopped being required
-4. writing progress back into `_plans/active/{module}.md`
+4. writing progress back into `_plans/active/{unit}.md`
 5. consuming the `unit_plan -> unit_impl` handoff only when gate and plan bindings both still hold
 
 ### 2.1 Lifecycle-State Advance Inheritance
@@ -23,8 +23,8 @@ Only a new independent full-scope run of `unit_impl` may produce that advancing 
 
 1. complete required pre-checks
 2. `_status.md` says `Next Command=unit_impl`
-3. a current valid `docs/specs/_check_result/{module}.md` exists
-4. a current valid `docs/specs/_plans/active/{module}.md` exists
+3. a current valid `docs/specs/_check_result/{unit}.md` exists
+4. a current valid `docs/specs/_plans/active/{unit}.md` exists
 5. the candidate still aligns with the current formal global baseline state
 6. read required candidate appendix files and bound Shared Contract files
 7. read the git policy before implementation work
@@ -33,20 +33,20 @@ Only a new independent full-scope run of `unit_impl` may produce that advancing 
 
 1. read the candidate Spec and all required appendix or Shared Contract files
 2. read `s_system_constraints.md` if it exists
-3. read the current `_check_result/{module}.md`
-4. read the current `_plans/active/{module}.md`
+3. read the current `_check_result/{unit}.md`
+4. read the current `_plans/active/{unit}.md`
 5. validate all required bindings of the pass gate and plan file according to the candidate handoff contract
 6. if any binding is invalid, stop immediately:
-   - delete `_check_result/{module}.md`
-   - delete `_plans/draft/{module}.md`
-   - delete `_plans/active/{module}.md`
-   - delete `_verify_result/{module}.md` if it exists
+   - delete `_check_result/{unit}.md`
+   - delete `_plans/draft/{unit}.md`
+   - delete `_plans/active/{unit}.md`
+   - delete `_verify_result/{unit}.md` if it exists
    - fall back `_status.md` to `unit_check`
 7. if `system_constraints_stable_ref` no longer matches the current formal global baseline state, stop immediately:
-   - delete `_check_result/{module}.md`
-   - delete `_plans/draft/{module}.md`
-   - delete `_plans/active/{module}.md`
-   - delete `_verify_result/{module}.md` if it exists
+   - delete `_check_result/{unit}.md`
+   - delete `_plans/draft/{unit}.md`
+   - delete `_plans/active/{unit}.md`
+   - delete `_verify_result/{unit}.md` if it exists
    - fall back to `unit_check`
 8. only when both pass gate and plan are still valid may implementation continue
 9. implement slice by slice in the order defined by the current plan unless the plan itself declares a dependency-safe different order
@@ -63,7 +63,7 @@ Only a new independent full-scope run of `unit_impl` may produce that advancing 
    - stop treating the issue as implementation-only
    - fall back to `unit_check`
 15. run necessary verification for the slices advanced in this round, or record clearly what could not be run
-16. write slice completion status, blockers, verification results, and retirement progression back into `_plans/active/{module}.md`
+16. write slice completion status, blockers, verification results, and retirement progression back into `_plans/active/{unit}.md`
 17. ensure the active plan write-back records at minimum:
    - `Takeover Progress`
    - `Retirement Progress`

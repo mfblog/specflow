@@ -148,7 +148,7 @@ Project-local review extension contract:
    - if incompatible, the result can only be `blocked` or `fix_required`
    - if the formal global baseline does not exist, `system_constraints_stable_ref` must be `none`
 11. process `system_constraints_change_proposal`:
-   - if present, it must clearly state the proposed global rule delta, the reason the current baseline is insufficient, the module-local implementation/verification impact, and the affected modules or shared contracts
+   - if present, it must clearly state the proposed global rule delta, the reason the current baseline is insufficient, the unit-local implementation/verification impact, and the affected units or shared contracts
    - if those fields are unclear, the result can only be `blocked` or `fix_required`
 12. process `shared_contract_refs`:
    - if current behavior depends on Shared Contract truth but bindings are missing or incomplete, the result can only be `blocked` or `fix_required`

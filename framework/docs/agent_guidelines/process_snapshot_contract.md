@@ -21,9 +21,9 @@ Executors must not create per-command snapshot shapes.
 This contract governs process files for:
 
 1. `unit`
-   - `docs/specs/_check_result/{module}.md`
-   - `docs/specs/_plans/active/{module}.md`
-   - `docs/specs/_verify_result/{module}.md`
+   - `docs/specs/_check_result/{unit}.md`
+   - `docs/specs/_plans/active/{unit}.md`
+   - `docs/specs/_verify_result/{unit}.md`
 2. `scenario`
    - `docs/specs/_check_result/{flow}.md`
    - `docs/specs/_verify_result/{flow}.md`
@@ -86,7 +86,7 @@ Every unit active plan file must record:
 3. `spec_fingerprint`
    - the Section 6 fingerprint of `spec_file_ref`
 4. `unit_appendix_snapshot`
-   - the normalized appendix snapshot of the current candidate-layer module truth, or `none`
+   - the normalized appendix snapshot of the current candidate-layer unit truth, or `none`
 5. `system_constraints_stable_file_ref`
    - the currently bound stable system-constraints file, or `none`
 6. `system_constraints_stable_version_ref`
@@ -94,16 +94,16 @@ Every unit active plan file must record:
 7. `system_constraints_stable_fingerprint`
    - the fingerprint of the currently bound stable system-constraints file, or `none`
 8. `shared_contract_snapshot`
-   - the normalized shared snapshot of the current candidate-layer module truth, or `none`
+   - the normalized shared snapshot of the current candidate-layer unit truth, or `none`
 
 Rules:
 
-1. `active/{module}.md` does not carry `gate`, `decision`, `allow_next`, or `next_command`
-2. `active/{module}.md` still records the exact candidate module truth and exact current global-binding snapshot it was written against
+1. `active/{unit}.md` does not carry `gate`, `decision`, `allow_next`, or `next_command`
+2. `active/{unit}.md` still records the exact candidate unit truth and exact current global-binding snapshot it was written against
 3. if an active plan correctly binds no appendix or shared files, `unit_appendix_snapshot` or `shared_contract_snapshot` must use literal `none`
 4. if an active plan correctly binds no system constraints, all three system-constraints fields must use literal `none`
 
-### 3.3 Module Draft Plan Files
+### 3.3 Unit Draft Plan Files
 
 `docs/specs/_plans/draft/{unit}.md` is a planning working artifact.
 
@@ -111,7 +111,7 @@ It is not:
 
 1. a gate-bearing file
 2. a consumable downstream handoff artifact
-3. a substitute for `active/{module}.md`
+3. a substitute for `active/{unit}.md`
 
 If a draft plan records snapshot anchors, it may record only:
 
@@ -207,9 +207,9 @@ Snapshot inclusion must follow the formal binding contract, not heuristic scanni
 
 Rules:
 
-1. `unit_appendix_snapshot` includes only appendix files explicitly referenced by the current-layer module truth
-2. `unit_snapshot` includes only modules formally bound by current `scenario` or `project` truth
-3. `scenario_snapshot` includes only flows formally bound by current `project` truth
+1. `unit_appendix_snapshot` includes only appendix files explicitly referenced by the current-layer unit truth
+2. `unit_snapshot` includes only units formally bound by current `scenario` or `project` truth
+3. `scenario_snapshot` includes only scenarios formally bound by current `project` truth
 4. `shared_contract_snapshot` includes only currently bound shared files from formal `shared_contract_refs`
 5. `bound_objects` metadata is never a formal inclusion source
 6. a `bound_objects`-only delta does not by itself invalidate downstream process files

@@ -1,28 +1,28 @@
-# Module New Command
+# Unit New Command
 
 ## 1. Purpose
 
-This command creates the first `candidate` Spec for a brand-new module.
+This command creates the first `candidate` Spec for a brand-new unit.
 
 Goals:
 
 1. define the first complete candidate design
 2. establish the starting point of the candidate chain
-3. register the module in `docs/specs/_status.md`
+3. register the unit in `docs/specs/_status.md`
 
 ## 2. Scope
 
 By default this command handles:
 
-1. first-time project initiation for a new module
-2. modules that do not yet have any formally effective version
+1. first-time project initiation for a new unit
+2. units that do not yet have any formally effective version
 3. creation of the first `candidate`
 4. initialization of `system_constraints_stable_ref` and `shared_contract_refs`
 
 It does not:
 
-1. invent a shared/module boundary when the first candidate still depends on shared truth that is not yet formalized
-2. write `shared_contract_refs=none` as a placeholder when the new module already depends on shared truth
+1. invent a shared/unit boundary when the first candidate still depends on shared truth that is not yet formalized
+2. write `shared_contract_refs=none` as a placeholder when the new unit already depends on shared truth
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
@@ -32,13 +32,13 @@ Only a new independent full-scope run of `unit_new` may produce that advancing r
 ## 3. Preconditions
 
 1. complete the required pre-checks
-2. the target module name is explicit
-3. the module is not yet in `_status.md`
+2. the target unit name is explicit
+3. the unit is not yet in `_status.md`
 4. the goal is future design first, not capturing current truth first
-5. if the first candidate depends on shared truth that is not yet formalized as `shared_contract`, or if the shared/module boundary is still unstable, do not start `unit_new`; resolve that shared truth through `specflow/framework/docs/agent_guidelines/shared_ops.md` first
+5. if the first candidate depends on shared truth that is not yet formalized as `shared_contract`, or if the shared/unit boundary is still unstable, do not start `unit_new`; resolve that shared truth through `specflow/framework/docs/agent_guidelines/shared_ops.md` first
 6. if the first candidate reuses already-existing shared truth, read the relevant `shared_contract` files before writing `shared_contract_refs`
-7. if the round will create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `shared_sync.md`
-8. if the round may update `bound_objects` or remove intentional-unbound retention fields from a touched Shared Contract file, read every current-layer module main file needed to derive the real repository-wide binding set of each touched Shared Contract from `shared_contract_refs`
+7. if the round will create, update, or delete any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `shared_sync.md`
+8. if the round may update `bound_objects` or remove intentional-unbound retention fields from a touched Shared Contract file, read every current-layer unit main file needed to derive the real repository-wide binding set of each touched Shared Contract from `shared_contract_refs`
 9. if `_status.md` or other commit-triggering governance files will change, read the git policy first
 
 ## 4. Procedure
@@ -47,7 +47,7 @@ Only a new independent full-scope run of `unit_new` may produce that advancing r
 2. decide whether the first candidate already reuses existing shared truth:
    - if no, the round may initialize `shared_contract_refs=none`
    - if yes, the round must bind that shared truth explicitly in the first candidate instead of using `none`
-3. define the new module's goals, boundaries, protocols, and main flow
+3. define the new unit's goals, boundaries, protocols, and main flow
 4. create `docs/specs/units/candidate/c_unit_{unit}.md`
 5. initialize `frontmatter.version` to `0.1.0`
 6. ensure the file covers the core sections of a formal Spec
@@ -59,20 +59,20 @@ Only a new independent full-scope run of `unit_new` may produce that advancing r
    - `global_constraint_exceptions`
    - `system_constraints_change_proposal`
 8. if the round changed Shared Contract bindings or touched Shared Contract files:
-   - derive the real repository-wide binding set of each touched Shared Contract from current-layer module `shared_contract_refs` plus this round's prepared target-module candidate writeback
+   - derive the real repository-wide binding set of each touched Shared Contract from current-layer unit `shared_contract_refs` plus this round's prepared target-unit candidate writeback
    - if current repository truth is insufficient to derive that touched real binding set safely, stop and reroute through `shared_ops:{natural-language request}` from current repository truth instead of guessing
-   - update `bound_objects` only as declarative metadata so each touched Shared Contract file matches the real binding set implied by that repository-wide binding view plus this round's prepared target-module writeback
-   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --units {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
-   - if a touched Shared Contract file now has one or more formal bound modules after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
+   - update `bound_objects` only as declarative metadata so each touched Shared Contract file matches the real binding set implied by that repository-wide binding view plus this round's prepared target-unit writeback
+   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --units {unit}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
+   - if a touched Shared Contract file now has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 9. update `_status.md`:
    - `Stable=no`
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=unit_check`
-   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable no --candidate yes --active-layer candidate --next-command unit_check --notes <status-note> --create`
-10. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` after `_status.md` has been updated, even when no additional affected module is known yet
+   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable no --candidate yes --active-layer candidate --next-command unit_check --notes <status-note> --create`
+10. if the round changed any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` after `_status.md` has been updated, even when no additional affected unit is known yet
    - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
-   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --units {module}` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
+   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --units {unit}` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
 11. perform git close-out if required
 
 ## 5. Stop Conditions

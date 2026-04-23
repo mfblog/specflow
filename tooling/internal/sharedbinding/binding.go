@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
 type ResolvedRef struct {
@@ -55,6 +57,9 @@ func ResolveRef(repoRoot, moduleLayer, ref string) (ResolvedRef, error) {
 	if actualVersion != expectedVersion {
 		return ResolvedRef{}, fmt.Errorf("%s: bound version %q does not match frontmatter shared_version %q", fileRef, expectedVersion, actualVersion)
 	}
+	if err := ValidatePromotionOwnerUnit(repoRoot, fileRef, actualLayer, sharedID, strings.TrimSpace(frontmatter["promotion_owner_unit"])); err != nil {
+		return ResolvedRef{}, err
+	}
 
 	return ResolvedRef{
 		VersionRef:       versionRef,
@@ -64,6 +69,36 @@ func ResolveRef(repoRoot, moduleLayer, ref string) (ResolvedRef, error) {
 		SharedVersion:    actualVersion,
 		Content:          content,
 	}, nil
+}
+
+func ValidatePromotionOwnerUnit(repoRoot, fileRef, layer, sharedContractID, promotionOwnerUnit string) error {
+	owner := strings.TrimSpace(promotionOwnerUnit)
+	if layer != "candidate" {
+		if owner != "" {
+			return fmt.Errorf("%s: promotion_owner_unit is allowed only on candidate-layer shared files with a stable sibling", fileRef)
+		}
+		return nil
+	}
+
+	stableSiblingRef := fmt.Sprintf("docs/specs/shared_contracts/stable/s_%s.md", strings.TrimSpace(sharedContractID))
+	_, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(stableSiblingRef)))
+	hasStableSibling := err == nil
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("stat %s: %w", stableSiblingRef, err)
+	}
+	if !hasStableSibling {
+		if owner != "" {
+			return fmt.Errorf("%s: promotion_owner_unit must not be recorded when no stable-layer sibling exists", fileRef)
+		}
+		return nil
+	}
+	if owner == "" {
+		return fmt.Errorf("%s: missing promotion_owner_unit for candidate-layer shared file with stable sibling %s", fileRef, stableSiblingRef)
+	}
+	if _, err := statusfile.LookupModuleStatus(repoRoot, owner); err != nil {
+		return fmt.Errorf("%s: promotion_owner_unit %q is not a registered formal unit", fileRef, owner)
+	}
+	return nil
 }
 
 func splitVersionRef(ref string) (string, string, error) {

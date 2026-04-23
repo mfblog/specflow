@@ -76,10 +76,10 @@ Default candidate fallback targets:
 Default candidate cleanup map:
 
 1. `module -> unit_check`
-   - delete `_check_result/{module}.md`
-   - delete `_plans/draft/{module}.md`
-   - delete `_plans/active/{module}.md`
-   - delete `_verify_result/{module}.md`
+   - delete `_check_result/{unit}.md`
+   - delete `_plans/draft/{unit}.md`
+   - delete `_plans/active/{unit}.md`
+   - delete `_verify_result/{unit}.md`
 2. `flow -> scenario_check`
    - delete `_check_result/{flow}.md`
    - delete `_verify_result/{flow}.md`
@@ -124,10 +124,10 @@ Object-specific minimums:
 1. `unit_promote`
    - `docs/specs/units/candidate/c_unit_{unit}.md`
    - `docs/specs/units/stable/s_unit_{unit}.md` when present
-   - `_check_result/{module}.md`
-   - `_plans/draft/{module}.md`
-   - `_plans/active/{module}.md`
-   - `_verify_result/{module}.md`
+   - `_check_result/{unit}.md`
+   - `_plans/draft/{unit}.md`
+   - `_plans/active/{unit}.md`
+   - `_verify_result/{unit}.md`
 2. `scenario_promote`
    - `docs/specs/scenarios/candidate/c_{flow}.md`
    - `docs/specs/scenarios/stable/s_{flow}.md` when present

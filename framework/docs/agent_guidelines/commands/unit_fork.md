@@ -32,7 +32,7 @@ Only a new independent full-scope run of `unit_fork` may produce that advancing 
 5. read any stable appendix files explicitly referenced by `s_unit_{unit}.md`
 6. read bound stable Shared Contract files if `shared_contract_refs` is not empty
 7. read the git policy if commit-triggering files may change
-8. if the round will create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `shared_sync.md`
+8. if the round will create, update, or delete any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `shared_sync.md`
 9. if the round may remove, retarget, or otherwise change an existing Shared Contract binding, read every current-layer module main file needed to derive the real binding set of each touched Shared Contract from `shared_contract_refs`
 
 ## 4. Procedure
@@ -57,7 +57,7 @@ Only a new independent full-scope run of `unit_fork` may produce that advancing 
    - write `shared_contract_refs=none` only when the current round no longer reuses shared contract truth
    - do not write `shared_contract_refs=none` merely because a shared-truth change for this round has not yet been formalized
 10. if Step 9 removes or retargets any existing Shared Contract binding:
-   - derive the real repository-wide binding set of each touched Shared Contract from current-layer module `shared_contract_refs` plus the target module candidate writeback prepared in Step 9
+   - derive the real repository-wide binding set of each touched Shared Contract from current-layer module `shared_contract_refs` plus the target unit candidate writeback prepared in Step 9
    - if repository truth is insufficient to decide whether any touched Shared Contract file would become unbound after this round, stop and reroute through `shared_ops:{natural-language request}` from current repository truth instead of leaving cleanup ownership implicit
 11. if the round changed shared bindings or shared files, resolve Shared Contract terminal state and `bound_objects` in the same round:
    - if a touched Shared Contract file would have no formal bound modules after this round, in the same round either delete it when cleanup is legal under `spec_policy.md` or explicitly keep it as independently authored shared truth by writing that file with:
@@ -67,18 +67,18 @@ Only a new independent full-scope run of `unit_fork` may produce that advancing 
    - reject closure if neither deletion nor explicit keep-writeback has happened for a touched now-unbound Shared Contract file
    - if a touched Shared Contract file still has one or more formal bound modules after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
    - update `bound_objects` only as declarative metadata so each remaining touched Shared Contract file matches the real binding set implied by module `shared_contract_refs`
-   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --units {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
-12. delete old `_check_result/{module}.md`, `_verify_result/{module}.md`, `_plans/draft/{module}.md`, `_plans/active/{module}.md`, and previous-round candidate appendix files
-   - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --module {module} --mode unit_fork`
+   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --units {unit}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
+12. delete old `_check_result/{unit}.md`, `_verify_result/{unit}.md`, `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and previous-round candidate appendix files
+   - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --unit {unit} --mode unit_fork`
 13. update `_status.md`:
    - `Stable=yes`
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=unit_check`
-   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate yes --active-layer candidate --next-command unit_check --notes <status-note>`
-14. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects `Active Layer=candidate` for this module, even when no additional affected module is known yet
+   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable yes --candidate yes --active-layer candidate --next-command unit_check --notes <status-note>`
+14. if the round changed any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects `Active Layer=candidate` for this unit, even when no additional affected unit is known yet
    - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
-   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --units {module}` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
+   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --units {unit}` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
    - if that `shared_sync` returns control because repository truth is still insufficient to continue safely, stop `unit_fork` as `blocked`, keep the newly created candidate-layer state in place, and reroute through `shared_ops:{natural-language request}` from current repository truth instead of claiming Shared Contract side effects are closed
 15. perform git close-out if required
 

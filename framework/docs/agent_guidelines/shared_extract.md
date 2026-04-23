@@ -2,13 +2,13 @@
 
 ## 1. Purpose
 
-`shared_extract` is the internal flow for extracting already-existing module truth into one independent `shared_contract`.
+`shared_extract` is the internal flow for extracting already-existing unit truth into one independent `shared_contract`.
 
 It answers four questions:
 
-1. whether multiple modules really depend on the same formal truth now
-2. which part of current module-local truth should move into one shared object
-3. how module-side truth must be rewritten so duplicate formal truth no longer remains
+1. whether multiple units really depend on the same formal truth now
+2. which part of current unit-local truth should move into one shared object
+3. how unit-side truth must be rewritten so duplicate formal truth no longer remains
 4. how the repository must be reconciled after the shared extraction lands
 
 This is not a user-facing command entry.
@@ -18,22 +18,22 @@ The user reaches it through `shared_ops:{natural-language request}`.
 
 ## 2. Scope
 
-By default it handles requests where shared truth already exists inside one or more modules and now needs to be extracted.
+By default it handles requests where shared truth already exists inside one or more units and now needs to be extracted.
 
 It may:
 
 1. create or update a candidate-layer `shared_contract`
-2. rewrite module candidate-side references and boundary explanation
-3. remove duplicate formal truth from the source module candidate side
+2. rewrite unit candidate-side references and boundary explanation
+3. remove duplicate formal truth from the source unit candidate side
 4. update the target shared file's declarative `bound_objects` metadata so it matches the real binding set after extraction writeback
 5. trigger `shared_sync` after any shared-truth or binding writeback
-6. stop at a `shared_ops` checkpoint when any source or consumer module is currently at `stable`
+6. stop at a `shared_ops` checkpoint when any source or consumer unit is currently at `stable`
 
 It does not:
 
-1. design new shared truth from scratch when no module-local source truth exists
-2. bind a module to an already-stable shared truth as the only task
-3. replace module lifecycle commands
+1. design new shared truth from scratch when no unit-local source truth exists
+2. bind a unit to an already-stable shared truth as the only task
+3. replace unit lifecycle commands
 4. promote shared truth into `system_constraints`
 
 ---
@@ -44,59 +44,59 @@ Before execution:
 
 1. read `specflow/framework/docs/agent_guidelines/spec_policy.md`
 2. read `specflow/framework/docs/agent_guidelines/command_policy.md`
-3. read `docs/specs/_status.md` and use it as the repository-wide formal module index for this extraction
-4. resolve each named module's current layer from `_status.md` before reading its main Spec
-5. read the source module current-layer main files and any explicitly referenced appendix truth involved in the extraction
-6. build the repository-wide involved-module set needed for this extraction from current repository truth before writeback starts:
-   - start from the current formal module set recorded in `_status.md`
-   - start from the named source modules and any named consumer modules
-   - read every additional current-layer module main file needed to judge whether that module still carries, duplicates, or already consumes the target truth
-   - do not treat the source module list alone as sufficient when the extraction target may already be reused elsewhere
+3. read `docs/specs/_status.md` and use it as the repository-wide formal unit index for this extraction
+4. resolve each named unit's current layer from `_status.md` before reading its main Spec
+5. read the source unit current-layer main files and any explicitly referenced appendix truth involved in the extraction
+6. build the repository-wide involved-unit set needed for this extraction from current repository truth before writeback starts:
+   - start from the current formal unit set recorded in `_status.md`
+   - start from the named source units and any named consumer units
+   - read every additional current-layer unit main file needed to judge whether that unit still carries, duplicates, or already consumes the target truth
+   - do not treat the source unit list alone as sufficient when the extraction target may already be reused elsewhere
 7. read any relevant existing `shared_contract` files that may overlap the target truth
 8. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
-9. if any involved module is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/unit_fork.md`
-10. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
+9. if any involved unit is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/unit_fork.md`
+10. if the round may create, update, or delete any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 11. if the round may create or update any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply
 
 ---
 
 ## 4. Procedure
 
-1. confirm the request is really about extracting already-existing module-local formal truth
-2. identify the smallest shared object that multiple modules truly depend on
-3. resolve the complete involved-module set from current repository truth before writeback:
-   - identify which modules currently carry duplicate module-local truth for that object
-   - identify which modules already consume that object through `shared_contract_refs`
+1. confirm the request is really about extracting already-existing unit-local formal truth
+2. identify the smallest shared object that multiple units truly depend on
+3. resolve the complete involved-unit set from current repository truth before writeback:
+   - identify which units currently carry duplicate unit-local truth for that object
+   - identify which units already consume that object through `shared_contract_refs`
    - reject closure if consumer coverage is still uncertain
-4. derive the writeback-required involved-module subset for this round from the already-resolved involved-module set:
-   - include each source module whose current-layer formal truth must be rewritten so the extracted object no longer remains duplicated as module-local truth
-   - include each consumer module whose current-layer `shared_contract_refs` or body-level consumption explanation must change because of the extraction result
-   - do not require writeback for an involved module that is read only to confirm consumer coverage and whose current-layer truth already aligns with the extraction result
-5. if any writeback-required involved module current layer is `stable`, do not modify that module `stable` directly:
+4. derive the writeback-required involved-unit subset for this round from the already-resolved involved-unit set:
+   - include each source unit whose current-layer formal truth must be rewritten so the extracted object no longer remains duplicated as unit-local truth
+   - include each consumer unit whose current-layer `shared_contract_refs` or body-level consumption explanation must change because of the extraction result
+   - do not require writeback for an involved unit that is read only to confirm consumer coverage and whose current-layer truth already aligns with the extraction result
+5. if any writeback-required involved unit current layer is `stable`, do not modify that unit `stable` directly:
    - raise a blocking `shared_ops` checkpoint with `type=prerequisite_action`
-   - require `unit_fork:{module}` for each such module before extraction continues
-   - set `required_writeback_target` to the corresponding module candidate main file set because chat-only agreement does not create legal extraction targets
+   - require `unit_fork:{unit}` for each such unit before extraction continues
+   - set `required_writeback_target` to the corresponding unit candidate main file set because chat-only agreement does not create legal extraction targets
 6. create or update the target candidate-layer `shared_contract`
 7. if Step 6 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
 8. if Step 6 reopened an already-stable shared object at the candidate layer, set the candidate `shared_version` to the intended next stable version according to Shared Contract semantic version rules
-9. if Step 6 reopened an already-stable shared object at the candidate layer, also write exactly one `promotion_owner_module` into that candidate-layer shared file:
-   - the owner must be chosen from the writeback-required involved-module subset for this round
-   - that owner is the module round that must later land this candidate-layer shared file as the next stable-layer Shared Contract file
-   - the owner module may still remain formally bound to the current stable-layer shared sibling until a later legal module candidate round rewrites its `shared_contract_refs`
+9. if Step 6 reopened an already-stable shared object at the candidate layer, also write exactly one `promotion_owner_unit` into that candidate-layer shared file:
+   - the owner must be chosen from the writeback-required involved-unit subset for this round
+   - that owner is the unit round that must later land this candidate-layer shared file as the next stable-layer Shared Contract file
+   - the owner unit may still remain formally bound to the current stable-layer shared sibling until a later legal unit candidate round rewrites its `shared_contract_refs`
    - if current repository truth is insufficient to name one stable owner without guessing, stop this flow and return control to `shared_escape` through `shared_ops`
-10. if the target candidate-layer shared file has a stable-layer sibling after Steps 6 to 9, validate that the resulting candidate-layer file still carries exactly one valid `promotion_owner_module`:
+10. if the target candidate-layer shared file has a stable-layer sibling after Steps 6 to 9, validate that the resulting candidate-layer file still carries exactly one valid `promotion_owner_unit`:
    - if Step 9 already wrote the owner, confirm that the resulting file still keeps that owner
-   - if Step 6 updated an already-existing candidate-layer file with a stable-layer sibling, preserve or rewrite `promotion_owner_module` so the resulting file still names one formal module from the writeback-required involved-module subset for this round
+   - if Step 6 updated an already-existing candidate-layer file with a stable-layer sibling, preserve or rewrite `promotion_owner_unit` so the resulting file still names one formal unit from the writeback-required involved-unit subset for this round
    - if current repository truth is insufficient to keep one stable owner from that subset without guessing, stop this flow and return control to `shared_escape` through `shared_ops`
-11. rewrite every source module candidate side so the extracted truth is no longer duplicated as module-local formal truth
-12. rewrite every additional writeback-required involved consumer module candidate-side reference and behavior explanation required by the extraction result
+11. rewrite every source unit candidate side so the extracted truth is no longer duplicated as unit-local formal truth
+12. rewrite every additional writeback-required involved consumer unit candidate-side reference and behavior explanation required by the extraction result
    - any written `shared_contract_refs` must use the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
-13. update the target shared file's `bound_objects` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
+13. update the target shared file's `bound_objects` only as declarative metadata so it matches the real binding set implied by unit-side `shared_contract_refs`
    - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --shared-refs c_shared_x@0.1.0` and additional `--shared-ids` filters when the active flow has already identified them
-14. if the target shared file now has one or more formal bound modules after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
+14. if the target shared file now has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 15. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
-16. if any involved module that should now consume the extracted truth was not fully reviewed and rewritten where required, stop and report consumer-coverage failure
-17. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
+16. if any involved unit that should now consume the extracted truth was not fully reviewed and rewritten where required, stop and report consumer-coverage failure
+17. after any write to `docs/specs/shared_contracts/**` or any unit `shared_contract_refs`, execute `shared_sync` before claiming closure
    - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
 
 ---
@@ -106,14 +106,14 @@ Before execution:
 Stop when one of the following is true:
 
 1. the shared extraction is complete, duplicate formal truth is removed, and `shared_sync` has finished reconciliation
-   - the target shared file `bound_objects` metadata must already match the real module-side binding set
+   - the target shared file `bound_objects` metadata must already match the real unit-side binding set
    - involved consumer coverage must already be complete for the current repository truth
 2. the request is not really extraction and must be re-routed to another shared flow
-3. one or more writeback-required involved modules are currently at `stable` and the flow has raised a `shared_ops` checkpoint for `unit_fork` first
-4. module-private truth versus shared truth is still not stably separable
+3. one or more writeback-required involved units are currently at `stable` and the flow has raised a `shared_ops` checkpoint for `unit_fork` first
+4. unit-local truth versus shared truth is still not stably separable
 5. involved consumer coverage is still incomplete or uncertain, so the flow cannot claim extraction closure yet
 6. the request has crossed into `system_constraints_change_proposal` and must stop at a `shared_ops` checkpoint instead of continuing here
-7. a resulting candidate-layer shared file for an already-stable shared object would exist after this round, but no stable `promotion_owner_module` can be named from the writeback-required involved-module subset
+7. a resulting candidate-layer shared file for an already-stable shared object would exist after this round, but no stable `promotion_owner_unit` can be named from the writeback-required involved-unit subset
 
 ---
 
@@ -122,16 +122,16 @@ Stop when one of the following is true:
 The output must include at least:
 
 1. the extracted shared object and why it belongs to `shared_extract`
-2. the complete involved-module set used for the extraction decision
-3. which involved modules were source modules, which were already consumer modules, which required writeback in this round, and which had to stop for `unit_fork`
-4. the source module files that originally carried the truth
+2. the complete involved-unit set used for the extraction decision
+3. which involved units were source units, which were already consumer units, which required writeback in this round, and which had to stop for `unit_fork`
+4. the source unit files that originally carried the truth
 5. the target shared-contract file written or updated, or the checkpoint result when extraction could not legally start yet
 6. the written `shared_version` and why it is correct for the current round
-7. the module candidate-side rewrite result and whether duplicate formal truth was fully removed
+7. the unit candidate-side rewrite result and whether duplicate formal truth was fully removed
 8. whether involved consumer coverage is complete for the current repository truth
 9. the target shared file `bound_objects` reconciliation result
-10. when the resulting candidate-layer shared file has a stable-layer sibling, the written or validated `promotion_owner_module`
-11. the `shared_sync` result, including affected modules and fallback if any
+10. when the resulting candidate-layer shared file has a stable-layer sibling, the written or validated `promotion_owner_unit`
+11. the `shared_sync` result, including affected units and fallback if any
 12. the git close-out result when governance files or commit-triggering files were changed
 
 ---
@@ -141,7 +141,7 @@ The output must include at least:
 `shared_extract` does not:
 
 1. preserve two formal truths for the same object
-2. skip module-side boundary rewrite after creating a shared file
+2. skip unit-side boundary rewrite after creating a shared file
 3. leave reconciliation for later after changing shared truth or bindings
-4. modify module `stable` truth directly
+4. modify unit `stable` truth directly
 5. absorb shared conclusions into `system_constraints`

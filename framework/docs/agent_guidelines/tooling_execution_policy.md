@@ -13,7 +13,7 @@ It answers five questions:
 5. how `spec_flow_review` must review the tooling layer
 
 This file is a framework-governance rule.
-It is not a command, not a module Spec, and not a project-local standard.
+It is not a command, not a unit Spec, and not a project-local standard.
 
 ## 2. What Counts As Governance Tooling
 
@@ -88,7 +88,7 @@ Governance tooling must not perform semantic judgment that belongs to rule docum
 At minimum, tooling must not decide:
 
 1. whether a user request should route to one governance flow or another from natural-language intent alone
-2. whether a boundary is module-local truth, Shared Contract truth, or global default-rule truth
+2. whether a boundary is unit-local truth, Shared Contract truth, or global default-rule truth
 3. whether candidate truth is sufficiently closed, complete, or progressable
 4. whether verification evidence is sufficient
 5. whether a finding is `pass`, `blocked`, or which severity it should have
@@ -155,5 +155,5 @@ This file does not:
 
 1. require every governance action to become tooling
 2. require a separate tooling registry file
-3. let tooling replace module Specs, shared-governance files, or review judgment
+3. let tooling replace unit Specs, shared-governance files, or review judgment
 4. treat platform binaries as the default governance review target
