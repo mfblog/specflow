@@ -29,6 +29,7 @@ That default scope includes:
 
 1. core governance and boundary rules
    - `spec_flow_design_review.md`
+   - `abstraction_validity_checklist.md`
    - `spec_policy.md`
    - `command_policy.md`
    - `implementation_change_policy.md`
@@ -85,6 +86,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
 
 1. `design_foundation`
    - `spec_flow_design_review.md`
+   - `abstraction_validity_checklist.md`
    - `spec_policy.md`
    - `command_policy.md`
    - `implementation_change_policy.md`
@@ -156,6 +158,7 @@ If any in-scope file cannot be assigned to a review block, do not issue `pass`.
    - human operability
    - gate usefulness
    - extension-surface cost
+   - abstraction validity using `abstraction_validity_checklist.md`
 4. complete the required cross-block convergence checks
 5. judge the hard-blocker set from Section 7.4 before any scoring-based `pass` claim
 6. score all eight fixed design questions from Section 7.1
