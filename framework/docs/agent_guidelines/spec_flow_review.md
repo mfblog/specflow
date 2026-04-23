@@ -74,7 +74,7 @@ For the default governance-baseline review, the execution-local `review_plan` mu
    - `severity_policy.md`
    - `checkpoint_protocol.md`
    - `project_spec_policy.md`
-   - `flow_policy.md`
+   - `scenario_policy.md`
    - `commands/*.md`
 2. `shared_governance`
    - `shared_ops.md`
@@ -121,7 +121,7 @@ For the default governance-baseline review, the execution-local `review_plan` mu
    - `specflow/tooling/cmd/**/*.go`
    - `specflow/tooling/internal/**/*.go`
 
-`ProjectSpec` and `flow` do not become independent review blocks.
+`ProjectSpec` and `scenario` do not become independent review blocks.
 They are reviewed inside `review_and_command_core`, plus their process and tooling contracts in the other fixed blocks.
 
 ## 4. Required Cross-Block Convergence Checks

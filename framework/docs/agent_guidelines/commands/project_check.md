@@ -18,8 +18,8 @@ Only a new independent full-scope run of `project_check` may produce that advanc
 
 1. read current candidate `ProjectSpec`
 2. verify required bindings are explicit:
-   - `flow_refs`
-   - `module_refs`
+   - `scenario_refs`
+   - `unit_refs`
    - `shared_contract_refs`
    - `system_constraints_stable_ref`
 3. verify all referenced objects exist at the declared layer

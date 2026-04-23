@@ -21,28 +21,28 @@ func TestApplyFallbackForPromoteEvidenceIncomplete(t *testing.T) {
 	status := strings.Join([]string{
 		"# Spec Status",
 		"",
-		"## Formal Modules",
+		"## Formal Objects",
 		"",
-		"| Module | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|",
-		"| `module_ai` | `yes` | `yes` | `candidate` | `module_promote` | note |",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `ai` | `yes` | `yes` | `candidate` | `unit_promote` | note |",
 	}, "\n") + "\n"
 	if err := os.WriteFile(filepath.Join(repoRoot, "docs/specs/_status.md"), []byte(status), 0o644); err != nil {
 		t.Fatalf("write status: %v", err)
 	}
-	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/module_ai.md")
+	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/ai.md")
 	if err := os.WriteFile(verifyPath, []byte("verify"), 0o644); err != nil {
 		t.Fatalf("write verify file: %v", err)
 	}
 
-	result, err := ApplyFallback(repoRoot, "module_ai", "module_promote", "evidence_incomplete")
+	result, err := ApplyFallback(repoRoot, "ai", "unit_promote", "evidence_incomplete")
 	if err != nil {
 		t.Fatalf("ApplyFallback: %v", err)
 	}
-	if result.NextCommand != "module_verify" {
-		t.Fatalf("expected next command module_verify, got %s", result.NextCommand)
+	if result.NextCommand != "unit_verify" {
+		t.Fatalf("expected next command unit_verify, got %s", result.NextCommand)
 	}
-	if len(result.DeletedFiles) != 1 || result.DeletedFiles[0] != "docs/specs/_verify_result/module_ai.md" {
+	if len(result.DeletedFiles) != 1 || result.DeletedFiles[0] != "docs/specs/_verify_result/ai.md" {
 		t.Fatalf("unexpected deleted files: %v", result.DeletedFiles)
 	}
 	if _, err := os.Stat(verifyPath); !os.IsNotExist(err) {
@@ -60,32 +60,32 @@ func TestApplyFallbackForVerifyImplementationDeviation(t *testing.T) {
 	status := strings.Join([]string{
 		"# Spec Status",
 		"",
-		"## Formal Modules",
+		"## Formal Objects",
 		"",
-		"| Module | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|",
-		"| `module_ai` | `yes` | `yes` | `candidate` | `module_verify` | note |",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `ai` | `yes` | `yes` | `candidate` | `unit_verify` | note |",
 	}, "\n") + "\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_ai.md"), "check")
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/module_ai.md"), "plan")
-	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/module_ai.md")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/ai.md"), "check")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/ai.md"), "plan")
+	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/ai.md")
 	mustWriteFile(t, verifyPath, "verify")
 
-	result, err := ApplyFallback(repoRoot, "module_ai", "module_verify", "implementation_deviation")
+	result, err := ApplyFallback(repoRoot, "ai", "unit_verify", "implementation_deviation")
 	if err != nil {
 		t.Fatalf("ApplyFallback: %v", err)
 	}
-	if result.NextCommand != "module_impl" {
-		t.Fatalf("expected next command module_impl, got %s", result.NextCommand)
+	if result.NextCommand != "unit_impl" {
+		t.Fatalf("expected next command unit_impl, got %s", result.NextCommand)
 	}
-	if len(result.DeletedFiles) != 1 || result.DeletedFiles[0] != "docs/specs/_verify_result/module_ai.md" {
+	if len(result.DeletedFiles) != 1 || result.DeletedFiles[0] != "docs/specs/_verify_result/ai.md" {
 		t.Fatalf("unexpected deleted files: %v", result.DeletedFiles)
 	}
-	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/module_ai.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/ai.md")); err != nil {
 		t.Fatalf("expected check file to remain, stat err=%v", err)
 	}
-	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_plans/active/module_ai.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_plans/active/ai.md")); err != nil {
 		t.Fatalf("expected plan file to remain, stat err=%v", err)
 	}
 	if _, err := os.Stat(verifyPath); !os.IsNotExist(err) {
@@ -104,37 +104,37 @@ func TestApplyFallbackForVerifyTruthIncomplete(t *testing.T) {
 	status := strings.Join([]string{
 		"# Spec Status",
 		"",
-		"## Formal Modules",
+		"## Formal Objects",
 		"",
-		"| Module | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|",
-		"| `module_ai` | `yes` | `yes` | `candidate` | `module_verify` | note |",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `ai` | `yes` | `yes` | `candidate` | `unit_verify` | note |",
 	}, "\n") + "\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 	for _, relPath := range []string{
-		"docs/specs/_check_result/module_ai.md",
-		"docs/specs/_plans/active/module_ai.md",
-		"docs/specs/_plans/draft/module_ai.md",
-		"docs/specs/_verify_result/module_ai.md",
+		"docs/specs/_check_result/ai.md",
+		"docs/specs/_plans/active/ai.md",
+		"docs/specs/_plans/draft/ai.md",
+		"docs/specs/_verify_result/ai.md",
 	} {
 		mustWriteFile(t, filepath.Join(repoRoot, relPath), relPath)
 	}
 
-	result, err := ApplyFallback(repoRoot, "module_ai", "module_verify", "truth_incomplete")
+	result, err := ApplyFallback(repoRoot, "ai", "unit_verify", "truth_incomplete")
 	if err != nil {
 		t.Fatalf("ApplyFallback: %v", err)
 	}
-	if result.NextCommand != "module_check" {
-		t.Fatalf("expected next command module_check, got %s", result.NextCommand)
+	if result.NextCommand != "unit_check" {
+		t.Fatalf("expected next command unit_check, got %s", result.NextCommand)
 	}
 	if len(result.DeletedFiles) != 4 {
 		t.Fatalf("expected 4 deleted files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
 	}
 	for _, relPath := range []string{
-		"docs/specs/_check_result/module_ai.md",
-		"docs/specs/_plans/active/module_ai.md",
-		"docs/specs/_plans/draft/module_ai.md",
-		"docs/specs/_verify_result/module_ai.md",
+		"docs/specs/_check_result/ai.md",
+		"docs/specs/_plans/active/ai.md",
+		"docs/specs/_plans/draft/ai.md",
+		"docs/specs/_verify_result/ai.md",
 	} {
 		if _, err := os.Stat(filepath.Join(repoRoot, relPath)); !os.IsNotExist(err) {
 			t.Fatalf("expected %s to be deleted, stat err=%v", relPath, err)
@@ -154,25 +154,25 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 	status := strings.Join([]string{
 		"# Spec Status",
 		"",
-		"## Formal Modules",
+		"## Formal Objects",
 		"",
-		"| Module | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|",
-		"| `module_ai` | `yes` | `no` | `stable` | `module_fork` | promoted |",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `ai` | `yes` | `no` | `stable` | `unit_fork` | promoted |",
 	}, "\n") + "\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
-	candidateMainRef, err := specpaths.MainSpecFileRef("candidate", "module_ai")
+	candidateMainRef, err := specpaths.MainSpecFileRef("candidate", "ai")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(candidateMainRef)), "candidate")
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_module_ai_prompt.md"), "appendix")
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_ai.md"), "check")
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/module_ai.md"), "plan")
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/module_ai.md"), "draft plan")
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/module_ai.md"), "verify")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_ai_prompt.md"), "appendix")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/ai.md"), "check")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/ai.md"), "plan")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/ai.md"), "draft plan")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/ai.md"), "verify")
 
-	result, err := ApplySuccessCleanup(repoRoot, "module_ai", "module_promote")
+	result, err := ApplySuccessCleanup(repoRoot, "ai", "unit_promote")
 	if err != nil {
 		t.Fatalf("ApplySuccessCleanup: %v", err)
 	}
@@ -181,11 +181,11 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 	}
 	for _, relPath := range []string{
 		candidateMainRef,
-		specpaths.CandidateAppendixDir + "/c_module_ai_prompt.md",
-		"docs/specs/_check_result/module_ai.md",
-		"docs/specs/_plans/active/module_ai.md",
-		"docs/specs/_plans/draft/module_ai.md",
-		"docs/specs/_verify_result/module_ai.md",
+		specpaths.CandidateAppendixDir + "/c_unit_ai_prompt.md",
+		"docs/specs/_check_result/ai.md",
+		"docs/specs/_plans/active/ai.md",
+		"docs/specs/_plans/draft/ai.md",
+		"docs/specs/_verify_result/ai.md",
 	} {
 		if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(relPath))); !os.IsNotExist(err) {
 			t.Fatalf("expected %s to be deleted, stat err=%v", relPath, err)

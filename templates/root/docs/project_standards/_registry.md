@@ -40,11 +40,11 @@
 
 1. `all_targets_on_surface`
    - 表示所有已经命中该命令已定义消费面的目标都适用
-2. `module:<formal_module_name>`
-   - 表示只适用于一个正式模块
-3. `module_set:<formal_module_name>,<formal_module_name>,...`
-   - 表示只适用于列出的正式模块集合
-   - 模块名必须来自 `docs/specs/_status.md`
+2. `unit:<formal_unit_name>`
+   - 表示只适用于一个正式单元
+3. `unit_set:<formal_unit_name>,<formal_unit_name>,...`
+   - 表示只适用于列出的正式单元集合
+   - 单元名必须来自 `docs/specs/_status.md`
    - 逗号分隔列表内部不得带空格
 4. `review_scenario:<stable_name>`
    - 表示只适用于消费方已经正式定义过的某个 review scenario

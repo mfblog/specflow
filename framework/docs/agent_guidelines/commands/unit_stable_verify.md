@@ -27,13 +27,13 @@ It does not:
 ### 2.1 Lifecycle-State Advance Inheritance
 
 When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
-Only a new independent full-scope run of `module_stable_verify` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+Only a new independent full-scope run of `unit_stable_verify` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
 
 ## 3. Preconditions
 
 1. complete required pre-checks
 2. the module's current `Active Layer=stable`
-3. `_status.md` says `Next Command=module_stable_verify`
+3. `_status.md` says `Next Command=unit_stable_verify`
 4. the target module is explicit
 5. the module has valid `stable`
 6. there is actual implementation context that must be checked
@@ -43,7 +43,7 @@ Only a new independent full-scope run of `module_stable_verify` may produce that
 
 ## 4. Procedure
 
-1. read `docs/specs/modules/stable/s_{module}.md` and any required appendix or Shared Contract files
+1. read `docs/specs/units/stable/s_unit_{unit}.md` and any required appendix or Shared Contract files
 2. if the stable truth explicitly records `system_constraints_stable_ref`, or if the verification scenario otherwise requires global-baseline or shared-mechanism judgment, read `s_system_constraints.md`
 3. if the stable truth explicitly records `system_constraints_stable_ref`, judge whether that recorded reference still matches the current formal global baseline state
 4. verify current code against key protocols, main flow, error handling, and acceptance criteria in `stable`
@@ -72,12 +72,12 @@ Only a new independent full-scope run of `module_stable_verify` may produce that
    - return code to `stable` semantics
    - or rerun stable-layer verification when the drift is stable-truth-side rather than code-side
    - or refresh the stable-layer verification conclusion against the current formal global baseline when the drift is baseline-side rather than code-side
-   - rerun `module_stable_verify:{module}` after the required repair or re-judgment work
-   - do not open `module_fork:{module}` while the current implementation still fails `module_stable_verify`
+   - rerun `unit_stable_verify:{module}` after the required repair or re-judgment work
+   - do not open `unit_fork:{module}` while the current implementation still fails `unit_stable_verify`
 12. update `_status.md`:
-   - if still aligned -> `Next Command=module_fork`
-   - if drift exists -> keep `Next Command=module_stable_verify`
-   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command <module_fork-or-module_stable_verify> --notes <status-note>`
+   - if still aligned -> `Next Command=unit_fork`
+   - if drift exists -> keep `Next Command=unit_stable_verify`
+   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command <unit_fork-or-unit_stable_verify> --notes <status-note>`
 13. perform git close-out if required
 
 ## 5. Stop Conditions
@@ -96,14 +96,14 @@ Only a new independent full-scope run of `module_stable_verify` may produce that
 6. deviation list
 7. `fallback_reason_code` when stable alignment cannot be claimed safely
 8. next-step recommendation
-   - if drift exists, the immediate next step must remain `module_stable_verify`
-   - `module_fork:{module}` may be suggested only as a later follow-up after stable alignment has been restored
+   - if drift exists, the immediate next step must remain `unit_stable_verify`
+   - `unit_fork:{module}` may be suggested only as a later follow-up after stable alignment has been restored
 9. git close-out result
 10. `_status.md` update result
 11. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - `current state` must explicitly confirm `Active Layer=stable` and the written `Next Command`
-   - if `Next Command=module_stable_verify`, `why this next step` must explicitly state that alignment is not yet restored rather than implying a no-op rerun
+   - if `Next Command=unit_stable_verify`, `why this next step` must explicitly state that alignment is not yet restored rather than implying a no-op rerun
 
 Allowed `fallback_reason_code` values:
 
@@ -122,5 +122,5 @@ Allowed `fallback_reason_code` values:
 ## 8. Example
 
 ```md
-module_stable_verify:module_ai
+unit_stable_verify:ai
 ```

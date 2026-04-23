@@ -28,7 +28,7 @@ It does not handle:
 ### 2.1 Lifecycle-State Advance Inheritance
 
 When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
-Only a new independent full-scope run of `module_init` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+Only a new independent full-scope run of `unit_init` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
 
 ## 3. Preconditions
 
@@ -38,20 +38,20 @@ Before execution:
 2. the target module name is explicit
 3. the module is not yet in `docs/specs/_status.md`
 4. the goal is to capture current truth, not define future design
-5. if onboarding current truth would create duplicated formal truth across modules, or if the shared/module boundary is still unstable, do not start `module_init`; resolve that shared-truth boundary through `specflow/framework/docs/agent_guidelines/shared_ops.md` first
+5. if onboarding current truth would create duplicated formal truth across modules, or if the shared/module boundary is still unstable, do not start `unit_init`; resolve that shared-truth boundary through `specflow/framework/docs/agent_guidelines/shared_ops.md` first
 6. if the first `stable` reuses already-existing shared truth, read the relevant `shared_contract` files before writing `shared_contract_refs`
-7. if the task also touches global baseline, shared mechanisms, or exceptions, read `docs/specs/system/stable/s_system_constraints.md`
+7. if the task also touches global baseline, shared mechanisms, or exceptions, read `docs/specs/system_constraints/stable/s_system_constraints.md`
 8. if the module involves technical choices, shared infrastructure, cross-module reuse, global exceptions, or system-level constraint relationships, the first `stable` must include `Global Constraint Alignment` or an equivalent section
 9. if the task changes `stable`, `_status.md`, or other commit-triggering governance files, read the git policy first
 10. if the round creates, updates, or deletes any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
-11. if the round may update `bound_modules` or remove intentional-unbound retention fields from a touched Shared Contract file, read every current-layer module main file needed to derive the real repository-wide binding set of each touched Shared Contract from `shared_contract_refs`
+11. if the round may update `bound_objects` or remove intentional-unbound retention fields from a touched Shared Contract file, read every current-layer module main file needed to derive the real repository-wide binding set of each touched Shared Contract from `shared_contract_refs`
 
 ## 4. Procedure
 
 1. summarize the module's already-effective behavior baseline
 2. if needed, read `s_system_constraints.md` as an upstream input
 3. if onboarding current truth shows that one or more existing formal modules already depend on the same formal truth and that truth is not yet formalized as one stable shared object, stop and reroute through `shared_ops:{natural-language request}` from current repository truth instead of writing duplicated module-local `stable` truth
-4. create `docs/specs/modules/stable/s_{module}.md`
+4. create `docs/specs/units/stable/s_unit_{unit}.md`
 5. ensure the file covers:
    - `Context & Motivation`
    - `Terminology`
@@ -68,20 +68,20 @@ Before execution:
 8. if the round changed Shared Contract bindings or touched Shared Contract files:
    - derive the real repository-wide binding set of each touched Shared Contract from current-layer module `shared_contract_refs` plus this round's prepared target-module stable writeback
    - if current repository truth is insufficient to derive that touched real binding set safely, stop and reroute through `shared_ops:{natural-language request}` from current repository truth instead of guessing
-   - update `bound_modules` only as declarative metadata so each touched Shared Contract file matches the real binding set implied by that repository-wide binding view plus this round's prepared target-module writeback
-   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-modules --modules {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
+   - update `bound_objects` only as declarative metadata so each touched Shared Contract file matches the real binding set implied by that repository-wide binding view plus this round's prepared target-module writeback
+   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --units {module}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
    - if a touched Shared Contract file now has one or more formal bound modules after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 9. update `docs/specs/_status.md`:
    - `Stable=yes`
    - `Candidate=no`
    - `Active Layer=stable`
-   - `Next Command=module_fork`
-   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command module_fork --notes <status-note> --create`
+   - `Next Command=unit_fork`
+   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-module --module {module} --stable yes --candidate no --active-layer stable --next-command unit_fork --notes <status-note> --create`
 10. if the round changed any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` after `_status.md` has been updated, even when no additional affected module is known yet
-   - pass execution-local `current_stable_landing_module={module}` into that `shared_sync` run because this same round just wrote the module's first stable truth together with its current stable Shared Contract binding
-   - pass execution-local `stable_landing_shared_refs=<exact-shared-ref-list-written-by-this-landing>` into that same `shared_sync` run; `current_stable_landing_module` alone is not sufficient
-   - if any touched shared file changed only in `bound_modules` during this round, pass execution-local `bound_modules_only_shared_file_refs` with the exact file refs for those files
-   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --modules {module} --stable-landing-module {module} --stable-landing-shared-refs <exact-stable-landing-shared-ref-list>` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
+   - pass execution-local `current_stable_landing_unit={module}` into that `shared_sync` run because this same round just wrote the module's first stable truth together with its current stable Shared Contract binding
+   - pass execution-local `stable_landing_shared_refs=<exact-shared-ref-list-written-by-this-landing>` into that same `shared_sync` run; `current_stable_landing_unit` alone is not sufficient
+   - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
+   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --units {module} --stable-landing-unit {module} --stable-landing-shared-refs <exact-stable-landing-shared-ref-list>` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
 11. perform git close-out if required by policy
 
 ## 5. Stop Conditions
@@ -117,5 +117,5 @@ Before execution:
 ## 8. Example
 
 ```md
-module_init:module_ai
+unit_init:ai
 ```

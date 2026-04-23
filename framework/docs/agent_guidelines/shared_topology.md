@@ -59,8 +59,8 @@ Before execution:
    - do not treat only the user-named modules or currently obvious consumers as sufficient when other modules may still bind the touched shared objects
 8. resolve every affected module's current layer from `_status.md` before reading its main Spec
 9. read every affected module current-layer main file needed to derive the real binding set from `shared_contract_refs`
-10. if any affected module is currently at `stable` and the topology change would require module truth writeback, also read `specflow/framework/docs/agent_guidelines/commands/module_fork.md`
-11. read `docs/specs/system/stable/s_system_constraints.md` when the topology request may cross into project-wide default-rule promotion
+10. if any affected module is currently at `stable` and the topology change would require module truth writeback, also read `specflow/framework/docs/agent_guidelines/commands/unit_fork.md`
+11. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the topology request may cross into project-wide default-rule promotion
 12. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 
 ---
@@ -68,11 +68,11 @@ Before execution:
 ## 4. Procedure
 
 1. confirm the request is really about Shared Contract topology change or terminal-state resolution rather than `shared_new`, `shared_extract`, `shared_bind`, or `shared_sync`
-2. resolve the complete repository-wide affected-module set for the touched shared objects from module `shared_contract_refs` rather than from `bound_modules`
+2. resolve the complete repository-wide affected-module set for the touched shared objects from module `shared_contract_refs` rather than from `bound_objects`
 3. if current repository truth is insufficient to derive that complete affected-module set safely, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
 4. if any affected module current layer is `stable` and the topology change would require module truth writeback:
    - raise a blocking `shared_ops` checkpoint with `type=prerequisite_action`
-   - require `module_fork:{module}` for each such module before topology writeback continues
+   - require `unit_fork:{module}` for each such module before topology writeback continues
    - set `required_writeback_target` to the corresponding module candidate main file set because chat-only agreement does not create legal topology-writeback targets
 5. decide the current-round topology plan explicitly against that complete affected-module set:
    - which touched shared object identity remains the same
@@ -99,10 +99,10 @@ Before execution:
      - `unbound_retention_owner: shared_topology`
    - reject closure if neither deletion nor explicit keep-writeback has happened
 10. for each touched shared file that still has one or more formal bound modules after Step 8, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-11. update `bound_modules` only as declarative metadata so every remaining touched shared file matches the real binding set implied by the repository-wide module-side `shared_contract_refs` plus this round's prepared module writeback
-   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-modules --shared-ids shared_x,shared_y` and additional `--shared-refs` filters when the active flow has already identified exact touched files
+11. update `bound_objects` only as declarative metadata so every remaining touched shared file matches the real binding set implied by the repository-wide module-side `shared_contract_refs` plus this round's prepared module writeback
+   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --shared-ids shared_x,shared_y` and additional `--shared-refs` filters when the active flow has already identified exact touched files
 12. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
-   - if any touched shared file changed only in `bound_modules` during this round, pass execution-local `bound_modules_only_shared_file_refs` with the exact file refs for those files
+   - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
 13. if `shared_sync` stops because repository truth is insufficient to continue safely, return control to `shared_escape` through `shared_ops` instead of inventing a flow-local checkpoint
 
 ---
@@ -113,7 +113,7 @@ Stop when one of the following is true:
 
 1. the topology change is complete, every touched shared file's terminal state is resolved, and `shared_sync` has finished reconciliation
 2. the request is not really topology change and must be re-routed to another shared flow
-3. one or more affected modules are currently at `stable` and the flow has raised a `shared_ops` checkpoint for `module_fork` first
+3. one or more affected modules are currently at `stable` and the flow has raised a `shared_ops` checkpoint for `unit_fork` first
 4. repository truth is insufficient to continue safely, so control has returned to `shared_escape` through `shared_ops`
 5. the topology plan requires new or changed stable-layer shared semantics, so this flow has completed the current-round candidate-layer Shared Contract writeback and any required `shared_sync` without direct stable-layer writeback; any later stable-layer Shared Contract file must be produced by a legal promotion rather than by this flow
 6. the request has crossed into `system_constraints_change_proposal`, so control has returned to `shared_escape` through `shared_ops` for checkpoint handling instead of continuing here
@@ -135,7 +135,7 @@ The output must include at least:
 4. the Shared Contract file writeback result, including the written `shared_version` for each created or updated candidate-layer file
 5. for each created or rewritten candidate-layer file that already has a stable-layer sibling, the written `promotion_owner_module`
 6. the module candidate-side retarget or rewrite result
-7. the `bound_modules` reconciliation result for each remaining touched shared file
+7. the `bound_objects` reconciliation result for each remaining touched shared file
 8. the `shared_sync` result, including affected modules and fallback if any
 9. the checkpoint result when candidate writeback could not legally start yet
 10. whether the flow had to stop with candidate-layer shared truth prepared for a later legal promotion instead of writing a stable-layer shared file directly

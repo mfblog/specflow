@@ -17,7 +17,7 @@ Only a new independent full-scope run of `project_stable_verify` may produce tha
 ## 4. Procedure
 
 1. read stable `ProjectSpec`
-2. revalidate current `flow`, `module`, `shared_contract`, and `system_constraints` bindings required by that project truth
+2. revalidate current `scenario`, `unit`, `shared_contract`, and `system_constraints` bindings required by that project truth
 3. if current bindings still align, keep or advance `Next Command=project_fork`
 4. if drift exists, keep `Next Command=project_stable_verify`
 

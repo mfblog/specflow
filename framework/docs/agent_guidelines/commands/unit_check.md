@@ -9,7 +9,7 @@ It is a review action, not a "store failed review results" action.
 By default, closure means all of the following:
 
 1. `progressability`
-   - the module behavior is clear enough to enter `module_plan`
+   - the module behavior is clear enough to enter `unit_plan`
    - main flow, key protocols, key boundaries, error semantics, and acceptance criteria are strong enough to prevent planning or implementation divergence
 2. `content completeness`
    - the candidate has formally acknowledged key behavior truth that affects implementation results
@@ -28,17 +28,17 @@ By default this command reviews:
 6. whether `system_constraints_change_proposal`, if present, is explicit enough to be implemented and verified in the current round
 7. whether shared-candidate signals require routing into `shared_ops` or directly reporting a dual-source-of-truth conflict
 8. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
-9. whether any registered project-local review standard applies on a `module_check`-owned generic review extension surface and tightens the closure decision for the current candidate
+9. whether any registered project-local review standard applies on a `unit_check`-owned generic review extension surface and tightens the closure decision for the current candidate
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
 When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
-Only a new independent full-scope run of `module_check` may produce that advancing result; later local confirmation, repair-side reassessment, or scoped follow-up review must not advance lifecycle state.
+Only a new independent full-scope run of `unit_check` may produce that advancing result; later local confirmation, repair-side reassessment, or scoped follow-up review must not advance lifecycle state.
 
-`module_check` is not a "minimum can-move-forward review."
-`module_check pass` always means:
+`unit_check` is not a "minimum can-move-forward review."
+`unit_check pass` always means:
 
-1. the current candidate may enter `module_plan`
+1. the current candidate may enter `unit_plan`
 2. the current candidate already contains the key constraints needed as the truth input for implementation in this round
 
 Result semantics for non-pass conclusions are fixed:
@@ -46,37 +46,37 @@ Result semantics for non-pass conclusions are fixed:
 1. `blocked`
    - use when the smallest correct next step cannot be completed by executor-side repair alone in the current round
    - the blocker is waiting on user clarification, user decision, or shared-truth closure outside the active command's direct repair surface
-   - if the blocker changes behavior truth, the answer must be written back before `module_check` may pass
+   - if the blocker changes behavior truth, the answer must be written back before `unit_check` may pass
 2. `fix_required`
    - use when the executor can already identify a concrete truth-side repair inside the current candidate, appendix, or explicit binding surface
    - no extra user choice is needed before that repair work starts
-   - after the repair, the module must return to `module_check` rather than skipping forward
+   - after the repair, the module must return to `unit_check` rather than skipping forward
 
 Authoritative rerun boundary:
 
-This section is the `module_check`-local elaboration of the centralized authoritative-run and non-authoritative-follow-up rules inherited above.
+This section is the `unit_check`-local elaboration of the centralized authoritative-run and non-authoritative-follow-up rules inherited above.
 
-1. a new formal `module_check` rerun may be entered either by explicit command syntax or by a later natural-language request that command routing correctly resolves to a fresh full-scope `module_check` run for the current module
-   - after a prior `module_check` ended as `blocked` or `fix_required`, that natural-language request must make rerun intent explicit enough to distinguish "rerun `module_check` now" from "repair the candidate", "continue follow-up work", or "recheck only the reported blocker"
-   - generic repair-oriented wording such as "fix it", "continue", "close this up", or equivalent wording does not by itself authorize a fresh authoritative `module_check` rerun
-2. for `module_check`, a fresh full-scope run means rerunning the command's full mandatory closure surface for the current module:
+1. a new formal `unit_check` rerun may be entered either by explicit command syntax or by a later natural-language request that command routing correctly resolves to a fresh full-scope `unit_check` run for the current module
+   - after a prior `unit_check` ended as `blocked` or `fix_required`, that natural-language request must make rerun intent explicit enough to distinguish "rerun `unit_check` now" from "repair the candidate", "continue follow-up work", or "recheck only the reported blocker"
+   - generic repair-oriented wording such as "fix it", "continue", "close this up", or equivalent wording does not by itself authorize a fresh authoritative `unit_check` rerun
+2. for `unit_check`, a fresh full-scope run means rerunning the command's full mandatory closure surface for the current unit:
    - reread the current candidate main file plus all required appendix and Shared Contract files
    - reread the current formal global baseline input when it exists
    - rerun the framework-baseline closure checks, including `progressability`, `content completeness`, binding checks, and baseline-alignment checks
-   - rerun any applicable registered project-local review surface consumed by `module_check`
+   - rerun any applicable registered project-local review surface consumed by `unit_check`
    - re-judge the overall gate conclusion for the current candidate instead of confirming only the previously reported finding
 3. truth repair performed after a `blocked` or `fix_required` result is not itself that rerun
 4. any repair-side reassessment or scoped follow-up review performed after such repair is non-authoritative:
    - it may report only whether the reported findings appear resolved within the checked scope
-   - it must not be labeled a formal `module_check pass`
+   - it must not be labeled a formal `unit_check pass`
    - it must not write `docs/specs/_check_result/{module}.md`
-   - it must not advance `_status.md` to `module_plan`
-   - checking only the repaired truth fragment, only the previously reported blocker, or any other narrowed review slice does not count as a fresh full-scope `module_check` rerun
+   - it must not advance `_status.md` to `unit_plan`
+   - checking only the repaired truth fragment, only the previously reported blocker, or any other narrowed review slice does not count as a fresh full-scope `unit_check` rerun
 
 Project-local review extension contract:
 
-1. `module_check` supports project-local `review_standard` entries only on generic review extension surfaces formally defined in this file.
-2. `module_check` currently supports:
+1. `unit_check` supports project-local `review_standard` entries only on generic review extension surfaces formally defined in this file.
+2. `unit_check` currently supports:
    - `candidate_closure_review`
 3. `candidate_closure_review` means:
    - a command-owned generic extension surface used after framework-baseline closure checks for project-local review standards that may tighten closure judgment for the current candidate
@@ -88,12 +88,12 @@ Project-local review extension contract:
 5. `candidate_closure_review` may tighten only:
    - `progressability`
    - `content completeness`
-   - structured findings written by `module_check`
+   - structured findings written by `unit_check`
 6. `candidate_closure_review` must not:
-   - redefine `module_check`'s lifecycle position
+   - redefine `unit_check`'s lifecycle position
    - create a new command-level result type
    - bypass `_check_result/{module}.md` pass-gate rules
-7. `module_check` may allow project-side extension write-back only where this file explicitly says so.
+7. `unit_check` may allow project-side extension write-back only where this file explicitly says so.
 8. The currently allowed `_check_result` project extension write-back container for `candidate_closure_review` is:
    - `project_review_extensions`
 9. `project_review_extensions` is a project extension field, not a framework fixed field.
@@ -103,19 +103,19 @@ Project-local review extension contract:
    - `decision`
    - `summary`
 11. `project_review_extensions` items may be written only when:
-   - `module_check` is already writing a pass gate for the current round
-   - a registered `candidate_closure_review` standard consumed by `module_check` either applies to the current target or explicitly requires non-hit semantics for pass-gate write-back
-12. If no consumed registered standard requires project-side write-back, `module_check` may omit `project_review_extensions`.
-13. If a consumed standard does not apply, `module_check` may still write that standard's non-hit semantics only inside the same pass gate write-back. It must not create a standalone or failed-state `_check_result/{module}.md`.
+   - `unit_check` is already writing a pass gate for the current round
+   - a registered `candidate_closure_review` standard consumed by `unit_check` either applies to the current target or explicitly requires non-hit semantics for pass-gate write-back
+12. If no consumed registered standard requires project-side write-back, `unit_check` may omit `project_review_extensions`.
+13. If a consumed standard does not apply, `unit_check` may still write that standard's non-hit semantics only inside the same pass gate write-back. It must not create a standalone or failed-state `_check_result/{module}.md`.
 
 ## 3. Preconditions
 
 1. complete required pre-checks
-2. `_status.md` says `Next Command=module_check`
+2. `_status.md` says `Next Command=unit_check`
 3. the module has `candidate`
 4. read explicitly referenced candidate appendix files and bound Shared Contract files
 5. read `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
-6. if `docs/project_standards/_registry.md` exists, read it and only the registered project-local standard files enabled for a `module_check`-defined supported generic review extension surface
+6. if `docs/project_standards/_registry.md` exists, read it and only the registered project-local standard files enabled for a `unit_check`-defined supported generic review extension surface
 7. if `docs/project_standards/_registry.md` is missing, stop and report governance drift according to `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
 8. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 9. if `_check_result/{module}.md`, `_status.md`, candidate truth, or other commit-triggering governance files may change, read the git policy first
@@ -123,9 +123,9 @@ Project-local review extension contract:
 
 ## 4. Procedure
 
-1. read `docs/specs/modules/candidate/c_{module}.md` plus all required appendix and Shared Contract files
-2. if `stable` exists, also read `docs/specs/modules/stable/s_{module}.md` plus required stable appendix files
-3. read `docs/specs/system/stable/s_system_constraints.md` if it exists; otherwise continue with the "no formal global baseline yet" state
+1. read `docs/specs/units/candidate/c_unit_{unit}.md` plus all required appendix and Shared Contract files
+2. if `stable` exists, also read `docs/specs/units/stable/s_unit_{unit}.md` plus required stable appendix files
+3. read `docs/specs/system_constraints/stable/s_system_constraints.md` if it exists; otherwise continue with the "no formal global baseline yet" state
 4. judge `progressability`
 5. judge `content completeness`
 6. classify completeness gaps into:
@@ -136,8 +136,8 @@ Project-local review extension contract:
    - `Behavior Basis Completeness`
    - `Decision Surface Completeness`
    - `Acceptance Basis Completeness`
-8. complete the framework-baseline closure checks owned by `module_check`, including the fixed completeness review objects plus the baseline, shared-contract, and shared-truth checks below, before finalizing any project-local review merge
-9. for each `module_check`-owned supported generic review extension surface:
+8. complete the framework-baseline closure checks owned by `unit_check`, including the fixed completeness review objects plus the baseline, shared-contract, and shared-truth checks below, before finalizing any project-local review merge
+9. for each `unit_check`-owned supported generic review extension surface:
    - resolve matching registered `review_standard` entries from `docs/project_standards/_registry.md`
    - let each registered standard's own applicability contract decide whether it applies to the current target inside that surface
    - execute only the standards whose applicability contract applies to the current target
@@ -161,7 +161,7 @@ Project-local review extension contract:
    - use `decision` when multiple materially different directions remain and the user must choose one
 15. checkpoint rules:
    - a checkpoint is not `pass`
-   - if a checkpoint conclusion changes behavior truth, it must be written back to candidate or appendix before `module_check` may be rerun
+   - if a checkpoint conclusion changes behavior truth, it must be written back to candidate or appendix before `unit_check` may be rerun
    - do not write `_check_result/{module}.md` for checkpoint-only stops
 16. merge conclusions in this order:
    - `progressability`
@@ -174,12 +174,12 @@ Project-local review extension contract:
 18. if the result is `pass`, create or update `docs/specs/_check_result/{module}.md`
    - when a supported project-local review extension surface was consumed and this file allows project-side extension write-back for that surface, write the corresponding `project_review_extensions` items together with the pass gate
 19. if the result is not `pass`, do not write a failed `_check_result/{module}.md`; delete an old pass gate if it is no longer valid
-20. if the result is `blocked` or `fix_required`, close the current `module_check` run after writing any required findings:
-   - any later truth repair belongs to follow-up work, not to a still-open `module_check`
-   - any later repair-side reassessment or scoped follow-up review remains non-authoritative unless a new fresh full-scope `module_check` run is entered through command routing
+20. if the result is `blocked` or `fix_required`, close the current `unit_check` run after writing any required findings:
+   - any later truth repair belongs to follow-up work, not to a still-open `unit_check`
+   - any later repair-side reassessment or scoped follow-up review remains non-authoritative unless a new fresh full-scope `unit_check` run is entered through command routing
 21. update `_status.md`:
-   - if pass -> `Next Command=module_plan`
-   - otherwise -> `Next Command=module_check`
+   - if pass -> `Next Command=unit_plan`
+   - otherwise -> `Next Command=unit_check`
 22. perform git close-out if required
 
 ## 5. Stop Conditions
@@ -189,7 +189,7 @@ Project-local review extension contract:
 3. if the round does not pass, no invalid old pass gate remains
 4. `_status.md` is updated
 5. if a supported project-local review extension surface was consumed and the round passes, its allowed project extension write-back is clear
-6. no repair-side reassessment or scoped follow-up review has been mistaken for a formal `module_check pass`
+6. no repair-side reassessment or scoped follow-up review has been mistaken for a formal `unit_check pass`
 
 ## 6. Output Contract
 
@@ -218,7 +218,7 @@ The output should include:
 14. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - when a checkpoint was raised, also report `resume signal`
-   - if `Next Command=module_check`, `why this next step` must explicitly state whether the blocker is truth repair, user clarification, or a required decision rather than only repeating that closure is incomplete
+   - if `Next Command=unit_check`, `why this next step` must explicitly state whether the blocker is truth repair, user clarification, or a required decision rather than only repeating that closure is incomplete
 
 When the result is `blocked` or `fix_required`, findings must be structured and must not be reduced to vague summaries.
 
@@ -258,5 +258,5 @@ Allowed `fallback_reason_code` values:
 ## 8. Examples
 
 ```md
-module_check:module_ai
+unit_check:ai
 ```

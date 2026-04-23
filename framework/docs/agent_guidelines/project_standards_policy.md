@@ -135,11 +135,11 @@ Fixed `applies_to` selector forms:
 
 1. `all_targets_on_surface`
    - applies to every current target that already hit the consuming command's declared `surface`
-2. `module:<formal_module_name>`
-   - applies only to one formal module, such as `module:module_ai`
-3. `module_set:<formal_module_name>,<formal_module_name>,...`
-   - applies only to the listed formal modules
-   - module names must use formal module names from `docs/specs/_status.md`
+2. `unit:<formal_unit_name>`
+   - applies only to one formal unit, such as `unit:ai`
+3. `unit_set:<formal_unit_name>,<formal_unit_name>,...`
+   - applies only to the listed formal units
+   - unit names must use formal unit names from `docs/specs/_status.md`
    - no spaces are allowed inside the comma-separated list
 4. `review_scenario:<stable_name>`
    - applies only to one command-defined review scenario name

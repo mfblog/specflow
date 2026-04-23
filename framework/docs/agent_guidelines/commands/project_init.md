@@ -10,7 +10,7 @@ It handles:
 
 1. creating `docs/specs/project/stable/s_project.md`
 2. registering `project` in `_status.md`
-3. recording current stable bindings to `flow`, `module`, `shared_contract`, and `system_constraints`
+3. recording current stable bindings to `scenario`, `unit`, `shared_contract`, and `system_constraints`
 
 It does not:
 
@@ -30,7 +30,7 @@ Only a new independent full-scope run of `project_init` may produce that advanci
 
 ## 4. Procedure
 
-1. read current formal `module`, `flow`, `shared_contract`, and `system_constraints` truth
+1. read current formal `unit`, `scenario`, `shared_contract`, and `system_constraints` truth
 2. write the first stable `ProjectSpec`
 3. write or upsert `_status.md` row:
    - `Object Type=project`

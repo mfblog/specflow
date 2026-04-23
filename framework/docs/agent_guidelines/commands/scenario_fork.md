@@ -2,28 +2,28 @@
 
 ## 1. Purpose
 
-`flow_fork:{flow}` opens a new candidate flow round from the current stable flow.
+`scenario_fork:{flow}` opens a new candidate flow round from the current stable flow.
 
 ## 2. Lifecycle-State Advance Inheritance
 
 When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
-Only a new independent full-scope run of `flow_fork` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+Only a new independent full-scope run of `scenario_fork` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
 
 ## 3. Preconditions
 
-1. `_status.md` says `Object Type=flow`, `Active Layer=stable`, `Next Command=flow_fork`
+1. `_status.md` says `Object Type=scenario`, `Active Layer=stable`, `Next Command=scenario_fork`
 2. stable flow truth exists
 
 ## 4. Procedure
 
 1. read stable flow truth
-2. create or overwrite `docs/specs/flows/candidate/c_flow_{name}.md`
+2. create or overwrite `docs/specs/scenarios/candidate/c_scenario_{name}.md`
 3. carry forward stable bindings
 4. delete outdated candidate-side flow process files if they exist
 5. write `_status.md`:
    - `Candidate=yes`
    - `Active Layer=candidate`
-   - `Next Command=flow_check`
+   - `Next Command=scenario_check`
 
 ## 5. Output Contract
 

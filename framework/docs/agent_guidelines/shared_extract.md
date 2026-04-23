@@ -25,7 +25,7 @@ It may:
 1. create or update a candidate-layer `shared_contract`
 2. rewrite module candidate-side references and boundary explanation
 3. remove duplicate formal truth from the source module candidate side
-4. update the target shared file's declarative `bound_modules` metadata so it matches the real binding set after extraction writeback
+4. update the target shared file's declarative `bound_objects` metadata so it matches the real binding set after extraction writeback
 5. trigger `shared_sync` after any shared-truth or binding writeback
 6. stop at a `shared_ops` checkpoint when any source or consumer module is currently at `stable`
 
@@ -53,8 +53,8 @@ Before execution:
    - read every additional current-layer module main file needed to judge whether that module still carries, duplicates, or already consumes the target truth
    - do not treat the source module list alone as sufficient when the extraction target may already be reused elsewhere
 7. read any relevant existing `shared_contract` files that may overlap the target truth
-8. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
-9. if any involved module is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/module_fork.md`
+8. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
+9. if any involved module is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/unit_fork.md`
 10. if the round may create, update, or delete any module `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 11. if the round may create or update any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply
 
@@ -74,7 +74,7 @@ Before execution:
    - do not require writeback for an involved module that is read only to confirm consumer coverage and whose current-layer truth already aligns with the extraction result
 5. if any writeback-required involved module current layer is `stable`, do not modify that module `stable` directly:
    - raise a blocking `shared_ops` checkpoint with `type=prerequisite_action`
-   - require `module_fork:{module}` for each such module before extraction continues
+   - require `unit_fork:{module}` for each such module before extraction continues
    - set `required_writeback_target` to the corresponding module candidate main file set because chat-only agreement does not create legal extraction targets
 6. create or update the target candidate-layer `shared_contract`
 7. if Step 6 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
@@ -91,13 +91,13 @@ Before execution:
 11. rewrite every source module candidate side so the extracted truth is no longer duplicated as module-local formal truth
 12. rewrite every additional writeback-required involved consumer module candidate-side reference and behavior explanation required by the extraction result
    - any written `shared_contract_refs` must use the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
-13. update the target shared file's `bound_modules` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
-   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-modules --shared-refs c_shared_x@0.1.0` and additional `--shared-ids` filters when the active flow has already identified them
+13. update the target shared file's `bound_objects` only as declarative metadata so it matches the real binding set implied by module-side `shared_contract_refs`
+   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --shared-refs c_shared_x@0.1.0` and additional `--shared-ids` filters when the active flow has already identified them
 14. if the target shared file now has one or more formal bound modules after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 15. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
 16. if any involved module that should now consume the extracted truth was not fully reviewed and rewritten where required, stop and report consumer-coverage failure
 17. after any write to `docs/specs/shared_contracts/**` or any module `shared_contract_refs`, execute `shared_sync` before claiming closure
-   - if any touched shared file changed only in `bound_modules` during this round, pass execution-local `bound_modules_only_shared_file_refs` with the exact file refs for those files
+   - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
 
 ---
 
@@ -106,10 +106,10 @@ Before execution:
 Stop when one of the following is true:
 
 1. the shared extraction is complete, duplicate formal truth is removed, and `shared_sync` has finished reconciliation
-   - the target shared file `bound_modules` metadata must already match the real module-side binding set
+   - the target shared file `bound_objects` metadata must already match the real module-side binding set
    - involved consumer coverage must already be complete for the current repository truth
 2. the request is not really extraction and must be re-routed to another shared flow
-3. one or more writeback-required involved modules are currently at `stable` and the flow has raised a `shared_ops` checkpoint for `module_fork` first
+3. one or more writeback-required involved modules are currently at `stable` and the flow has raised a `shared_ops` checkpoint for `unit_fork` first
 4. module-private truth versus shared truth is still not stably separable
 5. involved consumer coverage is still incomplete or uncertain, so the flow cannot claim extraction closure yet
 6. the request has crossed into `system_constraints_change_proposal` and must stop at a `shared_ops` checkpoint instead of continuing here
@@ -123,13 +123,13 @@ The output must include at least:
 
 1. the extracted shared object and why it belongs to `shared_extract`
 2. the complete involved-module set used for the extraction decision
-3. which involved modules were source modules, which were already consumer modules, which required writeback in this round, and which had to stop for `module_fork`
+3. which involved modules were source modules, which were already consumer modules, which required writeback in this round, and which had to stop for `unit_fork`
 4. the source module files that originally carried the truth
 5. the target shared-contract file written or updated, or the checkpoint result when extraction could not legally start yet
 6. the written `shared_version` and why it is correct for the current round
 7. the module candidate-side rewrite result and whether duplicate formal truth was fully removed
 8. whether involved consumer coverage is complete for the current repository truth
-9. the target shared file `bound_modules` reconciliation result
+9. the target shared file `bound_objects` reconciliation result
 10. when the resulting candidate-layer shared file has a stable-layer sibling, the written or validated `promotion_owner_module`
 11. the `shared_sync` result, including affected modules and fallback if any
 12. the git close-out result when governance files or commit-triggering files were changed

@@ -26,7 +26,7 @@ Only a new independent full-scope run of `project_new` may produce that advancin
 ## 4. Procedure
 
 1. create `c_project.md`
-2. initialize `flow_refs`, `module_refs`, `shared_contract_refs`, and `system_constraints_stable_ref`
+2. initialize `scenario_refs`, `unit_refs`, `shared_contract_refs`, and `system_constraints_stable_ref`
 3. write or upsert `_status.md` row:
    - `Object Type=project`
    - `Object=project`

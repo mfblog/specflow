@@ -52,7 +52,7 @@ var supportedTypes = map[string]bool{
 }
 
 var contracts = map[string]map[string]surfaceContract{
-	"module_check": {
+	"unit_check": {
 		"candidate_closure_review": {
 			StandardType: "review_standard",
 			AllowedEffects: map[string]bool{
@@ -61,8 +61,8 @@ var contracts = map[string]map[string]surfaceContract{
 			},
 			AllowedKinds: map[string]bool{
 				"all_targets_on_surface": true,
-				"module":                 true,
-				"module_set":             true,
+				"unit":                   true,
+				"unit_set":               true,
 			},
 			AllowAllOnSurface: true,
 		},
@@ -172,15 +172,15 @@ func ValidateRegistry(repoRoot string) (ValidationResult, error) {
 			continue
 		}
 		switch selector.Kind {
-		case "module":
+		case "unit":
 			if !moduleSet[selector.Values[0]] {
-				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unknown formal module %q", rowPrefix, selector.Values[0]))
+				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unknown formal unit %q", rowPrefix, selector.Values[0]))
 				entryValid = false
 			}
-		case "module_set":
+		case "unit_set":
 			for _, module := range selector.Values {
 				if !moduleSet[module] {
-					result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unknown formal module %q in module_set", rowPrefix, module))
+					result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unknown formal unit %q in unit_set", rowPrefix, module))
 					entryValid = false
 				}
 			}
@@ -219,28 +219,28 @@ func ParseAppliesTo(raw string) (AppliesSelector, error) {
 	if raw == "all_targets_on_surface" {
 		return AppliesSelector{Kind: raw}, nil
 	}
-	if strings.HasPrefix(raw, "module:") {
-		value := strings.TrimSpace(strings.TrimPrefix(raw, "module:"))
+	if strings.HasPrefix(raw, "unit:") {
+		value := strings.TrimSpace(strings.TrimPrefix(raw, "unit:"))
 		if value == "" {
-			return AppliesSelector{}, fmt.Errorf("module selector requires one formal module name")
+			return AppliesSelector{}, fmt.Errorf("unit selector requires one formal unit name")
 		}
-		return AppliesSelector{Kind: "module", Values: []string{value}}, nil
+		return AppliesSelector{Kind: "unit", Values: []string{value}}, nil
 	}
-	if strings.HasPrefix(raw, "module_set:") {
-		value := strings.TrimSpace(strings.TrimPrefix(raw, "module_set:"))
+	if strings.HasPrefix(raw, "unit_set:") {
+		value := strings.TrimSpace(strings.TrimPrefix(raw, "unit_set:"))
 		if value == "" {
-			return AppliesSelector{}, fmt.Errorf("module_set selector requires at least one formal module name")
+			return AppliesSelector{}, fmt.Errorf("unit_set selector requires at least one formal unit name")
 		}
 		if strings.Contains(value, " ") {
-			return AppliesSelector{}, fmt.Errorf("module_set selector must not contain spaces")
+			return AppliesSelector{}, fmt.Errorf("unit_set selector must not contain spaces")
 		}
 		values := strings.Split(value, ",")
 		for _, item := range values {
 			if item == "" {
-				return AppliesSelector{}, fmt.Errorf("module_set selector contains an empty module name")
+				return AppliesSelector{}, fmt.Errorf("unit_set selector contains an empty unit name")
 			}
 		}
-		return AppliesSelector{Kind: "module_set", Values: values}, nil
+		return AppliesSelector{Kind: "unit_set", Values: values}, nil
 	}
 	if strings.HasPrefix(raw, "review_scenario:") {
 		value := strings.TrimSpace(strings.TrimPrefix(raw, "review_scenario:"))

@@ -33,7 +33,7 @@ That default scope includes:
    - `command_policy.md`
    - `implementation_change_policy.md`
    - `project_spec_policy.md`
-   - `flow_policy.md`
+   - `scenario_policy.md`
    - `git_policy.md`
    - `checkpoint_protocol.md`
    - `shared_ops.md`
@@ -89,7 +89,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `command_policy.md`
    - `implementation_change_policy.md`
    - `project_spec_policy.md`
-   - `flow_policy.md`
+   - `scenario_policy.md`
    - `shared_ops.md`
    - `AGENTS.md`
    - `GEMINI.md`

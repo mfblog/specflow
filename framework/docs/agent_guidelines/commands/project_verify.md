@@ -17,7 +17,7 @@ Only a new independent full-scope run of `project_verify` may produce that advan
 ## 4. Procedure
 
 1. read current candidate `ProjectSpec`
-2. revalidate current bound `flow`, `module`, `shared_contract`, and `system_constraints` snapshots
+2. revalidate current bound `scenario`, `unit`, `shared_contract`, and `system_constraints` snapshots
 3. if current bindings and current project topology still align, write `_verify_result/project.md`
 4. if ready, advance `Next Command=project_promote`
 5. if bindings drifted, fall back to `project_check`
@@ -40,4 +40,4 @@ The output must report:
 ## 6. Non-Goals
 
 1. repairing downstream objects
-2. replacing `flow_verify`
+2. replacing `scenario_verify`

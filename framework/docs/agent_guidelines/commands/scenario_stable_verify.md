@@ -2,24 +2,24 @@
 
 ## 1. Purpose
 
-`flow_stable_verify:{flow}` checks whether current repository truth still aligns with the stable flow truth.
+`scenario_stable_verify:{flow}` checks whether current repository truth still aligns with the stable flow truth.
 
 ## 2. Lifecycle-State Advance Inheritance
 
 When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
-Only a new independent full-scope run of `flow_stable_verify` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+Only a new independent full-scope run of `scenario_stable_verify` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
 
 ## 3. Preconditions
 
-1. `_status.md` says `Object Type=flow`, `Active Layer=stable`, `Next Command=flow_stable_verify`
+1. `_status.md` says `Object Type=scenario`, `Active Layer=stable`, `Next Command=scenario_stable_verify`
 2. current stable flow file exists
 
 ## 4. Procedure
 
 1. read stable flow truth
 2. revalidate current bound modules, shared contracts, and stable baseline
-3. if still aligned, advance `Next Command=flow_fork`
-4. if drift exists, keep `Next Command=flow_stable_verify`
+3. if still aligned, advance `Next Command=scenario_fork`
+4. if drift exists, keep `Next Command=scenario_stable_verify`
 
 ## 5. Output Contract
 

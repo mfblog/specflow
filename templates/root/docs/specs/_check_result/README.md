@@ -7,8 +7,8 @@ Rules:
 1. `_check_result/{object}.md` should exist only for formal objects that passed their current-layer `check` command and still hold a valid candidate-chain gate.
 2. These files are not formal Specs and are not behavior sources of truth.
 3. The current round allows only these command-target object types here:
-   - `module`
-   - `flow`
+   - `unit`
+   - `scenario`
    - `project`
 4. `Check Result Snapshot` must use at least these fixed fields:
    - `object_type`
@@ -27,9 +27,9 @@ Rules:
    - `system_constraints_stable_version_ref`
    - `system_constraints_stable_fingerprint`
 5. Object-owned snapshot extensions are fixed by object type:
-   - `module` additionally records `module_appendix_snapshot` and `shared_contract_snapshot`
-   - `flow` additionally records `module_snapshot` and `shared_contract_snapshot`
-   - `project` additionally records `flow_snapshot`, `module_snapshot`, and `shared_contract_snapshot`
+   - `unit` additionally records `unit_appendix_snapshot` and `shared_contract_snapshot`
+   - `scenario` additionally records `unit_snapshot` and `shared_contract_snapshot`
+   - `project` additionally records `scenario_snapshot`, `unit_snapshot`, and `shared_contract_snapshot`
 6. `gate` must equal the formal `check` command for the current object family.
 7. A `check` command creates or overwrites this file only when the result is `pass`.
 8. When `check` does not pass, it must not write a failed-state file; if an old gate is no longer valid, delete it.

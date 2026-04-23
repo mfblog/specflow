@@ -18,18 +18,18 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 		"## Formal Objects",
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|---|",
-		"| `module` | `module_demo` | `no` | `yes` | `candidate` | `module_plan` | current round |",
-		"| `flow` | `flow_demo` | `no` | `yes` | `candidate` | `flow_verify` | current round |",
+		"|---|---|---|---|---|---|---|---|",
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
+		"| `scenario` | `demo` | `no` | `yes` | `candidate` | `scenario_verify` | current round |",
 		"| `project` | `project` | `no` | `yes` | `candidate` | `project_verify` | current round |",
 	}, "\n")+"\n")
 	for _, relPath := range []string{
-		"docs/specs/_check_result/module_demo.md",
-		"docs/specs/_plans/active/module_demo.md",
-		"docs/specs/_plans/draft/module_demo.md",
-		"docs/specs/_verify_result/module_demo.md",
-		"docs/specs/_check_result/flow_demo.md",
-		"docs/specs/_verify_result/flow_demo.md",
+		"docs/specs/_check_result/demo.md",
+		"docs/specs/_plans/active/demo.md",
+		"docs/specs/_plans/draft/demo.md",
+		"docs/specs/_verify_result/demo.md",
+		"docs/specs/_check_result/demo.md",
+		"docs/specs/_verify_result/demo.md",
 		"docs/specs/_check_result/project.md",
 		"docs/specs/_verify_result/project.md",
 	} {
@@ -39,18 +39,18 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 	result, err := Apply(repoRoot, Input{
 		Modules: []ScopedModule{{
 			Binding: ModuleBinding{
-				Module:        "module_demo",
+				Module:        "demo",
 				ActiveLayer:   "candidate",
-				NextCommand:   "module_plan",
+				NextCommand:   "unit_plan",
 				BindingIssues: []string{"binding drift"},
 			},
 		}},
 		Flows: []ScopedObject{{
 			Binding: ObjectBinding{
-				ObjectType:    "flow",
-				Object:        "flow_demo",
+				ObjectType:    "scenario",
+				Object:        "demo",
 				ActiveLayer:   "candidate",
-				NextCommand:   "flow_verify",
+				NextCommand:   "scenario_verify",
 				BindingIssues: []string{"binding drift"},
 			},
 		}},
@@ -68,10 +68,10 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	if len(result.ModuleResults) != 1 || result.ModuleResults[0].NextCommand != "module_check" || result.ModuleResults[0].Outcome != "invalidated" {
+	if len(result.ModuleResults) != 1 || result.ModuleResults[0].NextCommand != "unit_check" || result.ModuleResults[0].Outcome != "invalidated" {
 		t.Fatalf("unexpected module result: %+v", result.ModuleResults)
 	}
-	if len(result.FlowResults) != 1 || result.FlowResults[0].NextCommand != "flow_check" || result.FlowResults[0].Outcome != "invalidated" {
+	if len(result.FlowResults) != 1 || result.FlowResults[0].NextCommand != "scenario_check" || result.FlowResults[0].Outcome != "invalidated" {
 		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
 	}
 	if len(result.ProjectResults) != 1 || result.ProjectResults[0].NextCommand != "project_check" || result.ProjectResults[0].Outcome != "invalidated" {
@@ -79,12 +79,12 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 	}
 
 	for _, relPath := range []string{
-		"docs/specs/_check_result/module_demo.md",
-		"docs/specs/_plans/active/module_demo.md",
-		"docs/specs/_plans/draft/module_demo.md",
-		"docs/specs/_verify_result/module_demo.md",
-		"docs/specs/_check_result/flow_demo.md",
-		"docs/specs/_verify_result/flow_demo.md",
+		"docs/specs/_check_result/demo.md",
+		"docs/specs/_plans/active/demo.md",
+		"docs/specs/_plans/draft/demo.md",
+		"docs/specs/_verify_result/demo.md",
+		"docs/specs/_check_result/demo.md",
+		"docs/specs/_verify_result/demo.md",
 		"docs/specs/_check_result/project.md",
 		"docs/specs/_verify_result/project.md",
 	} {
@@ -99,8 +99,8 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 	}
 	statusText := string(statusData)
 	for _, expected := range []string{
-		"| `module` | `module_demo` | `no` | `yes` | `candidate` | `module_check` | current round |",
-		"| `flow` | `flow_demo` | `no` | `yes` | `candidate` | `flow_check` | current round |",
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | current round |",
+		"| `scenario` | `demo` | `no` | `yes` | `candidate` | `scenario_check` | current round |",
 		"| `project` | `project` | `no` | `yes` | `candidate` | `project_check` | current round |",
 	} {
 		if !strings.Contains(statusText, expected) {
@@ -117,27 +117,27 @@ func TestApplyReroutesStableObjectsToVerifyCommands(t *testing.T) {
 		"## Formal Objects",
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|---|",
-		"| `module` | `module_demo` | `yes` | `no` | `stable` | `module_fork` | stable round |",
-		"| `flow` | `flow_demo` | `yes` | `no` | `stable` | `flow_fork` | stable round |",
+		"|---|---|---|---|---|---|---|---|",
+		"| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | stable round |",
+		"| `scenario` | `demo` | `yes` | `no` | `stable` | `scenario_fork` | stable round |",
 		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
 	}, "\n")+"\n")
 
 	result, err := Apply(repoRoot, Input{
 		Modules: []ScopedModule{{
 			Binding: ModuleBinding{
-				Module:        "module_demo",
+				Module:        "demo",
 				ActiveLayer:   "stable",
-				NextCommand:   "module_fork",
+				NextCommand:   "unit_fork",
 				BindingIssues: []string{"binding drift"},
 			},
 		}},
 		Flows: []ScopedObject{{
 			Binding: ObjectBinding{
-				ObjectType:    "flow",
-				Object:        "flow_demo",
+				ObjectType:    "scenario",
+				Object:        "demo",
 				ActiveLayer:   "stable",
-				NextCommand:   "flow_fork",
+				NextCommand:   "scenario_fork",
 				BindingIssues: []string{"binding drift"},
 			},
 		}},
@@ -155,10 +155,10 @@ func TestApplyReroutesStableObjectsToVerifyCommands(t *testing.T) {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	if len(result.ModuleResults) != 1 || result.ModuleResults[0].NextCommand != "module_stable_verify" || result.ModuleResults[0].Outcome != "rerouted" {
+	if len(result.ModuleResults) != 1 || result.ModuleResults[0].NextCommand != "unit_stable_verify" || result.ModuleResults[0].Outcome != "rerouted" {
 		t.Fatalf("unexpected module result: %+v", result.ModuleResults)
 	}
-	if len(result.FlowResults) != 1 || result.FlowResults[0].NextCommand != "flow_stable_verify" || result.FlowResults[0].Outcome != "rerouted" {
+	if len(result.FlowResults) != 1 || result.FlowResults[0].NextCommand != "scenario_stable_verify" || result.FlowResults[0].Outcome != "rerouted" {
 		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
 	}
 	if len(result.ProjectResults) != 1 || result.ProjectResults[0].NextCommand != "project_stable_verify" || result.ProjectResults[0].Outcome != "rerouted" {
@@ -171,8 +171,8 @@ func TestApplyReroutesStableObjectsToVerifyCommands(t *testing.T) {
 	}
 	statusText := string(statusData)
 	for _, expected := range []string{
-		"| `module` | `module_demo` | `yes` | `no` | `stable` | `module_stable_verify` | stable round |",
-		"| `flow` | `flow_demo` | `yes` | `no` | `stable` | `flow_stable_verify` | stable round |",
+		"| `unit` | `demo` | `yes` | `no` | `stable` | `unit_stable_verify` | stable round |",
+		"| `scenario` | `demo` | `yes` | `no` | `stable` | `scenario_stable_verify` | stable round |",
 		"| `project` | `project` | `yes` | `no` | `stable` | `project_stable_verify` | stable round |",
 	} {
 		if !strings.Contains(statusText, expected) {
@@ -189,27 +189,27 @@ func TestApplyUsesResolvedSharedInvalidationForStableObjects(t *testing.T) {
 		"## Formal Objects",
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|---|",
-		"| `module` | `module_demo` | `yes` | `no` | `stable` | `module_fork` | stable round |",
-		"| `flow` | `flow_demo` | `yes` | `no` | `stable` | `flow_fork` | stable round |",
+		"|---|---|---|---|---|---|---|---|",
+		"| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | stable round |",
+		"| `scenario` | `demo` | `yes` | `no` | `stable` | `scenario_fork` | stable round |",
 		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
 	}, "\n")+"\n")
 
 	result, err := Apply(repoRoot, Input{
 		Modules: []ScopedModule{{
 			Binding: ModuleBinding{
-				Module:      "module_demo",
+				Module:      "demo",
 				ActiveLayer: "stable",
-				NextCommand: "module_fork",
+				NextCommand: "unit_fork",
 			},
 			InvalidatingSharedRefs: []string{"s_shared_demo@1.0.0"},
 		}},
 		Flows: []ScopedObject{{
 			Binding: ObjectBinding{
-				ObjectType:  "flow",
-				Object:      "flow_demo",
+				ObjectType:  "scenario",
+				Object:      "demo",
 				ActiveLayer: "stable",
-				NextCommand: "flow_fork",
+				NextCommand: "scenario_fork",
 			},
 			InvalidatingSharedRefs: []string{"s_shared_demo@1.0.0"},
 		}},
@@ -246,13 +246,13 @@ func TestApplyUsesExplicitFallbackScopeForObjects(t *testing.T) {
 		"## Formal Objects",
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|---|",
-		"| `flow` | `flow_demo` | `no` | `yes` | `candidate` | `flow_verify` | current round |",
+		"|---|---|---|---|---|---|---|---|",
+		"| `scenario` | `demo` | `no` | `yes` | `candidate` | `scenario_verify` | current round |",
 		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
 	}, "\n")+"\n")
 	for _, relPath := range []string{
-		"docs/specs/_check_result/flow_demo.md",
-		"docs/specs/_verify_result/flow_demo.md",
+		"docs/specs/_check_result/demo.md",
+		"docs/specs/_verify_result/demo.md",
 	} {
 		mustWriteImpactFile(t, filepath.Join(repoRoot, relPath), "# process\n")
 	}
@@ -260,10 +260,10 @@ func TestApplyUsesExplicitFallbackScopeForObjects(t *testing.T) {
 	result, err := Apply(repoRoot, Input{
 		Flows: []ScopedObject{{
 			Binding: ObjectBinding{
-				ObjectType:  "flow",
-				Object:      "flow_demo",
+				ObjectType:  "scenario",
+				Object:      "demo",
 				ActiveLayer: "candidate",
-				NextCommand: "flow_verify",
+				NextCommand: "scenario_verify",
 			},
 			ExplicitFallbackScope: true,
 		}},
@@ -281,7 +281,7 @@ func TestApplyUsesExplicitFallbackScopeForObjects(t *testing.T) {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "binding_drift" || result.FlowResults[0].NextCommand != "flow_check" {
+	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "binding_drift" || result.FlowResults[0].NextCommand != "scenario_check" {
 		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
 	}
 	if len(result.ProjectResults) != 1 || result.ProjectResults[0].FallbackReasonCode != "binding_drift" || result.ProjectResults[0].NextCommand != "project_stable_verify" {
@@ -297,18 +297,18 @@ func TestApplyKeepsObjectsUnchangedWithoutFallbackInputs(t *testing.T) {
 		"## Formal Objects",
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|---|",
-		"| `flow` | `flow_demo` | `no` | `yes` | `candidate` | `flow_verify` | current round |",
+		"|---|---|---|---|---|---|---|---|",
+		"| `scenario` | `demo` | `no` | `yes` | `candidate` | `scenario_verify` | current round |",
 		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
 	}, "\n")+"\n")
 
 	result, err := Apply(repoRoot, Input{
 		Flows: []ScopedObject{{
 			Binding: ObjectBinding{
-				ObjectType:  "flow",
-				Object:      "flow_demo",
+				ObjectType:  "scenario",
+				Object:      "demo",
 				ActiveLayer: "candidate",
-				NextCommand: "flow_verify",
+				NextCommand: "scenario_verify",
 			},
 		}},
 		Projects: []ScopedObject{{
@@ -341,8 +341,8 @@ func TestApplyKeepsCandidateModuleWhenCallerAllowsSharedSnapshotMismatch(t *test
 		"shared_contract_id: shared_demo",
 		"layer: candidate",
 		"shared_version: 0.1.0",
-		"bound_modules:",
-		"  - module_demo",
+		"bound_objects:",
+		"  - unit:demo",
 		"---",
 		"",
 		"# Shared",
@@ -354,9 +354,9 @@ func TestApplyKeepsCandidateModuleWhenCallerAllowsSharedSnapshotMismatch(t *test
 	result, err := Apply(repoRoot, Input{
 		Modules: []ScopedModule{{
 			Binding: ModuleBinding{
-				Module:      "module_demo",
+				Module:      "demo",
 				ActiveLayer: "candidate",
-				NextCommand: "module_plan",
+				NextCommand: "unit_plan",
 			},
 			AllowedSharedSnapshotMismatchFileRefs: []string{"docs/specs/shared_contracts/candidate/c_shared_demo.md"},
 		}},
@@ -372,10 +372,10 @@ func TestApplyKeepsCandidateModuleWhenCallerAllowsSharedSnapshotMismatch(t *test
 	if moduleResult.Outcome != "unchanged" {
 		t.Fatalf("expected unchanged outcome, got %+v", moduleResult)
 	}
-	if moduleResult.NextCommand != "module_plan" {
-		t.Fatalf("expected next command module_plan, got %+v", moduleResult)
+	if moduleResult.NextCommand != "unit_plan" {
+		t.Fatalf("expected next command unit_plan, got %+v", moduleResult)
 	}
-	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/module_demo.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/demo.md")); err != nil {
 		t.Fatalf("expected process file to remain, stat err=%v", err)
 	}
 }
@@ -384,18 +384,18 @@ func TestApplyKeepsCandidateModuleWhenPlanUsesPlanContract(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupImpactModuleSharedRepo(t, repoRoot)
 
-	snap, err := snapshot.RebuildCurrent(repoRoot, "module_demo")
+	snap, err := snapshot.RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
-	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/module_demo.md"), renderImpactPlanProcessSnapshot(snap))
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), renderImpactPlanProcessSnapshot(snap))
 
 	result, err := Apply(repoRoot, Input{
 		Modules: []ScopedModule{{
 			Binding: ModuleBinding{
-				Module:      "module_demo",
+				Module:      "demo",
 				ActiveLayer: "candidate",
-				NextCommand: "module_verify",
+				NextCommand: "unit_verify",
 			},
 		}},
 	})
@@ -407,7 +407,7 @@ func TestApplyKeepsCandidateModuleWhenPlanUsesPlanContract(t *testing.T) {
 		t.Fatalf("expected one module result, got %+v", result.ModuleResults)
 	}
 	moduleResult := result.ModuleResults[0]
-	if moduleResult.Outcome != "unchanged" || moduleResult.NextCommand != "module_verify" {
+	if moduleResult.Outcome != "unchanged" || moduleResult.NextCommand != "unit_verify" {
 		t.Fatalf("expected unchanged module with valid plan contract, got %+v", moduleResult)
 	}
 }
@@ -432,20 +432,20 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
 		"# Spec Status",
 		"",
-		"## Formal Modules",
+		"## Formal Objects",
 		"",
-		"| Module | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|",
-		"| `module_demo` | `no` | `yes` | `candidate` | `module_plan` | current round |",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
 	}, "\n")+"\n")
 
-	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_demo")
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteImpactFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
 		"---",
-		"id: module_demo",
+		"id: demo",
 		"layer: candidate",
 		"version: 0.1.0",
 		"---",
@@ -466,8 +466,8 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 		"shared_contract_id: shared_demo",
 		"layer: candidate",
 		"shared_version: 0.1.0",
-		"bound_modules:",
-		"  - module_demo",
+		"bound_objects:",
+		"  - unit:demo",
 		"---",
 		"",
 		"# Shared",
@@ -476,11 +476,11 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 	}, "\n"))
 
-	snap, err := snapshot.RebuildCurrent(repoRoot, "module_demo")
+	snap, err := snapshot.RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
-	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/module_demo.md"), renderImpactCheckProcessSnapshot(snap))
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/demo.md"), renderImpactCheckProcessSnapshot(snap))
 	return "docs/specs/shared_contracts/candidate/c_shared_demo.md"
 }
 
@@ -506,12 +506,12 @@ func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
 		"# check",
 		"",
 		"```yaml",
-		"object_type: module",
+		"object_type: unit",
 		"object_ref: " + snap.Module,
-		"gate: module_check",
+		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: module_plan",
+		"next_command: unit_plan",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: " + snap.TruthLayerRef,
@@ -521,7 +521,7 @@ func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
 		"system_constraints_stable_file_ref: " + snap.SystemConstraintsStableFileRef,
 		"system_constraints_stable_version_ref: " + snap.SystemConstraintsStableVersionRef,
 		"system_constraints_stable_fingerprint: " + snap.SystemConstraintsStableFingerprint,
-		"module_appendix_snapshot: none",
+		"unit_appendix_snapshot: none",
 		"shared_contract_snapshot:",
 	}
 	for _, entry := range snap.SharedContractSnapshot {
@@ -548,7 +548,7 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 		"spec_file_ref: " + snap.SpecFileRef,
 		"spec_version_ref: " + snap.SpecVersionRef,
 		"spec_fingerprint: " + snap.SpecFingerprint,
-		"module_appendix_snapshot: none",
+		"unit_appendix_snapshot: none",
 		"system_constraints_stable_file_ref: " + snap.SystemConstraintsStableFileRef,
 		"system_constraints_stable_version_ref: " + snap.SystemConstraintsStableVersionRef,
 		"system_constraints_stable_fingerprint: " + snap.SystemConstraintsStableFingerprint,

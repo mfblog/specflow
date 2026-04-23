@@ -56,7 +56,7 @@ Before execution:
 4. read `docs/specs/_status.md` when the request names existing formal modules
 5. resolve every named existing module's current layer from `_status.md` before reading its main Spec
 6. read any current-layer module files, appendix files, and `shared_contract` files needed to judge the true boundary
-7. read `docs/specs/system/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
+7. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
 
 ---
 
@@ -115,7 +115,7 @@ The output must include at least:
    - `type`
    - `blocking`
    - `command=shared_ops`
-   - `module` or `none`
+   - `unit` or `none`
    - `question_or_action`
    - `why_blocking`
    - `required_writeback_target`

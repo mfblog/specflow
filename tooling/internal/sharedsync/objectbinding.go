@@ -151,7 +151,7 @@ func processSnapshotContainsSelectedShared(repoRoot, objectType, object, activeL
 			return false, err
 		}
 		validEvidence := false
-		if objectType == "module" {
+		if objectType == "unit" {
 			validEvidence, err = isValidModuleRemovedBindingEvidence(repoRoot, object, activeLayer, processKind, processSnapshot, scopedRefs, scopedIDs, sharedFilesByID)
 		} else {
 			validEvidence, err = isValidRemovedBindingEvidence(repoRoot, processSnapshot, objectType, object, activeLayer, processKind, scopedRefs, scopedIDs, sharedFilesByID)
@@ -204,7 +204,7 @@ func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processK
 			return false, nil
 		}
 	}
-	if !processSnapshot.PresentFields["module_appendix_snapshot"] || !processSnapshot.PresentFields["shared_contract_snapshot"] {
+	if !processSnapshot.PresentFields["unit_appendix_snapshot"] || !processSnapshot.PresentFields["shared_contract_snapshot"] {
 		return false, nil
 	}
 	if !allSharedSnapshotEntriesComplete(processSnapshot.SharedContractSnapshot) {
@@ -219,11 +219,11 @@ func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processK
 	if err != nil {
 		return false, err
 	}
-	currentTruthContent, err := readCurrentObjectTruthContent(repoRoot, "module", module, activeLayer)
+	currentTruthContent, err := readCurrentObjectTruthContent(repoRoot, "unit", module, activeLayer)
 	if err != nil {
 		return false, err
 	}
-	if processSnapshot.Scalars["object_type"] != "module" {
+	if processSnapshot.Scalars["object_type"] != "unit" {
 		return false, nil
 	}
 	if processSnapshot.Scalars["object_ref"] != module {
@@ -302,9 +302,9 @@ func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.Pro
 		}
 	}
 
-	requiredListFields := []string{"shared_contract_snapshot", "module_snapshot"}
+	requiredListFields := []string{"shared_contract_snapshot", "unit_snapshot"}
 	if objectType == "project" {
-		requiredListFields = append(requiredListFields, "flow_snapshot")
+		requiredListFields = append(requiredListFields, "scenario_snapshot")
 	}
 	for _, field := range requiredListFields {
 		if !processSnapshot.PresentFields[field] {
@@ -524,25 +524,25 @@ func rebuildCurrentObjectSnapshot(repoRoot, objectType, object, activeLayer stri
 		SystemConstraintsStableFingerprint: systemFingerprint,
 	}
 
-	if objectType == "flow" || objectType == "project" {
-		moduleRefs, hasField, err := parseNamedRefList(body, "module_refs")
+	if objectType == "scenario" || objectType == "project" {
+		moduleRefs, hasField, err := parseNamedRefList(body, "unit_refs")
 		if err != nil {
 			return currentObjectSnapshot{}, err
 		}
 		if hasField {
-			result.ModuleSnapshot, err = buildObjectDependencySnapshot(repoRoot, "module", moduleRefs)
+			result.ModuleSnapshot, err = buildObjectDependencySnapshot(repoRoot, "unit", moduleRefs)
 			if err != nil {
 				return currentObjectSnapshot{}, err
 			}
 		}
 	}
 	if objectType == "project" {
-		flowRefs, hasField, err := parseNamedRefList(body, "flow_refs")
+		flowRefs, hasField, err := parseNamedRefList(body, "scenario_refs")
 		if err != nil {
 			return currentObjectSnapshot{}, err
 		}
 		if hasField {
-			result.FlowSnapshot, err = buildObjectDependencySnapshot(repoRoot, "flow", flowRefs)
+			result.FlowSnapshot, err = buildObjectDependencySnapshot(repoRoot, "scenario", flowRefs)
 			if err != nil {
 				return currentObjectSnapshot{}, err
 			}
@@ -636,14 +636,14 @@ func resolveObjectVersionRef(repoRoot, expectedObjectType, ref string) (snapshot
 
 func parseObjectVersionRefPrefix(prefix string) (string, string, string, error) {
 	switch {
-	case strings.HasPrefix(prefix, "c_module_"):
-		return "module", "candidate", strings.TrimPrefix(prefix, "c_module_"), nil
-	case strings.HasPrefix(prefix, "s_module_"):
-		return "module", "stable", strings.TrimPrefix(prefix, "s_module_"), nil
-	case strings.HasPrefix(prefix, "c_flow_"):
-		return "flow", "candidate", strings.TrimPrefix(prefix, "c_flow_"), nil
-	case strings.HasPrefix(prefix, "s_flow_"):
-		return "flow", "stable", strings.TrimPrefix(prefix, "s_flow_"), nil
+	case strings.HasPrefix(prefix, "c_unit_"):
+		return "unit", "candidate", strings.TrimPrefix(prefix, "c_unit_"), nil
+	case strings.HasPrefix(prefix, "s_unit_"):
+		return "unit", "stable", strings.TrimPrefix(prefix, "s_unit_"), nil
+	case strings.HasPrefix(prefix, "c_scenario_"):
+		return "scenario", "candidate", strings.TrimPrefix(prefix, "c_scenario_"), nil
+	case strings.HasPrefix(prefix, "s_scenario_"):
+		return "scenario", "stable", strings.TrimPrefix(prefix, "s_scenario_"), nil
 	case prefix == "c_project":
 		return "project", "candidate", "project", nil
 	case prefix == "s_project":
@@ -1033,9 +1033,9 @@ func detectSharedContractRefIndent(fieldLine string, existingListLines []string)
 func expectedModuleProcessRouting(processKind string) (string, string, bool) {
 	switch processKind {
 	case "check":
-		return "module_check", "module_plan", true
+		return "unit_check", "unit_plan", true
 	case "verify":
-		return "module_verify", "module_promote", true
+		return "unit_verify", "unit_promote", true
 	default:
 		return "", "", false
 	}
@@ -1043,12 +1043,12 @@ func expectedModuleProcessRouting(processKind string) (string, string, bool) {
 
 func expectedObjectProcessRouting(objectType, processKind string) (string, string, bool) {
 	switch objectType {
-	case "flow":
+	case "scenario":
 		switch processKind {
 		case "check":
-			return "flow_check", "flow_verify", true
+			return "scenario_check", "scenario_verify", true
 		case "verify":
-			return "flow_verify", "flow_promote", true
+			return "scenario_verify", "scenario_promote", true
 		}
 	case "project":
 		switch processKind {

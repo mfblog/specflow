@@ -4,7 +4,7 @@
 
 <p>
   <img alt="spec-driven" src="https://img.shields.io/badge/spec-driven-111111?style=for-the-badge&labelColor=111111&color=2F855A">
-  <img alt="module-oriented" src="https://img.shields.io/badge/module-oriented-111111?style=for-the-badge&labelColor=111111&color=1F6FEB">
+  <img alt="unit-governed" src="https://img.shields.io/badge/unit-governed-111111?style=for-the-badge&labelColor=111111&color=1F6FEB">
   <img alt="agent-runtime-ready" src="https://img.shields.io/badge/agent-runtime%20ready-111111?style=for-the-badge&labelColor=111111&color=C2410C">
   <img alt="human-and-ai" src="https://img.shields.io/badge/human%20%2B%20AI-collaboration-111111?style=for-the-badge&labelColor=111111&color=7C3AED">
 </p>
@@ -15,7 +15,7 @@
 
 ---
 
-`specFlow` makes AI-assisted development feel like engineering again: instead of letting requirements dissolve into chat logs, code diffs, and personal memory, it gives every module a current truth, a next truth, and a clear path from idea to verified change. Humans and agents can move fast together while the repository still knows what is true, what is changing, and what is ready to ship. It is not a rigid template, but a strong working skeleton you can adapt and sharpen for your own domain.
+`specFlow` makes AI-assisted development feel like engineering again: instead of letting requirements dissolve into chat logs, code diffs, and personal memory, it gives every governed unit a current truth, a next truth, and a clear path from idea to verified change. Humans and agents can move fast together while the repository still knows what is true, what is changing, and what is ready to ship. It is not a rigid template, but a strong working skeleton you can adapt and sharpen for your own domain.
 
 ## What Problem It Solves
 
@@ -36,7 +36,7 @@ Then it adds a small command set around that truth, so design, planning, impleme
 
 ## How specFlow Is Used
 
-> Runtime-driven. Module-shaped. Spec-first.
+> Runtime-driven. Unit-governed. Spec-first.
 
 `specFlow` is not a standalone runtime.
 
@@ -51,12 +51,12 @@ In plain language:
 - `specFlow` provides the working rules
 - the runtime reads those rules and executes the work
 
-`specFlow` is also module-oriented.
+`specFlow` is also unit-governed.
 
 That means:
 
-- the basic working target is a formal `module`
-- Specs, planning, implementation, verification, and promotion are normally organized per module
+- the basic working target is a formal `unit`
+- Specs, planning, implementation, verification, and promotion are normally organized per unit
 
 ## Start Here
 
@@ -155,12 +155,12 @@ After `init`, you normally use `specFlow` in one of two ways:
 
 What makes this spec-driven is simple:
 
-- the current accepted truth of one module lives in `docs/specs/modules/stable/s_{module}.md`
-- the next truth being prepared lives in `docs/specs/modules/candidate/c_{module}.md`
+- the current accepted truth of one unit lives in `docs/specs/units/stable/s_unit_{unit}.md`
+- the next truth being prepared lives in `docs/specs/units/candidate/c_unit_{unit}.md`
 
 The main document you write is that module Spec file.
 
-A formal module Spec should cover at least:
+A formal unit Spec should cover at least:
 
 - module goal and boundary
 - key terminology
@@ -171,7 +171,7 @@ A formal module Spec should cover at least:
 
 If the module depends on shared truth or global constraints, the Spec also needs to record that alignment explicitly.
 
-Read the three cases below as one rough story about the same module over time.
+Read the three cases below as one rough story about the same unit over time.
 This is intentionally simplified.
 The point is to show the lifecycle shape, not every exact rule.
 
@@ -184,58 +184,58 @@ flowchart LR
 How to read this:
 
 - `A. first version` is when the module is created for the first time.
-- `B. next version` is when that same module changes later.
+- `B. next version` is when that same unit changes later.
 - `C. later alignment check` is when you want confidence that current code still matches the accepted truth.
 
 One note before the story:
 
-- if the module already existed before `specFlow`, use `module_init:{module}` once to capture its current accepted behavior as the first governed `stable`
+- if the module already existed before `specFlow`, use `unit_init:{module}` once to capture its current accepted behavior as the first governed `stable`
 - after that, the module behaves like the story below
 
 ### Case 1: The First Version Of A Module
 
 What you say:
 
-- "Create a new module for search."
+- "Create a new unit for search."
 
 If you want exact control:
 
 ```text
-module_new:module_search
--> write docs/specs/modules/candidate/c_module_search.md
--> module_check:module_search
--> module_plan:module_search
--> module_impl:module_search
--> module_verify:module_search
--> module_promote:module_search
+unit_new:search
+-> write docs/specs/units/candidate/c_unit_search.md
+-> unit_check:search
+-> unit_plan:search
+-> unit_impl:search
+-> unit_verify:search
+-> unit_promote:search
 ```
 
 What those commands are doing:
 
-- `module_new` creates the first `candidate` for the new module
-- then you or the runtime write the actual candidate content into `c_module_search.md`
-- `module_check` makes sure that written candidate truth is closed enough to guide work
-- `module_plan` turns that truth into an implementation plan
-- `module_impl` writes code against that candidate
-- `module_verify` checks whether the code matches the candidate
-- `module_promote` turns the accepted candidate into the new `stable`
+- `unit_new` creates the first `candidate` for the new unit
+- then you or the runtime write the actual candidate content into `c_unit_search.md`
+- `unit_check` makes sure that written candidate truth is closed enough to guide work
+- `unit_plan` turns that truth into an implementation plan
+- `unit_impl` writes code against that candidate
+- `unit_verify` checks whether the code matches the candidate
+- `unit_promote` turns the accepted candidate into the new `stable`
 
 When you write the document content:
 
-- right after `module_new`, the file exists but it still needs real content
-- this is where you write the first candidate design in `c_module_search.md`
+- right after `unit_new`, the file exists but it still needs real content
+- this is where you write the first candidate design in `c_unit_search.md`
 - the minimum useful content is:
   - what the module is for
   - what inputs and outputs it owns
   - what the main flow is
   - what edge cases matter
   - how you will know the result is correct
-- only after that does `module_check` have something real to judge
-- if `module_check` says the candidate is still incomplete, you keep editing the same candidate file until it is closed enough
+- only after that does `unit_check` have something real to judge
+- if `unit_check` says the candidate is still incomplete, you keep editing the same candidate file until it is closed enough
 
 What `specFlow` adds here:
 
-- the new module does not begin as "just some new code"
+- the new unit does not begin as "just some new code"
 - the repository gets a written first version of the module's behavior before implementation drifts
 - later agents can see what the module was supposed to do, not just what happened to get coded first
 
@@ -248,33 +248,33 @@ What you say:
 If you want exact control:
 
 ```text
-module_fork:module_search
--> edit docs/specs/modules/candidate/c_module_search.md
--> module_check:module_search
--> module_plan:module_search
--> module_impl:module_search
--> module_verify:module_search
--> module_promote:module_search
+unit_fork:search
+-> edit docs/specs/units/candidate/c_unit_search.md
+-> unit_check:search
+-> unit_plan:search
+-> unit_impl:search
+-> unit_verify:search
+-> unit_promote:search
 ```
 
 What those commands are doing:
 
-- `module_fork` opens a new `candidate` from the current `stable`
-- then you or the runtime edit `c_module_search.md` to describe the next version
-- `module_check` confirms that edited next truth is clear enough
-- `module_plan`, `module_impl`, and `module_verify` move that next truth into code and verify it
-- `module_promote` makes the next truth become the new accepted `stable`
+- `unit_fork` opens a new `candidate` from the current `stable`
+- then you or the runtime edit `c_unit_search.md` to describe the next version
+- `unit_check` confirms that edited next truth is clear enough
+- `unit_plan`, `unit_impl`, and `unit_verify` move that next truth into code and verify it
+- `unit_promote` makes the next truth become the new accepted `stable`
 
 When you write the document content:
 
-- `module_fork` gives you a starting point by deriving the candidate from the current stable truth
+- `unit_fork` gives you a starting point by deriving the candidate from the current stable truth
 - then you edit the candidate file to describe what changes in this round
 - this is where you update things such as:
   - changed protocol or field meaning
   - changed main flow
   - new validation or error behavior
   - new acceptance criteria
-- `module_check` is the point where the system asks "is this updated candidate written clearly enough to drive the implementation round"
+- `unit_check` is the point where the system asks "is this updated candidate written clearly enough to drive the implementation round"
 - if the answer is no, you go back to the same candidate file and keep refining it
 
 What `specFlow` adds here:
@@ -287,21 +287,21 @@ What `specFlow` adds here:
 
 What you say:
 
-- "Check whether the search module still matches the accepted truth."
+- "Check whether the search unit still matches the accepted truth."
 
 If you want exact control:
 
 ```text
-read docs/specs/modules/stable/s_module_search.md
--> module_stable_verify:module_search
+read docs/specs/units/stable/s_unit_search.md
+-> unit_stable_verify:search
 ```
 
 If drift exists and you want to start the next change round:
 
 ```text
-module_fork:module_search
--> edit docs/specs/modules/candidate/c_module_search.md
--> module_check:module_search
+unit_fork:search
+-> edit docs/specs/units/candidate/c_unit_search.md
+-> unit_check:search
 ```
 
 What that command is doing:
@@ -318,10 +318,10 @@ What `specFlow` adds here:
 
 The beginner takeaway is simple:
 
-- first version of a new module: `module_new` + candidate chain
-- next version of an existing governed module: `module_fork` + candidate chain
-- later alignment check: `module_stable_verify`
-- historical module entering governance for the first time: `module_init`
+- first version of a new unit: `unit_new` + candidate chain
+- next version of an existing governed unit: `unit_fork` + candidate chain
+- later alignment check: `unit_stable_verify`
+- historical module entering governance for the first time: `unit_init`
 
 You can still start in natural language.
 These command names are the exact handles behind that lifecycle.
@@ -395,33 +395,33 @@ Most manual control starts from just three entry decisions:
 
 | Situation | Use this command |
 | --- | --- |
-| bring an existing historical module into governance for the first time | `module_init:{module}` |
-| start a brand-new module | `module_new:{module}` |
-| change a module that already has governed `stable` truth | `module_fork:{module}` |
+| bring an existing historical unit into governance for the first time | `unit_init:{unit}` |
+| start a brand-new unit | `unit_new:{unit}` |
+| change a unit that already has governed `stable` truth | `unit_fork:{unit}` |
 
 After that, the normal candidate chain is:
 
 ```text
-module_check -> module_plan -> module_impl -> module_verify -> module_promote
+unit_check -> unit_plan -> unit_impl -> unit_verify -> unit_promote
 ```
 
 There is also one stable-side maintenance step:
 
 ```text
-module_stable_verify
+unit_stable_verify
 ```
 
-Use `module_stable_verify:{module}` only when the module is currently on `stable`, but you need to check whether the code still matches that accepted truth.
+Use `unit_stable_verify:{module}` only when the module is currently on `stable`, but you need to check whether the code still matches that accepted truth.
 
 If you want one compact picture:
 
 ```mermaid
 flowchart LR
-    A["A. module_init or module_new or module_fork"] --> B["B. module_check"]
-    B --> C["C. module_plan"]
-    C --> D["D. module_impl"]
-    D --> E["E. module_verify"]
-    E --> F["F. module_promote"]
+    A["A. unit_init or unit_new or unit_fork"] --> B["B. unit_check"]
+    B --> C["C. unit_plan"]
+    C --> D["D. unit_impl"]
+    D --> E["E. unit_verify"]
+    E --> F["F. unit_promote"]
 ```
 
 This is the explicit control surface.

@@ -2,16 +2,16 @@
 
 ## 1. Purpose
 
-`flow_check:{flow}` checks whether the current candidate flow truth is sufficiently closed to constrain later end-to-end verification.
+`scenario_check:{flow}` checks whether the current candidate flow truth is sufficiently closed to constrain later end-to-end verification.
 
 ## 2. Lifecycle-State Advance Inheritance
 
 When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/docs/agent_guidelines/command_policy.md`.
-Only a new independent full-scope run of `flow_check` may produce that advancing result; later repair confirmation or scoped follow-up review must not advance lifecycle state.
+Only a new independent full-scope run of `scenario_check` may produce that advancing result; later repair confirmation or scoped follow-up review must not advance lifecycle state.
 
 ## 3. Preconditions
 
-1. `_status.md` says `Object Type=flow`, `Active Layer=candidate`, `Next Command=flow_check`
+1. `_status.md` says `Object Type=scenario`, `Active Layer=candidate`, `Next Command=scenario_check`
 2. current candidate flow file exists
 
 ## 4. Procedure
@@ -19,12 +19,12 @@ Only a new independent full-scope run of `flow_check` may produce that advancing
 1. read current candidate flow truth
 2. verify required bindings are explicit:
    - `project_ref`
-   - `module_refs`
+   - `unit_refs`
    - `shared_contract_refs`
    - `system_constraints_stable_ref`
 3. verify entry, path, exit, and failure absorption are explicit enough to verify
-4. if pass, write `_check_result/{flow}.md` and advance `Next Command=flow_verify`
-5. if not pass, keep `Next Command=flow_check`
+4. if pass, write `_check_result/{flow}.md` and advance `Next Command=scenario_verify`
+5. if not pass, keep `Next Command=scenario_check`
 
 ## 5. Output Contract
 

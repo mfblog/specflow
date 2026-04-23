@@ -29,33 +29,35 @@ type ModuleStatus struct {
 	Notes       string
 }
 
-type tableShape struct {
-	ObjectTypeColumn bool
+var allowedNextCommands = map[string]bool{
+	"unit_init":              true,
+	"unit_new":               true,
+	"unit_fork":              true,
+	"unit_stable_verify":     true,
+	"unit_check":             true,
+	"unit_plan":              true,
+	"unit_impl":              true,
+	"unit_verify":            true,
+	"unit_promote":           true,
+	"project_new":            true,
+	"project_init":           true,
+	"project_fork":           true,
+	"project_check":          true,
+	"project_verify":         true,
+	"project_promote":        true,
+	"project_stable_verify":  true,
+	"scenario_new":           true,
+	"scenario_fork":          true,
+	"scenario_check":         true,
+	"scenario_verify":        true,
+	"scenario_promote":       true,
+	"scenario_stable_verify": true,
 }
 
-var allowedNextCommands = map[string]bool{
-	"module_init":           true,
-	"module_new":            true,
-	"module_fork":           true,
-	"module_stable_verify":  true,
-	"module_check":          true,
-	"module_plan":           true,
-	"module_impl":           true,
-	"module_verify":         true,
-	"module_promote":        true,
-	"project_new":           true,
-	"project_init":          true,
-	"project_fork":          true,
-	"project_check":         true,
-	"project_verify":        true,
-	"project_promote":       true,
-	"project_stable_verify": true,
-	"flow_new":              true,
-	"flow_fork":             true,
-	"flow_check":            true,
-	"flow_verify":           true,
-	"flow_promote":          true,
-	"flow_stable_verify":    true,
+var allowedObjectTypes = map[string]bool{
+	"unit":     true,
+	"scenario": true,
+	"project":  true,
 }
 
 func LoadModules(repoRoot string) ([]string, error) {
@@ -78,7 +80,7 @@ func LoadObjectStatuses(repoRoot string) ([]ObjectStatus, error) {
 		return nil, err
 	}
 
-	start, end, shape, err := findStatusTable(lines)
+	start, end, err := findStatusTable(lines)
 	if err != nil {
 		return nil, err
 	}
@@ -89,32 +91,17 @@ func LoadObjectStatuses(repoRoot string) ([]ObjectStatus, error) {
 		if !ok {
 			continue
 		}
-		if shape.ObjectTypeColumn {
-			if len(cells) < 7 {
-				continue
-			}
-			statuses = append(statuses, ObjectStatus{
-				ObjectType:  stripCodeSpan(cells[0]),
-				Object:      stripCodeSpan(cells[1]),
-				Stable:      stripCodeSpan(cells[2]),
-				Candidate:   stripCodeSpan(cells[3]),
-				ActiveLayer: stripCodeSpan(cells[4]),
-				NextCommand: stripCodeSpan(cells[5]),
-				Notes:       strings.TrimSpace(cells[6]),
-			})
-			continue
-		}
-		if len(cells) < 6 {
+		if len(cells) < 7 {
 			continue
 		}
 		statuses = append(statuses, ObjectStatus{
-			ObjectType:  "module",
-			Object:      stripCodeSpan(cells[0]),
-			Stable:      stripCodeSpan(cells[1]),
-			Candidate:   stripCodeSpan(cells[2]),
-			ActiveLayer: stripCodeSpan(cells[3]),
-			NextCommand: stripCodeSpan(cells[4]),
-			Notes:       strings.TrimSpace(cells[5]),
+			ObjectType:  stripCodeSpan(cells[0]),
+			Object:      stripCodeSpan(cells[1]),
+			Stable:      stripCodeSpan(cells[2]),
+			Candidate:   stripCodeSpan(cells[3]),
+			ActiveLayer: stripCodeSpan(cells[4]),
+			NextCommand: stripCodeSpan(cells[5]),
+			Notes:       strings.TrimSpace(cells[6]),
 		})
 	}
 	return statuses, nil
@@ -128,7 +115,7 @@ func LoadModuleStatuses(repoRoot string) ([]ModuleStatus, error) {
 
 	statuses := make([]ModuleStatus, 0, len(objectStatuses))
 	for _, status := range objectStatuses {
-		if status.ObjectType != "module" {
+		if status.ObjectType != "unit" {
 			continue
 		}
 		statuses = append(statuses, ModuleStatus{
@@ -158,7 +145,7 @@ func LookupObjectStatus(repoRoot, objectType, object string) (ObjectStatus, erro
 }
 
 func LookupModuleStatus(repoRoot, module string) (ModuleStatus, error) {
-	status, err := LookupObjectStatus(repoRoot, "module", module)
+	status, err := LookupObjectStatus(repoRoot, "unit", module)
 	if err != nil {
 		return ModuleStatus{}, err
 	}
@@ -202,12 +189,9 @@ func UpsertObjectStatus(repoRoot string, status ObjectStatus, createIfMissing bo
 		return false, err
 	}
 
-	start, end, shape, err := findStatusTable(lines)
+	start, end, err := findStatusTable(lines)
 	if err != nil {
 		return false, err
-	}
-	if !shape.ObjectTypeColumn && status.ObjectType != "module" {
-		return false, fmt.Errorf("legacy status table cannot store non-module object type %q", status.ObjectType)
 	}
 
 	updated := false
@@ -216,24 +200,13 @@ func UpsertObjectStatus(repoRoot string, status ObjectStatus, createIfMissing bo
 		if !ok {
 			continue
 		}
-		if shape.ObjectTypeColumn {
-			if len(cells) < 7 {
-				continue
-			}
-			if stripCodeSpan(cells[0]) != status.ObjectType || stripCodeSpan(cells[1]) != status.Object {
-				continue
-			}
-			lines[idx] = formatObjectStatusLine(status, shape)
-			updated = true
-			break
-		}
-		if len(cells) < 6 {
+		if len(cells) < 7 {
 			continue
 		}
-		if stripCodeSpan(cells[0]) != status.Object {
+		if stripCodeSpan(cells[0]) != status.ObjectType || stripCodeSpan(cells[1]) != status.Object {
 			continue
 		}
-		lines[idx] = formatObjectStatusLine(status, shape)
+		lines[idx] = formatObjectStatusLine(status)
 		updated = true
 		break
 	}
@@ -242,7 +215,7 @@ func UpsertObjectStatus(repoRoot string, status ObjectStatus, createIfMissing bo
 		if !createIfMissing {
 			return false, fmt.Errorf("%s %q not found in %s", status.ObjectType, status.Object, relativeStatusPath)
 		}
-		lines = append(lines[:end], append([]string{formatObjectStatusLine(status, shape)}, lines[end:]...)...)
+		lines = append(lines[:end], append([]string{formatObjectStatusLine(status)}, lines[end:]...)...)
 		updated = true
 	}
 
@@ -260,7 +233,7 @@ func UpsertObjectStatus(repoRoot string, status ObjectStatus, createIfMissing bo
 func UpsertModuleStatus(repoRoot string, status ModuleStatus, createIfMissing bool) (bool, error) {
 	objectType := strings.TrimSpace(status.ObjectType)
 	if objectType == "" {
-		objectType = "module"
+		objectType = "unit"
 	}
 	return UpsertObjectStatus(repoRoot, ObjectStatus{
 		ObjectType:  objectType,
@@ -287,27 +260,23 @@ func readLines(path string) ([]string, bool, error) {
 	return strings.Split(text, "\n"), hadTrailingNewline, nil
 }
 
-func findStatusTable(lines []string) (int, int, tableShape, error) {
+func findStatusTable(lines []string) (int, int, error) {
 	for idx := range lines {
 		cells, ok := parseTableLine(lines[idx])
 		if !ok {
 			continue
 		}
-		switch {
-		case len(cells) >= 7 && cells[0] == "Object Type" && cells[5] == "Next Command":
-			start, end, _, err := tableRange(lines, idx)
-			return start, end, tableShape{ObjectTypeColumn: true}, err
-		case len(cells) >= 6 && cells[0] == "Module" && cells[4] == "Next Command":
-			start, end, _, err := tableRange(lines, idx)
-			return start, end, tableShape{ObjectTypeColumn: false}, err
+		if len(cells) >= 7 && cells[0] == "Object Type" && cells[5] == "Next Command" {
+			start, end, err := tableRange(lines, idx)
+			return start, end, err
 		}
 	}
-	return 0, 0, tableShape{}, fmt.Errorf("status table not found in %s", relativeStatusPath)
+	return 0, 0, fmt.Errorf("status table not found in %s", relativeStatusPath)
 }
 
-func tableRange(lines []string, headerIndex int) (int, int, tableShape, error) {
+func tableRange(lines []string, headerIndex int) (int, int, error) {
 	if headerIndex+1 >= len(lines) {
-		return 0, 0, tableShape{}, fmt.Errorf("missing separator row in %s", relativeStatusPath)
+		return 0, 0, fmt.Errorf("missing separator row in %s", relativeStatusPath)
 	}
 	start := headerIndex + 2
 	end := start
@@ -317,7 +286,7 @@ func tableRange(lines []string, headerIndex int) (int, int, tableShape, error) {
 		}
 		end++
 	}
-	return start, end, tableShape{}, nil
+	return start, end, nil
 }
 
 func parseTableLine(line string) ([]string, bool) {
@@ -340,19 +309,9 @@ func formatTableLine(cells []string) string {
 	return "| " + strings.Join(cells, " | ") + " |"
 }
 
-func formatObjectStatusLine(status ObjectStatus, shape tableShape) string {
-	if shape.ObjectTypeColumn {
-		return formatTableLine([]string{
-			fmt.Sprintf("`%s`", status.ObjectType),
-			fmt.Sprintf("`%s`", status.Object),
-			fmt.Sprintf("`%s`", status.Stable),
-			fmt.Sprintf("`%s`", status.Candidate),
-			fmt.Sprintf("`%s`", status.ActiveLayer),
-			fmt.Sprintf("`%s`", status.NextCommand),
-			status.Notes,
-		})
-	}
+func formatObjectStatusLine(status ObjectStatus) string {
 	return formatTableLine([]string{
+		fmt.Sprintf("`%s`", status.ObjectType),
 		fmt.Sprintf("`%s`", status.Object),
 		fmt.Sprintf("`%s`", status.Stable),
 		fmt.Sprintf("`%s`", status.Candidate),
@@ -373,6 +332,9 @@ func stripCodeSpan(value string) string {
 func validateObjectStatus(status ObjectStatus) error {
 	if strings.TrimSpace(status.ObjectType) == "" {
 		return fmt.Errorf("object type is required")
+	}
+	if !allowedObjectTypes[strings.TrimSpace(status.ObjectType)] {
+		return fmt.Errorf("object type %q is not a supported status value", status.ObjectType)
 	}
 	if strings.TrimSpace(status.Object) == "" {
 		return fmt.Errorf("object is required")

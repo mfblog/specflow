@@ -4,7 +4,7 @@
 
 <p>
   <img alt="规格驱动" src="https://img.shields.io/badge/spec-driven-111111?style=for-the-badge&labelColor=111111&color=2F855A">
-  <img alt="模块导向" src="https://img.shields.io/badge/module-oriented-111111?style=for-the-badge&labelColor=111111&color=1F6FEB">
+  <img alt="单元治理" src="https://img.shields.io/badge/unit-governed-111111?style=for-the-badge&labelColor=111111&color=1F6FEB">
   <img alt="Agent 运行时就绪" src="https://img.shields.io/badge/agent-runtime%20ready-111111?style=for-the-badge&labelColor=111111&color=C2410C">
   <img alt="人机协作" src="https://img.shields.io/badge/human%20%2B%20AI-collaboration-111111?style=for-the-badge&labelColor=111111&color=7C3AED">
 </p>
@@ -15,7 +15,7 @@
 
 ---
 
-`specFlow` 想做的，是让 AI 辅助开发重新像工程，而不是一连串聪明但会蒸发的对话：它把每个模块的当前真相、下一版真相，以及从想法到验证落地的推进路径，真正留在仓库里。这样一来，人和 agent 可以一起高速推进，但项目本身仍然清楚知道什么是真的、什么正在变化、什么已经可以交付。它不是死模板，而是一套很强的治理骨架，你可以继续按自己的业务把它改得更锋利。
+`specFlow` 想做的，是让 AI 辅助开发重新像工程，而不是一连串聪明但会蒸发的对话：它把每个治理单元的当前真相、下一版真相，以及从想法到验证落地的推进路径，真正留在仓库里。这样一来，人和 agent 可以一起高速推进，但项目本身仍然清楚知道什么是真的、什么正在变化、什么已经可以交付。它不是死模板，而是一套很强的治理骨架，你可以继续按自己的业务把它改得更锋利。
 
 ## 它解决什么问题
 
@@ -36,7 +36,7 @@
 
 ## specFlow 怎么用
 
-> Runtime 驱动，模块组织，Spec 优先。
+> Runtime 驱动，单元治理，Spec 优先。
 
 `specFlow` 不是一个单独运行的 runtime。
 
@@ -51,8 +51,8 @@
 - `specFlow` 负责定义这件事在仓库里应该怎么推进
 - runtime 负责按照这些规则真正去读文件、改文件、改代码、做验证
 
-它还是模块导向的。
-也就是说，大部分正式工作都会围绕一个明确的 `module` 展开，Spec、计划、实现、验证和升级，通常也按模块收口。
+它还是单元治理的。
+也就是说，大部分正式工作都会围绕一个明确的 `unit` 展开，Spec、计划、实现、验证和升级，通常也按单元收口。
 
 ## 从这里开始
 
@@ -151,8 +151,8 @@ git config core.hooksPath .githooks
 
 这套东西之所以叫“文档驱动”，核心就在这里：
 
-- 当前已经正式接受的模块真相，放在 `docs/specs/modules/stable/s_{module}.md`
-- 正在准备中的下一版真相，放在 `docs/specs/modules/candidate/c_{module}.md`
+- 当前已经正式接受的单元真相，放在 `docs/specs/units/stable/s_unit_{unit}.md`
+- 正在准备中的下一版真相，放在 `docs/specs/units/candidate/c_unit_{unit}.md`
 
 你真正要写的主文档，就是这个模块 Spec 文件。
 
@@ -187,7 +187,7 @@ flowchart LR
 
 在进入案例前先补一个前提：
 
-- 如果这个模块在 `specFlow` 接入前就已经存在，那么第一次纳管时先用 `module_init:{module}`
+- 如果这个模块在 `specFlow` 接入前就已经存在，那么第一次纳管时先用 `unit_init:{module}`
 - 它的作用不是设计下一版，而是先把“当前已经生效的真实行为”落成第一份 governed `stable`
 - 从那以后，这个模块就会按下面这条故事线继续走
 
@@ -200,37 +200,37 @@ flowchart LR
 如果你想精确控制：
 
 ```text
-module_new:module_search
--> write docs/specs/modules/candidate/c_module_search.md
--> module_check:module_search
--> module_plan:module_search
--> module_impl:module_search
--> module_verify:module_search
--> module_promote:module_search
+unit_new:search
+-> write docs/specs/units/candidate/c_unit_search.md
+-> unit_check:search
+-> unit_plan:search
+-> unit_impl:search
+-> unit_verify:search
+-> unit_promote:search
 ```
 
 这些命令分别在干什么：
 
-- `module_new` 先给这个新模块创建第一份 `candidate`
-- 接着你或 runtime 把真正的 candidate 内容写进 `c_module_search.md`
-- `module_check` 判断这份 candidate 是否已经闭合到足以支撑后续工作
-- `module_plan` 把这份真相转成实现计划
-- `module_impl` 按 candidate 去改代码
-- `module_verify` 检查代码是否真的符合 candidate
-- `module_promote` 把被接受的 candidate 变成新的 `stable`
+- `unit_new` 先给这个新模块创建第一份 `candidate`
+- 接着你或 runtime 把真正的 candidate 内容写进 `c_unit_search.md`
+- `unit_check` 判断这份 candidate 是否已经闭合到足以支撑后续工作
+- `unit_plan` 把这份真相转成实现计划
+- `unit_impl` 按 candidate 去改代码
+- `unit_verify` 检查代码是否真的符合 candidate
+- `unit_promote` 把被接受的 candidate 变成新的 `stable`
 
 文档内容是在什么时候写进去的：
 
-- `module_new` 之后，文件虽然存在了，但内容还没有自然完整到能直接推进
-- 这时你要在 `c_module_search.md` 里把第一版 candidate 真正写出来
+- `unit_new` 之后，文件虽然存在了，但内容还没有自然完整到能直接推进
+- 这时你要在 `c_unit_search.md` 里把第一版 candidate 真正写出来
 - 最少应该写到让人能看懂：
   - 这个模块到底负责什么
   - 它接什么输入，产什么输出
   - 主要流程怎么走
   - 关键边界情况是什么
   - 你准备拿什么标准判断它算正确
-- 只有写到这个程度，`module_check` 才有东西可判断
-- 如果 `module_check` 认为还不够闭合，就继续回到同一个 candidate 文件里补内容
+- 只有写到这个程度，`unit_check` 才有东西可判断
+- 如果 `unit_check` 认为还不够闭合，就继续回到同一个 candidate 文件里补内容
 
 这里 `specFlow` 额外提供的价值是：
 
@@ -247,33 +247,33 @@ module_new:module_search
 如果你想精确控制：
 
 ```text
-module_fork:module_search
--> edit docs/specs/modules/candidate/c_module_search.md
--> module_check:module_search
--> module_plan:module_search
--> module_impl:module_search
--> module_verify:module_search
--> module_promote:module_search
+unit_fork:search
+-> edit docs/specs/units/candidate/c_unit_search.md
+-> unit_check:search
+-> unit_plan:search
+-> unit_impl:search
+-> unit_verify:search
+-> unit_promote:search
 ```
 
 这些命令分别在干什么：
 
-- `module_fork` 从当前 `stable` 打开一个新的 `candidate`
-- 接着你或 runtime 修改 `c_module_search.md`，描述这一轮的下一版行为
-- `module_check` 确认这份更新后的 candidate 是否已经写清楚
-- `module_plan`、`module_impl`、`module_verify` 负责把这一轮真相真正推进成代码并验证
-- `module_promote` 则把这一轮的下一版变成新的正式 `stable`
+- `unit_fork` 从当前 `stable` 打开一个新的 `candidate`
+- 接着你或 runtime 修改 `c_unit_search.md`，描述这一轮的下一版行为
+- `unit_check` 确认这份更新后的 candidate 是否已经写清楚
+- `unit_plan`、`unit_impl`、`unit_verify` 负责把这一轮真相真正推进成代码并验证
+- `unit_promote` 则把这一轮的下一版变成新的正式 `stable`
 
 文档内容是在什么时候写进去的：
 
-- `module_fork` 不是直接把下一版写完，它只是给你一个从当前 stable 派生出来的起点
-- 真正的变化内容，还是要你写进 `c_module_search.md`
+- `unit_fork` 不是直接把下一版写完，它只是给你一个从当前 stable 派生出来的起点
+- 真正的变化内容，还是要你写进 `c_unit_search.md`
 - 这一轮通常会改到这些东西：
   - 协议或字段含义变了什么
   - 主流程哪里变了
   - 验证规则或错误行为哪里变了
   - 这轮新增了什么验收标准
-- `module_check` 的作用就是问一句：这份“下一版真相”现在是不是已经写清楚到足够驱动实现
+- `unit_check` 的作用就是问一句：这份“下一版真相”现在是不是已经写清楚到足够驱动实现
 - 如果答案是否，那就继续回到 candidate 文档里补，不是硬往后推
 
 这里 `specFlow` 额外提供的价值是：
@@ -291,21 +291,21 @@ module_fork:module_search
 如果你想精确控制：
 
 ```text
-read docs/specs/modules/stable/s_module_search.md
--> module_stable_verify:module_search
+read docs/specs/units/stable/s_unit_search.md
+-> unit_stable_verify:search
 ```
 
 如果发现 drift，而且你想顺势开始下一轮改动：
 
 ```text
-module_fork:module_search
--> edit docs/specs/modules/candidate/c_module_search.md
--> module_check:module_search
+unit_fork:search
+-> edit docs/specs/units/candidate/c_unit_search.md
+-> unit_check:search
 ```
 
 这个命令在做什么：
 
-- `module_stable_verify` 检查的是：当前实现是否还符合当前正式接受的 `stable`
+- `unit_stable_verify` 检查的是：当前实现是否还符合当前正式接受的 `stable`
 - 它不是因为你提了“检查”就自动开启一个新的 candidate 轮次
 - 如果发现 drift，就先把“已经漂移”这个事实说清楚，再决定后续怎么处理
 
@@ -317,10 +317,10 @@ module_fork:module_search
 
 给新手的最短总结：
 
-- 新模块第一版：`module_new` + candidate 链
-- 已经纳管的模块继续做下一版：`module_fork` + candidate 链
-- 后来做对齐检查：`module_stable_verify`
-- 历史模块第一次纳管：`module_init`
+- 新模块第一版：`unit_new` + candidate 链
+- 已经纳管的模块继续做下一版：`unit_fork` + candidate 链
+- 后来做对齐检查：`unit_stable_verify`
+- 历史模块第一次纳管：`unit_init`
 
 你依然可以从自然语言开始。
 这些命令只是把这条生命周期背后的精确抓手显式写出来。
@@ -391,20 +391,20 @@ flowchart LR
 
 | 你的情况 | 对应命令 |
 | --- | --- |
-| 历史模块第一次纳入治理 | `module_init:{module}` |
-| 全新模块第一次进入治理 | `module_new:{module}` |
-| 已有 stable 的模块要开新一轮演进 | `module_fork:{module}` |
+| 历史单元第一次纳入治理 | `unit_init:{unit}` |
+| 全新单元第一次进入治理 | `unit_new:{unit}` |
+| 已有 stable 的单元要开新一轮演进 | `unit_fork:{unit}` |
 
 一旦模块已经进入 candidate 链，后面的正常顺序通常是：
 
 ```text
-module_check -> module_plan -> module_impl -> module_verify -> module_promote
+unit_check -> unit_plan -> unit_impl -> unit_verify -> unit_promote
 ```
 
 另外还有一个 stable 侧的维护动作：
 
 ```text
-module_stable_verify
+unit_stable_verify
 ```
 
 只有在模块当前停留在 `stable`，而你又想确认代码是不是还和这份 stable 对得上时，才会用到它。
@@ -413,11 +413,11 @@ module_stable_verify
 
 ```mermaid
 flowchart LR
-    A["A. module_init 或 module_new 或 module_fork"] --> B["B. module_check"]
-    B --> C["C. module_plan"]
-    C --> D["D. module_impl"]
-    D --> E["E. module_verify"]
-    E --> F["F. module_promote"]
+    A["A. unit_init 或 unit_new 或 unit_fork"] --> B["B. unit_check"]
+    B --> C["C. unit_plan"]
+    C --> D["D. unit_impl"]
+    D --> E["E. unit_verify"]
+    E --> F["F. unit_promote"]
 ```
 
 这就是显式控制面。

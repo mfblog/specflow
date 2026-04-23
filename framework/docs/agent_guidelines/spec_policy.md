@@ -4,12 +4,13 @@
 
 This file defines the formal truth objects used by `specFlow` in this repository.
 
-It answers four questions:
+It answers five questions:
 
 1. which formal objects exist
 2. which files carry those objects
-3. how executors must read those objects before governance actions
-4. how bindings, snapshots, and invalidation are anchored to those objects
+3. how object identity is recorded
+4. how bindings, snapshots, and invalidation are anchored
+5. how executors must read truth before governance actions
 
 ## 2. Core Object Families
 
@@ -17,21 +18,21 @@ It answers four questions:
 
 This repository has three command-target truth object families:
 
-1. `module`
-2. `flow`
+1. `unit`
+2. `scenario`
 3. `project`
 
-They all:
+Shared rules:
 
-1. support `stable` and `candidate` layers
-2. enter `docs/specs/_status.md`
-3. may produce process files when their command family explicitly allows them
+1. all three families support `stable` and `candidate`
+2. all three families enter `docs/specs/_status.md`
+3. only these three families are standard command targets
 
-Differences:
+Family differences:
 
-1. only `module` owns implementation planning and implementation work
-2. `flow` owns business-chain truth and business-chain verification, but not implementation planning
-3. `project` owns project-topology truth and project-topology verification, but not implementation planning
+1. `unit` is the minimal governed unit and is the only family that owns implementation planning and implementation work
+2. `scenario` owns trigger-to-outcome chain truth and end-to-end verification, but not implementation planning
+3. `project` owns governed-unit definition, support-surface rules, topology mapping, and the current formal object graph, but not implementation planning
 
 ### 2.2 `system_constraints`
 
@@ -39,72 +40,93 @@ Differences:
 
 It answers:
 
-1. what the current project-wide technical baseline is
-2. which shared mechanisms are formally preferred
-3. which default engineering choices are formally active
-4. which global prohibitions or explicit exceptions exist
+1. what the current repository-wide engineering baseline is
+2. which global default rules are formally active
+3. which global prohibitions or explicit exceptions exist
+4. which shared mechanisms have already been absorbed into the global baseline
 
 It does not answer:
 
-1. one module's internal state machine
-2. one flow's path semantics
-3. one project's topology detail
+1. one unit's local behavior truth
+2. one scenario's trigger-to-outcome chain
+3. one project's topology mapping detail
+4. one shared contract's local reusable rule text
 
-It has only one formal effective file:
+It has one effective file only:
 
-1. `docs/specs/system/stable/s_system_constraints.md`
+1. `docs/specs/system_constraints/stable/s_system_constraints.md`
 
 It is not a command target.
 
 ### 2.3 `shared_contract`
 
-`shared_contract` files are independent shared truth objects reused by multiple command-target objects.
+`shared_contract` is an independent shared local-truth object reused by multiple downstream formal objects.
 
-They answer:
+It answers:
 
-1. which shared local protocol or shared semantics multiple formal objects reuse now
-2. which exact layer and file currently carries that shared truth
+1. which local reusable rule is currently shared
+2. which exact layer and file carry that shared rule now
+3. which formal objects are currently bound to it through declarative metadata
 
-They do not answer:
+It does not answer:
 
-1. full business-chain truth
-2. project-topology truth
-3. global default-rule truth
+1. a whole unit
+2. a whole scenario
+3. the whole project model
+4. the whole global baseline
 
-They are not standard command targets.
+It is not a standard command target.
 Users enter shared work through `shared_ops:{natural-language request}`.
 
-## 3. Files
+## 3. Identity And Files
 
-### 3.1 `module`
+### 3.1 Object Identity
 
-1. `stable` -> `docs/specs/modules/stable/s_{module}.md`
-2. `candidate` -> `docs/specs/modules/candidate/c_{module}.md`
+Formal object identity uses the following rules:
 
-### 3.2 `flow`
+1. `_status.md` records bare object IDs
+   - `agent`
+   - `ai`
+   - `task_execution`
+   - `project`
+2. file names still carry object family prefixes
+   - `c_unit_agent.md`
+   - `s_unit_ai.md`
+   - `c_scenario_task_execution.md`
+3. `bound_objects` in Shared Contract files must use typed refs
+   - `unit:ai`
+   - `scenario:task_execution`
+   - `project:project`
 
-1. `stable` -> `docs/specs/flows/stable/s_flow_{name}.md`
-2. `candidate` -> `docs/specs/flows/candidate/c_flow_{name}.md`
+### 3.2 `unit`
 
-### 3.3 `project`
+1. `stable` -> `docs/specs/units/stable/s_unit_{unit}.md`
+2. `candidate` -> `docs/specs/units/candidate/c_unit_{unit}.md`
+
+### 3.3 `scenario`
+
+1. `stable` -> `docs/specs/scenarios/stable/s_scenario_{scenario}.md`
+2. `candidate` -> `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
+
+### 3.4 `project`
 
 1. `stable` -> `docs/specs/project/stable/s_project.md`
 2. `candidate` -> `docs/specs/project/candidate/c_project.md`
 
-### 3.4 `shared_contract`
+### 3.5 `shared_contract`
 
 1. `stable` -> `docs/specs/shared_contracts/stable/*.md`
 2. `candidate` -> `docs/specs/shared_contracts/candidate/*.md`
 
-### 3.5 `_status.md`
+### 3.6 `_status.md`
 
 `docs/specs/_status.md` is the formal object-state index file.
 
 It records rows for:
 
-1. `project`
-2. `flow`
-3. `module`
+1. `unit`
+2. `scenario`
+3. `project`
 
 Required columns are:
 
@@ -121,62 +143,104 @@ It is the state index that commands must keep aligned with current governance st
 
 ## 4. Object Boundaries
 
-### 4.1 `module`
+### 4.1 `unit`
 
-`module` truth answers:
+`unit` is the minimal governed unit.
 
-1. module goal and boundary
-2. module protocols
-3. module state transitions
-4. module-local acceptance criteria
+It answers:
 
-### 4.2 `flow`
+1. what responsibility the unit owns
+2. which truth surface and implementation surface belong to it
+3. which local behavior, protocol, state, and acceptance rules define it
+4. how that unit is validated
+5. where repairs must land first when the unit is wrong
 
-`flow` truth answers:
+It must not silently mean:
 
-1. entry
-2. path across modules
-3. success outcome
-4. failure absorption
-5. end-to-end verification expectation
+1. one directory
+2. one package
+3. one service
+4. one bounded context
+
+### 4.2 `scenario`
+
+`scenario` is the formal trigger-to-outcome chain object.
+
+It answers:
+
+1. what triggers the chain
+2. which units it traverses
+3. which shared contracts it reuses
+4. what success means
+5. where failure is absorbed, surfaced, or rolled back
+6. how the chain is verified end to end
+
+It does not own:
+
+1. unit-local implementation detail
+2. shared-contract body text
+3. project mapping rules
+4. direct implementation editing
 
 ### 4.3 `project`
 
-`project` truth answers:
+`project` is the project governance coordinate-system object.
 
-1. what the project is
-2. which formal `module` objects belong to the project
-3. which formal `flow` objects belong to the project
-4. which formal `shared_contract` objects are formally reused by the project surface
-5. which stable `system_constraints` version currently constrains the project
-6. how those objects connect at topology level
+It answers five mandatory sections:
+
+1. `Governed Unit Definition`
+   - what qualifies as a formal `unit`
+   - what must become `shared_contract`
+   - what stays outside command-target truth
+2. `Support Surface Rules`
+   - which paths are governed support surfaces rather than command-target objects
+3. `Topology Mapping`
+   - which roots are governed
+   - which paths are ignored
+   - which paths map to which current formal object
+   - how conflicts are decided
+4. `Current Formal Object Graph`
+   - current `unit_refs`
+   - current `scenario_refs`
+   - current `shared_contract_refs`
+   - current relations among them
+5. `Global Constraint Alignment`
+   - which stable `system_constraints` version currently constrains the project
+
+It does not own:
+
+1. unit-local behavior truth
+2. shared-contract body text
+3. scenario-local chain detail
+4. implementation planning or implementation editing
 
 ### 4.4 `shared_contract`
 
-`shared_contract` truth answers:
+`shared_contract` answers:
 
-1. one shared reusable local truth
-2. not the whole flow
-3. not the whole project
-4. not the whole global baseline
+1. one shared reusable local rule
+2. not the whole unit
+3. not the whole scenario
+4. not the whole project
+5. not the whole global baseline
 
 ## 5. Required Binding Fields
 
-### 5.1 `module`
+### 5.1 `unit`
 
-Each current-layer module truth must record:
+Each current-layer unit truth must record:
 
 1. `system_constraints_stable_ref`
 2. `shared_contract_refs`
 
-`module` does not formally record `flow_refs`.
+`unit` does not formally record `scenario_refs`.
 
-### 5.2 `flow`
+### 5.2 `scenario`
 
-Each current-layer flow truth must record:
+Each current-layer scenario truth must record:
 
 1. `project_ref`
-2. `module_refs`
+2. `unit_refs`
 3. `shared_contract_refs`
 4. `system_constraints_stable_ref`
 
@@ -184,8 +248,8 @@ Each current-layer flow truth must record:
 
 Each current-layer project truth must record:
 
-1. `flow_refs`
-2. `module_refs`
+1. `scenario_refs`
+2. `unit_refs`
 3. `shared_contract_refs`
 4. `system_constraints_stable_ref`
 
@@ -200,19 +264,22 @@ Rules:
 1. `shared_contract_refs` must name the exact layer and file currently bound
 2. stable-layer command-target objects may bind only stable-layer shared truth
 3. candidate-layer command-target objects may bind stable-layer or candidate-layer shared truth, but the bound layer must be explicit
-4. `bound_modules` is declarative metadata only; it does not replace the command-target object's formal binding source
-5. a `bound_modules`-only delta does not by itself invalidate downstream process files
-6. when `shared_contract_refs` is written as a markdown list, executors must normalize the ref order by exact shared ref string in ascending lexical order
-7. the ordering contract applies to the underlying shared ref values, not to whether a list item is rendered with backticks
+4. `bound_objects` is declarative metadata only; it does not replace the command-target object's formal binding source
+5. a `bound_objects`-only delta does not by itself invalidate downstream process files
+6. `bound_objects` must use typed refs only
+   - `unit:<id>`
+   - `scenario:<id>`
+   - `project:project`
+7. when `shared_contract_refs` is written as a markdown list, executors must normalize the ref order by exact shared ref string in ascending lexical order
 
 ### 6.2 Dependency Direction Contract
 
 Formal dependency direction is fixed:
 
-1. `system_constraints -> shared_contract/module/flow/project`
-2. `shared_contract -> module/flow/project`
-3. `module -> flow/project`
-4. `flow -> project`
+1. `system_constraints -> shared_contract/unit/scenario/project`
+2. `shared_contract -> unit/scenario/project`
+3. `unit -> scenario/project`
+4. `scenario -> project`
 
 Downstream invalidation rule:
 
@@ -226,7 +293,7 @@ Before any governance action:
 1. read the target object's current-layer main file
 2. read any explicitly required appendix truth for that object family
 3. read bound shared files when `shared_contract_refs` is not empty
-4. read `s_system_constraints.md` when `system_constraints_stable_ref` is part of the current truth or when the task requires baseline judgment
+4. read `s_system_constraints.md` when `system_constraints_stable_ref` is part of current truth or when the task requires baseline judgment
 
 Additional rules:
 
@@ -241,16 +308,29 @@ They are current-round derived artifacts.
 
 Process containers by object family:
 
-1. `module`
+1. `unit`
    - `_check_result`
    - `_plans`
    - `_verify_result`
-2. `flow`
+2. `scenario`
    - `_check_result`
    - `_verify_result`
 3. `project`
    - `_check_result`
    - `_verify_result`
+
+Object-owned snapshot extensions are fixed by object type:
+
+1. `unit`
+   - `unit_appendix_snapshot`
+   - `shared_contract_snapshot`
+2. `scenario`
+   - `unit_snapshot`
+   - `shared_contract_snapshot`
+3. `project`
+   - `scenario_snapshot`
+   - `unit_snapshot`
+   - `shared_contract_snapshot`
 
 Process files become invalid when their required current truth or required current bindings no longer match.
 
@@ -258,18 +338,13 @@ The exact snapshot field definitions come from `process_snapshot_contract.md`.
 
 ## 9. Invalidation And Reconciliation
 
-Shared rules:
+When upstream truth or binding changes:
 
-1. invalid candidate-side process files fall back to the smallest legal `check`-side step for that object family
-2. invalid stable-layer alignment falls back to the matching stable verification command
-3. downstream invalidation and fallback execution may be handled by `impact_sync` once the affected downstream set is already fixed
-4. shared-governance uncertainty must still be handled through `shared_ops` and its internal shared flows rather than by `impact_sync`
+1. invalidate downstream process files deterministically
+2. fall back the downstream object to the minimum legal next step defined by its command family
+3. keep Shared Contract topology reconciliation and generic impact reconciliation separate
 
-## 10. Non-Goals
+Formal routing remains:
 
-This file does not:
-
-1. define command procedures in place of command files
-2. create an independent command chain for `shared_contract`
-3. create an independent command chain for `system_constraints`
-4. allow executors to bypass current truth by starting from code
+1. `shared_sync` for shared-governance downstream discovery
+2. `impact_sync` for generic fallback and cleanup once the affected downstream object set is fixed
