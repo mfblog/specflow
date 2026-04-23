@@ -11,10 +11,11 @@ By default it handles:
 1. reading the current valid candidate pass gate
 2. optionally running research preflight when implementation-critical unknowns still block a stable plan
 3. deriving a stable-to-candidate change surface with `git diff` when the module already has `stable`
-4. generating or updating `_plans/active/{module}.md`
-5. writing or updating `_plans/draft/{module}.md` when planning cannot yet produce a consumable active plan
-6. keeping active-plan bindings aligned with the current candidate, current formal global baseline state, and current Shared Contract snapshot
-7. stopping at a structured decision checkpoint only when key implementation direction is still not locked
+4. identifying the changed execution surfaces of this round and defining their convergence targets
+5. generating or updating `_plans/active/{module}.md`
+6. writing or updating `_plans/draft/{module}.md` when planning cannot yet produce a consumable active plan
+7. keeping active-plan bindings aligned with the current candidate, current formal global baseline state, and current Shared Contract snapshot
+8. stopping at a structured decision checkpoint only when key implementation direction is still not locked
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
@@ -95,7 +96,26 @@ Only a new independent full-scope run of `cand_plan` may produce that advancing 
 15. create or update `docs/specs/_plans/active/{module}.md` only when no checkpoint blocks planning and the result is `plan-ready`
 16. if `docs/specs/_plans/draft/{module}.md` exists for the same round and the round is now `plan-ready`, extract only the stabilized planning content into `active/{module}.md`; do not rename the draft file in place
 17. after a successful active-plan write for the current round, delete `docs/specs/_plans/draft/{module}.md` if it exists
-18. ensure the active plan records:
+18. identify the changed execution surfaces of this round before finalizing either draft or active planning output:
+   - define an execution surface as the concrete capability path that this round is actually changing inside the module
+   - do not force one whole-module owner or one whole-module path when the round touches only a narrower capability slice
+   - name each execution surface directly enough that `cand_impl` and `cand_verify` can reuse the same surface labels without reinterpretation
+19. for each changed execution surface, record at minimum:
+   - current known path
+   - target path for the end of this round
+   - retirement goal naming which legacy dependency should stop being a required prerequisite
+   - the first stable cutover slices that can advance now
+20. if current implementation facts are still insufficient to name a target path or retirement goal safely, but candidate truth still stands:
+   - keep the round at `cand_plan`
+   - update `docs/specs/_plans/draft/{module}.md`
+   - record the missing implementation fact under `open_modeling_unknowns`
+21. if planning discovers that the real blocker is missing behavior truth, missing boundary truth, or missing acceptance truth:
+   - do not compensate inside plan text
+   - treat the round as `truth-fallback`
+22. ensure the active plan records:
+   - `Execution Surface Plan`
+   - `Retirement Targets`
+   - `Verification Targets`
    - execution slices rather than one undifferentiated implementation block
    - for each slice: objective, file scope, dependencies, verification action, done condition, and current status
    - progress, blockers, and verification focus for this round
@@ -107,18 +127,23 @@ Only a new independent full-scope run of `cand_plan` may produce that advancing 
    - `system_constraints_stable_version_ref`
    - `system_constraints_stable_fingerprint`
    - `shared_contract_snapshot`
-19. update `_status.md`:
+23. treat `plan-ready` as valid only when all of the following hold:
+   - the changed execution surfaces of this round are identified
+   - each changed execution surface has a target path
+   - each changed execution surface has at least one explicit retirement goal
+   - the first implementation slices are stable enough to enter `cand_impl`
+24. update `_status.md`:
    - if the candidate is now ready for implementation -> `Next Command=cand_impl`
    - if candidate truth drift was discovered -> `Next Command=cand_check`
    - if research preflight found candidate truth gaps -> `Next Command=cand_check`
    - if research preflight is blocked on implementation-critical unknowns but no truth rewrite is pending -> keep `Next Command=cand_plan`
    - if the result is `decision-checkpoint` and no truth writeback is pending -> keep `Next Command=cand_plan`
    - if a `decision` checkpoint stopped planning and no truth writeback is pending -> keep `Next Command=cand_plan`
-20. perform git close-out if required
+25. perform git close-out if required
 
 ## 5. Stop Conditions
 
-1. either a valid active plan file exists for the current candidate truth, or planning stopped with no consumable active plan artifact because of fallback, bounded blocking, or checkpoint
+1. either a valid active plan file exists for the current candidate truth and records the changed execution surfaces, target paths, retirement targets, and first stable cutover slices, or planning stopped with no consumable active plan artifact because of fallback, bounded blocking, or checkpoint
 2. `_status.md` points to the real next step
 
 ## 6. Output Contract
@@ -129,15 +154,17 @@ Only a new independent full-scope run of `cand_plan` may produce that advancing 
 4. plan binding result
 5. stable-to-candidate change-surface review result when `stable` exists
 6. research preflight result when research preflight was used
-7. `handoff validation result`
-8. cleanup result when planning fell back to `cand_check`
-9. `checkpoint result` when a checkpoint stop was raised
+7. changed execution surfaces and their target-path result
+8. retirement-target planning result
+9. `handoff validation result`
+10. cleanup result when planning fell back to `cand_check`
+11. `checkpoint result` when a checkpoint stop was raised
    - when present, it must satisfy the fixed checkpoint fields defined by `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
-10. `fallback_reason_code` for fallback, blocking, or checkpoint stops
-11. blocking reason and resume signal when planning stayed at `cand_plan` without fallback
-12. git close-out result
-13. `_status.md` update result
-14. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
+12. `fallback_reason_code` for fallback, blocking, or checkpoint stops
+13. blocking reason and resume signal when planning stayed at `cand_plan` without fallback
+14. git close-out result
+15. `_status.md` update result
+16. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - when a checkpoint was raised or planning stayed blocked at `cand_plan`, also report `resume signal`
    - if `Next Command=cand_plan`, `why this next step` must explicitly state whether planning is waiting on implementation facts, unresolved direction, or truth writeback
