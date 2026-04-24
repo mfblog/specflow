@@ -6,13 +6,13 @@
 
 It answers four questions:
 
-1. whether a `shared_ops` request can be routed into exactly one standard shared flow
+1. whether a shared-governance request can be routed into exactly one standard shared flow
 2. whether the request can be decomposed into a safe sequence of standard shared flows
 3. when a checkpoint is mandatory instead of automatic continuation
 4. how to hand work back to the smallest legal next step without guessing
 
 This is not a user-facing command entry.
-The user reaches it through `shared_ops:{natural-language request}`.
+The user reaches it through natural-language routing when that routing enters the shared-governance branch.
 
 ---
 
@@ -71,8 +71,8 @@ Before execution:
    - the full ordered step list
    - the current step
    - the remaining steps after the current step
-   - the closure condition that `shared_ops` stays open until the final listed step finishes
-   - that the contract is execution-local and must be discarded if the current `shared_ops` handling stops before final closure
+   - the closure condition that shared governance stays open until the final listed step finishes
+   - that the contract is execution-local and must be discarded if the current shared-governance handling stops before final closure
 7. if such a stable sequence exists, report that contract and route to the first legal flow only
 8. stop immediately and raise a checkpoint when any of the following holds:
    - the same truth has two or more plausible formal landing points
@@ -81,7 +81,7 @@ Before execution:
    - the action order would change resulting formal truth
    - current repository truth is insufficient to support a stable decomposition
 9. when the request has crossed into `system_constraints_change_proposal`, require writeback into the responsible unit candidate instead of inventing a new shared-side target
-10. if the current `shared_ops` handling stops before all listed steps finish, require rerunning `shared_ops` from current repository truth rather than resuming an old `remaining_steps_contract`
+10. if the current shared-governance handling stops before all listed steps finish, require rerunning natural-language routing from current repository truth rather than resuming an old `remaining_steps_contract`
 
 ---
 
@@ -107,9 +107,9 @@ The output must include at least:
    - `step_order`
    - `current_step`
    - `remaining_steps`
-   - `shared_ops_closure_rule`
+   - `shared_governance_closure_rule`
    - `durability=execution_local`
-   - `resume_rule=rerun_shared_ops_from_current_truth_if_interrupted`
+   - `resume_rule=rerun_natural_language_routing_from_current_truth_if_interrupted`
 6. the smallest legal next shared flow if decomposition is stable
 7. if a checkpoint is raised:
    - `type`
@@ -121,7 +121,7 @@ The output must include at least:
    - `required_writeback_target`
    - `resume_signal`
    - `resume_next_step`
-8. when the boundary crosses into `system_constraints_change_proposal`, which unit candidate must receive the writeback before `shared_ops` may resume
+8. when the boundary crosses into `system_constraints_change_proposal`, which unit candidate must receive the writeback before shared governance may resume
 
 ---
 

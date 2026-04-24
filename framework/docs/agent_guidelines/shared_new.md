@@ -12,7 +12,7 @@ It answers four questions:
 4. how the repository must be reconciled after that shared truth is created or updated, including who owns the later stable landing when a next-round shared candidate is opened for an already-stable shared object
 
 This is not a user-facing command entry.
-The user reaches it through `shared_ops:{natural-language request}`.
+The user reaches it through natural-language routing when that routing enters the shared-governance branch.
 
 ---
 
@@ -68,7 +68,7 @@ If the request names units that do not yet have current-layer Spec files and the
    - start from the formal unit set recorded in `_status.md`
    - include any named existing units and any units already shown by current repository truth to overlap the target topic
    - read every additional current-layer unit main file needed to judge whether the target truth already exists as unit-local formal truth, is already duplicated across units, or is already formalized as a different shared object
-   - if current repository truth is insufficient to rule those cases out safely, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+   - if current repository truth is insufficient to rule those cases out safely, stop this flow and return control to `shared_escape` through shared-governance routing instead of guessing
 3. inspect existing unit truth and existing shared truth across that repository-wide review set to ensure the target truth is not already formalized elsewhere as duplicate formal truth
 4. decide the target shared object boundary:
    - one shared object per shared file
@@ -76,20 +76,20 @@ If the request names units that do not yet have current-layer Spec files and the
 5. if the round may create or update a candidate-layer file for a `shared_contract_id` that already has a stable-layer sibling, resolve the repository-wide affected-unit set for that already-stable shared object from current repository truth before owner selection:
    - derive that set from unit `shared_contract_refs` rather than from `bound_objects`
    - include units that currently bind the stable-layer sibling and units that already bind its current candidate-layer sibling when that sibling exists
-   - if current repository truth is insufficient to derive that affected-unit set safely, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
-   - if that affected-unit set is empty, continue only when current repository truth explicitly shows that the already-stable shared object is intentionally kept as independently authored shared truth with no current formal bindings; otherwise stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing a lifecycle owner with no current formal consumer set
+   - if current repository truth is insufficient to derive that affected-unit set safely, stop this flow and return control to `shared_escape` through shared-governance routing instead of guessing
+   - if that affected-unit set is empty, continue only when current repository truth explicitly shows that the already-stable shared object is intentionally kept as independently authored shared truth with no current formal bindings; otherwise stop this flow and return control to `shared_escape` through shared-governance routing instead of guessing a lifecycle owner with no current formal consumer set
 6. if the request is to continue evolving an already-independent shared object that currently has only a stable-layer file, create or update the sibling candidate-layer `shared_contract` for the same `shared_contract_id`, set its `shared_version` to the intended next stable version according to Shared Contract semantic version rules, and write exactly one `promotion_owner_unit` into that candidate-layer shared file:
    - when the repository-wide affected-unit set from Step 5 is not empty, the owner must be one formal unit from that set
    - when Step 5 confirmed that the already-stable shared object is intentionally kept with no current formal bindings, the owner must be one formal unit explicitly required by the current round as the future adopter of that next-round draft
    - that owner is the unit round that must later bind or retarget legally to this candidate-layer shared file before it may land as the next stable-layer Shared Contract file
    - the owner unit may still remain formally bound to the current stable-layer shared sibling until a later legal unit candidate round rewrites its `shared_contract_refs`
-   - if current repository truth is insufficient to justify the no-current-binding continuation or to name one stable promotion owner unit, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+   - if current repository truth is insufficient to justify the no-current-binding continuation or to name one stable promotion owner unit, stop this flow and return control to `shared_escape` through shared-governance routing instead of guessing
 7. otherwise create or update the target candidate-layer `shared_contract`
 8. if Step 7 created the first file for a brand-new shared object, initialize `shared_version=0.1.0`
 9. if the target candidate-layer shared file has a stable-layer sibling after Steps 6 to 8, validate that the resulting candidate-layer file still carries exactly one valid `promotion_owner_unit`:
    - if Step 6 already wrote the owner, confirm that the resulting file still keeps that owner
    - if Step 7 updated an already-existing candidate-layer file with a stable-layer sibling, preserve or rewrite `promotion_owner_unit` so the resulting file still names one formal unit from the repository-wide affected-unit set resolved in Step 5
-   - if current repository truth is insufficient to keep one stable promotion owner without guessing, stop this flow and return control to `shared_escape` through `shared_ops`
+   - if current repository truth is insufficient to keep one stable promotion owner without guessing, stop this flow and return control to `shared_escape` through shared-governance routing
 10. if no consumer unit formally binds the shared truth yet:
    - keep `bound_objects=none`
    - record expected future consumers only as planning text in the shared file body
@@ -105,9 +105,9 @@ Stop when one of the following is true:
 1. the target candidate-layer `shared_contract` has been written and required reconciliation through `shared_sync` is complete
 2. the request is not really independent shared authoring or next-round opening and must be re-routed to another shared flow
 3. duplicate formal truth remains in unit-local files and boundary closure has not been completed
-4. current repository truth is insufficient to rule out duplicate formal truth or alternate formal landing points, so control has returned to `shared_escape` through `shared_ops`
+4. current repository truth is insufficient to rule out duplicate formal truth or alternate formal landing points, so control has returned to `shared_escape` through shared-governance routing
 5. the request is really a pure unit retarget or shared impact-check request and must be re-routed to another shared flow
-6. the request has crossed into `system_constraints_change_proposal` and must stop at a `shared_ops` checkpoint instead of continuing here
+6. the request has crossed into `system_constraints_change_proposal` and must stop at a shared-governance checkpoint instead of continuing here
 7. a next-round candidate-layer shared file for an already-stable shared object would exist after this round, but no stable `promotion_owner_unit` can be named from current repository truth
 
 ---

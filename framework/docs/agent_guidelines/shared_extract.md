@@ -12,7 +12,7 @@ It answers four questions:
 4. how the repository must be reconciled after the shared extraction lands
 
 This is not a user-facing command entry.
-The user reaches it through `shared_ops:{natural-language request}`.
+The user reaches it through natural-language routing when that routing enters the shared-governance branch.
 
 ---
 
@@ -27,7 +27,7 @@ It may:
 3. remove duplicate formal truth from the source unit candidate side
 4. update the target shared file's declarative `bound_objects` metadata so it matches the real binding set after extraction writeback
 5. trigger `shared_sync` after any shared-truth or binding writeback
-6. stop at a `shared_ops` checkpoint when any source or consumer unit is currently at `stable`
+6. stop at a shared-governance checkpoint when any source or consumer unit is currently at `stable`
 
 It does not:
 
@@ -73,7 +73,7 @@ Before execution:
    - include each consumer unit whose current-layer `shared_contract_refs` or body-level consumption explanation must change because of the extraction result
    - do not require writeback for an involved unit that is read only to confirm consumer coverage and whose current-layer truth already aligns with the extraction result
 5. if any writeback-required involved unit current layer is `stable`, do not modify that unit `stable` directly:
-   - raise a blocking `shared_ops` checkpoint with `type=prerequisite_action`
+   - raise a blocking shared-governance checkpoint with `type=prerequisite_action`
    - require `unit_fork:{unit}` for each such unit before extraction continues
    - set `required_writeback_target` to the corresponding unit candidate main file set because chat-only agreement does not create legal extraction targets
 6. create or update the target candidate-layer `shared_contract`
@@ -83,11 +83,11 @@ Before execution:
    - the owner must be chosen from the writeback-required involved-unit subset for this round
    - that owner is the unit round that must later land this candidate-layer shared file as the next stable-layer Shared Contract file
    - the owner unit may still remain formally bound to the current stable-layer shared sibling until a later legal unit candidate round rewrites its `shared_contract_refs`
-   - if current repository truth is insufficient to name one stable owner without guessing, stop this flow and return control to `shared_escape` through `shared_ops`
+   - if current repository truth is insufficient to name one stable owner without guessing, stop this flow and return control to `shared_escape` through shared-governance routing
 10. if the target candidate-layer shared file has a stable-layer sibling after Steps 6 to 9, validate that the resulting candidate-layer file still carries exactly one valid `promotion_owner_unit`:
    - if Step 9 already wrote the owner, confirm that the resulting file still keeps that owner
    - if Step 6 updated an already-existing candidate-layer file with a stable-layer sibling, preserve or rewrite `promotion_owner_unit` so the resulting file still names one formal unit from the writeback-required involved-unit subset for this round
-   - if current repository truth is insufficient to keep one stable owner from that subset without guessing, stop this flow and return control to `shared_escape` through `shared_ops`
+   - if current repository truth is insufficient to keep one stable owner from that subset without guessing, stop this flow and return control to `shared_escape` through shared-governance routing
 11. rewrite every source unit candidate side so the extracted truth is no longer duplicated as unit-local formal truth
 12. rewrite every additional writeback-required involved consumer unit candidate-side reference and behavior explanation required by the extraction result
    - any written `shared_contract_refs` must use the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
@@ -109,10 +109,10 @@ Stop when one of the following is true:
    - the target shared file `bound_objects` metadata must already match the real unit-side binding set
    - involved consumer coverage must already be complete for the current repository truth
 2. the request is not really extraction and must be re-routed to another shared flow
-3. one or more writeback-required involved units are currently at `stable` and the flow has raised a `shared_ops` checkpoint for `unit_fork` first
+3. one or more writeback-required involved units are currently at `stable` and the flow has raised a shared-governance checkpoint for `unit_fork` first
 4. unit-local truth versus shared truth is still not stably separable
 5. involved consumer coverage is still incomplete or uncertain, so the flow cannot claim extraction closure yet
-6. the request has crossed into `system_constraints_change_proposal` and must stop at a `shared_ops` checkpoint instead of continuing here
+6. the request has crossed into `system_constraints_change_proposal` and must stop at a shared-governance checkpoint instead of continuing here
 7. a resulting candidate-layer shared file for an already-stable shared object would exist after this round, but no stable `promotion_owner_unit` can be named from the writeback-required involved-unit subset
 
 ---

@@ -58,7 +58,7 @@ Only a new independent full-scope run of `unit_fork` may produce that advancing 
    - do not write `shared_contract_refs=none` merely because a shared-truth change for this round has not yet been formalized
 10. if Step 9 removes or retargets any existing Shared Contract binding:
    - derive the real repository-wide binding set of each touched Shared Contract from current-layer module `shared_contract_refs` plus the target unit candidate writeback prepared in Step 9
-   - if repository truth is insufficient to decide whether any touched Shared Contract file would become unbound after this round, stop and reroute through `shared_ops:{natural-language request}` from current repository truth instead of leaving cleanup ownership implicit
+   - if repository truth is insufficient to decide whether any touched Shared Contract file would become unbound after this round, stop and reroute through natural-language shared governance from current repository truth instead of leaving cleanup ownership implicit
 11. if the round changed shared bindings or shared files, resolve Shared Contract terminal state and `bound_objects` in the same round:
    - if a touched Shared Contract file would have no formal bound modules after this round, in the same round either delete it when cleanup is legal under `spec_policy.md` or explicitly keep it as independently authored shared truth by writing that file with:
      - `unbound_retention: intentional`
@@ -79,7 +79,7 @@ Only a new independent full-scope run of `unit_fork` may produce that advancing 
 14. if the round changed any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects `Active Layer=candidate` for this unit, even when no additional affected unit is known yet
    - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --units {unit}` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
-   - if that `shared_sync` returns control because repository truth is still insufficient to continue safely, stop `unit_fork` as `blocked`, keep the newly created candidate-layer state in place, and reroute through `shared_ops:{natural-language request}` from current repository truth instead of claiming Shared Contract side effects are closed
+   - if that `shared_sync` returns control because repository truth is still insufficient to continue safely, stop `unit_fork` as `blocked`, keep the newly created candidate-layer state in place, and reroute through natural-language shared governance from current repository truth instead of claiming Shared Contract side effects are closed
 15. perform git close-out if required
 
 ## 5. Stop Conditions
@@ -88,8 +88,8 @@ Only a new independent full-scope run of `unit_fork` may produce that advancing 
 2. previous-round process files are cleaned up
 3. Shared Contract side effects are closed
 4. `_status.md` is updated
-5. if a touched Shared Contract file became unbound because of this round's binding change, its terminal state is already resolved or the command has stopped and rerouted through `shared_ops`
-6. if post-fork `shared_sync` could not continue safely, the command result is `blocked`, the candidate-layer state remains the current formal layer, and the required next step is rerunning `shared_ops` from current repository truth
+5. if a touched Shared Contract file became unbound because of this round's binding change, its terminal state is already resolved or the command has stopped and rerouted through natural-language shared governance
+6. if post-fork `shared_sync` could not continue safely, the command result is `blocked`, the candidate-layer state remains the current formal layer, and the required next step is rerunning natural-language routing from current repository truth so it can re-enter shared governance
 
 ## 6. Output Contract
 
@@ -101,12 +101,12 @@ Only a new independent full-scope run of `unit_fork` may produce that advancing 
 6. cleanup result
 7. `_status.md` update result
 8. Shared Contract reconciliation result when the round changed shared truth or bindings
-9. when post-fork `shared_sync` could not continue safely, that the command stopped as `blocked` and must resume through `shared_ops`
+9. when post-fork `shared_sync` could not continue safely, that the command stopped as `blocked` and must resume through natural-language shared governance
 10. git close-out result
 11. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - `current state` must explicitly confirm the candidate-layer state written to `_status.md`
-   - if post-fork follow-up is blocked on `shared_ops`, the block must name that reroute as the immediate `next step`
+   - if post-fork follow-up is blocked on shared governance, the block must name natural-language shared-governance rerouting as the immediate `next step`
 
 ## 7. Non-Goals
 

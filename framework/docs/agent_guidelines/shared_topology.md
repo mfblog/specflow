@@ -12,7 +12,7 @@ It answers four questions:
 4. how the repository must be reconciled after the topology change lands
 
 This is not a user-facing command entry.
-The user reaches it through `shared_ops:{natural-language request}`.
+The user reaches it through natural-language routing when that routing enters the shared-governance branch.
 
 ---
 
@@ -31,7 +31,7 @@ It may:
 7. delete touched stable-layer Shared Contract files only when they are already unbound and cleanup is legal under `spec_policy.md`
 8. keep an existing stable-layer Shared Contract file unchanged when the topology plan intentionally leaves it in place
 9. trigger `shared_sync` after any shared-truth or binding writeback
-10. stop at a `shared_ops` checkpoint when legal unit writeback targets do not exist yet
+10. stop at a shared-governance checkpoint when legal unit writeback targets do not exist yet
 
 It does not:
 
@@ -39,7 +39,7 @@ It does not:
 2. replace `shared_new` when the main task is first-time shared authoring with no existing shared topology change
 3. replace `shared_extract` when the main task is only extracting unit-local truth into one shared object
 4. create or update a stable-layer Shared Contract file directly just to carry new topology semantics or a new `shared_version`
-5. create an independent Shared Contract lifecycle outside `shared_ops`
+5. create an independent Shared Contract lifecycle outside shared governance
 
 ---
 
@@ -69,9 +69,9 @@ Before execution:
 
 1. confirm the request is really about Shared Contract topology change or terminal-state resolution rather than `shared_new`, `shared_extract`, `shared_bind`, or `shared_sync`
 2. resolve the complete repository-wide affected-unit set for the touched shared objects from unit `shared_contract_refs` rather than from `bound_objects`
-3. if current repository truth is insufficient to derive that complete affected-unit set safely, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+3. if current repository truth is insufficient to derive that complete affected-unit set safely, stop this flow and return control to `shared_escape` through shared-governance routing instead of guessing
 4. if any affected unit current layer is `stable` and the topology change would require unit truth writeback:
-   - raise a blocking `shared_ops` checkpoint with `type=prerequisite_action`
+   - raise a blocking shared-governance checkpoint with `type=prerequisite_action`
    - require `unit_fork:{unit}` for each such unit before topology writeback continues
    - set `required_writeback_target` to the corresponding unit candidate main file set because chat-only agreement does not create legal topology-writeback targets
 5. decide the current-round topology plan explicitly against that complete affected-unit set:
@@ -79,7 +79,7 @@ Before execution:
    - which new shared object identities must be created
    - which touched shared files must be deleted in this round
    - which touched shared files will remain intentionally unbound as independently authored shared truth
-6. if the current repository truth is not sufficient to stabilize Step 5, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+6. if the current repository truth is not sufficient to stabilize Step 5, stop this flow and return control to `shared_escape` through shared-governance routing instead of guessing
 7. create, update, or delete the touched candidate-layer Shared Contract files according to the topology plan:
    - if the round creates the first file for a brand-new shared object, initialize `shared_version=0.1.0`
    - if the round opens or rewrites a candidate-layer file for a shared object that already has a stable-layer sibling, set that candidate file's `shared_version` to the intended next stable version according to Shared Contract semantic version rules
@@ -87,7 +87,7 @@ Before execution:
      - the owner must be a formal unit from the affected-unit set or another formal unit explicitly required by the topology plan
      - that owner is the only unit round allowed to land that candidate-layer shared file as the next stable-layer Shared Contract file
      - the owner unit may remain bound to the current stable-layer shared sibling until a later legal unit candidate round rewrites its `shared_contract_refs`
-     - if current repository truth is insufficient to name one stable owner for such a file, stop this flow and return control to `shared_escape` through `shared_ops` instead of guessing
+     - if current repository truth is insufficient to name one stable owner for such a file, stop this flow and return control to `shared_escape` through shared-governance routing instead of guessing
    - if the topology plan needs new or changed stable-layer shared semantics, do not write that stable-layer file directly in this flow; write or update the corresponding candidate-layer shared file first, carry the intended next stable `shared_version` there, and let a later legal promotion produce the stable-layer file
 8. rewrite every affected unit candidate-side `shared_contract_refs` and body-level consumption explanation required by the topology plan
    - any written `shared_contract_refs` must use the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
@@ -103,7 +103,7 @@ Before execution:
    - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --shared-ids shared_x,shared_y` and additional `--shared-refs` filters when the active flow has already identified exact touched files
 12. after any write to `docs/specs/shared_contracts/**` or any unit `shared_contract_refs`, execute `shared_sync` before claiming closure
    - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
-13. if `shared_sync` stops because repository truth is insufficient to continue safely, return control to `shared_escape` through `shared_ops` instead of inventing a flow-local checkpoint
+13. if `shared_sync` stops because repository truth is insufficient to continue safely, return control to `shared_escape` through shared-governance routing instead of inventing a flow-local checkpoint
 
 ---
 
@@ -113,10 +113,10 @@ Stop when one of the following is true:
 
 1. the topology change is complete, every touched shared file's terminal state is resolved, and `shared_sync` has finished reconciliation
 2. the request is not really topology change and must be re-routed to another shared flow
-3. one or more affected units are currently at `stable` and the flow has raised a `shared_ops` checkpoint for `unit_fork` first
-4. repository truth is insufficient to continue safely, so control has returned to `shared_escape` through `shared_ops`
+3. one or more affected units are currently at `stable` and the flow has raised a shared-governance checkpoint for `unit_fork` first
+4. repository truth is insufficient to continue safely, so control has returned to `shared_escape` through shared-governance routing
 5. the topology plan requires new or changed stable-layer shared semantics, so this flow has completed the current-round candidate-layer Shared Contract writeback and any required `shared_sync` without direct stable-layer writeback; any later stable-layer Shared Contract file must be produced by a legal promotion rather than by this flow
-6. the request has crossed into `system_constraints_change_proposal`, so control has returned to `shared_escape` through `shared_ops` for checkpoint handling instead of continuing here
+6. the request has crossed into `system_constraints_change_proposal`, so control has returned to `shared_escape` through shared-governance routing for checkpoint handling instead of continuing here
 7. the topology plan would leave a next-round candidate-layer shared file for an already-stable shared object without a stable `promotion_owner_unit`
 
 ---

@@ -36,14 +36,16 @@ When a request hits any of the following, handle it with `specFlow` rules:
    - `scenario_check:{scenario}`
    - `scenario_verify:{scenario}`
    - `scenario_promote:{scenario}`
-2. Governance review entries:
+2. Natural-language `specFlow` requests:
+   - requests that express desired project design, implementation, verification, promotion, governance review, repository mapping, shared truth, or system-constraint work without explicit command syntax
+   - route these requests through `specflow/framework/docs/agent_guidelines/natural_language_routing.md`
+3. Governance review entries:
    - `spec_flow_review`
    - `spec_flow_design_review`
-   - `shared_ops:{natural-language request}`
-3. Requests involving `unit`, `scenario`, `repository_mapping` truth, state progression, candidate closure, formal promotion, Shared Contract, shared_ops routing, or system constraints.
-4. Requests involving registered project-local standards under `docs/project_standards/`.
-5. Requests to create, register, or tighten a project-local standard for the current project.
-6. Direct implementation requests that would modify repo-tracked code or other repo-tracked implementation-side files.
+4. Requests involving `unit`, `scenario`, `repository_mapping` truth, state progression, candidate closure, formal promotion, Shared Contract, shared-governance routing, or system constraints.
+5. Requests involving registered project-local standards under `docs/project_standards/`.
+6. Requests to create, register, or tighten a project-local standard for the current project.
+7. Direct implementation requests that would modify repo-tracked code or other repo-tracked implementation-side files.
 
 For direct implementation requests:
 
@@ -90,11 +92,11 @@ The standard commands are grouped by object family:
    - `scenario_check:{scenario}`
    - `scenario_verify:{scenario}`
    - `scenario_promote:{scenario}`
+
 Governance review entries are:
 
 1. `spec_flow_review`
 2. `spec_flow_design_review`
-3. `shared_ops:{natural-language request}`
 
 ### 2.1 Repository Mapping Routing
 
@@ -107,18 +109,20 @@ When the repository is brand-new, unfamiliar, or its governed path ownership is 
 
 Additional rules:
 
-1. `spec_flow_review`, `spec_flow_design_review`, and `shared_ops:{natural-language request}` are not standard object-lifecycle commands.
-2. `shared_topology` and `shared_sync` are internal shared flows used after Shared Contract topology, binding, or lifecycle changes; users should enter shared work through `shared_ops`.
-3. `impact_sync` is an internal generic impact-reconciliation flow, not a user-facing command.
-4. `project_standard_create` is not a standard user-facing command. It is an internal flow the agent may use when the user asks to create a project-local standard.
-5. plain `spec_flow_review` means the default governance-baseline review defined in `specflow/framework/docs/agent_guidelines/spec_flow_review.md` unless the user explicitly narrows the scope.
-6. plain `spec_flow_design_review` means the default design-baseline review defined in `specflow/framework/docs/agent_guidelines/spec_flow_design_review.md` unless the user explicitly narrows the scope.
-7. that default `spec_flow_review` must cover the shared-governance rule set, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`, even when the user did not mention shared governance explicitly.
-8. that default `spec_flow_review` must also cover the impact-reconciliation rule set, at minimum `impact_sync_policy.md`, `process_snapshot_contract.md`, `recovery_policy.md`, template `_status.md`, and the process README files.
-9. that default `spec_flow_review` must also cover the tooling execution contract set, at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, and the in-scope tooling source files under `specflow/tooling/`.
-10. if the review output does not explicitly report shared-governance coverage, impact-reconciliation coverage, tooling coverage, and their results, the `spec_flow_review` is not complete and must not be treated as a `pass`.
-11. plain `spec_flow_design_review` must not be narrowed to recently touched files, tooling source, or only one design block unless the user explicitly narrows it that way.
-12. before issuing any `pass` conclusion for plain `spec_flow_design_review`, confirm that the hard-blocker result, all eight question scores, the fixed group averages, and the `weighted_score` required by `spec_flow_design_review.md` have all been read and are explicitly reported in the review output.
+1. `spec_flow_review` and `spec_flow_design_review` are not standard object-lifecycle commands.
+2. natural-language routing is the default user-facing entry for non-command `specFlow` requests.
+3. `shared_ops` is an internal shared-governance router, not a user-facing command.
+4. `shared_topology` and `shared_sync` are internal shared flows used after Shared Contract topology, binding, or lifecycle changes; users should enter shared work through natural-language routing.
+5. `impact_sync` is an internal generic impact-reconciliation flow, not a user-facing command.
+6. `project_standard_create` is not a standard user-facing command. It is an internal flow the agent may use when the user asks to create a project-local standard.
+7. plain `spec_flow_review` means the default governance-baseline review defined in `specflow/framework/docs/agent_guidelines/spec_flow_review.md` unless the user explicitly narrows the scope.
+8. plain `spec_flow_design_review` means the default design-baseline review defined in `specflow/framework/docs/agent_guidelines/spec_flow_design_review.md` unless the user explicitly narrows the scope.
+9. that default `spec_flow_review` must cover the shared-governance rule set, at minimum `shared_ops.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`, even when the user did not mention shared governance explicitly.
+10. that default `spec_flow_review` must also cover the impact-reconciliation rule set, at minimum `impact_sync_policy.md`, `process_snapshot_contract.md`, `recovery_policy.md`, template `_status.md`, and the process README files.
+11. that default `spec_flow_review` must also cover the tooling execution contract set, at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, and the in-scope tooling source files under `specflow/tooling/`.
+12. if the review output does not explicitly report shared-governance coverage, impact-reconciliation coverage, tooling coverage, and their results, the `spec_flow_review` is not complete and must not be treated as a `pass`.
+13. plain `spec_flow_design_review` must not be narrowed to recently touched files, tooling source, or only one design block unless the user explicitly narrows it that way.
+14. before issuing any `pass` conclusion for plain `spec_flow_design_review`, confirm that the hard-blocker result, all eight question scores, the fixed group averages, and the `weighted_score` required by `spec_flow_design_review.md` have all been read and are explicitly reported in the review output.
 
 ### 3. How To Resolve Objects And Files
 
@@ -155,25 +159,26 @@ If the user gives a concrete file prefix, treat it as a file reference:
 If a request is inside the `specFlow` scope but is not a standard command, handle it in this default order:
 
 1. If the request directly asks to modify repo-tracked code or other implementation-side files, read `specflow/framework/docs/agent_guidelines/implementation_change_policy.md` first.
-2. Then determine whether the request targets:
+2. Otherwise, read `specflow/framework/docs/agent_guidelines/natural_language_routing.md` first, unless the request is already an explicit standard command or explicit governance review entry.
+3. Then determine whether the request targets:
    - a command-target truth object
    - or a governance object / governance flow
-3. If it targets a governance object or governance flow:
+4. If it targets a governance object or governance flow:
    - read the governance file that defines that flow's scope, preconditions, and procedure first
    - follow that file's declared read scope instead of automatically starting from `docs/specs/_status.md`
    - if the flow is plain `spec_flow_review`, do not narrow it to main command-chain files, recent edits, or non-shared rules only unless the user explicitly narrows it that way
    - if the flow is plain `spec_flow_design_review`, do not narrow it to recently touched files, tooling source, or only one design block unless the user explicitly narrows it that way
    - before issuing any `pass` conclusion for plain `spec_flow_review`, confirm that the shared-governance rule set, the impact-reconciliation rule set, and the tooling execution contract set required by `spec_flow_review.md` have all been read and are explicitly reported in the review output
    - before issuing any `pass` conclusion for plain `spec_flow_design_review`, confirm that the hard-blocker result, all eight question scores, the fixed group averages, and the `weighted_score` required by `spec_flow_design_review.md` have all been read and are explicitly reported in the review output
-4. If it targets a command-target truth object:
+5. If it targets a command-target truth object:
    - read `docs/specs/_status.md` to confirm the target object's current `Active Layer` and `Next Command`
-5. Then read the current-layer main truth file for that object.
-6. If that truth file explicitly references appendix files or Shared Contract files, read them too.
-7. If the task involves repository structure, path ownership, support surface, or object boundaries, also read:
+6. Then read the current-layer main truth file for that object.
+7. If that truth file explicitly references appendix files or Shared Contract files, read them too.
+8. If the task involves repository structure, path ownership, support surface, or object boundaries, also read:
    - `docs/specs/repository_mapping.md`
-8. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
+9. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
    - `docs/specs/system_constraints.md`
-9. Then decide whether the current action is:
+10. Then decide whether the current action is:
    - explanation only
    - modifying `candidate`
    - modifying `stable`

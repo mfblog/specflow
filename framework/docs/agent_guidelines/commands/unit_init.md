@@ -38,7 +38,7 @@ Before execution:
 2. the target unit name is explicit
 3. the unit is not yet in `docs/specs/_status.md`
 4. the goal is to capture current truth, not define future design
-5. if onboarding current truth would create duplicated formal truth across units, or if the shared/unit boundary is still unstable, do not start `unit_init`; resolve that shared-truth boundary through `specflow/framework/docs/agent_guidelines/shared_ops.md` first
+5. if onboarding current truth would create duplicated formal truth across units, or if the shared/unit boundary is still unstable, do not start `unit_init`; resolve that shared-truth boundary through natural-language shared governance first
 6. if the first `stable` reuses already-existing shared truth, read the relevant `shared_contract` files before writing `shared_contract_refs`
 7. if the task also touches global baseline, shared mechanisms, or exceptions, read `docs/specs/system_constraints.md`
 8. if the unit involves technical choices, shared infrastructure, cross-unit reuse, global exceptions, or system-level constraint relationships, the first `stable` must include `Global Constraint Alignment` or an equivalent section
@@ -50,7 +50,7 @@ Before execution:
 
 1. summarize the unit's already-effective behavior baseline
 2. if needed, read `system_constraints.md` as an upstream input
-3. if onboarding current truth shows that one or more existing formal units already depend on the same formal truth and that truth is not yet formalized as one stable shared object, stop and reroute through `shared_ops:{natural-language request}` from current repository truth instead of writing duplicated unit-local `stable` truth
+3. if onboarding current truth shows that one or more existing formal units already depend on the same formal truth and that truth is not yet formalized as one stable shared object, stop and reroute through natural-language shared governance from current repository truth instead of writing duplicated unit-local `stable` truth
 4. create `docs/specs/units/stable/s_unit_{unit}.md`
 5. ensure the file covers:
    - `Context & Motivation`
@@ -67,7 +67,7 @@ Before execution:
 7. do not introduce `system_constraints_change_proposal` into the first `stable`; that field belongs only to unit `candidate`
 8. if the round changed Shared Contract bindings or touched Shared Contract files:
    - derive the real repository-wide binding set of each touched Shared Contract from current-layer unit `shared_contract_refs` plus this round's prepared target-unit stable writeback
-   - if current repository truth is insufficient to derive that touched real binding set safely, stop and reroute through `shared_ops:{natural-language request}` from current repository truth instead of guessing
+   - if current repository truth is insufficient to derive that touched real binding set safely, stop and reroute through natural-language shared governance from current repository truth instead of guessing
    - update `bound_objects` only as declarative metadata so each touched Shared Contract file matches the real binding set implied by that repository-wide binding view plus this round's prepared target-unit writeback
    - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --units {unit}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
    - if a touched Shared Contract file now has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
@@ -89,7 +89,7 @@ Before execution:
 1. the first `stable` exists
 2. `_status.md` registration is complete
 3. Shared Contract side effects, if any, are closed
-4. if onboarding discovered unresolved cross-unit shared truth, the command stopped and rerouted through `shared_ops` instead of writing duplicated unit-local `stable` truth
+4. if onboarding discovered unresolved cross-unit shared truth, the command stopped and rerouted through natural-language shared governance instead of writing duplicated unit-local `stable` truth
 5. the command does not automatically open a candidate round
 
 ## 6. Output Contract
@@ -97,7 +97,7 @@ Before execution:
 1. onboarding judgment
 2. created file path
 3. whether `Global Constraint Alignment` was required and why
-4. whether the command had to stop and reroute through `shared_ops` because shared-truth boundary closure was required before onboarding could continue
+4. whether the command had to stop and reroute through natural-language shared governance because shared-truth boundary closure was required before onboarding could continue
 5. `_status.md` update result
 6. Shared Contract reconciliation result when the round changed shared truth or bindings
 7. git close-out result
@@ -105,7 +105,7 @@ Before execution:
 9. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - `current state` must explicitly confirm the stable-layer landing written to `_status.md`
-   - if the round stopped and rerouted through `shared_ops`, `next step` must name that reroute directly instead of implying that onboarding closed
+   - if the round stopped and rerouted through natural-language shared governance, `next step` must name that reroute directly instead of implying that onboarding closed
 
 ## 7. Non-Goals
 

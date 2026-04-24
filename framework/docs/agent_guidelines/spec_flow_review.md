@@ -69,6 +69,7 @@ For the default governance-baseline review, the execution-local `review_plan` mu
    - `spec_flow_review.md`
    - `spec_policy.md`
    - `command_policy.md`
+   - `natural_language_routing.md`
    - `implementation_change_policy.md`
    - `git_policy.md`
    - `severity_policy.md`

@@ -18,7 +18,7 @@ This file answers five questions:
 5. which shared-specific exceptions it may interpret
 
 `shared_sync` is not a user-facing command.
-Users still enter shared work through `shared_ops:{natural-language request}`.
+Users still enter shared work through natural-language routing.
 
 ## 2. Scope
 

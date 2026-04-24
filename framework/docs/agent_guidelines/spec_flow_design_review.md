@@ -31,6 +31,7 @@ That default scope includes:
    - `spec_flow_design_review.md`
    - `spec_policy.md`
    - `command_policy.md`
+   - `natural_language_routing.md`
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
    - `scenario_policy.md`
@@ -87,6 +88,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `spec_flow_design_review.md`
    - `spec_policy.md`
    - `command_policy.md`
+   - `natural_language_routing.md`
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
    - `scenario_policy.md`

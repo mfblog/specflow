@@ -4,13 +4,14 @@
 
 This file defines how formal commands work in this repository.
 
-It answers five questions:
+It answers six questions:
 
 1. what a command is
 2. which object families commands operate on
 3. which commands are standard lifecycle commands
 4. which objects are not command targets
 5. which shared gate rules every command must follow
+6. how natural-language requests enter the command and governance system
 
 ## 2. What A Command Is
 
@@ -63,8 +64,9 @@ Additional rules:
 1. `system_constraints` is not a legal command target
 2. `shared_contract` is not a legal standard command target
 3. `repository_mapping` is not a legal standard command target
-4. `shared_ops:{natural-language request}` remains the only user-facing shared-governance entry
-5. `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, `shared_sync`, `shared_escape`, and `impact_sync` are internal governance flows, not direct user-facing standard commands
+4. natural-language routing is the default user-facing entry for requests that do not use explicit command syntax
+5. `shared_ops` is an internal shared-governance routing flow reached through natural-language routing, not a user-facing command form
+6. `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, `shared_sync`, `shared_escape`, and `impact_sync` are internal governance flows, not direct user-facing standard commands
 
 ## 5. Standard Commands
 
@@ -89,19 +91,34 @@ Additional rules:
 5. `scenario_verify:{scenario}`
 6. `scenario_promote:{scenario}`
 
-### 5.3 Shared Governance Entry
+### 5.3 Natural-Language Entry
 
-The user-facing shared-governance entry remains:
+The default user-facing entry is natural language.
 
-```text
-shared_ops:{natural-language request}
-```
+Natural-language requests must follow:
+
+1. `specflow/framework/docs/agent_guidelines/natural_language_routing.md`
+2. the routed command or governance-flow file
 
 Rules:
 
-1. `shared_ops` is the only preferred user-facing entry for shared-truth governance
-2. it is intent-driven rather than object-name-driven
-3. it routes into internal shared flows according to `shared_ops.md`
+1. a natural-language request must first be resolved into intent fragments
+2. the executor must read the current repository truth needed to prove the route
+3. if the request can be safely decomposed, only the first smallest legal step may be entered in the current handling round
+4. if the request is missing target, scope, success meaning, acceptance meaning, or boundary truth, the executor must stop through the checkpoint protocol instead of guessing
+5. if the request touches cross-unit shared truth, route into the internal shared-governance branch defined by `shared_ops.md`
+6. `shared_ops:{natural-language request}` is not a user-facing command form
+
+### 5.4 Shared Governance Internal Routing
+
+The shared-governance internal routing flow remains `shared_ops`.
+
+Rules:
+
+1. users enter shared work by stating their shared intent in natural language
+2. natural-language routing decides whether shared governance owns the request
+3. `shared_ops.md` routes the shared branch into internal shared flows
+4. executors must not ask users to choose among `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, `shared_sync`, or `shared_escape`
 
 ## 6. Responsibilities By Family
 

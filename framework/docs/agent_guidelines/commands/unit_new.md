@@ -35,7 +35,7 @@ Only a new independent full-scope run of `unit_new` may produce that advancing r
 2. the target unit name is explicit
 3. the unit is not yet in `_status.md`
 4. the goal is future design first, not capturing current truth first
-5. if the first candidate depends on shared truth that is not yet formalized as `shared_contract`, or if the shared/unit boundary is still unstable, do not start `unit_new`; resolve that shared truth through `specflow/framework/docs/agent_guidelines/shared_ops.md` first
+5. if the first candidate depends on shared truth that is not yet formalized as `shared_contract`, or if the shared/unit boundary is still unstable, do not start `unit_new`; resolve that shared truth through natural-language shared governance first
 6. if the first candidate reuses already-existing shared truth, read the relevant `shared_contract` files before writing `shared_contract_refs`
 7. if the round will create, update, or delete any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `shared_sync.md`
 8. if the round may update `bound_objects` or remove intentional-unbound retention fields from a touched Shared Contract file, read every current-layer unit main file needed to derive the real repository-wide binding set of each touched Shared Contract from `shared_contract_refs`
@@ -60,7 +60,7 @@ Only a new independent full-scope run of `unit_new` may produce that advancing r
    - `system_constraints_change_proposal`
 8. if the round changed Shared Contract bindings or touched Shared Contract files:
    - derive the real repository-wide binding set of each touched Shared Contract from current-layer unit `shared_contract_refs` plus this round's prepared target-unit candidate writeback
-   - if current repository truth is insufficient to derive that touched real binding set safely, stop and reroute through `shared_ops:{natural-language request}` from current repository truth instead of guessing
+   - if current repository truth is insufficient to derive that touched real binding set safely, stop and reroute through natural-language shared governance from current repository truth instead of guessing
    - update `bound_objects` only as declarative metadata so each touched Shared Contract file matches the real binding set implied by that repository-wide binding view plus this round's prepared target-unit writeback
    - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --units {unit}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
    - if a touched Shared Contract file now has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
@@ -82,7 +82,7 @@ Only a new independent full-scope run of `unit_new` may produce that advancing r
 3. any first-round shared binding required by the candidate has been written explicitly instead of being left as placeholder `none`
 4. Shared Contract side effects, if any, are closed
 5. the command does not automatically continue into implementation
-6. if repository truth was insufficient to close shared-truth binding metadata safely, the command stopped and rerouted through `shared_ops` instead of guessing
+6. if repository truth was insufficient to close shared-truth binding metadata safely, the command stopped and rerouted through natural-language shared governance instead of guessing
 
 ## 6. Output Contract
 
@@ -91,7 +91,7 @@ Only a new independent full-scope run of `unit_new` may produce that advancing r
 3. initialized candidate version
 4. initialized formal global baseline reference or `none`
 5. initialized explicit Shared Contract binding set or confirmed `shared_contract_refs=none`
-6. whether the command had to stop and reroute through `shared_ops` because repository truth was insufficient to close shared-truth binding metadata safely
+6. whether the command had to stop and reroute through natural-language shared governance because repository truth was insufficient to close shared-truth binding metadata safely
 7. `_status.md` update result
 8. Shared Contract reconciliation result when the round changed shared truth or bindings
 9. git close-out result

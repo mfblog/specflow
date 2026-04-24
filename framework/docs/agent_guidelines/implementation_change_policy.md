@@ -137,7 +137,7 @@ The smallest legal next step after classification is fixed as follows:
 | brand-new unit, user directly asks to write code | `unit_new:{unit}` |
 | existing `stable` unit, and the requested change would alter formal behavior truth | `unit_fork:{unit}` first, then write the new candidate truth before implementation |
 | existing `candidate` unit, and the requested change would alter current candidate truth | write back into the current candidate main file, required appendix truth, or required Shared Contract truth first, then rerun `unit_check:{unit}` |
-| request touches cross-unit shared truth | `shared_ops:{natural-language request}` |
+| request touches cross-unit shared truth | natural-language routing into the shared-governance branch defined by `shared_ops.md` |
 | `implementation_only`, target unit has `Active Layer=stable` | implementation may continue only within current stable truth; after code changes, the unit must return to `unit_stable_verify:{unit}` before stable alignment may be claimed again |
 | `implementation_only`, target unit has `Active Layer=candidate` and `_status.md` says `Next Command=unit_impl` | implementation may continue, but only under `unit_impl` semantics |
 | `implementation_only`, target unit has `Active Layer=candidate` and `_status.md` says any `Next Command` other than `unit_impl` | do not modify code; return to the currently recorded smallest legal next step first |
@@ -145,7 +145,7 @@ The smallest legal next step after classification is fixed as follows:
 Additional routing rules:
 
 1. `implementation_only` does not create permission to skip `Next Command`
-2. if the request touches both unit-local truth and cross-unit shared truth, route through `shared_ops` rather than guessing a local-only shortcut
+2. if the request touches both unit-local truth and cross-unit shared truth, route through natural-language shared governance rather than guessing a local-only shortcut
 3. if classification would require guessing whether the target is unit-local truth, Shared Contract truth, or global default-rule truth, the result must stay `boundary_unclear`
 
 ---

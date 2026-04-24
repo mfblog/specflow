@@ -26,7 +26,7 @@ By default this command reviews:
 4. whether bound Shared Contract relations and body dependencies are consistent
 5. whether `system_constraints_ref` matches the current formal global baseline state
 6. whether `system_constraints_change_proposal`, if present, is explicit enough to be implemented and verified in the current round
-7. whether shared-candidate signals require routing into `shared_ops` or directly reporting a dual-source-of-truth conflict
+7. whether shared-candidate signals require routing into shared governance or directly reporting a dual-source-of-truth conflict
 8. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
 9. whether any registered project-local review standard applies on a `unit_check`-owned generic review extension surface and tightens the closure decision for the current candidate
 
@@ -154,7 +154,7 @@ Project-local review extension contract:
    - if current behavior depends on Shared Contract truth but bindings are missing or incomplete, the result can only be `blocked` or `fix_required`
    - if bindings exist but the body does not explain which behavior chain reuses them, the result can only be `blocked` or `fix_required`
 13. process shared-candidate signals:
-   - by default, shared-candidate hints only trigger a suggestion to enter `shared_ops:{natural-language request}`
+   - by default, shared-candidate hints only trigger a suggestion to enter natural-language shared governance
    - if the current required reading range already confirms a dual source of truth, report it directly as a blocking issue with `fallback_reason_code=shared_truth_conflict`
 14. determine whether a blocking checkpoint is the correct stop form:
    - use `clarification` when user intent, boundary meaning, or acceptance meaning is still missing from truth
