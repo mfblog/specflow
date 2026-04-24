@@ -11,9 +11,7 @@ const (
 	FlowsRootDir                   = "docs/specs/scenarios"
 	CandidateFlowDir               = FlowsRootDir + "/candidate"
 	StableFlowDir                  = FlowsRootDir + "/stable"
-	ProjectRootDir                 = "docs/specs/project"
-	CandidateProjectDir            = ProjectRootDir + "/candidate"
-	StableProjectDir               = ProjectRootDir + "/stable"
+	RepositoryMappingFileRef       = "docs/specs/repository_mapping.md"
 	SystemConstraintsStableFileRef = "docs/specs/system_constraints/stable/s_system_constraints.md"
 )
 
@@ -29,8 +27,6 @@ func ObjectMainSpecFileRef(objectType, layer, object string) (string, error) {
 			return fmt.Sprintf("%s/c_unit_%s.md", CandidateDir, object), nil
 		case "scenario":
 			return fmt.Sprintf("%s/c_scenario_%s.md", CandidateFlowDir, object), nil
-		case "project":
-			return fmt.Sprintf("%s/c_project.md", CandidateProjectDir), nil
 		}
 	case "stable":
 		switch objectType {
@@ -38,8 +34,6 @@ func ObjectMainSpecFileRef(objectType, layer, object string) (string, error) {
 			return fmt.Sprintf("%s/s_unit_%s.md", StableDir, object), nil
 		case "scenario":
 			return fmt.Sprintf("%s/s_scenario_%s.md", StableFlowDir, object), nil
-		case "project":
-			return fmt.Sprintf("%s/s_project.md", StableProjectDir), nil
 		}
 	}
 	return "", fmt.Errorf("unsupported object/layer combination %q/%q", objectType, layer)

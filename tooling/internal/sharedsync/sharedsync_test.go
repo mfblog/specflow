@@ -379,51 +379,6 @@ Body changed.
 	}
 }
 
-func TestSyncImpactReroutesStableProjectToProjectStableVerify(t *testing.T) {
-	repoRoot := t.TempDir()
-	sharedRef := setupStableProjectSharedRepo(t, repoRoot)
-
-	writeStableSharedFile(t, repoRoot, `---
-shared_contract_id: shared_demo
-layer: stable
-shared_version: 1.0.0
-bound_objects: none
----
-
-# Shared
-
-Body changed.
-`)
-
-	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
-	if err != nil {
-		t.Fatalf("SyncImpact: %v", err)
-	}
-	if len(result.ProjectResults) != 1 {
-		t.Fatalf("expected one project result, got %d", len(result.ProjectResults))
-	}
-	projectResult := result.ProjectResults[0]
-	if projectResult.Object != "project" {
-		t.Fatalf("expected project, got %+v", projectResult)
-	}
-	if projectResult.Outcome != "rerouted" {
-		t.Fatalf("expected rerouted outcome, got %+v", projectResult)
-	}
-	if projectResult.FallbackReasonCode != "shared_contract_drift" {
-		t.Fatalf("expected shared_contract_drift, got %s", projectResult.FallbackReasonCode)
-	}
-	if projectResult.NextCommand != "project_stable_verify" {
-		t.Fatalf("expected next command project_stable_verify, got %s", projectResult.NextCommand)
-	}
-	statusData, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/_status.md"))
-	if err != nil {
-		t.Fatalf("read status: %v", err)
-	}
-	if !strings.Contains(string(statusData), "| `project` | `project` | `yes` | `no` | `stable` | `project_stable_verify` | stable round |") {
-		t.Fatalf("status row not updated:\n%s", string(statusData))
-	}
-}
-
 func TestSyncImpactRejectsStableModuleBindingCandidateShared(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir)))
@@ -1306,7 +1261,7 @@ func TestSyncImpactIncludesCandidateFlowWhenSelectedBindingWasRemovedFromCurrent
 		"",
 		"## Bindings",
 		"",
-		"1. project_ref: c_project@0.1.0",
+		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
 		"4. system_constraints_stable_ref: none",
@@ -1348,7 +1303,7 @@ func TestSyncImpactIgnoresFlowEvidenceWithUnrelatedSharedSnapshotDelta(t *testin
 		"",
 		"## Bindings",
 		"",
-		"1. project_ref: c_project@0.1.0",
+		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
 		"4. system_constraints_stable_ref: none",
@@ -1379,56 +1334,6 @@ func TestSyncImpactIgnoresFlowEvidenceWithUnrelatedSharedSnapshotDelta(t *testin
 	}
 }
 
-func TestSyncImpactIncludesCandidateProjectWhenSelectedBindingWasRemovedFromCurrentTruth(t *testing.T) {
-	repoRoot := t.TempDir()
-	sharedRef := setupCandidateProjectSharedRepo(t, repoRoot)
-	sharedFingerprint := fingerprintForTest(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate/c_shared_demo.md"))
-	storedProcess := renderProjectProcessSnapshotForTest(t, repoRoot, "check", "project", false, []string{
-		"shared_contract_id: shared_demo",
-		"layer: candidate",
-		"file_ref: docs/specs/shared_contracts/candidate/c_shared_demo.md",
-		"version_ref: c_shared_demo@0.1.0",
-		"fingerprint: " + sharedFingerprint,
-	}, nil, nil)
-
-	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("project", "candidate", "project")
-	if err != nil {
-		t.Fatalf("ObjectMainSpecFileRef: %v", err)
-	}
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
-		"---",
-		"id: project",
-		"layer: candidate",
-		"version: 0.1.0",
-		"---",
-		"",
-		"# Demo Project",
-		"",
-		"## Bindings",
-		"",
-		"1. scenario_refs: none",
-		"2. unit_refs: none",
-		"3. shared_contract_refs: none",
-		"4. system_constraints_stable_ref: none",
-		"",
-	}, "\n"))
-	writeNamedProcessFile(t, repoRoot, "check", "project", storedProcess)
-
-	result, err := SyncImpact(repoRoot, Options{SharedRefs: []string{sharedRef}})
-	if err != nil {
-		t.Fatalf("SyncImpact: %v", err)
-	}
-	if len(result.ScopedProjects) != 1 || result.ScopedProjects[0] != "project" {
-		t.Fatalf("expected removed-binding project to remain in scope, got %+v", result.ScopedProjects)
-	}
-	if len(result.ProjectResults) != 1 {
-		t.Fatalf("expected one project result, got %+v", result.ProjectResults)
-	}
-	if result.ProjectResults[0].FallbackReasonCode != "binding_drift" {
-		t.Fatalf("expected binding_drift, got %+v", result.ProjectResults[0])
-	}
-}
-
 func TestSyncImpactFailsClosedWhenCurrentFlowTruthCannotBeRebuilt(t *testing.T) {
 	repoRoot := t.TempDir()
 	sharedRef := setupCandidateFlowSharedRepo(t, repoRoot)
@@ -1448,7 +1353,7 @@ func TestSyncImpactFailsClosedWhenCurrentFlowTruthCannotBeRebuilt(t *testing.T) 
 		"",
 		"## Bindings",
 		"",
-		"1. project_ref: c_project@0.1.0",
+		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: invalid",
 		"3. shared_contract_refs: none",
 		"4. system_constraints_stable_ref: none",
@@ -1500,7 +1405,7 @@ func TestSyncImpactIgnoresIncompleteRemovedBindingEvidenceForFlow(t *testing.T) 
 		"",
 		"## Bindings",
 		"",
-		"1. project_ref: c_project@0.1.0",
+		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
 		"4. system_constraints_stable_ref: none",
@@ -1546,7 +1451,7 @@ func TestSyncImpactIgnoresFlowEvidenceWithMismatchedModuleSnapshot(t *testing.T)
 		"",
 		"## Bindings",
 		"",
-		"1. project_ref: c_project@0.1.0",
+		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
 		"4. system_constraints_stable_ref: none",
@@ -1605,7 +1510,7 @@ func TestSyncImpactAcceptsMarkdownBulletRemovedBindingEvidenceForFlow(t *testing
 		"",
 		"## Bindings",
 		"",
-		"1. project_ref: c_project@0.1.0",
+		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
 		"4. system_constraints_stable_ref: none",
@@ -1645,7 +1550,7 @@ func TestSyncImpactAcceptsRemovedBindingEvidenceWhenTruthUsesBacktickedSharedRef
 		"",
 		"## Bindings",
 		"",
-		"1. project_ref: c_project@0.1.0",
+		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs:",
 		"   - `c_shared_demo@0.1.0`",
@@ -1670,7 +1575,7 @@ func TestSyncImpactAcceptsRemovedBindingEvidenceWhenTruthUsesBacktickedSharedRef
 		"",
 		"## Bindings",
 		"",
-		"1. project_ref: c_project@0.1.0",
+		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
 		"4. system_constraints_stable_ref: none",
@@ -1933,7 +1838,7 @@ func setupCandidateFlowSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"## Bindings",
 		"",
-		"1. project_ref: c_project@0.1.0",
+		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs:",
 		"   - c_shared_demo@0.1.0",
@@ -1955,118 +1860,6 @@ Body stays the same.
 
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/demo.md"), "check")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/demo.md"), "verify")
-	return "c_shared_demo@0.1.0"
-}
-
-func setupStableProjectSharedRepo(t *testing.T, repoRoot string) string {
-	t.Helper()
-	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableProjectDir)))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/stable"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
-
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
-		"# Spec Status",
-		"",
-		"## Formal Objects",
-		"",
-		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|---|---|",
-		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
-	}, "\n")+"\n")
-
-	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("project", "stable", "project")
-	if err != nil {
-		t.Fatalf("ObjectMainSpecFileRef: %v", err)
-	}
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
-		"---",
-		"id: project",
-		"layer: stable",
-		"version: 1.0.0",
-		"---",
-		"",
-		"# Demo Project",
-		"",
-		"## Bindings",
-		"",
-		"1. scenario_refs: none",
-		"2. unit_refs: none",
-		"3. shared_contract_refs:",
-		"   - s_shared_demo@1.0.0",
-		"4. system_constraints_stable_ref: none",
-		"",
-	}, "\n"))
-
-	writeStableSharedFile(t, repoRoot, `---
-shared_contract_id: shared_demo
-layer: stable
-shared_version: 1.0.0
-bound_objects: none
----
-
-# Shared
-
-Body stays the same.
-`)
-
-	return "s_shared_demo@1.0.0"
-}
-
-func setupCandidateProjectSharedRepo(t *testing.T, repoRoot string) string {
-	t.Helper()
-	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateProjectDir)))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
-
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
-		"# Spec Status",
-		"",
-		"## Formal Objects",
-		"",
-		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|---|---|",
-		"| `project` | `project` | `no` | `yes` | `candidate` | `project_verify` | current round |",
-	}, "\n")+"\n")
-
-	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("project", "candidate", "project")
-	if err != nil {
-		t.Fatalf("ObjectMainSpecFileRef: %v", err)
-	}
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
-		"---",
-		"id: project",
-		"layer: candidate",
-		"version: 0.1.0",
-		"---",
-		"",
-		"# Demo Project",
-		"",
-		"## Bindings",
-		"",
-		"1. scenario_refs: none",
-		"2. unit_refs: none",
-		"3. shared_contract_refs:",
-		"   - c_shared_demo@0.1.0",
-		"4. system_constraints_stable_ref: none",
-		"",
-	}, "\n"))
-
-	writeSharedFile(t, repoRoot, `---
-shared_contract_id: shared_demo
-layer: candidate
-shared_version: 0.1.0
-bound_objects: none
----
-
-# Shared
-
-Body stays the same.
-`)
-
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/project.md"), "check")
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/project.md"), "verify")
 	return "c_shared_demo@0.1.0"
 }
 
@@ -2208,41 +2001,6 @@ func renderFlowProcessSnapshotForTest(t *testing.T, repoRoot, processKind, objec
 		scalars = append(scalars, "verification_scope_ref: current candidate")
 	}
 	lists := [][]string{
-		append([]string{"unit_snapshot: " + noneOrBlank(moduleLines)}, prefixNestedList(moduleLines)...),
-		append([]string{"shared_contract_snapshot: " + noneOrBlank(sharedLines)}, prefixNestedList(sharedLines)...),
-	}
-	return renderSnapshotBodyForTest(scalars, lists, bulletFormat)
-}
-
-func renderProjectProcessSnapshotForTest(t *testing.T, repoRoot, processKind, object string, bulletFormat bool, sharedLines, moduleLines, flowLines []string) string {
-	t.Helper()
-	mainSpecRef, err := specpaths.ObjectMainSpecFileRef("project", "candidate", object)
-	if err != nil {
-		t.Fatalf("ObjectMainSpecFileRef: %v", err)
-	}
-	truthFingerprint := fingerprintForTest(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)))
-	scalars := []string{
-		"object_type: project",
-		"object_ref: " + object,
-		"gate: " + map[string]string{"check": "project_check", "verify": "project_verify"}[processKind],
-		"decision: pass",
-		"allow_next: true",
-		"next_command: " + map[string]string{"check": "project_verify", "verify": "project_promote"}[processKind],
-		"blocking_summary: none",
-		"coverage_summary: current candidate",
-		"truth_layer_ref: candidate",
-		"truth_file_ref: " + mainSpecRef,
-		"truth_version_ref: c_project@0.1.0",
-		"truth_fingerprint: " + truthFingerprint,
-		"system_constraints_stable_file_ref: none",
-		"system_constraints_stable_version_ref: none",
-		"system_constraints_stable_fingerprint: none",
-	}
-	if processKind == "verify" {
-		scalars = append(scalars, "verification_scope_ref: current candidate")
-	}
-	lists := [][]string{
-		append([]string{"scenario_snapshot: " + noneOrBlank(flowLines)}, prefixNestedList(flowLines)...),
 		append([]string{"unit_snapshot: " + noneOrBlank(moduleLines)}, prefixNestedList(moduleLines)...),
 		append([]string{"shared_contract_snapshot: " + noneOrBlank(sharedLines)}, prefixNestedList(sharedLines)...),
 	}

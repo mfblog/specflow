@@ -303,9 +303,6 @@ func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.Pro
 	}
 
 	requiredListFields := []string{"shared_contract_snapshot", "unit_snapshot"}
-	if objectType == "project" {
-		requiredListFields = append(requiredListFields, "scenario_snapshot")
-	}
 	for _, field := range requiredListFields {
 		if !processSnapshot.PresentFields[field] {
 			return false, nil
@@ -361,9 +358,6 @@ func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.Pro
 		return false, nil
 	}
 	if !equalObjectSnapshotEntries(processSnapshot.ModuleSnapshot, currentSnapshot.ModuleSnapshot) {
-		return false, nil
-	}
-	if objectType == "project" && !equalObjectSnapshotEntries(processSnapshot.FlowSnapshot, currentSnapshot.FlowSnapshot) {
 		return false, nil
 	}
 	return sharedSnapshotMatchesRemovedBindingEvidence(
@@ -524,25 +518,13 @@ func rebuildCurrentObjectSnapshot(repoRoot, objectType, object, activeLayer stri
 		SystemConstraintsStableFingerprint: systemFingerprint,
 	}
 
-	if objectType == "scenario" || objectType == "project" {
+	if objectType == "scenario" {
 		moduleRefs, hasField, err := parseNamedRefList(body, "unit_refs")
 		if err != nil {
 			return currentObjectSnapshot{}, err
 		}
 		if hasField {
 			result.ModuleSnapshot, err = buildObjectDependencySnapshot(repoRoot, "unit", moduleRefs)
-			if err != nil {
-				return currentObjectSnapshot{}, err
-			}
-		}
-	}
-	if objectType == "project" {
-		flowRefs, hasField, err := parseNamedRefList(body, "scenario_refs")
-		if err != nil {
-			return currentObjectSnapshot{}, err
-		}
-		if hasField {
-			result.FlowSnapshot, err = buildObjectDependencySnapshot(repoRoot, "scenario", flowRefs)
 			if err != nil {
 				return currentObjectSnapshot{}, err
 			}
@@ -644,10 +626,6 @@ func parseObjectVersionRefPrefix(prefix string) (string, string, string, error) 
 		return "scenario", "candidate", strings.TrimPrefix(prefix, "c_scenario_"), nil
 	case strings.HasPrefix(prefix, "s_scenario_"):
 		return "scenario", "stable", strings.TrimPrefix(prefix, "s_scenario_"), nil
-	case prefix == "c_project":
-		return "project", "candidate", "project", nil
-	case prefix == "s_project":
-		return "project", "stable", "project", nil
 	default:
 		return "", "", "", fmt.Errorf("unsupported object version ref prefix %q", prefix)
 	}
@@ -1049,13 +1027,6 @@ func expectedObjectProcessRouting(objectType, processKind string) (string, strin
 			return "scenario_check", "scenario_verify", true
 		case "verify":
 			return "scenario_verify", "scenario_promote", true
-		}
-	case "project":
-		switch processKind {
-		case "check":
-			return "project_check", "project_verify", true
-		case "verify":
-			return "project_verify", "project_promote", true
 		}
 	}
 	return "", "", false

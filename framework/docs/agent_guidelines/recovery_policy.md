@@ -22,11 +22,9 @@ This policy covers:
 1. candidate-side recovery for:
    - `unit`
    - `scenario`
-   - `project`
 2. incomplete promotion recovery for:
    - `unit_promote`
    - `scenario_promote`
-   - `project_promote`
 
 Boundary:
 
@@ -71,7 +69,6 @@ Default candidate fallback targets:
 
 1. invalid `unit` candidate -> `unit_check`
 2. invalid `scenario` candidate -> `scenario_check`
-3. invalid `project` candidate -> `project_check`
 
 Default candidate cleanup map:
 
@@ -83,9 +80,6 @@ Default candidate cleanup map:
 2. `scenario -> scenario_check`
    - delete `_check_result/{scenario}.md`
    - delete `_verify_result/{scenario}.md`
-3. `project -> project_check`
-   - delete `_check_result/project.md`
-   - delete `_verify_result/project.md`
 
 Plain meaning:
 
@@ -103,7 +97,6 @@ Default stable fallback targets:
 
 1. invalid `unit` stable -> `unit_stable_verify`
 2. invalid `scenario` stable -> `scenario_stable_verify`
-3. invalid `project` stable -> `project_stable_verify`
 
 ## 6. Incomplete Promotion Recovery
 
@@ -133,11 +126,6 @@ Object-specific minimums:
    - `docs/specs/scenarios/stable/s_scenario_{scenario}.md` when present
    - `_check_result/{scenario}.md`
    - `_verify_result/{scenario}.md`
-3. `project_promote`
-   - `docs/specs/project/candidate/c_project.md`
-   - `docs/specs/project/stable/s_project.md` when present
-   - `_check_result/project.md`
-   - `_verify_result/project.md`
 
 Rules:
 
@@ -172,7 +160,6 @@ When incomplete promotion recovery is triggered:
    - set the smallest restart step to:
      - `unit -> unit_check`
      - `scenario -> scenario_check`
-     - `project -> project_check`
 5. keep `Stable=yes|no` consistent with the pre-round state from the recovery baseline
 6. after repository restoration, delete candidate-side process files for that target object because they are no longer safe for reuse
 

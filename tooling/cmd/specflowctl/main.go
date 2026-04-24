@@ -413,7 +413,6 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 
 		writeList(stdout, "Scoped units", result.ScopedModules)
 		writeList(stdout, "Scoped scenarios", result.ScopedFlows)
-		writeList(stdout, "Scoped projects", result.ScopedProjects)
 		writeList(stdout, "Scoped shared refs", result.ScopedSharedRefs)
 		writeList(stdout, "Scoped shared ids", result.ScopedSharedIDs)
 		fmt.Fprintf(stdout, "Stable landing unit: %s\n", noneIfEmpty(result.StableLandingModule))
@@ -450,22 +449,6 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 			fmt.Fprintln(stdout, "- none")
 		}
 		for _, item := range result.FlowResults {
-			fmt.Fprintf(stdout, "- %s | layer=%s | outcome=%s | next=%s | reason=%s | status_updated=%t\n", item.Object, item.ActiveLayer, item.Outcome, item.NextCommand, noneIfEmpty(item.FallbackReasonCode), item.StatusUpdated)
-			for _, diagnostic := range item.Diagnostics {
-				fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)
-			}
-			for _, path := range item.DeletedFiles {
-				fmt.Fprintf(stdout, "  deleted: %s\n", path)
-			}
-			for _, path := range item.MissingFiles {
-				fmt.Fprintf(stdout, "  missing: %s\n", path)
-			}
-		}
-		fmt.Fprintf(stdout, "Project results (%d):\n", len(result.ProjectResults))
-		if len(result.ProjectResults) == 0 {
-			fmt.Fprintln(stdout, "- none")
-		}
-		for _, item := range result.ProjectResults {
 			fmt.Fprintf(stdout, "- %s | layer=%s | outcome=%s | next=%s | reason=%s | status_updated=%t\n", item.Object, item.ActiveLayer, item.Outcome, item.NextCommand, noneIfEmpty(item.FallbackReasonCode), item.StatusUpdated)
 			for _, diagnostic := range item.Diagnostics {
 				fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)

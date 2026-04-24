@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This file defines what a formal `scenario` object is in this repository and how it differs from `unit`, `shared_contract`, and `ProjectSpec`.
+This file defines what a formal `scenario` object is in this repository and how it differs from `unit`, `shared_contract`, and `repository_mapping`.
 
 It answers five questions:
 
@@ -29,7 +29,7 @@ It does not answer:
 
 1. unit-local state-machine detail
 2. shared-contract field-level body text
-3. project-wide mapping rules
+3. repository-wide mapping rules
 4. implementation ownership for code edits
 
 ## 3. Files
@@ -49,7 +49,7 @@ Additional rules:
 
 Each `scenario` must record at minimum:
 
-1. `project_ref`
+1. `repository_mapping_ref`
 2. `unit_refs`
 3. `shared_contract_refs`
 4. `system_constraints_stable_ref`
@@ -60,8 +60,7 @@ Binding rules:
 2. units do not record `scenario_refs` as a required formal binding field
 3. `scenario stable` must bind only stable-layer dependencies
 4. `scenario candidate` may bind candidate-layer dependencies, but the bound layer must be explicit
-5. `scenario` is downstream of `unit`, `shared_contract`, and `system_constraints`
-6. `ProjectSpec` is downstream of `scenario`
+5. `scenario` is downstream of `repository_mapping`, `unit`, `shared_contract`, and `system_constraints`
 
 ## 5. Lifecycle Responsibility
 
@@ -101,9 +100,10 @@ Additional rules:
 `scenario` process files become invalid when any current required binding changes, including:
 
 1. current scenario truth changes
-2. any bound unit set or required unit identity changes
-3. any bound `shared_contract` truth, layer, version, or snapshot changes
-4. `system_constraints_stable_ref` no longer matches the current stable global baseline
+2. `repository_mapping_ref` no longer matches the current repository mapping
+3. any bound unit set or required unit identity changes
+4. any bound `shared_contract` truth, layer, version, or snapshot changes
+5. `system_constraints_stable_ref` no longer matches the current stable global baseline
 
 Fallback rules:
 
@@ -116,5 +116,5 @@ This file does not:
 
 1. create a second implementation chain outside `unit`
 2. redefine `shared_contract`
-3. redefine `ProjectSpec`
+3. redefine `repository_mapping`
 4. create an independent lifecycle for `system_constraints`

@@ -23,7 +23,6 @@ It may reconcile:
 
 1. `unit`
 2. `scenario`
-3. `project`
 
 It does not:
 
@@ -64,13 +63,11 @@ Candidate fallback rules:
 
 1. invalid `unit` -> `unit_check`
 2. invalid `scenario` -> `scenario_check`
-3. invalid `project` -> `project_check`
 
 Stable fallback rules:
 
 1. invalid `unit` -> `unit_stable_verify`
 2. invalid `scenario` -> `scenario_stable_verify`
-3. invalid `project` -> `project_stable_verify`
 
 ## 5. Relationship To `shared_sync`
 
@@ -92,5 +89,5 @@ Therefore:
 
 1. create a new user-facing command
 2. replace `shared_ops`
-3. replace `unit_check`, `scenario_check`, or `project_check`
-4. replace `unit_stable_verify`, `scenario_stable_verify`, or `project_stable_verify`
+3. replace `unit_check` or `scenario_check`
+4. replace `unit_stable_verify` or `scenario_stable_verify`

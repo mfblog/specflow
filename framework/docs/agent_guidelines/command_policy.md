@@ -23,28 +23,28 @@ In plain words:
 
 ## 3. Command-Target Object Families
 
-This repository has three command-target object families:
+This repository has two command-target object families:
 
 1. `unit`
 2. `scenario`
-3. `project`
 
 Shared notes:
 
-1. all three families write state into `docs/specs/_status.md`
-2. all three families may use `stable` and `candidate`
+1. both families write state into `docs/specs/_status.md`
+2. both families may use `stable` and `candidate`
 3. only `unit` owns direct implementation responsibility
-4. `scenario` and `project` are command targets, but neither is a unit
+4. `scenario` is a command target, but it is not a unit
 
 Non-command objects:
 
 1. `shared_contract` is not a standard command target
 2. `system_constraints` is not a standard command target
-3. `impact_sync` is an internal governance flow, not a user-facing standard command
+3. `repository_mapping` is not a standard command target
+4. `impact_sync` is an internal governance flow, not a user-facing standard command
 
 ## 4. Command Forms
 
-This repository uses three user-facing command shapes:
+This repository uses two user-facing command shapes:
 
 1. `unit` command form:
 
@@ -58,18 +58,13 @@ This repository uses three user-facing command shapes:
 {command}:{scenario}
 ```
 
-3. `project` command form:
-
-```text
-{command}
-```
-
 Additional rules:
 
 1. `system_constraints` is not a legal command target
 2. `shared_contract` is not a legal standard command target
-3. `shared_ops:{natural-language request}` remains the only user-facing shared-governance entry
-4. `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, `shared_sync`, `shared_escape`, and `impact_sync` are internal governance flows, not direct user-facing standard commands
+3. `repository_mapping` is not a legal standard command target
+4. `shared_ops:{natural-language request}` remains the only user-facing shared-governance entry
+5. `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, `shared_sync`, `shared_escape`, and `impact_sync` are internal governance flows, not direct user-facing standard commands
 
 ## 5. Standard Commands
 
@@ -94,17 +89,7 @@ Additional rules:
 5. `scenario_verify:{scenario}`
 6. `scenario_promote:{scenario}`
 
-### 5.3 Project Commands
-
-1. `project_init`
-2. `project_new`
-3. `project_stable_verify`
-4. `project_fork`
-5. `project_check`
-6. `project_verify`
-7. `project_promote`
-
-### 5.4 Shared Governance Entry
+### 5.3 Shared Governance Entry
 
 The user-facing shared-governance entry remains:
 
@@ -145,21 +130,25 @@ Rules:
 2. implementation editing
 3. unit-local repair
 
-### 6.3 Project
+### 6.3 Repository Mapping
 
-`project` commands own:
+`repository_mapping` is consumed by commands, but it is not a command family.
+
+It owns the current repository-structure truth:
 
 1. governed-unit definition
 2. support-surface rules
 3. topology mapping
-4. current formal object-graph closure
-5. verification and promotion of project truth
+4. current formal object map
+5. repository-level global constraint alignment
 
-`project` commands do not own:
+It does not own:
 
-1. implementation planning
-2. implementation editing
-3. unit-local behavior authoring
+1. command lifecycle state
+2. implementation planning
+3. implementation editing
+4. unit-local behavior authoring
+5. scenario verification
 
 ## 7. Default Lifecycle Order
 
@@ -184,16 +173,6 @@ Rules:
 5. `scenario_verify`
 6. `scenario_promote`
 
-### 7.3 Project
-
-1. `project_init`
-2. `project_new`
-3. `project_stable_verify`
-4. `project_fork`
-5. `project_check`
-6. `project_verify`
-7. `project_promote`
-
 ## 8. Shared Gate Rules
 
 These rules apply by default to every command family:
@@ -203,7 +182,8 @@ These rules apply by default to every command family:
 3. a formal pass gate, formal verification pass, or lifecycle-state advance may be produced only by a new independent full-scope run of the corresponding command
 4. after a command ends with any non-pass result other than a resumable checkpoint explicitly allowed by that command file, later repair or scoped recheck is non-authoritative for lifecycle progression
 5. checkpoints are structured stops inside a command, not second lifecycles
-6. `shared_contract` and `system_constraints` are always upstream inputs, never the primary output of `scenario` or `project` commands
+6. `shared_contract`, `system_constraints`, and `repository_mapping` are always upstream inputs, never the primary output of `scenario` commands
+7. commands that rely on repository path ownership must consume `docs/specs/repository_mapping.md`
 
 ### 8.1 Binding Drift
 
@@ -213,7 +193,6 @@ At minimum:
 
 1. `unit` candidate process files fall back to `unit_check`
 2. `scenario` candidate process files fall back to `scenario_check`
-3. `project` candidate process files fall back to `project_check`
 
 ### 8.2 Stable Drift
 
@@ -223,13 +202,13 @@ At minimum:
 
 1. `unit` stable alignment falls back to `unit_stable_verify`
 2. `scenario` stable alignment falls back to `scenario_stable_verify`
-3. `project` stable alignment falls back to `project_stable_verify`
 
 ### 8.3 Shared And Baseline Inputs
 
 1. if a command depends on bound `shared_contract` truth, it must read the exact currently bound shared files
 2. if a command depends on the formal global baseline, it must read `docs/specs/system_constraints/stable/s_system_constraints.md`
-3. `bound_objects`-only metadata drift does not by itself invalidate downstream process files
+3. if a command depends on repository path ownership, it must read `docs/specs/repository_mapping.md`
+4. `bound_objects`-only metadata drift does not by itself invalidate downstream process files
 
 ### 8.4 Impact Reconciliation
 

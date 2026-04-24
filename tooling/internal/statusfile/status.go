@@ -39,13 +39,6 @@ var allowedNextCommands = map[string]bool{
 	"unit_impl":              true,
 	"unit_verify":            true,
 	"unit_promote":           true,
-	"project_new":            true,
-	"project_init":           true,
-	"project_fork":           true,
-	"project_check":          true,
-	"project_verify":         true,
-	"project_promote":        true,
-	"project_stable_verify":  true,
 	"scenario_new":           true,
 	"scenario_fork":          true,
 	"scenario_check":         true,
@@ -57,7 +50,6 @@ var allowedNextCommands = map[string]bool{
 var allowedObjectTypes = map[string]bool{
 	"unit":     true,
 	"scenario": true,
-	"project":  true,
 }
 
 func LoadModules(repoRoot string) ([]string, error) {

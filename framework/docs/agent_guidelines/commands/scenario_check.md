@@ -18,7 +18,7 @@ Only a new independent full-scope run of `scenario_check` may produce that advan
 
 1. read current candidate scenario truth
 2. verify required bindings are explicit:
-   - `project_ref`
+   - `repository_mapping_ref`
    - `unit_refs`
    - `shared_contract_refs`
    - `system_constraints_stable_ref`

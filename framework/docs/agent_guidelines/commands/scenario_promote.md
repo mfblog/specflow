@@ -46,4 +46,4 @@ The output must report:
 ## 6. Non-Goals
 
 1. unit promotion
-2. project promotion
+2. changing repository mapping

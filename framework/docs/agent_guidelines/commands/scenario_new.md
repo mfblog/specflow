@@ -18,7 +18,7 @@ Only a new independent full-scope run of `scenario_new` may produce that advanci
 
 1. create `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
 2. initialize:
-   - `project_ref`
+   - `repository_mapping_ref`
    - `unit_refs`
    - `shared_contract_refs`
    - `system_constraints_stable_ref`
