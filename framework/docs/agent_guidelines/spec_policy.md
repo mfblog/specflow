@@ -101,7 +101,7 @@ It does not answer:
 4. the whole global baseline
 
 It is not a standard command target.
-Users enter shared work through `shared_ops:{natural-language request}`.
+Users enter shared work through natural-language routing, which calls the internal shared-governance router defined by `shared_ops.md`.
 
 ## 3. Identity And Files
 

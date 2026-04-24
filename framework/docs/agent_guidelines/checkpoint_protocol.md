@@ -80,7 +80,7 @@ Field meanings:
    - the active command or governance flow that raised the checkpoint
 4. `unit`
    - the formal unit identifier
-   - use literal `none` only when the active governance flow is not bound to exactly one formal unit, for example a cross-unit `shared_ops` checkpoint
+   - use literal `none` only when the active governance flow is not bound to exactly one formal unit, for example a cross-unit shared-governance checkpoint
 5. `question_or_action`
    - the exact input or verification the user must provide
 6. `why_blocking`

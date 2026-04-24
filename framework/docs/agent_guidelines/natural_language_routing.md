@@ -1,0 +1,300 @@
+# Natural Language Routing
+
+## 1. Purpose
+
+Natural language routing is the default user entry for `specFlow`.
+
+It exists because users often know the change they want, but they usually do not know which command, object family, or governance flow should own that change.
+
+It answers seven questions:
+
+1. whether the request belongs to `specFlow`
+2. which repository truth must be read before routing
+3. which intent fragments are present in the request
+4. whether the intent is complete enough to route
+5. whether a complex request can be decomposed safely
+6. which smallest legal next step owns the first action
+7. when routing must stop at a checkpoint instead of guessing
+
+This file defines the routing and intent-closure rules for natural-language requests.
+It does not replace standard commands.
+It decides which existing command, governance flow, or checkpoint is legal to enter first.
+
+---
+
+## 2. Entry Rule
+
+Users may start `specFlow` work with ordinary natural language.
+
+Examples:
+
+```text
+Add rate limiting to the auth module.
+This checkout behavior changed. Update the truth first, then implement it.
+Extract the common error protocol used by auth and checkout.
+Continue the next step for payment.
+Check whether the current governance flow still closes correctly.
+```
+
+Rules:
+
+1. users are not required to choose a standard command before work can start
+2. users may still use explicit command syntax when they want exact control
+3. executors must route by repository truth and intent closure, not by keywords alone
+4. when the route is not stable, executors must stop and ask only for the smallest missing input that blocks routing
+
+---
+
+## 3. Scope
+
+Natural language routing may route into:
+
+1. standard `unit` commands
+2. standard `scenario` commands
+3. governance review flows
+4. direct implementation classification through `implementation_change_policy.md`
+5. repository mapping handling
+6. shared-governance internal routing through `shared_ops.md`
+7. system-constraint boundary handling through the responsible unit candidate truth
+
+Natural language routing does not:
+
+1. create a new lifecycle object
+2. create a new user-facing shared command
+3. allow implementation before required truth writeback
+4. allow chat-only decisions to replace durable truth
+5. authorize a full multi-step chain to run automatically just because a sequence can be described
+
+---
+
+## 4. Required Read Surface
+
+Before routing, read only the truth needed for the request.
+
+Fixed read rules:
+
+1. if the user gives explicit standard command syntax, follow `command_policy.md` and that command file
+2. if the request may modify repo-tracked code, tests, or implementation-side files, read `implementation_change_policy.md` first
+3. if the request names existing formal `unit` or `scenario` objects, read `docs/specs/_status.md` before resolving their current-layer files
+4. if the request depends on path ownership, repository structure, support surfaces, or object boundaries, read `docs/specs/repository_mapping.md`
+5. if the request depends on cross-unit shared truth, shared binding, shared topology, or shared impact, read `shared_ops.md` and the relevant Shared Contract files
+6. if the request may affect global default rules, shared mechanisms promoted into the global baseline, or explicit global exceptions, read `docs/specs/system_constraints.md`
+7. if the request is a governance review, read the governance file that defines that review scope before reading object state
+
+The executor must not read every file by default.
+The executor must read enough current truth to prove the route, the missing blocker, or the safe first step.
+
+---
+
+## 5. Intent Fragments
+
+The executor must break a natural-language request into intent fragments before routing.
+
+An intent fragment is the smallest recognizable part of the request that may need its own governance owner.
+
+Allowed fragment families are:
+
+1. `unit_truth`
+   - the request creates, changes, verifies, promotes, or repairs one unit's formal truth
+2. `scenario_truth`
+   - the request creates, changes, verifies, or promotes an end-to-end trigger-to-outcome chain
+3. `shared_truth`
+   - the request creates, extracts, binds, restructures, retires, or impact-checks cross-unit shared truth
+4. `repository_mapping`
+   - the request depends on path ownership, object boundaries, support surfaces, or repository structure truth
+5. `system_constraints`
+   - the request may change a repository-wide default rule, global mechanism, prohibition, or explicit exception
+6. `implementation`
+   - the request asks for repo-tracked code, tests, or implementation-side files to change
+7. `governance_review`
+   - the request asks to review the governance mechanism or design
+8. `explanation_only`
+   - the request asks only for explanation and does not need repository mutation
+
+For each fragment, the executor must record these facts in working judgment before routing:
+
+1. the recognized intent
+2. the possible formal object or governance owner
+3. the repository truth used as evidence
+4. the missing information, if any
+5. whether the fragment may change formal behavior, boundary, acceptance, shared, or system truth
+
+---
+
+## 6. Routing Order
+
+After intent fragments are identified, route in this order:
+
+1. explicit standard command syntax
+2. governance review requests
+3. direct implementation requests through `implementation_change_policy.md`
+4. repository mapping boundary checks
+5. existing `unit` or `scenario` object state through `_status.md`
+6. shared-governance internal routing through `shared_ops.md`
+7. system-constraint boundary handling through the responsible unit candidate truth
+8. explanation-only handling
+
+This order is a decision order, not permission to skip required reads.
+If a later family is needed to decide an earlier family safely, read the later family's truth as input before choosing the route.
+
+---
+
+## 7. Intent Closure Rules
+
+### 7.1 Single Clear Intent
+
+When exactly one intent fragment has one stable owner and one legal next step, route directly to that smallest legal step.
+
+Example:
+
+1. the user says "continue payment"
+2. `_status.md` shows `unit:payment` has `Next Command=unit_plan`
+3. route to `unit_plan:payment`
+
+### 7.2 Multiple Fragments With Safe Order
+
+When several fragments are present, the executor may decompose the request only when current repository truth proves that the order is safe.
+
+Safe order means:
+
+1. the first step is the smallest legal next step
+2. completing the first step cannot make a later step's formal owner ambiguous
+3. the sequence does not require choosing between unit-local truth, Shared Contract truth, or system constraints before the first step
+4. no implementation step comes before required truth writeback
+
+When safe decomposition exists, the executor must emit an execution-local `routing_steps_contract` and enter only the first legal step.
+
+### 7.3 Multiple Fragments With Unsafe Order
+
+When several fragments are present and their order would change formal truth, the executor must stop with a `decision` checkpoint.
+
+Unsafe order exists when at least one of these holds:
+
+1. the same rule could legally land in unit truth, Shared Contract truth, or system constraints
+2. extracting shared truth before unit candidate writeback would change the formal source of truth
+3. promoting a system default before shared topology is settled would change downstream responsibility
+4. implementation could encode a behavior choice that has not yet been written into truth
+
+### 7.4 Missing Intent
+
+When routing needs a target object, scope boundary, success meaning, acceptance condition, or user decision that cannot be derived from current repository truth, the executor must stop with a `clarification` checkpoint.
+
+The question must ask only for the missing input that blocks routing.
+The executor must not ask broad preference questions when a recommended legal path can already be derived from current truth.
+
+### 7.5 Missing Boundary Truth
+
+When path ownership, object boundary, or support-surface ownership is not explicit enough to route safely, the smallest legal next step is repository mapping writeback.
+
+The executor must not guess `unit` or `scenario` ownership from directory shape alone.
+
+### 7.6 Prerequisite Action
+
+When the current route is known but cannot legally continue until one upstream action creates the required writeback target, the executor must stop with a `prerequisite_action` checkpoint.
+
+Typical cases:
+
+1. a stable unit needs candidate truth before shared or implementation writeback can continue
+2. repository mapping must be updated before unit or scenario ownership can be claimed
+3. a candidate truth target must exist before a decision can become durable truth
+
+---
+
+## 8. `routing_steps_contract`
+
+`routing_steps_contract` is an execution-local contract used only for the current natural-language handling round.
+
+It is not durable truth.
+It must be discarded if the handling round stops before final closure.
+
+It must include at least:
+
+1. `recognized_intent`
+2. `intent_fragments`
+3. `step_order`
+4. `current_step`
+5. `remaining_steps`
+6. `why_order_is_safe`
+7. `durability=execution_local`
+8. `resume_rule=rerun_natural_language_routing_from_current_truth_if_interrupted`
+
+Rules:
+
+1. the first step in `step_order` must be the smallest legal next step
+2. `remaining_steps` must not be treated as authorization to continue after the first step without rerouting from current truth
+3. if the first step changes truth, later steps must be revalidated against the updated truth
+4. a contract may describe the whole safe sequence, but it authorizes entry only into `current_step`
+
+---
+
+## 9. Checkpoint Rules
+
+Natural language routing uses `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`.
+
+Allowed checkpoint types are:
+
+1. `clarification`
+2. `decision`
+3. `prerequisite_action`
+
+Rules:
+
+1. `clarification` is used when target, scope, success meaning, acceptance meaning, or boundary intent is missing
+2. `decision` is used when two or more legal routes remain and the choice changes formal truth
+3. `prerequisite_action` is used when one upstream command or truth writeback target must exist before the route can continue
+4. `required_writeback_target` must name the durable target when the answer affects behavior, boundary, shared, system, or acceptance truth
+5. `resume_next_step` must be rerunning natural language routing from current repository truth unless a more specific command file declares a narrower legal resume
+
+Natural language routing must not use checkpoints to avoid technical investigation that the executor can perform.
+
+---
+
+## 10. Shared Governance Branch
+
+Shared work is entered through natural language routing.
+
+The internal shared-governance router is defined by:
+
+1. `specflow/framework/docs/agent_guidelines/shared_ops.md`
+2. `specflow/framework/docs/agent_guidelines/shared_new.md`
+3. `specflow/framework/docs/agent_guidelines/shared_extract.md`
+4. `specflow/framework/docs/agent_guidelines/shared_bind.md`
+5. `specflow/framework/docs/agent_guidelines/shared_topology.md`
+6. `specflow/framework/docs/agent_guidelines/shared_sync.md`
+7. `specflow/framework/docs/agent_guidelines/shared_escape.md`
+
+Rules:
+
+1. users should describe the shared intent in natural language
+2. executors must not ask users to choose among internal shared flow names
+3. if shared routing cannot choose exactly one safe internal flow, control must enter `shared_escape`
+4. if shared routing raises a checkpoint, the resume path must return through natural language routing from current truth
+
+---
+
+## 11. Output Contract
+
+When natural language routing is the active entry, the output must include:
+
+1. the recognized intent
+2. the routed first step or checkpoint type
+3. the repository truth used to make the route
+4. any missing intent or boundary input that blocked routing
+5. any `routing_steps_contract` when safe decomposition was used
+6. the smallest legal next step
+7. why that next step is legal
+
+If the output starts an existing standard command, the command's own output contract controls the final close-out.
+
+---
+
+## 12. Non-Goals
+
+Natural language routing does not:
+
+1. replace standard command files
+2. let executors skip `_status.md`, `repository_mapping.md`, Shared Contract files, or `system_constraints.md` when those files are needed
+3. turn user preference into truth without writeback
+4. treat a multi-step plan as completed because the first step was routed
+5. make `shared_ops:{natural-language request}` a user-facing command
+6. create compatibility aliases for retired user-facing shared entries

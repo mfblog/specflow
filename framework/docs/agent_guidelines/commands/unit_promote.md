@@ -31,7 +31,7 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
 7. read `specflow/framework/docs/agent_guidelines/recovery_policy.md` before promotion
 8. if the round may create, update, or delete any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` before promotion
 9. if the unit candidate currently binds any candidate-layer Shared Contract file, or if the round may change the layer, version, or terminal state of any touched Shared Contract file, read `docs/specs/_status.md` and every affected unit current-layer main file needed to derive the real repository-wide binding set from `shared_contract_refs` before file mutation starts
-10. if repository truth is insufficient to derive that real binding set safely, do not start file mutation; reroute through `shared_ops:{natural-language request}` from current repository truth instead of guessing promotion-local topology
+10. if repository truth is insufficient to derive that real binding set safely, do not start file mutation; reroute through natural-language shared governance from current repository truth instead of guessing promotion-local topology
 11. read the git policy before promotion
 
 ## 4. Procedure
@@ -72,17 +72,17 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
    - read every affected unit current-layer main file needed to derive which units currently bind each touched Shared Contract file or sibling layer through `shared_contract_refs`
    - interpret every unit-side `shared_contract_refs` through the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1 before deriving that real binding view
    - treat unit `shared_contract_refs` as the formal source of the real binding set rather than `bound_objects`
-   - if repository truth is insufficient to state the post-promotion topology safely, stop before file mutation and reroute through `shared_ops:{natural-language request}` from current repository truth
+   - if repository truth is insufficient to state the post-promotion topology safely, stop before file mutation and reroute through natural-language shared governance from current repository truth
 9. if the round touches any Shared Contract file, Shared Contract layer/version target, or Shared Contract terminal state, decide for each touched shared item against that repository-wide binding view:
    - determine the post-promotion binding target for the promoted unit stable truth; a promoted stable unit must not keep binding a candidate-layer Shared Contract file
    - if it should remain an independent cross-unit truth after promotion, promote it into `docs/specs/shared_contracts/stable/`
    - when this round writes or updates a stable-layer Shared Contract file, use the already-decided candidate `shared_version` for that file; do not invent or bump a Shared Contract version during unit promotion itself
-   - when this round writes or updates a stable-layer Shared Contract file from a candidate-layer Shared Contract file that already had a stable-layer sibling before promotion, require that candidate file's `promotion_owner_unit` to equal the promoted unit name; otherwise stop before file mutation and reroute through `shared_ops:{natural-language request}`
+   - when this round writes or updates a stable-layer Shared Contract file from a candidate-layer Shared Contract file that already had a stable-layer sibling before promotion, require that candidate file's `promotion_owner_unit` to equal the promoted unit name; otherwise stop before file mutation and reroute through natural-language shared governance
    - if a candidate-layer Shared Contract file for the same `shared_contract_id` remains in place after this round lands the stable-layer Shared Contract file, rewrite that remaining candidate-layer file in the same round as an explicit next-round draft:
      - set its `shared_version` to the intended next stable version after the just-landed stable file
      - write exactly one next `promotion_owner_unit`
      - do not leave it as a candidate-layer duplicate of the just-landed stable truth
-   - if current repository truth is insufficient to define that retained next-round draft or its next `promotion_owner_unit` safely, stop before file mutation and reroute through `shared_ops:{natural-language request}`
+   - if current repository truth is insufficient to define that retained next-round draft or its next `promotion_owner_unit` safely, stop before file mutation and reroute through natural-language shared governance
    - if part of its conclusion has become a project-wide default rule, also absorb that specific conclusion into `system_constraints.md`
    - do not absorb a Shared Contract into unit `stable` merely because promotion happened
    - do not treat promotion itself as a reason to delete a still-needed Shared Contract
@@ -93,7 +93,7 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
      - `unbound_retention: intentional`
      - `unbound_retention_reason: <why this unbound state is intentional now>`
      - `unbound_retention_owner: unit_promote`
-   - if the required post-promotion truth shape is still unclear, or the round cannot safely judge whether an unbound touched file should be deleted or kept as independently authored shared truth, stop promotion and require rerouting through `shared_ops:{natural-language request}` from current repository truth instead of guessing a unit-local-only continuation
+   - if the required post-promotion truth shape is still unclear, or the round cannot safely judge whether an unbound touched file should be deleted or kept as independently authored shared truth, stop promotion and require rerouting through natural-language shared governance from current repository truth instead of guessing a unit-local-only continuation
 10. if the unit candidate contains a closed `system_constraints_change_proposal` that this round has implemented and verified, absorb the promoted conclusion into `docs/specs/system_constraints.md`
 11. generate or update `docs/specs/units/stable/s_unit_{unit}.md`
 12. if current-round candidate appendix files exist, in the same promotion round either:
@@ -127,7 +127,7 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --units {unit} --stable-landing-unit {unit} --stable-landing-shared-refs <exact-stable-landing-shared-ref-list>` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
    - if that post-promotion `shared_sync` returns control because repository truth is still insufficient to continue safely, do not claim promotion success:
      - immediately run incomplete promotion recovery according to `recovery_policy.md`
-     - after recovery, require rerouting through `shared_ops:{natural-language request}` from the restored candidate-layer repository truth
+     - after recovery, require rerouting through natural-language shared governance from the restored candidate-layer repository truth
      - do not leave the repository in partially promoted semantics while waiting for shared-governance clarification
 19. perform git close-out if required
 
@@ -142,7 +142,7 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
 3. this round's candidate cleanup is complete
 4. if verification became invalid, the command stopped and `_status.md` fell back appropriately
 5. if the command entered incomplete-promotion recovery state, candidate semantics were restored and the unit can restart from `unit_check`
-6. if post-promotion `shared_sync` could not continue safely, incomplete promotion recovery is complete and the next required action is rerunning `shared_ops` from restored candidate truth before any later candidate-chain restart
+6. if post-promotion `shared_sync` could not continue safely, incomplete promotion recovery is complete and the next required action is rerunning natural-language routing from restored candidate truth so it can re-enter shared governance before any later candidate-chain restart
 7. if a candidate-layer Shared Contract sibling remains after promotion, its next-round draft state is already explicit for the current repository truth
 
 ## 6. Output Contract
@@ -167,7 +167,7 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
 18. when post-promotion `shared_sync` was executed, the passed `current_stable_landing_unit` value
 19. when post-promotion `shared_sync` was executed, the passed `stable_landing_shared_refs` value
 20. when post-promotion `shared_sync` was executed, the passed `bound_objects_only_shared_file_refs` value when present
-21. when promotion stopped because post-promotion Shared Contract topology, retained candidate next-round draft shape, `promotion_owner_unit`, unbound-file terminal state, or post-promotion `shared_sync` uncertainty was unclear, the required next step through `shared_ops`
+21. when promotion stopped because post-promotion Shared Contract topology, retained candidate next-round draft shape, `promotion_owner_unit`, unbound-file terminal state, or post-promotion `shared_sync` uncertainty was unclear, the required next step through natural-language shared governance
 22. git close-out result
 23. follow-up state explanation
    - when promotion succeeds, the follow-up state must explicitly confirm:
@@ -180,7 +180,7 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
      - `Candidate=yes`
      - `Active Layer=candidate`
      - `Next Command=unit_check`
-     - `resume through shared_ops` before any later promotion retry
+     - `resume through natural-language shared governance` before any later promotion retry
 23. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/docs/agent_guidelines/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - when promotion recovery or shared-governance reroute occurred, also report `resume signal`

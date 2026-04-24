@@ -477,14 +477,16 @@ There are three different places truth can live:
 flowchart LR
     A["A. unit main spec"] --> B["B. unit appendix"]
     B --> C["C. shared natural-language intent"]
-    C --> D["D. shared_ops request"]
+    C --> D["D. natural-language routing"]
+    D --> E["E. shared governance"]
 ```
 
 How to read this:
 
 - `A. unit main spec` is the main home for one unit's behavior.
 - `B. unit appendix` is still one unit's truth, just expanded out of the main file.
-- `D. shared_ops request` is where you enter when the truth is no longer only about one unit.
+- `D. natural-language routing` is where the runtime decides whether the truth is no longer only about one unit.
+- `E. shared governance` is the internal branch that chooses the correct shared flow.
 
 Use this rule:
 
@@ -492,11 +494,12 @@ Use this rule:
 - do not extract something into shared just because it may be reused later
 - move into shared only when multiple units really depend on the same truth
 
-### How To Use `shared_ops`
+### How To Work With Shared Truth
 
-`shared_ops:{natural-language request}` is the only user-facing entry for shared governance.
+Shared work starts from natural language.
+There is no separate user-facing shared command to memorize.
 
-Use it when you want to:
+Describe the shared intent when you want to:
 
 - design shared truth from the start
 - extract already-written unit truth into a shared contract
@@ -589,7 +592,7 @@ Besides the standard unit commands, `specFlow` also has advanced flows.
 Two you should know exist are:
 
 - `spec_flow_review`
-- `shared_ops:{natural-language request}`
+- natural-language shared governance
 
 Use `spec_flow_review` when you want to review the governance system itself rather than move one business unit forward.
 Its default scope now covers both the governance baseline documents and the governance tooling implementation under `specflow/tooling/`.
@@ -600,11 +603,12 @@ If you want to deeply understand or redesign the system, read in this order:
 
 1. `framework/docs/agent_guidelines/spec_policy.md`
 2. `framework/docs/agent_guidelines/command_policy.md`
-3. `framework/docs/agent_guidelines/git_policy.md`
-4. `framework/docs/agent_guidelines/shared_ops.md`
-5. `framework/docs/agent_guidelines/spec_flow_review.md`
-6. the command docs under `framework/docs/agent_guidelines/commands/`
-7. the installed project-side files under `docs/`
+3. `framework/docs/agent_guidelines/natural_language_routing.md`
+4. `framework/docs/agent_guidelines/git_policy.md`
+5. `framework/docs/agent_guidelines/shared_ops.md`
+6. `framework/docs/agent_guidelines/spec_flow_review.md`
+7. the command docs under `framework/docs/agent_guidelines/commands/`
+8. the installed project-side files under `docs/`
 
 ## File Ownership
 

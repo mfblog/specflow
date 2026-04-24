@@ -473,14 +473,16 @@ flowchart LR
 flowchart LR
     A["A. 单元主 Spec"] --> B["B. 单元 appendix"]
     B --> C["C. 共享意图"]
-    C --> D["D. shared_ops 请求"]
+    C --> D["D. 自然语言路由"]
+    D --> E["E. shared 治理"]
 ```
 
 怎么理解：
 
 - `A. 单元主 Spec` 是一个单元主行为的正式落点
 - `B. 单元 appendix` 还是单元内真相，只是把细节从主文件里展开
-- `D. shared_ops 请求` 是当这份真相不再只属于一个单元时，你应该进入的用户入口
+- `D. 自然语言路由` 是 runtime 判断这份真相是否已经不再只属于一个单元的入口
+- `E. shared 治理` 是内部选择正确 shared flow 的分支
 
 可以先记住一条简单规则：
 
@@ -488,11 +490,12 @@ flowchart LR
 - 不要因为“以后可能复用”就过早抽 shared
 - 只有当多个单元真的依赖同一份正式真相时，才把它变成 shared
 
-### 如何使用 `shared_ops`
+### 如何处理 shared 真相
 
-`shared_ops:{natural-language request}` 是 shared 治理唯一正式的用户入口。
+shared 工作直接从自然语言开始。
+你不需要记一个单独的 shared 命令。
 
-你会在这些场景里用到它：
+你可以在这些场景里直接描述 shared 意图：
 
 - 一开始就要设计成共享真相
 - 把已经写在单元里的内容抽成 shared contract
@@ -585,7 +588,7 @@ tooling 层很有用，但它不是新手第一天最该学的东西。
 最值得先知道存在的是两个：
 
 - `spec_flow_review`
-- `shared_ops:{natural-language request}`
+- 自然语言 shared 治理
 
 当你想审的是治理系统本身，而不是推进某个业务单元时，才会进入 `spec_flow_review`。
 它的默认范围现在同时覆盖治理基线文档，以及 `specflow/tooling/` 下的治理工具实现。
@@ -596,11 +599,12 @@ tooling 层很有用，但它不是新手第一天最该学的东西。
 
 1. `framework/docs/agent_guidelines/spec_policy.md`
 2. `framework/docs/agent_guidelines/command_policy.md`
-3. `framework/docs/agent_guidelines/git_policy.md`
-4. `framework/docs/agent_guidelines/shared_ops.md`
-5. `framework/docs/agent_guidelines/spec_flow_review.md`
-6. `framework/docs/agent_guidelines/commands/` 下的命令文档
-7. 安装到项目侧的 `docs/` 文件
+3. `framework/docs/agent_guidelines/natural_language_routing.md`
+4. `framework/docs/agent_guidelines/git_policy.md`
+5. `framework/docs/agent_guidelines/shared_ops.md`
+6. `framework/docs/agent_guidelines/spec_flow_review.md`
+7. `framework/docs/agent_guidelines/commands/` 下的命令文档
+8. 安装到项目侧的 `docs/` 文件
 
 ## 文件所有权
 
