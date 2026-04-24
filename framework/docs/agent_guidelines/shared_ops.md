@@ -87,7 +87,7 @@ Before routing a `shared_ops` request:
 7. read any explicitly referenced appendix truth needed to judge whether the real source truth is unit-local, shared, or still boundary-unstable
 8. if the request names units that do not yet have current-layer Spec files, do not block on that absence before routing
 9. read the relevant `shared_contract` files if the request names shared truth directly
-10. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross the boundary into global-default-rule promotion
+10. read `docs/specs/system_constraints.md` when the request may cross the boundary into global-default-rule promotion
 11. if the request may route to `shared_sync`, inspect the directly affected current-round Shared Contract files needed to judge whether any of those files changed only in `bound_objects`
 
 The executor must not route by keyword alone when the named files already show a different formal situation.
@@ -194,7 +194,7 @@ This is mandatory, not optional.
    - use `_status.md` to resolve current layer for any named existing formal unit
    - read current-layer appendix truth whenever the routing decision depends on where the formal truth currently lives or whether unit-local versus shared boundary is already stable
    - read named `shared_contract` files when shared truth is named directly
-   - read `s_system_constraints.md` when the request may cross the shared/system boundary
+   - read `system_constraints.md` when the request may cross the shared/system boundary
 3. test whether the request belongs to exactly one of `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, or `shared_sync`
 4. if routing to `shared_sync`, decide whether any directly affected current-round Shared Contract file is provably `bound_objects`-only:
    - derive that judgment from current repository truth and the current-round changed shared files

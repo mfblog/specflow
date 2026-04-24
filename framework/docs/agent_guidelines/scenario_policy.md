@@ -52,7 +52,7 @@ Each `scenario` must record at minimum:
 1. `repository_mapping_ref`
 2. `unit_refs`
 3. `shared_contract_refs`
-4. `system_constraints_stable_ref`
+4. `system_constraints_ref`
 
 Binding rules:
 
@@ -103,7 +103,7 @@ Additional rules:
 2. `repository_mapping_ref` no longer matches the current repository mapping
 3. any bound unit set or required unit identity changes
 4. any bound `shared_contract` truth, layer, version, or snapshot changes
-5. `system_constraints_stable_ref` no longer matches the current stable global baseline
+5. `system_constraints_ref` no longer matches the current formal global baseline
 
 Fallback rules:
 

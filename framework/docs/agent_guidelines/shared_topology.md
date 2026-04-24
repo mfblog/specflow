@@ -60,7 +60,7 @@ Before execution:
 8. resolve every affected unit's current layer from `_status.md` before reading its main Spec
 9. read every affected unit current-layer main file needed to derive the real binding set from `shared_contract_refs`
 10. if any affected unit is currently at `stable` and the topology change would require unit truth writeback, also read `specflow/framework/docs/agent_guidelines/commands/unit_fork.md`
-11. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the topology request may cross into project-wide default-rule promotion
+11. read `docs/specs/system_constraints.md` when the topology request may cross into project-wide default-rule promotion
 12. if this round may raise a checkpoint, read `specflow/framework/docs/agent_guidelines/checkpoint_protocol.md`
 
 ---

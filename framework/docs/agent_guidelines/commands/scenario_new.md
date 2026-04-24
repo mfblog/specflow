@@ -21,7 +21,7 @@ Only a new independent full-scope run of `scenario_new` may produce that advanci
    - `repository_mapping_ref`
    - `unit_refs`
    - `shared_contract_refs`
-   - `system_constraints_stable_ref`
+   - `system_constraints_ref`
 3. write or upsert `_status.md` row:
    - `Object Type=scenario`
    - `Object={scenario}`

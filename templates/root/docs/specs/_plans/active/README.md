@@ -30,9 +30,9 @@ Rules:
    - `spec_version_ref`
    - `spec_fingerprint`
    - `unit_appendix_snapshot`
-   - `system_constraints_stable_file_ref`
-   - `system_constraints_stable_version_ref`
-   - `system_constraints_stable_fingerprint`
+   - `system_constraints_file_ref`
+   - `system_constraints_version_ref`
+   - `system_constraints_fingerprint`
    - `shared_contract_snapshot`
 12. `active/{unit}.md` does not carry the gate decision of `unit_check` or the promotion decision of `unit_verify`.
 13. `unit_plan` writes or updates `active/{unit}.md` only when the round is `plan-ready`.

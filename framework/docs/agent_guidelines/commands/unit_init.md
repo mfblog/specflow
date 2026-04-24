@@ -40,7 +40,7 @@ Before execution:
 4. the goal is to capture current truth, not define future design
 5. if onboarding current truth would create duplicated formal truth across units, or if the shared/unit boundary is still unstable, do not start `unit_init`; resolve that shared-truth boundary through `specflow/framework/docs/agent_guidelines/shared_ops.md` first
 6. if the first `stable` reuses already-existing shared truth, read the relevant `shared_contract` files before writing `shared_contract_refs`
-7. if the task also touches global baseline, shared mechanisms, or exceptions, read `docs/specs/system_constraints/stable/s_system_constraints.md`
+7. if the task also touches global baseline, shared mechanisms, or exceptions, read `docs/specs/system_constraints.md`
 8. if the unit involves technical choices, shared infrastructure, cross-unit reuse, global exceptions, or system-level constraint relationships, the first `stable` must include `Global Constraint Alignment` or an equivalent section
 9. if the task changes `stable`, `_status.md`, or other commit-triggering governance files, read the git policy first
 10. if the round creates, updates, or deletes any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
@@ -49,7 +49,7 @@ Before execution:
 ## 4. Procedure
 
 1. summarize the unit's already-effective behavior baseline
-2. if needed, read `s_system_constraints.md` as an upstream input
+2. if needed, read `system_constraints.md` as an upstream input
 3. if onboarding current truth shows that one or more existing formal units already depend on the same formal truth and that truth is not yet formalized as one stable shared object, stop and reroute through `shared_ops:{natural-language request}` from current repository truth instead of writing duplicated unit-local `stable` truth
 4. create `docs/specs/units/stable/s_unit_{unit}.md`
 5. ensure the file covers:
@@ -60,7 +60,7 @@ Before execution:
    - `Edge Cases & Error Handling`
    - `Testability / Acceptance Criteria`
 6. if needed, add `Global Constraint Alignment` with at least:
-   - `system_constraints_stable_ref`
+   - `system_constraints_ref`
    - `shared_contract_refs` written in the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
    - `shared_mechanism_reuse_summary`
    - `global_constraint_exceptions`

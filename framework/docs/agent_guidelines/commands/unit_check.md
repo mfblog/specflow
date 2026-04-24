@@ -24,7 +24,7 @@ By default this command reviews:
 2. whether `content completeness` holds
 3. whether `Global Constraint Alignment` is explicit and internally consistent
 4. whether bound Shared Contract relations and body dependencies are consistent
-5. whether `system_constraints_stable_ref` matches the current formal global baseline state
+5. whether `system_constraints_ref` matches the current formal global baseline state
 6. whether `system_constraints_change_proposal`, if present, is explicit enough to be implemented and verified in the current round
 7. whether shared-candidate signals require routing into `shared_ops` or directly reporting a dual-source-of-truth conflict
 8. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
@@ -125,7 +125,7 @@ Project-local review extension contract:
 
 1. read `docs/specs/units/candidate/c_unit_{unit}.md` plus all required appendix and Shared Contract files
 2. if `stable` exists, also read `docs/specs/units/stable/s_unit_{unit}.md` plus required stable appendix files
-3. read `docs/specs/system_constraints/stable/s_system_constraints.md` if it exists; otherwise continue with the "no formal global baseline yet" state
+3. read `docs/specs/system_constraints.md` if it exists; otherwise continue with the "no formal global baseline yet" state
 4. judge `progressability`
 5. judge `content completeness`
 6. classify completeness gaps into:
@@ -143,10 +143,10 @@ Project-local review extension contract:
    - execute only the standards whose applicability contract applies to the current target
    - merge the result only as tightening or clarifying input into `progressability`, `content completeness`, and structured findings
    - do not let project-local review bypass framework-baseline closure checks
-10. process `system_constraints_stable_ref`:
+10. process `system_constraints_ref`:
    - if the formal global baseline exists and the candidate is still compatible, a mechanical update to the current version is allowed
    - if incompatible, the result can only be `blocked` or `fix_required`
-   - if the formal global baseline does not exist, `system_constraints_stable_ref` must be `none`
+   - if the formal global baseline does not exist, `system_constraints_ref` must be `none`
 11. process `system_constraints_change_proposal`:
    - if present, it must clearly state the proposed global rule delta, the reason the current baseline is insufficient, the unit-local implementation/verification impact, and the affected units or shared contracts
    - if those fields are unclear, the result can only be `blocked` or `fix_required`

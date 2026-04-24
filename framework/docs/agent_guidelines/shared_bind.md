@@ -58,7 +58,7 @@ Before execution:
    - include the target shared file and any previous bound Shared Contract file already identified for retarget review
    - read every additional current-layer unit main file needed to judge which units currently bind those touched Shared Contract files through `shared_contract_refs`
    - do not treat the target unit alone as sufficient when other units may already bind the same shared truth
-11. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
+11. read `docs/specs/system_constraints.md` when the request may cross into project-wide default-rule promotion
 12. if the target unit is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/unit_fork.md`
 13. read `specflow/framework/docs/agent_guidelines/git_policy.md` when the round may change unit `shared_contract_refs`, update `bound_objects`, validate or rewrite `promotion_owner_unit`, delete a touched Shared Contract file, or otherwise mutate commit-triggering governance files
 14. if the round may create, update, or delete any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first

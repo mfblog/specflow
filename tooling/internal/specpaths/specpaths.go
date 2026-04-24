@@ -3,16 +3,16 @@ package specpaths
 import "fmt"
 
 const (
-	ModulesRootDir                 = "docs/specs/units"
-	CandidateDir                   = ModulesRootDir + "/candidate"
-	StableDir                      = ModulesRootDir + "/stable"
-	CandidateAppendixDir           = CandidateDir + "/appendix"
-	StableAppendixDir              = StableDir + "/appendix"
-	FlowsRootDir                   = "docs/specs/scenarios"
-	CandidateFlowDir               = FlowsRootDir + "/candidate"
-	StableFlowDir                  = FlowsRootDir + "/stable"
-	RepositoryMappingFileRef       = "docs/specs/repository_mapping.md"
-	SystemConstraintsStableFileRef = "docs/specs/system_constraints/stable/s_system_constraints.md"
+	ModulesRootDir           = "docs/specs/units"
+	CandidateDir             = ModulesRootDir + "/candidate"
+	StableDir                = ModulesRootDir + "/stable"
+	CandidateAppendixDir     = CandidateDir + "/appendix"
+	StableAppendixDir        = StableDir + "/appendix"
+	FlowsRootDir             = "docs/specs/scenarios"
+	CandidateFlowDir         = FlowsRootDir + "/candidate"
+	StableFlowDir            = FlowsRootDir + "/stable"
+	RepositoryMappingFileRef = "docs/specs/repository_mapping.md"
+	SystemConstraintsFileRef = "docs/specs/system_constraints.md"
 )
 
 func MainSpecFileRef(layer, unit string) (string, error) {

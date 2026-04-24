@@ -23,9 +23,9 @@ Rules:
    - `truth_version_ref`
    - `truth_fingerprint`
    - `verification_scope_ref`
-   - `system_constraints_stable_file_ref`
-   - `system_constraints_stable_version_ref`
-   - `system_constraints_stable_fingerprint`
+   - `system_constraints_file_ref`
+   - `system_constraints_version_ref`
+   - `system_constraints_fingerprint`
 5. Object-owned snapshot extensions are fixed by object type:
    - `unit` additionally records `unit_appendix_snapshot` and `shared_contract_snapshot`
    - `scenario` additionally records `unit_snapshot` and `shared_contract_snapshot`

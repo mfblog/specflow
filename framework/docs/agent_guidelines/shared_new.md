@@ -49,7 +49,7 @@ Before execution:
 5. read any current-layer unit main files already involved in the request
 6. read every additional current-layer unit main file needed to judge whether the target truth already exists as unit-local formal truth, is already duplicated across units, or is already formalized as shared truth elsewhere
 7. read any relevant existing `shared_contract` files if the request names or overlaps them
-8. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
+8. read `docs/specs/system_constraints.md` when the request may cross into project-wide default-rule promotion
 9. if the round may create, update, or delete any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 10. if the round may create or update any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply
 11. if the request may create or update a candidate-layer file for a `shared_contract_id` that already has a stable-layer sibling, build the repository-wide affected-unit review set for that already-stable shared object from current repository truth before owner selection:

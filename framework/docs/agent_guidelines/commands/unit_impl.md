@@ -32,7 +32,7 @@ Only a new independent full-scope run of `unit_impl` may produce that advancing 
 ## 4. Procedure
 
 1. read the candidate Spec and all required appendix or Shared Contract files
-2. read `s_system_constraints.md` if it exists
+2. read `system_constraints.md` if it exists
 3. read the current `_check_result/{unit}.md`
 4. read the current `_plans/active/{unit}.md`
 5. validate all required bindings of the pass gate and plan file according to the candidate handoff contract
@@ -42,7 +42,7 @@ Only a new independent full-scope run of `unit_impl` may produce that advancing 
    - delete `_plans/active/{unit}.md`
    - delete `_verify_result/{unit}.md` if it exists
    - fall back `_status.md` to `unit_check`
-7. if `system_constraints_stable_ref` no longer matches the current formal global baseline state, stop immediately:
+7. if `system_constraints_ref` no longer matches the current formal global baseline state, stop immediately:
    - delete `_check_result/{unit}.md`
    - delete `_plans/draft/{unit}.md`
    - delete `_plans/active/{unit}.md`

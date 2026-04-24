@@ -35,7 +35,7 @@ Only a new independent full-scope run of `unit_plan` may produce that advancing 
 ## 4. Procedure
 
 1. read the candidate Spec and all required appendix or Shared Contract files
-2. read `s_system_constraints.md` if it exists
+2. read `system_constraints.md` if it exists
 3. read `docs/specs/_check_result/{unit}.md`
 4. verify the pass gate bindings are still valid
 5. if the pass gate is invalid, stop immediately:
@@ -123,9 +123,9 @@ Only a new independent full-scope run of `unit_plan` may produce that advancing 
    - `spec_version_ref`
    - `spec_fingerprint`
    - `unit_appendix_snapshot`
-   - `system_constraints_stable_file_ref`
-   - `system_constraints_stable_version_ref`
-   - `system_constraints_stable_fingerprint`
+   - `system_constraints_file_ref`
+   - `system_constraints_version_ref`
+   - `system_constraints_fingerprint`
    - `shared_contract_snapshot`
 23. treat `plan-ready` as valid only when all of the following hold:
    - the changed execution surfaces of this round are identified

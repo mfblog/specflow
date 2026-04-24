@@ -206,7 +206,7 @@ At minimum:
 ### 8.3 Shared And Baseline Inputs
 
 1. if a command depends on bound `shared_contract` truth, it must read the exact currently bound shared files
-2. if a command depends on the formal global baseline, it must read `docs/specs/system_constraints/stable/s_system_constraints.md`
+2. if a command depends on the formal global baseline, it must read `docs/specs/system_constraints.md`
 3. if a command depends on repository path ownership, it must read `docs/specs/repository_mapping.md`
 4. `bound_objects`-only metadata drift does not by itself invalidate downstream process files
 

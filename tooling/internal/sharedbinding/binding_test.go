@@ -20,7 +20,7 @@ layer: stable
 shared_version: 0.1.0
 bound_objects:
   - unit:demo
-system_constraints_stable_ref: s_system_constraints@1.1.0
+system_constraints_ref: system_constraints@1.1.0
 ---
 
 # Stable
@@ -31,7 +31,7 @@ layer: candidate
 shared_version: 0.2.0
 bound_objects:
   - unit:demo
-system_constraints_stable_ref: s_system_constraints@1.1.0
+system_constraints_ref: system_constraints@1.1.0
 ---
 
 # Candidate
@@ -56,7 +56,7 @@ layer: stable
 shared_version: 0.1.0
 bound_objects:
   - unit:demo
-system_constraints_stable_ref: s_system_constraints@1.1.0
+system_constraints_ref: system_constraints@1.1.0
 ---
 
 # Stable
@@ -68,7 +68,7 @@ shared_version: 0.2.0
 promotion_owner_unit: demo
 bound_objects:
   - unit:demo
-system_constraints_stable_ref: s_system_constraints@1.1.0
+system_constraints_ref: system_constraints@1.1.0
 ---
 
 # Candidate

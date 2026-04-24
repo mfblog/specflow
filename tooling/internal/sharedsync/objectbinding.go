@@ -189,9 +189,9 @@ func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processK
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
-		"system_constraints_stable_file_ref",
-		"system_constraints_stable_version_ref",
-		"system_constraints_stable_fingerprint",
+		"system_constraints_file_ref",
+		"system_constraints_version_ref",
+		"system_constraints_fingerprint",
 	}
 	if processKind == "verify" {
 		requiredScalars = append(requiredScalars, "verification_scope_ref")
@@ -254,9 +254,9 @@ func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processK
 	if !truthMatches {
 		return false, nil
 	}
-	if processSnapshot.Scalars["system_constraints_stable_file_ref"] != currentSnapshot.SystemConstraintsStableFileRef ||
-		processSnapshot.Scalars["system_constraints_stable_version_ref"] != currentSnapshot.SystemConstraintsStableVersionRef ||
-		processSnapshot.Scalars["system_constraints_stable_fingerprint"] != currentSnapshot.SystemConstraintsStableFingerprint {
+	if processSnapshot.Scalars["system_constraints_file_ref"] != currentSnapshot.SystemConstraintsFileRef ||
+		processSnapshot.Scalars["system_constraints_version_ref"] != currentSnapshot.SystemConstraintsVersionRef ||
+		processSnapshot.Scalars["system_constraints_fingerprint"] != currentSnapshot.SystemConstraintsFingerprint {
 		return false, nil
 	}
 	if !equalAppendixEntries(processSnapshot.ModuleAppendixSnapshot, currentSnapshot.ModuleAppendixSnapshot) {
@@ -286,9 +286,9 @@ func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.Pro
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
-		"system_constraints_stable_file_ref",
-		"system_constraints_stable_version_ref",
-		"system_constraints_stable_fingerprint",
+		"system_constraints_file_ref",
+		"system_constraints_version_ref",
+		"system_constraints_fingerprint",
 	}
 	if processKind == "verify" {
 		requiredScalars = append(requiredScalars, "verification_scope_ref")
@@ -352,9 +352,9 @@ func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.Pro
 	if processSnapshot.Scalars["next_command"] != expectedNextCommand {
 		return false, nil
 	}
-	if processSnapshot.Scalars["system_constraints_stable_file_ref"] != currentSnapshot.SystemConstraintsStableFileRef ||
-		processSnapshot.Scalars["system_constraints_stable_version_ref"] != currentSnapshot.SystemConstraintsStableVersionRef ||
-		processSnapshot.Scalars["system_constraints_stable_fingerprint"] != currentSnapshot.SystemConstraintsStableFingerprint {
+	if processSnapshot.Scalars["system_constraints_file_ref"] != currentSnapshot.SystemConstraintsFileRef ||
+		processSnapshot.Scalars["system_constraints_version_ref"] != currentSnapshot.SystemConstraintsVersionRef ||
+		processSnapshot.Scalars["system_constraints_fingerprint"] != currentSnapshot.SystemConstraintsFingerprint {
 		return false, nil
 	}
 	if !equalObjectSnapshotEntries(processSnapshot.ModuleSnapshot, currentSnapshot.ModuleSnapshot) {
@@ -476,15 +476,15 @@ func normalizeSharedSnapshotEntries(entries []snapshot.SharedContractEntry) []sn
 }
 
 type currentObjectSnapshot struct {
-	TruthFileRef                       string
-	TruthVersionRef                    string
-	TruthFingerprint                   string
-	SystemConstraintsStableFileRef     string
-	SystemConstraintsStableVersionRef  string
-	SystemConstraintsStableFingerprint string
-	ModuleSnapshot                     []snapshot.ObjectSnapshotEntry
-	FlowSnapshot                       []snapshot.ObjectSnapshotEntry
-	SharedContractSnapshot             []snapshot.SharedContractEntry
+	TruthFileRef                 string
+	TruthVersionRef              string
+	TruthFingerprint             string
+	SystemConstraintsFileRef     string
+	SystemConstraintsVersionRef  string
+	SystemConstraintsFingerprint string
+	ModuleSnapshot               []snapshot.ObjectSnapshotEntry
+	FlowSnapshot                 []snapshot.ObjectSnapshotEntry
+	SharedContractSnapshot       []snapshot.SharedContractEntry
 }
 
 func rebuildCurrentObjectSnapshot(repoRoot, objectType, object, activeLayer string) (currentObjectSnapshot, error) {
@@ -510,12 +510,12 @@ func rebuildCurrentObjectSnapshot(repoRoot, objectType, object, activeLayer stri
 	}
 
 	result := currentObjectSnapshot{
-		TruthFileRef:                       mainSpecRef,
-		TruthVersionRef:                    fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(mainSpecRef), ".md"), version),
-		TruthFingerprint:                   hashNormalizedText(string(content)),
-		SystemConstraintsStableFileRef:     systemFileRef,
-		SystemConstraintsStableVersionRef:  systemVersionRef,
-		SystemConstraintsStableFingerprint: systemFingerprint,
+		TruthFileRef:                 mainSpecRef,
+		TruthVersionRef:              fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(mainSpecRef), ".md"), version),
+		TruthFingerprint:             hashNormalizedText(string(content)),
+		SystemConstraintsFileRef:     systemFileRef,
+		SystemConstraintsVersionRef:  systemVersionRef,
+		SystemConstraintsFingerprint: systemFingerprint,
 	}
 
 	if objectType == "scenario" {
@@ -632,18 +632,18 @@ func parseObjectVersionRefPrefix(prefix string) (string, string, string, error) 
 }
 
 func buildSystemConstraintsSnapshot(repoRoot, body string) (string, string, string, error) {
-	ref, _, err := parseSystemConstraintsStableRef(body)
+	ref, _, err := parseSystemConstraintsRef(body)
 	if err != nil {
 		return "", "", "", err
 	}
 	if ref == "" || ref == "none" {
 		return "none", "none", "none", nil
 	}
-	if !strings.HasPrefix(ref, "s_system_constraints@") {
-		return "", "", "", fmt.Errorf("unsupported system_constraints_stable_ref %q", ref)
+	if !strings.HasPrefix(ref, "system_constraints@") {
+		return "", "", "", fmt.Errorf("unsupported system_constraints_ref %q", ref)
 	}
 
-	systemFileRef := specpaths.SystemConstraintsStableFileRef
+	systemFileRef := specpaths.SystemConstraintsFileRef
 	systemContent, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(systemFileRef)))
 	if err != nil {
 		return "", "", "", fmt.Errorf("read %s: %w", systemFileRef, err)
@@ -656,7 +656,7 @@ func buildSystemConstraintsSnapshot(repoRoot, body string) (string, string, stri
 	if systemVersion == "" {
 		return "", "", "", fmt.Errorf("%s: missing frontmatter.version", systemFileRef)
 	}
-	return systemFileRef, fmt.Sprintf("s_system_constraints@%s", systemVersion), hashNormalizedText(string(systemContent)), nil
+	return systemFileRef, fmt.Sprintf("system_constraints@%s", systemVersion), hashNormalizedText(string(systemContent)), nil
 }
 
 func parseNamedRefList(body, fieldName string) ([]string, bool, error) {
@@ -708,11 +708,11 @@ func parseNamedRefList(body, fieldName string) ([]string, bool, error) {
 	return nil, false, nil
 }
 
-func parseSystemConstraintsStableRef(body string) (string, bool, error) {
+func parseSystemConstraintsRef(body string) (string, bool, error) {
 	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		right, matched, err := parseObjectNamedFieldLine(trimmed, "system_constraints_stable_ref")
+		right, matched, err := parseObjectNamedFieldLine(trimmed, "system_constraints_ref")
 		if err != nil {
 			return "", false, err
 		}
@@ -721,7 +721,7 @@ func parseSystemConstraintsStableRef(body string) (string, bool, error) {
 		}
 		value := strings.Trim(right, "`")
 		if value == "" {
-			return "", false, fmt.Errorf("system_constraints_stable_ref is empty")
+			return "", false, fmt.Errorf("system_constraints_ref is empty")
 		}
 		return value, true, nil
 	}

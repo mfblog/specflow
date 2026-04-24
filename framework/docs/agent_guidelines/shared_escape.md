@@ -56,7 +56,7 @@ Before execution:
 4. read `docs/specs/_status.md` when the request names existing formal units
 5. resolve every named existing unit's current layer from `_status.md` before reading its main Spec
 6. read any current-layer unit files, appendix files, and `shared_contract` files needed to judge the true boundary
-7. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
+7. read `docs/specs/system_constraints.md` when the request may cross into project-wide default-rule promotion
 
 ---
 

@@ -37,16 +37,16 @@ type ObjectSnapshotEntry struct {
 }
 
 type Snapshot struct {
-	Module                             string
-	TruthLayerRef                      string
-	SpecFileRef                        string
-	SpecVersionRef                     string
-	SpecFingerprint                    string
-	ModuleAppendixSnapshot             []AppendixEntry
-	SystemConstraintsStableFileRef     string
-	SystemConstraintsStableVersionRef  string
-	SystemConstraintsStableFingerprint string
-	SharedContractSnapshot             []SharedContractEntry
+	Module                       string
+	TruthLayerRef                string
+	SpecFileRef                  string
+	SpecVersionRef               string
+	SpecFingerprint              string
+	ModuleAppendixSnapshot       []AppendixEntry
+	SystemConstraintsFileRef     string
+	SystemConstraintsVersionRef  string
+	SystemConstraintsFingerprint string
+	SharedContractSnapshot       []SharedContractEntry
 }
 
 type ValidationResult struct {
@@ -85,9 +85,9 @@ var requiredProcessSnapshotFields = map[string][]string{
 		"truth_version_ref",
 		"truth_fingerprint",
 		"unit_appendix_snapshot",
-		"system_constraints_stable_file_ref",
-		"system_constraints_stable_version_ref",
-		"system_constraints_stable_fingerprint",
+		"system_constraints_file_ref",
+		"system_constraints_version_ref",
+		"system_constraints_fingerprint",
 		"shared_contract_snapshot",
 	},
 	"plan": {
@@ -95,9 +95,9 @@ var requiredProcessSnapshotFields = map[string][]string{
 		"spec_version_ref",
 		"spec_fingerprint",
 		"unit_appendix_snapshot",
-		"system_constraints_stable_file_ref",
-		"system_constraints_stable_version_ref",
-		"system_constraints_stable_fingerprint",
+		"system_constraints_file_ref",
+		"system_constraints_version_ref",
+		"system_constraints_fingerprint",
 		"shared_contract_snapshot",
 	},
 	"verify": {
@@ -115,9 +115,9 @@ var requiredProcessSnapshotFields = map[string][]string{
 		"truth_fingerprint",
 		"unit_appendix_snapshot",
 		"verification_scope_ref",
-		"system_constraints_stable_file_ref",
-		"system_constraints_stable_version_ref",
-		"system_constraints_stable_fingerprint",
+		"system_constraints_file_ref",
+		"system_constraints_version_ref",
+		"system_constraints_fingerprint",
 		"shared_contract_snapshot",
 	},
 }
@@ -164,9 +164,9 @@ func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
-	result.SystemConstraintsStableFileRef = systemFileRef
-	result.SystemConstraintsStableVersionRef = systemVersionRef
-	result.SystemConstraintsStableFingerprint = systemFingerprint
+	result.SystemConstraintsFileRef = systemFileRef
+	result.SystemConstraintsVersionRef = systemVersionRef
+	result.SystemConstraintsFingerprint = systemFingerprint
 
 	sharedEntries, err := buildSharedContractSnapshot(repoRoot, moduleStatus.ActiveLayer, body)
 	if err != nil {
@@ -241,9 +241,9 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 				result.Mismatches = append(result.Mismatches, fmt.Sprintf("shared_contract_snapshot mismatch: actual=%s expected=%s", actualShared, expectedShared))
 			}
 		}
-		compareScalar(&result, "system_constraints_stable_file_ref", actual.scalars["system_constraints_stable_file_ref"], expected.SystemConstraintsStableFileRef)
-		compareScalar(&result, "system_constraints_stable_version_ref", actual.scalars["system_constraints_stable_version_ref"], expected.SystemConstraintsStableVersionRef)
-		compareScalar(&result, "system_constraints_stable_fingerprint", actual.scalars["system_constraints_stable_fingerprint"], expected.SystemConstraintsStableFingerprint)
+		compareScalar(&result, "system_constraints_file_ref", actual.scalars["system_constraints_file_ref"], expected.SystemConstraintsFileRef)
+		compareScalar(&result, "system_constraints_version_ref", actual.scalars["system_constraints_version_ref"], expected.SystemConstraintsVersionRef)
+		compareScalar(&result, "system_constraints_fingerprint", actual.scalars["system_constraints_fingerprint"], expected.SystemConstraintsFingerprint)
 		return result, nil
 	}
 
@@ -261,9 +261,9 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 	compareScalar(&result, "truth_file_ref", actual.scalars["truth_file_ref"], expected.SpecFileRef)
 	compareScalar(&result, "truth_version_ref", actual.scalars["truth_version_ref"], expected.SpecVersionRef)
 	compareScalar(&result, "truth_fingerprint", actual.scalars["truth_fingerprint"], expected.SpecFingerprint)
-	compareScalar(&result, "system_constraints_stable_file_ref", actual.scalars["system_constraints_stable_file_ref"], expected.SystemConstraintsStableFileRef)
-	compareScalar(&result, "system_constraints_stable_version_ref", actual.scalars["system_constraints_stable_version_ref"], expected.SystemConstraintsStableVersionRef)
-	compareScalar(&result, "system_constraints_stable_fingerprint", actual.scalars["system_constraints_stable_fingerprint"], expected.SystemConstraintsStableFingerprint)
+	compareScalar(&result, "system_constraints_file_ref", actual.scalars["system_constraints_file_ref"], expected.SystemConstraintsFileRef)
+	compareScalar(&result, "system_constraints_version_ref", actual.scalars["system_constraints_version_ref"], expected.SystemConstraintsVersionRef)
+	compareScalar(&result, "system_constraints_fingerprint", actual.scalars["system_constraints_fingerprint"], expected.SystemConstraintsFingerprint)
 
 	if _, ok := actual.scalars["unit_appendix_snapshot"]; ok || actual.appendixPresent {
 		actualAppendix := normalizeAppendixList(actual.appendixEntries)
@@ -338,9 +338,9 @@ func Render(snapshot Snapshot) string {
 		fmt.Sprintf("truth_file_ref: %s", snapshot.SpecFileRef),
 		fmt.Sprintf("truth_version_ref: %s", snapshot.SpecVersionRef),
 		fmt.Sprintf("truth_fingerprint: %s", snapshot.SpecFingerprint),
-		fmt.Sprintf("system_constraints_stable_file_ref: %s", snapshot.SystemConstraintsStableFileRef),
-		fmt.Sprintf("system_constraints_stable_version_ref: %s", snapshot.SystemConstraintsStableVersionRef),
-		fmt.Sprintf("system_constraints_stable_fingerprint: %s", snapshot.SystemConstraintsStableFingerprint),
+		fmt.Sprintf("system_constraints_file_ref: %s", snapshot.SystemConstraintsFileRef),
+		fmt.Sprintf("system_constraints_version_ref: %s", snapshot.SystemConstraintsVersionRef),
+		fmt.Sprintf("system_constraints_fingerprint: %s", snapshot.SystemConstraintsFingerprint),
 		"unit_appendix_snapshot:",
 	}
 	lines = append(lines, renderAppendixLines(snapshot.ModuleAppendixSnapshot)...)
@@ -428,18 +428,18 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 }
 
 func buildSystemConstraintsSnapshot(repoRoot, body string) (string, string, string, error) {
-	ref, _, err := parseSystemConstraintsStableRef(body)
+	ref, _, err := parseSystemConstraintsRef(body)
 	if err != nil {
 		return "", "", "", err
 	}
 	if ref == "" || ref == "none" {
 		return "none", "none", "none", nil
 	}
-	if !strings.HasPrefix(ref, "s_system_constraints@") {
-		return "", "", "", fmt.Errorf("unsupported system_constraints_stable_ref %q", ref)
+	if !strings.HasPrefix(ref, "system_constraints@") {
+		return "", "", "", fmt.Errorf("unsupported system_constraints_ref %q", ref)
 	}
 
-	systemFileRef := specpaths.SystemConstraintsStableFileRef
+	systemFileRef := specpaths.SystemConstraintsFileRef
 	systemContent, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(systemFileRef)))
 	if err != nil {
 		return "", "", "", fmt.Errorf("read %s: %w", systemFileRef, err)
@@ -452,7 +452,7 @@ func buildSystemConstraintsSnapshot(repoRoot, body string) (string, string, stri
 	if systemVersion == "" {
 		return "", "", "", fmt.Errorf("%s: missing frontmatter.version", systemFileRef)
 	}
-	return systemFileRef, fmt.Sprintf("s_system_constraints@%s", systemVersion), hashNormalizedText(string(systemContent)), nil
+	return systemFileRef, fmt.Sprintf("system_constraints@%s", systemVersion), hashNormalizedText(string(systemContent)), nil
 }
 
 func buildSharedContractSnapshot(repoRoot, moduleLayer, body string) ([]SharedContractEntry, error) {
@@ -596,11 +596,11 @@ func validateOrderedSharedContractRefs(refs []string) error {
 	return nil
 }
 
-func parseSystemConstraintsStableRef(body string) (string, bool, error) {
+func parseSystemConstraintsRef(body string) (string, bool, error) {
 	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		right, matched, err := parseNamedFieldLine(trimmed, "system_constraints_stable_ref")
+		right, matched, err := parseNamedFieldLine(trimmed, "system_constraints_ref")
 		if err != nil {
 			return "", false, err
 		}
@@ -609,7 +609,7 @@ func parseSystemConstraintsStableRef(body string) (string, bool, error) {
 		}
 		value := strings.Trim(right, "`")
 		if value == "" {
-			return "", false, fmt.Errorf("system_constraints_stable_ref is empty")
+			return "", false, fmt.Errorf("system_constraints_ref is empty")
 		}
 		return value, true, nil
 	}

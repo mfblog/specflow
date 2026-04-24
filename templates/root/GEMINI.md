@@ -172,7 +172,7 @@ If a request is inside the `specFlow` scope but is not a standard command, handl
 7. If the task involves repository structure, path ownership, support surface, or object boundaries, also read:
    - `docs/specs/repository_mapping.md`
 8. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
-   - `docs/specs/system_constraints/stable/s_system_constraints.md`
+   - `docs/specs/system_constraints.md`
 9. Then decide whether the current action is:
    - explanation only
    - modifying `candidate`

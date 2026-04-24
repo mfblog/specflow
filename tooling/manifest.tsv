@@ -10,4 +10,4 @@ templates/root/docs/specs/_plans/draft/README.md	docs/specs/_plans/draft/README.
 templates/root/docs/specs/_plans/active/README.md	docs/specs/_plans/active/README.md	framework
 templates/root/docs/specs/_verify_result/README.md	docs/specs/_verify_result/README.md	framework
 templates/root/docs/specs/_status.md	docs/specs/_status.md	project
-templates/root/docs/specs/system_constraints/stable/s_system_constraints.md	docs/specs/system_constraints/stable/s_system_constraints.md	project
+templates/root/docs/specs/system_constraints.md	docs/specs/system_constraints.md	project
