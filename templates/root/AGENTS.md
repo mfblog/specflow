@@ -36,18 +36,11 @@ When a request hits any of the following, handle it with `specFlow` rules:
    - `scenario_check:{scenario}`
    - `scenario_verify:{scenario}`
    - `scenario_promote:{scenario}`
-   - `project_init`
-   - `project_new`
-   - `project_stable_verify`
-   - `project_fork`
-   - `project_check`
-   - `project_verify`
-   - `project_promote`
 2. Governance review entries:
    - `spec_flow_review`
    - `spec_flow_design_review`
    - `shared_ops:{natural-language request}`
-3. Requests involving `unit`, `scenario`, or `project` truth, state progression, candidate closure, formal promotion, Shared Contract, shared_ops routing, or system constraints.
+3. Requests involving `unit`, `scenario`, `repository_mapping` truth, state progression, candidate closure, formal promotion, Shared Contract, shared_ops routing, or system constraints.
 4. Requests involving registered project-local standards under `docs/project_standards/`.
 5. Requests to create, register, or tighten a project-local standard for the current project.
 6. Direct implementation requests that would modify repo-tracked code or other repo-tracked implementation-side files.
@@ -68,7 +61,6 @@ Standard command forms:
 ```text
 unit     -> {command}:{unit}
 scenario -> {command}:{scenario}
-project  -> {command}
 ```
 
 See the command policy:
@@ -98,29 +90,20 @@ The standard commands are grouped by object family:
    - `scenario_check:{scenario}`
    - `scenario_verify:{scenario}`
    - `scenario_promote:{scenario}`
-3. `project`
-   - `project_init`
-   - `project_new`
-   - `project_stable_verify`
-   - `project_fork`
-   - `project_check`
-   - `project_verify`
-   - `project_promote`
-
 Governance review entries are:
 
 1. `spec_flow_review`
 2. `spec_flow_design_review`
 3. `shared_ops:{natural-language request}`
 
-### 2.1 Project-First Repository Routing
+### 2.1 Repository Mapping Routing
 
 When the repository is brand-new, unfamiliar, or its governed path ownership is not yet explicit:
 
 1. do not guess `unit` or `scenario` boundaries from directory shape alone
-2. establish or read current `ProjectSpec` first
-3. if no current project row exists, start with `project_new` or `project_init` as appropriate
-4. only after `ProjectSpec` states `Governed Unit Definition`, `Support Surface Rules`, `Topology Mapping`, `Current Formal Object Graph`, and `Global Constraint Alignment` may later `unit` or `scenario` work claim repository coordinates
+2. establish or read `docs/specs/repository_mapping.md` first
+3. if `docs/specs/repository_mapping.md` is missing or cannot explain current path ownership, update that file before boundary-sensitive work continues
+4. only after `repository_mapping` states `Project Overview`, `Governed Object Map`, `Boundary Rules`, `Path Ownership`, `Global Constraint Alignment`, and `Drift Handling` may later `unit` or `scenario` work claim repository coordinates
 
 Additional rules:
 
@@ -139,7 +122,7 @@ Additional rules:
 
 ### 3. How To Resolve Objects And Files
 
-`unit`, `scenario`, and `project` are formal object names, not concrete file names.
+`unit` and `scenario` are formal command-target object names, not concrete file names.
 
 If the user names an object but not a concrete file, read this first:
 
@@ -153,9 +136,6 @@ Then resolve the actual target from `Object Type` and `Active Layer`:
 2. `scenario`
    - `stable` -> `docs/specs/scenarios/stable/s_scenario_{scenario}.md`
    - `candidate` -> `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
-3. `project`
-   - `stable` -> `docs/specs/project/stable/s_project.md`
-   - `candidate` -> `docs/specs/project/candidate/c_project.md`
 
 If the user gives a concrete file prefix, treat it as a file reference:
 
@@ -167,10 +147,8 @@ If the user gives a concrete file prefix, treat it as a file reference:
    - Refers to the `stable` flow file
 4. `c_scenario_xxx`
    - Refers to the `candidate` flow file
-5. `s_project`
-   - Refers to the stable project file
-6. `c_project`
-   - Refers to the candidate project file
+5. `repository_mapping`
+   - Refers to `docs/specs/repository_mapping.md`
 
 ### 4. Read Order For Non-Command Requests
 
@@ -191,9 +169,11 @@ If a request is inside the `specFlow` scope but is not a standard command, handl
    - read `docs/specs/_status.md` to confirm the target object's current `Active Layer` and `Next Command`
 5. Then read the current-layer main truth file for that object.
 6. If that truth file explicitly references appendix files or Shared Contract files, read them too.
-7. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
+7. If the task involves repository structure, path ownership, support surface, or object boundaries, also read:
+   - `docs/specs/repository_mapping.md`
+8. If the task involves the global technical baseline, shared mechanisms, or global exceptions, also read:
    - `docs/specs/system_constraints/stable/s_system_constraints.md`
-8. Then decide whether the current action is:
+9. Then decide whether the current action is:
    - explanation only
    - modifying `candidate`
    - modifying `stable`
@@ -208,11 +188,11 @@ If a request is inside the `specFlow` scope but is not a standard command, handl
 4. Direct implementation requests must first be classified through `specflow/framework/docs/agent_guidelines/implementation_change_policy.md`. `truth_writeback_required` and `boundary_unclear` must not start from code.
 5. A brand-new unit or scenario may start with `candidate`; its first `stable` is created later by `unit_promote:{unit}` or `scenario_promote:{scenario}`.
 6. A historical unit entering governance for the first time must begin with `unit_init:{unit}` to create its first `stable`.
-7. A historical project entering governance for the first time must begin with `project_init` to create its first `stable`.
-7. Under `docs/specs/`, every Spec file except `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` is a behavior source of truth and should normally enter git history.
-8. `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` are draft-layer artifacts, but draft-layer status does not block commits. When a round reaches a reviewable checkpoint, those files should normally be committed together with the linked process or code changes of that checkpoint.
-9. Changes to `specflow/framework/docs/agent_guidelines/*.md` should normally be committed in the current task.
-10. When Spec, command, and git-flow rules conflict, do not guess. Go back to the relevant policy or command file.
+7. `repository_mapping` is not a command target and must not be routed through `stable`, `candidate`, or `promote`.
+8. Under `docs/specs/`, every Spec file except `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` is a behavior or structure source of truth and should normally enter git history.
+9. `candidate` main files, candidate appendix files, and `docs/specs/shared_contracts/candidate/*.md` are draft-layer artifacts, but draft-layer status does not block commits. When a round reaches a reviewable checkpoint, those files should normally be committed together with the linked process or code changes of that checkpoint.
+10. Changes to `specflow/framework/docs/agent_guidelines/*.md` should normally be committed in the current task.
+11. When Spec, command, and git-flow rules conflict, do not guess. Go back to the relevant policy or command file.
 
 ### 6. Git Handling Rules
 
@@ -237,6 +217,8 @@ If the task falls inside the `specFlow` scope, at minimum you should know what t
    - Defines which changes normally require commits and which do not
 5. `docs/specs/_status.md`
    - Records each formal object's current status, active layer, and default next command
+6. `docs/specs/repository_mapping.md`
+   - Records current repository structure truth, governed object map, path ownership, support surfaces, and drift handling
 
 Do not blindly read everything at once. Read only what the current task actually needs.
 <!-- SPECFLOW:END -->

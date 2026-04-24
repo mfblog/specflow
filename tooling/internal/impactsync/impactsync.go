@@ -40,15 +40,13 @@ type ScopedObject struct {
 }
 
 type Input struct {
-	Modules  []ScopedModule
-	Flows    []ScopedObject
-	Projects []ScopedObject
+	Modules []ScopedModule
+	Flows   []ScopedObject
 }
 
 type Result struct {
-	ModuleResults  []ModuleResult
-	FlowResults    []ObjectResult
-	ProjectResults []ObjectResult
+	ModuleResults []ModuleResult
+	FlowResults   []ObjectResult
 }
 
 type ModuleResult struct {
@@ -100,19 +98,9 @@ func Apply(repoRoot string, input Input) (Result, error) {
 		flowResults = append(flowResults, result)
 	}
 
-	projectResults := make([]ObjectResult, 0, len(input.Projects))
-	for _, scoped := range input.Projects {
-		result, err := reconcileObject(repoRoot, scoped)
-		if err != nil {
-			return Result{}, err
-		}
-		projectResults = append(projectResults, result)
-	}
-
 	return Result{
-		ModuleResults:  moduleResults,
-		FlowResults:    flowResults,
-		ProjectResults: projectResults,
+		ModuleResults: moduleResults,
+		FlowResults:   flowResults,
 	}, nil
 }
 
@@ -324,12 +312,6 @@ func objectFamilyConfigFor(objectType string) (objectFamilyConfig, error) {
 		return objectFamilyConfig{
 			CandidateNextCommand:  "scenario_check",
 			StableNextCommand:     "scenario_stable_verify",
-			CandidateProcessKinds: []string{"check", "verify"},
-		}, nil
-	case "project":
-		return objectFamilyConfig{
-			CandidateNextCommand:  "project_check",
-			StableNextCommand:     "project_stable_verify",
 			CandidateProcessKinds: []string{"check", "verify"},
 		}, nil
 	default:

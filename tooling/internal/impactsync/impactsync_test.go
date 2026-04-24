@@ -21,7 +21,6 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 		"|---|---|---|---|---|---|---|---|",
 		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
 		"| `scenario` | `demo` | `no` | `yes` | `candidate` | `scenario_verify` | current round |",
-		"| `project` | `project` | `no` | `yes` | `candidate` | `project_verify` | current round |",
 	}, "\n")+"\n")
 	for _, relPath := range []string{
 		"docs/specs/_check_result/demo.md",
@@ -30,8 +29,6 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 		"docs/specs/_verify_result/demo.md",
 		"docs/specs/_check_result/demo.md",
 		"docs/specs/_verify_result/demo.md",
-		"docs/specs/_check_result/project.md",
-		"docs/specs/_verify_result/project.md",
 	} {
 		mustWriteImpactFile(t, filepath.Join(repoRoot, relPath), "# process\n")
 	}
@@ -54,15 +51,6 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 				BindingIssues: []string{"binding drift"},
 			},
 		}},
-		Projects: []ScopedObject{{
-			Binding: ObjectBinding{
-				ObjectType:    "project",
-				Object:        "project",
-				ActiveLayer:   "candidate",
-				NextCommand:   "project_verify",
-				BindingIssues: []string{"binding drift"},
-			},
-		}},
 	})
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
@@ -74,10 +62,6 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 	if len(result.FlowResults) != 1 || result.FlowResults[0].NextCommand != "scenario_check" || result.FlowResults[0].Outcome != "invalidated" {
 		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
 	}
-	if len(result.ProjectResults) != 1 || result.ProjectResults[0].NextCommand != "project_check" || result.ProjectResults[0].Outcome != "invalidated" {
-		t.Fatalf("unexpected project result: %+v", result.ProjectResults)
-	}
-
 	for _, relPath := range []string{
 		"docs/specs/_check_result/demo.md",
 		"docs/specs/_plans/active/demo.md",
@@ -85,8 +69,6 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 		"docs/specs/_verify_result/demo.md",
 		"docs/specs/_check_result/demo.md",
 		"docs/specs/_verify_result/demo.md",
-		"docs/specs/_check_result/project.md",
-		"docs/specs/_verify_result/project.md",
 	} {
 		if _, err := os.Stat(filepath.Join(repoRoot, relPath)); !os.IsNotExist(err) {
 			t.Fatalf("expected %s to be deleted, stat err=%v", relPath, err)
@@ -101,7 +83,6 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 	for _, expected := range []string{
 		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | current round |",
 		"| `scenario` | `demo` | `no` | `yes` | `candidate` | `scenario_check` | current round |",
-		"| `project` | `project` | `no` | `yes` | `candidate` | `project_check` | current round |",
 	} {
 		if !strings.Contains(statusText, expected) {
 			t.Fatalf("status row %q not updated:\n%s", expected, statusText)
@@ -120,7 +101,6 @@ func TestApplyReroutesStableObjectsToVerifyCommands(t *testing.T) {
 		"|---|---|---|---|---|---|---|---|",
 		"| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | stable round |",
 		"| `scenario` | `demo` | `yes` | `no` | `stable` | `scenario_fork` | stable round |",
-		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
 	}, "\n")+"\n")
 
 	result, err := Apply(repoRoot, Input{
@@ -141,15 +121,6 @@ func TestApplyReroutesStableObjectsToVerifyCommands(t *testing.T) {
 				BindingIssues: []string{"binding drift"},
 			},
 		}},
-		Projects: []ScopedObject{{
-			Binding: ObjectBinding{
-				ObjectType:    "project",
-				Object:        "project",
-				ActiveLayer:   "stable",
-				NextCommand:   "project_fork",
-				BindingIssues: []string{"binding drift"},
-			},
-		}},
 	})
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
@@ -161,10 +132,6 @@ func TestApplyReroutesStableObjectsToVerifyCommands(t *testing.T) {
 	if len(result.FlowResults) != 1 || result.FlowResults[0].NextCommand != "scenario_stable_verify" || result.FlowResults[0].Outcome != "rerouted" {
 		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
 	}
-	if len(result.ProjectResults) != 1 || result.ProjectResults[0].NextCommand != "project_stable_verify" || result.ProjectResults[0].Outcome != "rerouted" {
-		t.Fatalf("unexpected project result: %+v", result.ProjectResults)
-	}
-
 	statusData, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/_status.md"))
 	if err != nil {
 		t.Fatalf("read status: %v", err)
@@ -173,7 +140,6 @@ func TestApplyReroutesStableObjectsToVerifyCommands(t *testing.T) {
 	for _, expected := range []string{
 		"| `unit` | `demo` | `yes` | `no` | `stable` | `unit_stable_verify` | stable round |",
 		"| `scenario` | `demo` | `yes` | `no` | `stable` | `scenario_stable_verify` | stable round |",
-		"| `project` | `project` | `yes` | `no` | `stable` | `project_stable_verify` | stable round |",
 	} {
 		if !strings.Contains(statusText, expected) {
 			t.Fatalf("status row %q not updated:\n%s", expected, statusText)
@@ -192,7 +158,6 @@ func TestApplyUsesResolvedSharedInvalidationForStableObjects(t *testing.T) {
 		"|---|---|---|---|---|---|---|---|",
 		"| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | stable round |",
 		"| `scenario` | `demo` | `yes` | `no` | `stable` | `scenario_fork` | stable round |",
-		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
 	}, "\n")+"\n")
 
 	result, err := Apply(repoRoot, Input{
@@ -213,15 +178,6 @@ func TestApplyUsesResolvedSharedInvalidationForStableObjects(t *testing.T) {
 			},
 			InvalidatingSharedRefs: []string{"s_shared_demo@1.0.0"},
 		}},
-		Projects: []ScopedObject{{
-			Binding: ObjectBinding{
-				ObjectType:  "project",
-				Object:      "project",
-				ActiveLayer: "stable",
-				NextCommand: "project_fork",
-			},
-			InvalidatingSharedRefs: []string{"s_shared_demo@1.0.0"},
-		}},
 	})
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
@@ -232,9 +188,6 @@ func TestApplyUsesResolvedSharedInvalidationForStableObjects(t *testing.T) {
 	}
 	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "shared_contract_drift" {
 		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
-	}
-	if len(result.ProjectResults) != 1 || result.ProjectResults[0].FallbackReasonCode != "shared_contract_drift" {
-		t.Fatalf("unexpected project result: %+v", result.ProjectResults)
 	}
 }
 
@@ -248,7 +201,6 @@ func TestApplyUsesExplicitFallbackScopeForObjects(t *testing.T) {
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
 		"|---|---|---|---|---|---|---|---|",
 		"| `scenario` | `demo` | `no` | `yes` | `candidate` | `scenario_verify` | current round |",
-		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
 	}, "\n")+"\n")
 	for _, relPath := range []string{
 		"docs/specs/_check_result/demo.md",
@@ -267,15 +219,6 @@ func TestApplyUsesExplicitFallbackScopeForObjects(t *testing.T) {
 			},
 			ExplicitFallbackScope: true,
 		}},
-		Projects: []ScopedObject{{
-			Binding: ObjectBinding{
-				ObjectType:  "project",
-				Object:      "project",
-				ActiveLayer: "stable",
-				NextCommand: "project_fork",
-			},
-			ExplicitFallbackScope: true,
-		}},
 	})
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
@@ -283,9 +226,6 @@ func TestApplyUsesExplicitFallbackScopeForObjects(t *testing.T) {
 
 	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "binding_drift" || result.FlowResults[0].NextCommand != "scenario_check" {
 		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
-	}
-	if len(result.ProjectResults) != 1 || result.ProjectResults[0].FallbackReasonCode != "binding_drift" || result.ProjectResults[0].NextCommand != "project_stable_verify" {
-		t.Fatalf("unexpected project result: %+v", result.ProjectResults)
 	}
 }
 
@@ -299,7 +239,6 @@ func TestApplyKeepsObjectsUnchangedWithoutFallbackInputs(t *testing.T) {
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
 		"|---|---|---|---|---|---|---|---|",
 		"| `scenario` | `demo` | `no` | `yes` | `candidate` | `scenario_verify` | current round |",
-		"| `project` | `project` | `yes` | `no` | `stable` | `project_fork` | stable round |",
 	}, "\n")+"\n")
 
 	result, err := Apply(repoRoot, Input{
@@ -311,14 +250,6 @@ func TestApplyKeepsObjectsUnchangedWithoutFallbackInputs(t *testing.T) {
 				NextCommand: "scenario_verify",
 			},
 		}},
-		Projects: []ScopedObject{{
-			Binding: ObjectBinding{
-				ObjectType:  "project",
-				Object:      "project",
-				ActiveLayer: "stable",
-				NextCommand: "project_fork",
-			},
-		}},
 	})
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
@@ -326,9 +257,6 @@ func TestApplyKeepsObjectsUnchangedWithoutFallbackInputs(t *testing.T) {
 
 	if len(result.FlowResults) != 1 || result.FlowResults[0].Outcome != "unchanged" {
 		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
-	}
-	if len(result.ProjectResults) != 1 || result.ProjectResults[0].Outcome != "unchanged" {
-		t.Fatalf("unexpected project result: %+v", result.ProjectResults)
 	}
 }
 

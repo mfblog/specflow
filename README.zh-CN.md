@@ -149,13 +149,13 @@ git config core.hooksPath .githooks
 2. 让 runtime 把这个意图路由到合适的 `specFlow` 步骤
 3. 如果你想精确控制，再自己显式写命令
 
-但在推进某个 `unit` 或 `scenario` 之前，先判断一件事：这个仓库有没有已经写清楚的项目治理坐标系。
+但在推进某个 `unit` 或 `scenario` 之前，先判断一件事：这个仓库的结构有没有写清楚。
 
-- 如果这是个新仓库，或者你对这个仓库还不熟，先定义 `ProjectSpec`
-- 还没有当前正式 `ProjectSpec` 时，用 `project_new`
-- 仓库已经有真实结构，只是第一次把它纳入正式治理时，用 `project_init`
-- 这份 `ProjectSpec` 必须把 `Governed Unit Definition`、`Support Surface Rules`、`Topology Mapping`、`Current Formal Object Graph`、`Global Constraint Alignment` 五块写闭合
-- 只有这一步站住了，后面的 `unit` 或 `scenario` 才有稳定坐标系
+- 当前项目结构真相放在 `docs/specs/repository_mapping.md`
+- 这不是命令对象，也没有 `stable` 或 `candidate` 生命周期
+- 如果这是新仓库、陌生仓库，或者仓库结构刚变过，先更新这份文件
+- 它必须写清 `Project Overview`、`Governed Object Map`、`Boundary Rules`、`Path Ownership`、`Global Constraint Alignment`、`Drift Handling`
+- 后续 `unit` 和 `scenario` 通过这份文件理解路径归属和对象边界
 
 这套东西之所以叫“文档驱动”，核心就在这里：
 
@@ -387,7 +387,7 @@ flowchart LR
 命令系统存在的意义，是把这条顺序显式化、可审阅化。
 但对新手来说，先理解这条顺序，通常比先背命令更重要。
 
-放到仓库层面，同样的顺序要再往前补一步：如果仓库还没写清“路径怎么归属到正式对象”，先写 `ProjectSpec`，再推进后续对象。
+放到仓库层面，同样的顺序要再往前补一步：如果仓库还没写清“路径怎么归属到正式对象”，先更新 `docs/specs/repository_mapping.md`，再推进后续对象。
 
 ## 什么时候需要手动控命令
 
@@ -401,7 +401,7 @@ flowchart LR
 
 | 你的情况 | 对应命令 |
 | --- | --- |
-| 新仓库或陌生仓库，要先建立项目治理坐标系 | `project_new` 或 `project_init` |
+| 新仓库、陌生仓库，或者仓库结构刚变过，要先建立或刷新项目结构真相 | 更新 `docs/specs/repository_mapping.md` |
 | 历史单元第一次纳入治理 | `unit_init:{unit}` |
 | 全新单元第一次进入治理 | `unit_new:{unit}` |
 | 已有 stable 的单元要开新一轮演进 | `unit_fork:{unit}` |

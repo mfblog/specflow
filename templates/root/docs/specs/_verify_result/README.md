@@ -9,7 +9,6 @@ Rules:
 3. The current round allows only these command-target object types here:
    - `unit`
    - `scenario`
-   - `project`
 4. `Verify Result Snapshot` must use at least these fixed fields:
    - `object_type`
    - `object_ref`
@@ -30,7 +29,6 @@ Rules:
 5. Object-owned snapshot extensions are fixed by object type:
    - `unit` additionally records `unit_appendix_snapshot` and `shared_contract_snapshot`
    - `scenario` additionally records `unit_snapshot` and `shared_contract_snapshot`
-   - `project` additionally records `scenario_snapshot`, `unit_snapshot`, and `shared_contract_snapshot`
 6. `gate` must equal the formal `verify` command for the current object family.
 7. If current candidate truth, current implementation, or current bound snapshots change after verification, the file becomes outdated.
 8. Consumers must validate bindings, not just existence.

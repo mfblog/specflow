@@ -27,9 +27,6 @@ This contract governs process files for:
 2. `scenario`
    - `docs/specs/_check_result/{scenario}.md`
    - `docs/specs/_verify_result/{scenario}.md`
-3. `project`
-   - `docs/specs/_check_result/project.md`
-   - `docs/specs/_verify_result/project.md`
 
 It also governs any internal flow that revalidates those files, including:
 
@@ -46,9 +43,9 @@ It defines only how process files record the truth they were written against.
 Every gate-bearing process file covered by this contract must record:
 
 1. `object_type`
-   - one of `unit`, `scenario`, `project`
+   - one of `unit`, `scenario`
 2. `object_ref`
-   - the bare formal object identifier, for example `ai`, `task_execution`, or `project`
+   - the bare formal object identifier, for example `ai` or `task_execution`
 3. `truth_file_ref`
    - the exact current-layer truth file used by that process file
 4. `truth_version_ref`
@@ -181,26 +178,6 @@ Rules:
 
 `shared_contract_snapshot` uses the same shape as `unit`.
 
-### 4.3 `project`
-
-`project` process files may additionally record:
-
-1. `scenario_snapshot`
-2. `unit_snapshot`
-3. `shared_contract_snapshot`
-
-`scenario_snapshot` has only two legal forms:
-
-1. literal `none`
-2. a normalized ordered list where each item contains:
-   - `scenario`
-   - `layer`
-   - `file_ref`
-   - `version_ref`
-   - `fingerprint`
-
-`unit_snapshot` and `shared_contract_snapshot` use the shapes defined above.
-
 ## 5. Binding And Inclusion Boundary
 
 Snapshot inclusion must follow the formal binding contract, not heuristic scanning.
@@ -208,11 +185,10 @@ Snapshot inclusion must follow the formal binding contract, not heuristic scanni
 Rules:
 
 1. `unit_appendix_snapshot` includes only appendix files explicitly referenced by the current-layer unit truth
-2. `unit_snapshot` includes only units formally bound by current `scenario` or `project` truth
-3. `scenario_snapshot` includes only scenarios formally bound by current `project` truth
-4. `shared_contract_snapshot` includes only currently bound shared files from formal `shared_contract_refs`
-5. `bound_objects` metadata is never a formal inclusion source
-6. a `bound_objects`-only delta does not by itself invalidate downstream process files
+2. `unit_snapshot` includes only units formally bound by current `scenario` truth
+3. `shared_contract_snapshot` includes only currently bound shared files from formal `shared_contract_refs`
+4. `bound_objects` metadata is never a formal inclusion source
+5. a `bound_objects`-only delta does not by itself invalidate downstream process files
 
 ## 6. Fingerprint Contract
 
@@ -229,9 +205,8 @@ This same fingerprint contract applies to:
 2. `spec_fingerprint`
 3. appendix file fingerprints
 4. `unit_snapshot` item fingerprints
-5. `scenario_snapshot` item fingerprints
-6. `shared_contract_snapshot` item fingerprints
-7. `system_constraints_stable_fingerprint`
+5. `shared_contract_snapshot` item fingerprints
+6. `system_constraints_stable_fingerprint`
 
 ## 7. Text Normalization Rules
 
@@ -265,11 +240,7 @@ Ordering rules:
    - sort by `unit`
    - then by `layer`
    - then by `file_ref`
-3. `scenario_snapshot`
-   - sort by `scenario`
-   - then by `layer`
-   - then by `file_ref`
-4. `shared_contract_snapshot`
+3. `shared_contract_snapshot`
    - sort by `shared_contract_id`
    - then by `layer`
    - then by `file_ref`

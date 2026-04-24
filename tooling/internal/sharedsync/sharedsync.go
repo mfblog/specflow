@@ -24,7 +24,6 @@ type Options struct {
 type Result struct {
 	ScopedModules                  []string
 	ScopedFlows                    []string
-	ScopedProjects                 []string
 	ScopedSharedRefs               []string
 	ScopedSharedIDs                []string
 	StableLandingModule            string
@@ -32,7 +31,6 @@ type Result struct {
 	BoundObjectsOnlySharedFileRefs []string
 	ModuleResults                  []ModuleResult
 	FlowResults                    []ObjectResult
-	ProjectResults                 []ObjectResult
 	BoundObjectDrifts              []BoundObjectDrift
 }
 
@@ -106,12 +104,8 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	projectBindings, unresolvedProjectRefs, err := loadObjectBindings(repoRoot, "project")
-	if err != nil {
-		return Result{}, err
-	}
-	allUnresolvedRefs := normalizeStrings(append(append(unresolvedSharedRefs, unresolvedFlowRefs...), unresolvedProjectRefs...))
-	referencedSharedRefs := allReferencedSharedRefs(moduleBindings, flowBindings, projectBindings)
+	allUnresolvedRefs := normalizeStrings(append(unresolvedSharedRefs, unresolvedFlowRefs...))
+	referencedSharedRefs := allReferencedSharedRefs(moduleBindings, flowBindings)
 	for _, sharedID := range normalized.SharedIDs {
 		if len(allUnresolvedRefs) > 0 {
 			return Result{}, fmt.Errorf(
@@ -175,7 +169,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		boundObjectsOnlyFileRefs[shared.FileRef] = true
 	}
 
-	actualBoundObjectsByRef, err := collectActualBoundObjectsByRef(repoRoot, actualModulesByRef, flowBindings, projectBindings)
+	actualBoundObjectsByRef, err := collectActualBoundObjectsByRef(repoRoot, actualModulesByRef, flowBindings)
 	if err != nil {
 		return Result{}, err
 	}
@@ -192,20 +186,11 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	removedBindingProjects, err := candidateObjectsWithRemovedSelectedBinding(repoRoot, projectBindings, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByRef, sharedFilesByID)
-	if err != nil {
-		return Result{}, err
-	}
-
 	scopeModules, err := buildScopeModules(moduleBindings, sharedFilesByRef, sharedFilesByID, normalized, removedBindingModules)
 	if err != nil {
 		return Result{}, err
 	}
 	scopeFlows, err := buildScopeObjects(flowBindings, sharedFilesByRef, sharedFilesByID, normalized.SharedRefs, normalized.SharedIDs, removedBindingFlows)
-	if err != nil {
-		return Result{}, err
-	}
-	scopeProjects, err := buildScopeObjects(projectBindings, sharedFilesByRef, sharedFilesByID, normalized.SharedRefs, normalized.SharedIDs, removedBindingProjects)
 	if err != nil {
 		return Result{}, err
 	}
@@ -218,15 +203,10 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	projectImpactScope, err := scopedObjectsForImpact("project", scopeProjects, projectBindings, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByRef, sharedFilesByID, boundObjectsOnlyFileRefs, removedBindingProjects)
-	if err != nil {
-		return Result{}, err
-	}
 
 	impactResult, err := impactsync.Apply(repoRoot, impactsync.Input{
-		Modules:  moduleImpactScope,
-		Flows:    flowImpactScope,
-		Projects: projectImpactScope,
+		Modules: moduleImpactScope,
+		Flows:   flowImpactScope,
 	})
 	if err != nil {
 		return Result{}, err
@@ -235,7 +215,6 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	return Result{
 		ScopedModules:                  scopeModules,
 		ScopedFlows:                    scopeFlows,
-		ScopedProjects:                 scopeProjects,
 		ScopedSharedRefs:               normalized.SharedRefs,
 		ScopedSharedIDs:                normalized.SharedIDs,
 		StableLandingModule:            normalized.StableLandingModule,
@@ -243,7 +222,6 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		BoundObjectsOnlySharedFileRefs: normalized.BoundObjectsOnlySharedFileRefs,
 		ModuleResults:                  impactResult.ModuleResults,
 		FlowResults:                    impactResult.FlowResults,
-		ProjectResults:                 impactResult.ProjectResults,
 		BoundObjectDrifts:              drifts,
 	}, nil
 }
@@ -271,10 +249,6 @@ func ReconcileBoundModules(repoRoot string, options ReconcileBoundModulesOptions
 	if err != nil {
 		return ReconcileBoundModulesResult{}, err
 	}
-	projectBindings, _, err := loadObjectBindings(repoRoot, "project")
-	if err != nil {
-		return ReconcileBoundModulesResult{}, err
-	}
 	for _, module := range normalized.Modules {
 		if _, ok := moduleBindings[module]; !ok {
 			return ReconcileBoundModulesResult{}, fmt.Errorf("module %q is not registered in docs/specs/_status.md", module)
@@ -298,7 +272,7 @@ func ReconcileBoundModules(repoRoot string, options ReconcileBoundModulesOptions
 		ScopedSharedIDs:  normalized.SharedIDs,
 		TouchedFiles:     touchedFiles,
 	}
-	actualBoundObjectsByRef, err := collectActualBoundObjectsByRef(repoRoot, actualModulesByRef, flowBindings, projectBindings)
+	actualBoundObjectsByRef, err := collectActualBoundObjectsByRef(repoRoot, actualModulesByRef, flowBindings)
 	if err != nil {
 		return ReconcileBoundModulesResult{}, err
 	}
@@ -347,7 +321,7 @@ func collectBoundObjectDrifts(sharedFilesByRef map[string]sharedFile, actualBoun
 	return drifts, nil
 }
 
-func collectActualBoundObjectsByRef(repoRoot string, actualUnitsByRef map[string][]string, flowBindings, projectBindings map[string]objectBinding) (map[string][]string, error) {
+func collectActualBoundObjectsByRef(repoRoot string, actualUnitsByRef map[string][]string, flowBindings map[string]objectBinding) (map[string][]string, error) {
 	result := map[string][]string{}
 	appendTypedRefs := func(versionRef, objectType string, objects []string) {
 		for _, object := range objects {
@@ -365,15 +339,6 @@ func collectActualBoundObjectsByRef(repoRoot string, actualUnitsByRef map[string
 				continue
 			}
 			result[resolved.VersionRef] = append(result[resolved.VersionRef], typedBoundObjectRef("scenario", object))
-		}
-	}
-	for object, binding := range projectBindings {
-		for _, ref := range binding.SharedRefs {
-			resolved, err := sharedbinding.ResolveRef(repoRoot, binding.Status.ActiveLayer, ref)
-			if err != nil {
-				continue
-			}
-			result[resolved.VersionRef] = append(result[resolved.VersionRef], typedBoundObjectRef("project", object))
 		}
 	}
 	for versionRef := range result {
@@ -601,7 +566,7 @@ func candidateModulesWithRemovedSelectedBinding(repoRoot string, moduleBindings 
 	return result, nil
 }
 
-func allReferencedSharedRefs(moduleBindings map[string]moduleBinding, flowBindings, projectBindings map[string]objectBinding) map[string]bool {
+func allReferencedSharedRefs(moduleBindings map[string]moduleBinding, flowBindings map[string]objectBinding) map[string]bool {
 	result := map[string]bool{}
 	for _, binding := range moduleBindings {
 		for _, ref := range binding.SharedRefs {
@@ -609,11 +574,6 @@ func allReferencedSharedRefs(moduleBindings map[string]moduleBinding, flowBindin
 		}
 	}
 	for _, binding := range flowBindings {
-		for _, ref := range binding.SharedRefs {
-			result[ref] = true
-		}
-	}
-	for _, binding := range projectBindings {
 		for _, ref := range binding.SharedRefs {
 			result[ref] = true
 		}
@@ -873,7 +833,7 @@ func normalizeTypedBoundObjectRef(raw string) (string, error) {
 	objectType = strings.TrimSpace(objectType)
 	object = strings.TrimSpace(object)
 	switch objectType {
-	case "unit", "scenario", "project":
+	case "unit", "scenario":
 	default:
 		return "", fmt.Errorf("bound_objects item %q uses unsupported object type %q", raw, objectType)
 	}

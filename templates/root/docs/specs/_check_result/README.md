@@ -9,7 +9,6 @@ Rules:
 3. The current round allows only these command-target object types here:
    - `unit`
    - `scenario`
-   - `project`
 4. `Check Result Snapshot` must use at least these fixed fields:
    - `object_type`
    - `object_ref`
@@ -29,7 +28,6 @@ Rules:
 5. Object-owned snapshot extensions are fixed by object type:
    - `unit` additionally records `unit_appendix_snapshot` and `shared_contract_snapshot`
    - `scenario` additionally records `unit_snapshot` and `shared_contract_snapshot`
-   - `project` additionally records `scenario_snapshot`, `unit_snapshot`, and `shared_contract_snapshot`
 6. `gate` must equal the formal `check` command for the current object family.
 7. A `check` command creates or overwrites this file only when the result is `pass`.
 8. When `check` does not pass, it must not write a failed-state file; if an old gate is no longer valid, delete it.

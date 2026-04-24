@@ -16,25 +16,50 @@ It answers five questions:
 
 ### 2.1 Command-Target Objects
 
-This repository has three command-target truth object families:
+This repository has two command-target truth object families:
 
 1. `unit`
 2. `scenario`
-3. `project`
 
 Shared rules:
 
-1. all three families support `stable` and `candidate`
-2. all three families enter `docs/specs/_status.md`
-3. only these three families are standard command targets
+1. both families support `stable` and `candidate`
+2. both families enter `docs/specs/_status.md`
+3. only these two families are standard command targets
 
 Family differences:
 
 1. `unit` is the minimal governed unit and is the only family that owns implementation planning and implementation work
 2. `scenario` owns trigger-to-outcome chain truth and end-to-end verification, but not implementation planning
-3. `project` owns governed-unit definition, support-surface rules, topology mapping, and the current formal object graph, but not implementation planning
 
-### 2.2 `system_constraints`
+### 2.2 `repository_mapping`
+
+`repository_mapping` is the current repository-structure truth.
+
+It answers:
+
+1. what this repository is for
+2. which formal objects currently exist
+3. which paths belong to which objects or support surfaces
+4. which paths are ignored
+5. which boundary rules humans and agents must use when judging new paths
+
+It does not answer:
+
+1. one unit's local behavior truth
+2. one scenario's trigger-to-outcome chain
+3. one shared contract's local reusable rule text
+4. lifecycle state progression
+5. implementation planning or implementation editing
+
+It has one current file:
+
+1. `docs/specs/repository_mapping.md`
+
+It is not a command target.
+It does not enter `docs/specs/_status.md`.
+
+### 2.3 `system_constraints`
 
 `system_constraints` is the unique global system-constraint object.
 
@@ -49,7 +74,7 @@ It does not answer:
 
 1. one unit's local behavior truth
 2. one scenario's trigger-to-outcome chain
-3. one project's topology mapping detail
+3. repository-structure mapping detail
 4. one shared contract's local reusable rule text
 
 It has one effective file only:
@@ -58,7 +83,7 @@ It has one effective file only:
 
 It is not a command target.
 
-### 2.3 `shared_contract`
+### 2.4 `shared_contract`
 
 `shared_contract` is an independent shared local-truth object reused by multiple downstream formal objects.
 
@@ -72,7 +97,7 @@ It does not answer:
 
 1. a whole unit
 2. a whole scenario
-3. the whole project model
+3. the whole repository mapping
 4. the whole global baseline
 
 It is not a standard command target.
@@ -88,7 +113,6 @@ Formal object identity uses the following rules:
    - `agent`
    - `ai`
    - `task_execution`
-   - `project`
 2. file names still carry object family prefixes
    - `c_unit_agent.md`
    - `s_unit_ai.md`
@@ -96,7 +120,6 @@ Formal object identity uses the following rules:
 3. `bound_objects` in Shared Contract files must use typed refs
    - `unit:ai`
    - `scenario:task_execution`
-   - `project:project`
 
 ### 3.2 `unit`
 
@@ -108,10 +131,9 @@ Formal object identity uses the following rules:
 1. `stable` -> `docs/specs/scenarios/stable/s_scenario_{scenario}.md`
 2. `candidate` -> `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
 
-### 3.4 `project`
+### 3.4 `repository_mapping`
 
-1. `stable` -> `docs/specs/project/stable/s_project.md`
-2. `candidate` -> `docs/specs/project/candidate/c_project.md`
+1. current -> `docs/specs/repository_mapping.md`
 
 ### 3.5 `shared_contract`
 
@@ -126,7 +148,6 @@ It records rows for:
 
 1. `unit`
 2. `scenario`
-3. `project`
 
 Required columns are:
 
@@ -179,33 +200,37 @@ It does not own:
 
 1. unit-local implementation detail
 2. shared-contract body text
-3. project mapping rules
+3. repository mapping rules
 4. direct implementation editing
 
-### 4.3 `project`
+### 4.3 `repository_mapping`
 
-`project` is the project governance coordinate-system object.
+`repository_mapping` is the repository structure truth file.
 
-It answers five mandatory sections:
+It answers these mandatory sections:
 
-1. `Governed Unit Definition`
+1. `Project Overview`
+   - what this repository is for
+   - the main delivery surface
+   - the shortest useful reading path
+2. `Governed Object Map`
+   - current `unit` IDs and one-line responsibilities
+   - current `scenario` IDs and one-line responsibilities, or `none`
+   - current `shared_contract` IDs and one-line responsibilities
+3. `Boundary Rules`
    - what qualifies as a formal `unit`
    - what must become `shared_contract`
    - what stays outside command-target truth
-2. `Support Surface Rules`
-   - which paths are governed support surfaces rather than command-target objects
-3. `Topology Mapping`
+4. `Path Ownership`
    - which roots are governed
    - which paths are ignored
    - which paths map to which current formal object
    - how conflicts are decided
-4. `Current Formal Object Graph`
-   - current `unit_refs`
-   - current `scenario_refs`
-   - current `shared_contract_refs`
-   - current relations among them
 5. `Global Constraint Alignment`
-   - which stable `system_constraints` version currently constrains the project
+   - which stable `system_constraints` version currently constrains the repository mapping
+6. `Drift Handling`
+   - what counts as mapping drift
+   - how consumers must stop when drift is found
 
 It does not own:
 
@@ -213,6 +238,7 @@ It does not own:
 2. shared-contract body text
 3. scenario-local chain detail
 4. implementation planning or implementation editing
+5. command lifecycle state
 
 ### 4.4 `shared_contract`
 
@@ -221,7 +247,7 @@ It does not own:
 1. one shared reusable local rule
 2. not the whole unit
 3. not the whole scenario
-4. not the whole project
+4. not the whole repository mapping
 5. not the whole global baseline
 
 When a candidate-layer shared file already has a stable-layer sibling for the same `shared_contract_id`, that candidate file also owns the explicit next-landing owner for the reopened shared round.
@@ -241,19 +267,21 @@ Each current-layer unit truth must record:
 
 Each current-layer scenario truth must record:
 
-1. `project_ref`
+1. `repository_mapping_ref`
 2. `unit_refs`
 3. `shared_contract_refs`
 4. `system_constraints_stable_ref`
 
-### 5.3 `project`
+### 5.3 `repository_mapping`
 
-Each current-layer project truth must record:
+`repository_mapping` must record:
 
-1. `scenario_refs`
-2. `unit_refs`
-3. `shared_contract_refs`
+1. current `unit` IDs
+2. current `scenario` IDs, or `none`
+3. current `shared_contract` IDs
 4. `system_constraints_stable_ref`
+
+This is repository-structure truth, not lifecycle binding metadata for a command-target object.
 
 ### 5.4 `shared_contract`
 
@@ -290,17 +318,16 @@ Rules:
 6. `bound_objects` must use typed refs only
    - `unit:<id>`
    - `scenario:<id>`
-   - `project:project`
 7. when `shared_contract_refs` is written as a markdown list, executors must normalize the ref order by exact shared ref string in ascending lexical order
 
 ### 6.2 Dependency Direction Contract
 
 Formal dependency direction is fixed:
 
-1. `system_constraints -> shared_contract/unit/scenario/project`
-2. `shared_contract -> unit/scenario/project`
-3. `unit -> scenario/project`
-4. `scenario -> project`
+1. `repository_mapping -> unit/scenario/shared_contract`
+2. `system_constraints -> shared_contract/unit/scenario/repository_mapping`
+3. `shared_contract -> unit/scenario`
+4. `unit -> scenario`
 
 Downstream invalidation rule:
 
@@ -315,6 +342,7 @@ Before any governance action:
 2. read any explicitly required appendix truth for that object family
 3. read bound shared files when `shared_contract_refs` is not empty
 4. read `s_system_constraints.md` when `system_constraints_stable_ref` is part of current truth or when the task requires baseline judgment
+5. read `docs/specs/repository_mapping.md` when object boundary, path ownership, support surface, or current object map matters
 
 Additional rules:
 
@@ -336,9 +364,6 @@ Process containers by object family:
 2. `scenario`
    - `_check_result`
    - `_verify_result`
-3. `project`
-   - `_check_result`
-   - `_verify_result`
 
 Object-owned snapshot extensions are fixed by object type:
 
@@ -346,10 +371,6 @@ Object-owned snapshot extensions are fixed by object type:
    - `unit_appendix_snapshot`
    - `shared_contract_snapshot`
 2. `scenario`
-   - `unit_snapshot`
-   - `shared_contract_snapshot`
-3. `project`
-   - `scenario_snapshot`
    - `unit_snapshot`
    - `shared_contract_snapshot`
 
