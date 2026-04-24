@@ -16,7 +16,7 @@ By default it handles:
 
 1. a new upgrade round for a module that already has `stable`
 2. deriving candidate truth from formal truth
-3. initializing the current round's `system_constraints_stable_ref`
+3. initializing the current round's `system_constraints_ref`
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
@@ -38,7 +38,7 @@ Only a new independent full-scope run of `unit_fork` may produce that advancing 
 ## 4. Procedure
 
 1. read `docs/specs/_status.md`
-2. read `s_system_constraints.md` if it exists; otherwise continue with no formal global baseline
+2. read `system_constraints.md` if it exists; otherwise continue with no formal global baseline
 3. read `docs/specs/units/stable/s_unit_{unit}.md` and any explicitly referenced appendix files
 4. read bound stable Shared Contract files if any
 5. determine the target formal version for this round:
@@ -47,11 +47,11 @@ Only a new independent full-scope run of `unit_fork` may produce that advancing 
    - compatible fix or alignment -> next `PATCH`
 6. generate `docs/specs/units/candidate/c_unit_{unit}.md` from the current stable file
 7. set candidate `frontmatter.version` to that target version
-8. write `system_constraints_stable_ref`
+8. write `system_constraints_ref`
    - if the new round proposes a global baseline change, record it in `system_constraints_change_proposal` inside the module candidate
 9. re-check `shared_contract_refs`:
    - interpret and rewrite that field using the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1
-   - judge Shared Contract bindings independently from whether `s_system_constraints.md` exists
+   - judge Shared Contract bindings independently from whether `system_constraints.md` exists
    - if the stable layer depended on shared files and the candidate still depends on the same unchanged shared truth, keep binding those existing shared files in the candidate
    - create or bind candidate-layer shared files only when the current round changes the shared truth itself
    - write `shared_contract_refs=none` only when the current round no longer reuses shared contract truth

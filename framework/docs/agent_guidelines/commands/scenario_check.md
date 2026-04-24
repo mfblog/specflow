@@ -21,7 +21,7 @@ Only a new independent full-scope run of `scenario_check` may produce that advan
    - `repository_mapping_ref`
    - `unit_refs`
    - `shared_contract_refs`
-   - `system_constraints_stable_ref`
+   - `system_constraints_ref`
 3. verify entry, path, exit, and failure absorption are explicit enough to verify
 4. if pass, write `_check_result/{scenario}.md` and advance `Next Command=scenario_verify`
 5. if not pass, keep `Next Command=scenario_check`

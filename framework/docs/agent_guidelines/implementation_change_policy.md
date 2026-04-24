@@ -47,7 +47,7 @@ Before classification:
 3. if the request names an existing formal unit, read `docs/specs/_status.md` and resolve the unit's current `Active Layer` and `Next Command`
 4. read the current-layer main Spec and any explicitly referenced appendix truth needed to judge whether formal behavior truth changes
 5. read bound Shared Contract files when the relevant behavior depends on them
-6. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may affect shared mechanisms, global default rules, or explicit global exceptions
+6. read `docs/specs/system_constraints.md` when the request may affect shared mechanisms, global default rules, or explicit global exceptions
 7. if the request is for a brand-new unit, confirm only that the unit name is clear and non-conflicting before routing to `unit_new:{unit}`
 
 The executor must not classify from code shape alone when repository truth already exists.

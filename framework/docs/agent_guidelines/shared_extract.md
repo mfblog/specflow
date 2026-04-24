@@ -53,7 +53,7 @@ Before execution:
    - read every additional current-layer unit main file needed to judge whether that unit still carries, duplicates, or already consumes the target truth
    - do not treat the source unit list alone as sufficient when the extraction target may already be reused elsewhere
 7. read any relevant existing `shared_contract` files that may overlap the target truth
-8. read `docs/specs/system_constraints/stable/s_system_constraints.md` when the request may cross into project-wide default-rule promotion
+8. read `docs/specs/system_constraints.md` when the request may cross into project-wide default-rule promotion
 9. if any involved unit is currently at `stable`, also read `specflow/framework/docs/agent_guidelines/commands/unit_fork.md`
 10. if the round may create, update, or delete any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/shared_sync.md` first
 11. if the round may create or update any file under `docs/specs/shared_contracts/**`, read `specflow/framework/docs/agent_guidelines/git_policy.md` because Shared Contract semantic version rules apply

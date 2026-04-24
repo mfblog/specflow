@@ -79,7 +79,7 @@ It does not answer:
 
 It has one effective file only:
 
-1. `docs/specs/system_constraints/stable/s_system_constraints.md`
+1. `docs/specs/system_constraints.md`
 
 It is not a command target.
 
@@ -227,7 +227,7 @@ It answers these mandatory sections:
    - which paths map to which current formal object
    - how conflicts are decided
 5. `Global Constraint Alignment`
-   - which stable `system_constraints` version currently constrains the repository mapping
+   - which `system_constraints` version currently constrains the repository mapping
 6. `Drift Handling`
    - what counts as mapping drift
    - how consumers must stop when drift is found
@@ -258,7 +258,7 @@ When a candidate-layer shared file already has a stable-layer sibling for the sa
 
 Each current-layer unit truth must record:
 
-1. `system_constraints_stable_ref`
+1. `system_constraints_ref`
 2. `shared_contract_refs`
 
 `unit` does not formally record `scenario_refs`.
@@ -270,7 +270,7 @@ Each current-layer scenario truth must record:
 1. `repository_mapping_ref`
 2. `unit_refs`
 3. `shared_contract_refs`
-4. `system_constraints_stable_ref`
+4. `system_constraints_ref`
 
 ### 5.3 `repository_mapping`
 
@@ -279,7 +279,7 @@ Each current-layer scenario truth must record:
 1. current `unit` IDs
 2. current `scenario` IDs, or `none`
 3. current `shared_contract` IDs
-4. `system_constraints_stable_ref`
+4. `system_constraints_ref`
 
 This is repository-structure truth, not lifecycle binding metadata for a command-target object.
 
@@ -291,7 +291,7 @@ Each current-layer shared-contract file must record:
 2. `layer`
 3. `shared_version`
 4. `bound_objects`
-5. `system_constraints_stable_ref`
+5. `system_constraints_ref`
 
 Conditional field:
 
@@ -341,7 +341,7 @@ Before any governance action:
 1. read the target object's current-layer main file
 2. read any explicitly required appendix truth for that object family
 3. read bound shared files when `shared_contract_refs` is not empty
-4. read `s_system_constraints.md` when `system_constraints_stable_ref` is part of current truth or when the task requires baseline judgment
+4. read `system_constraints.md` when `system_constraints_ref` is part of current truth or when the task requires baseline judgment
 5. read `docs/specs/repository_mapping.md` when object boundary, path ownership, support surface, or current object map matters
 
 Additional rules:

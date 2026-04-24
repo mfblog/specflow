@@ -14,7 +14,6 @@ func TestRebuildCurrentCollectsAppendixAndSharedSnapshot(t *testing.T) {
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable"))
 
 	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
@@ -31,7 +30,7 @@ See [appendix](./appendix/c_unit_demo_prompt.md).
 
 ## Global Constraint Alignment
 
-1. ` + "`system_constraints_stable_ref`: `s_system_constraints@1.1.0`" + `
+1. ` + "`system_constraints_ref`: `system_constraints@1.1.0`" + `
 2. ` + "`shared_contract_refs`:" + `
    - ` + "`c_shared_demo@0.2.0`" + `
 `
@@ -57,7 +56,7 @@ layer: candidate
 shared_version: 0.2.0
 bound_objects:
   - unit:demo
-system_constraints_stable_ref: s_system_constraints@1.1.0
+system_constraints_ref: system_constraints@1.1.0
 ---
 
 # Shared
@@ -70,7 +69,7 @@ version: 1.1.0
 
 # System
 `
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable/s_system_constraints.md"), system)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), system)
 
 	result, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
@@ -88,8 +87,8 @@ version: 1.1.0
 	if result.ModuleAppendixSnapshot[0].AppendixRef != "c_unit_demo_prompt@c_unit_demo@0.1.0" {
 		t.Fatalf("unexpected appendix ref: %s", result.ModuleAppendixSnapshot[0].AppendixRef)
 	}
-	if result.SystemConstraintsStableVersionRef != "s_system_constraints@1.1.0" {
-		t.Fatalf("unexpected system constraints version ref: %s", result.SystemConstraintsStableVersionRef)
+	if result.SystemConstraintsVersionRef != "system_constraints@1.1.0" {
+		t.Fatalf("unexpected system constraints version ref: %s", result.SystemConstraintsVersionRef)
 	}
 	if len(result.SharedContractSnapshot) != 1 {
 		t.Fatalf("expected one shared snapshot entry, got %d", len(result.SharedContractSnapshot))
@@ -104,7 +103,6 @@ func TestRebuildCurrentCollectsEquivalentAppendixSubdirAndPlainFieldNames(t *tes
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "support"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable"))
 
 	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
@@ -121,7 +119,7 @@ See [support](./support/c_unit_demo_prompt.md).
 
 ## Global Constraint Alignment
 
-1. system_constraints_stable_ref: s_system_constraints@1.1.0
+1. system_constraints_ref: system_constraints@1.1.0
 2. shared_contract_refs:
    - c_shared_demo@0.2.0
 `
@@ -147,7 +145,7 @@ layer: candidate
 shared_version: 0.2.0
 bound_objects:
   - unit:demo
-system_constraints_stable_ref: s_system_constraints@1.1.0
+system_constraints_ref: system_constraints@1.1.0
 ---
 
 # Shared
@@ -160,7 +158,7 @@ version: 1.1.0
 
 # System
 `
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable/s_system_constraints.md"), system)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), system)
 
 	result, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
@@ -175,8 +173,8 @@ version: 1.1.0
 	if len(result.SharedContractSnapshot) != 1 || result.SharedContractSnapshot[0].VersionRef != "c_shared_demo@0.2.0" {
 		t.Fatalf("unexpected shared snapshot: %+v", result.SharedContractSnapshot)
 	}
-	if result.SystemConstraintsStableVersionRef != "s_system_constraints@1.1.0" {
-		t.Fatalf("unexpected system constraints version ref: %s", result.SystemConstraintsStableVersionRef)
+	if result.SystemConstraintsVersionRef != "system_constraints@1.1.0" {
+		t.Fatalf("unexpected system constraints version ref: %s", result.SystemConstraintsVersionRef)
 	}
 }
 
@@ -203,7 +201,7 @@ version: 0.1.0
 
 ## Global Constraint Alignment
 
-1. system_constraints_stable_ref: none
+1. system_constraints_ref: none
 2. shared_contract_refs:
    - c_shared_zeta@0.1.0
    - c_shared_alpha@0.1.0
@@ -259,7 +257,7 @@ Use appendix path `+"`./appendix/c_unit_demo_prompt.md`"+` for detailed prompts.
 
 ## Global Constraint Alignment
 
-1. system_constraints_stable_ref: none
+1. system_constraints_ref: none
 2. shared_contract_refs: none
 `)
 
@@ -305,7 +303,7 @@ See [support](./c_unit_demo_prompt.md).
 
 ## Global Constraint Alignment
 
-1. system_constraints_stable_ref: none
+1. system_constraints_ref: none
 2. shared_contract_refs: none
 `)
 
@@ -341,9 +339,9 @@ func TestValidateProcessFileRejectsMissingRequiredSnapshotField(t *testing.T) {
 		"truth_file_ref: docs/specs/units/candidate/c_unit_demo.md",
 		"truth_version_ref: c_unit_demo@0.1.0",
 		"unit_appendix_snapshot: none",
-		"system_constraints_stable_file_ref: none",
-		"system_constraints_stable_version_ref: none",
-		"system_constraints_stable_fingerprint: none",
+		"system_constraints_file_ref: none",
+		"system_constraints_version_ref: none",
+		"system_constraints_fingerprint: none",
 		"shared_contract_snapshot: none",
 	}, "\n"))
 
@@ -425,7 +423,7 @@ See [appendix](./appendix/c_unit_demo_prompt.md).
 
 ## Global Constraint Alignment
 
-1. system_constraints_stable_ref: none
+1. system_constraints_ref: none
 2. shared_contract_refs: none
 `)
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_demo_prompt.md"), `---
@@ -463,9 +461,9 @@ spec_version_ref: c_unit_demo@0.1.0
 		"  - `file_ref`: `" + expected.ModuleAppendixSnapshot[0].FileRef + "`",
 		"  - `appendix_ref`: `" + expected.ModuleAppendixSnapshot[0].AppendixRef + "`",
 		"  - `fingerprint`: `" + expected.ModuleAppendixSnapshot[0].Fingerprint + "`",
-		"- `system_constraints_stable_file_ref`: `none`",
-		"- `system_constraints_stable_version_ref`: `none`",
-		"- `system_constraints_stable_fingerprint`: `none`",
+		"- `system_constraints_file_ref`: `none`",
+		"- `system_constraints_version_ref`: `none`",
+		"- `system_constraints_fingerprint`: `none`",
 		"- `shared_contract_snapshot`: `none`",
 		"",
 	}, "\n"))
@@ -540,7 +538,7 @@ version: 0.1.0
 
 ## Global Constraint Alignment
 
-1. system_constraints_stable_ref: none
+1. system_constraints_ref: none
 2. shared_contract_refs:
 `)
 
@@ -569,7 +567,7 @@ version: 0.1.0
 
 ## Global Constraint Alignment
 
-1. system_constraints_stable_ref: none
+1. system_constraints_ref: none
 2. shared_contract_refs:
    - c_shared_demo@0.1.0
    - c_shared_demo@0.1.0
@@ -610,7 +608,7 @@ version: 0.1.0
 
 ## Global Constraint Alignment
 
-1. system_constraints_stable_ref: none
+1. system_constraints_ref: none
 2. shared_contract_refs:
    - c_shared_demo@0.1.0
 `)
@@ -654,7 +652,7 @@ version: 1.0.0
 
 ## Global Constraint Alignment
 
-1. system_constraints_stable_ref: none
+1. system_constraints_ref: none
 2. shared_contract_refs:
    - c_shared_demo@0.1.0
 `)
@@ -678,7 +676,6 @@ bound_objects:
 func TestRebuildCurrentRespectsExplicitNoneSystemConstraintsBinding(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable"))
 
 	system := `---
 version: 1.1.0
@@ -686,20 +683,20 @@ version: 1.1.0
 
 # System
 `
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints/stable/s_system_constraints.md"), system)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), system)
 
 	result, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
-	if result.SystemConstraintsStableFileRef != "none" {
-		t.Fatalf("expected system file ref none, got %s", result.SystemConstraintsStableFileRef)
+	if result.SystemConstraintsFileRef != "none" {
+		t.Fatalf("expected system file ref none, got %s", result.SystemConstraintsFileRef)
 	}
-	if result.SystemConstraintsStableVersionRef != "none" {
-		t.Fatalf("expected system version ref none, got %s", result.SystemConstraintsStableVersionRef)
+	if result.SystemConstraintsVersionRef != "none" {
+		t.Fatalf("expected system version ref none, got %s", result.SystemConstraintsVersionRef)
 	}
-	if result.SystemConstraintsStableFingerprint != "none" {
-		t.Fatalf("expected system fingerprint none, got %s", result.SystemConstraintsStableFingerprint)
+	if result.SystemConstraintsFingerprint != "none" {
+		t.Fatalf("expected system fingerprint none, got %s", result.SystemConstraintsFingerprint)
 	}
 }
 
@@ -724,7 +721,7 @@ version: 0.1.0
 
 ## Global Constraint Alignment
 
-1. system_constraints_stable_ref: none
+1. system_constraints_ref: none
 2. shared_contract_refs: none
 `
 	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
@@ -755,9 +752,9 @@ func renderFormalCheckProcessBody(expected Snapshot) string {
 		"truth_version_ref: " + expected.SpecVersionRef,
 		"truth_fingerprint: " + expected.SpecFingerprint,
 		"unit_appendix_snapshot: none",
-		"system_constraints_stable_file_ref: none",
-		"system_constraints_stable_version_ref: none",
-		"system_constraints_stable_fingerprint: none",
+		"system_constraints_file_ref: none",
+		"system_constraints_version_ref: none",
+		"system_constraints_fingerprint: none",
 		"shared_contract_snapshot: none",
 	}, "\n")
 }
@@ -768,9 +765,9 @@ func renderFormalPlanProcessBody(expected Snapshot) string {
 		"spec_version_ref: " + expected.SpecVersionRef,
 		"spec_fingerprint: " + expected.SpecFingerprint,
 		"unit_appendix_snapshot: none",
-		"system_constraints_stable_file_ref: none",
-		"system_constraints_stable_version_ref: none",
-		"system_constraints_stable_fingerprint: none",
+		"system_constraints_file_ref: none",
+		"system_constraints_version_ref: none",
+		"system_constraints_fingerprint: none",
 		"shared_contract_snapshot: none",
 	}, "\n")
 }

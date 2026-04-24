@@ -410,7 +410,7 @@ func TestSyncImpactRejectsStableModuleBindingCandidateShared(t *testing.T) {
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs:",
 		"   - c_shared_demo@0.1.0",
 		"",
@@ -508,7 +508,7 @@ func TestSyncImpactStableLandingModuleStillReroutesOnUnrelatedSharedDrift(t *tes
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs:",
 		"   - s_shared_demo@1.0.0",
 		"   - s_shared_extra@1.1.0",
@@ -571,7 +571,7 @@ func TestSyncImpactMixedSharedRefsStillInvalidateOnNonExemptRef(t *testing.T) {
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs:",
 		"   - c_shared_demo@0.1.0",
 		"   - c_shared_extra@0.2.0",
@@ -680,7 +680,7 @@ func TestSyncImpactDoesNotExpandScopeWithExplicitModuleSelector(t *testing.T) {
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs: none",
 		"",
 	}, "\n"))
@@ -700,7 +700,7 @@ func TestSyncImpactDoesNotExpandScopeWithExplicitModuleSelector(t *testing.T) {
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs: none",
 		"",
 	}, "\n"))
@@ -751,7 +751,7 @@ func TestSyncImpactIncludesCandidateModuleWhenSelectedBindingWasRemovedFromCurre
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs: none",
 		"",
 	}, "\n"))
@@ -791,7 +791,7 @@ func TestSyncImpactIgnoresIncompleteRemovedBindingEvidenceForModule(t *testing.T
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs: none",
 		"",
 	}, "\n"))
@@ -839,7 +839,7 @@ func TestSyncImpactIgnoresModuleEvidenceThatDoesNotMatchCurrentModuleIdentity(t 
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs: none",
 		"",
 	}, "\n"))
@@ -902,7 +902,7 @@ func TestSyncImpactIgnoresModuleEvidenceWhenCurrentTruthChangedBeyondRemovedBind
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs: none",
 		"",
 	}, "\n"))
@@ -968,7 +968,7 @@ Body stays the same.
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs:",
 		"   - s_shared_demo@1.0.0",
 		"",
@@ -998,7 +998,7 @@ Body stays the same.
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs: none",
 		"",
 	}, "\n"))
@@ -1079,7 +1079,7 @@ Body stays the same.
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs:",
 		"   - c_shared_demo@0.1.0",
 		"   - c_shared_alpha@0.1.0",
@@ -1124,7 +1124,7 @@ func TestSyncImpactIncludesRemovedBindingWhenSharedIDIsUnambiguous(t *testing.T)
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs: none",
 		"",
 	}, "\n"))
@@ -1161,7 +1161,7 @@ func TestSyncImpactRejectsEmptySharedContractRefsList(t *testing.T) {
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs:",
 		"",
 	}, "\n"))
@@ -1194,7 +1194,7 @@ func TestSyncImpactRejectsDuplicateSharedContractRefs(t *testing.T) {
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs:",
 		"   - c_shared_demo@0.1.0",
 		"   - c_shared_demo@0.1.0",
@@ -1264,7 +1264,7 @@ func TestSyncImpactIncludesCandidateFlowWhenSelectedBindingWasRemovedFromCurrent
 		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
-		"4. system_constraints_stable_ref: none",
+		"4. system_constraints_ref: none",
 		"",
 	}, "\n"))
 	writeNamedProcessFile(t, repoRoot, "check", "demo", storedProcess)
@@ -1306,7 +1306,7 @@ func TestSyncImpactIgnoresFlowEvidenceWithUnrelatedSharedSnapshotDelta(t *testin
 		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
-		"4. system_constraints_stable_ref: none",
+		"4. system_constraints_ref: none",
 		"",
 	}, "\n"))
 	writeNamedProcessFile(t, repoRoot, "check", "demo", renderFlowProcessSnapshotForTest(t, repoRoot, "check", "demo", false, []string{
@@ -1356,7 +1356,7 @@ func TestSyncImpactFailsClosedWhenCurrentFlowTruthCannotBeRebuilt(t *testing.T) 
 		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: invalid",
 		"3. shared_contract_refs: none",
-		"4. system_constraints_stable_ref: none",
+		"4. system_constraints_ref: none",
 		"",
 	}, "\n"))
 	writeNamedProcessFile(t, repoRoot, "check", "demo", renderFlowProcessSnapshotForTest(t, repoRoot, "check", "demo", false, []string{
@@ -1408,7 +1408,7 @@ func TestSyncImpactIgnoresIncompleteRemovedBindingEvidenceForFlow(t *testing.T) 
 		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
-		"4. system_constraints_stable_ref: none",
+		"4. system_constraints_ref: none",
 		"",
 	}, "\n"))
 	writeNamedProcessFile(t, repoRoot, "check", "demo", strings.Join([]string{
@@ -1454,7 +1454,7 @@ func TestSyncImpactIgnoresFlowEvidenceWithMismatchedModuleSnapshot(t *testing.T)
 		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
-		"4. system_constraints_stable_ref: none",
+		"4. system_constraints_ref: none",
 		"",
 	}, "\n"))
 	writeNamedProcessFile(t, repoRoot, "check", "demo", renderFlowProcessSnapshotForTest(t, repoRoot, "check", "demo", false, []string{
@@ -1513,7 +1513,7 @@ func TestSyncImpactAcceptsMarkdownBulletRemovedBindingEvidenceForFlow(t *testing
 		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
-		"4. system_constraints_stable_ref: none",
+		"4. system_constraints_ref: none",
 		"",
 	}, "\n"))
 	writeNamedProcessFile(t, repoRoot, "check", "demo", storedProcess)
@@ -1554,7 +1554,7 @@ func TestSyncImpactAcceptsRemovedBindingEvidenceWhenTruthUsesBacktickedSharedRef
 		"2. unit_refs: none",
 		"3. shared_contract_refs:",
 		"   - `c_shared_demo@0.1.0`",
-		"4. system_constraints_stable_ref: none",
+		"4. system_constraints_ref: none",
 		"",
 	}, "\n"))
 	storedProcess := renderFlowProcessSnapshotForTest(t, repoRoot, "check", "demo", false, []string{
@@ -1578,7 +1578,7 @@ func TestSyncImpactAcceptsRemovedBindingEvidenceWhenTruthUsesBacktickedSharedRef
 		"1. repository_mapping_ref: repository_mapping@0.1.0",
 		"2. unit_refs: none",
 		"3. shared_contract_refs: none",
-		"4. system_constraints_stable_ref: none",
+		"4. system_constraints_ref: none",
 		"",
 	}, "\n"))
 	writeNamedProcessFile(t, repoRoot, "check", "demo", storedProcess)
@@ -1718,7 +1718,7 @@ func setupCandidateSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs:",
 		"   - c_shared_demo@0.1.0",
 		"",
@@ -1777,7 +1777,7 @@ func setupStableSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"## Global Constraint Alignment",
 		"",
-		"1. system_constraints_stable_ref: none",
+		"1. system_constraints_ref: none",
 		"2. shared_contract_refs:",
 		"   - s_shared_demo@1.0.0",
 		"",
@@ -1842,7 +1842,7 @@ func setupCandidateFlowSharedRepo(t *testing.T, repoRoot string) string {
 		"2. unit_refs: none",
 		"3. shared_contract_refs:",
 		"   - c_shared_demo@0.1.0",
-		"4. system_constraints_stable_ref: none",
+		"4. system_constraints_ref: none",
 		"",
 	}, "\n"))
 
@@ -1941,9 +1941,9 @@ func renderModuleProcessSnapshotForTest(t *testing.T, repoRoot, processKind, mod
 		"truth_file_ref: " + mainSpecRef,
 		"truth_version_ref: c_unit_" + module + "@0.1.0",
 		"truth_fingerprint: " + truthFingerprint,
-		"system_constraints_stable_file_ref: none",
-		"system_constraints_stable_version_ref: none",
-		"system_constraints_stable_fingerprint: none",
+		"system_constraints_file_ref: none",
+		"system_constraints_version_ref: none",
+		"system_constraints_fingerprint: none",
 	}
 	if processKind == "verify" {
 		scalars = append(scalars, "verification_scope_ref: current candidate")
@@ -1993,9 +1993,9 @@ func renderFlowProcessSnapshotForTest(t *testing.T, repoRoot, processKind, objec
 		"truth_file_ref: " + mainSpecRef,
 		"truth_version_ref: c_scenario_" + object + "@0.1.0",
 		"truth_fingerprint: " + truthFingerprint,
-		"system_constraints_stable_file_ref: none",
-		"system_constraints_stable_version_ref: none",
-		"system_constraints_stable_fingerprint: none",
+		"system_constraints_file_ref: none",
+		"system_constraints_version_ref: none",
+		"system_constraints_fingerprint: none",
 	}
 	if processKind == "verify" {
 		scalars = append(scalars, "verification_scope_ref: current candidate")

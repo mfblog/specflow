@@ -10,7 +10,7 @@
 6. `specflow/framework/docs/agent_guidelines/*.md` and `specflow/framework/docs/agent_guidelines/commands/*.md` are part of repository governance and should normally be committed in the current task.
 7. Changes to registered entry index files are also governance changes and should normally be committed in the current task after entry-file sync is complete.
 8. When `Active Layer=stable` and code changes introduce new formal-layer implementation drift, the unit's `Next Command` should normally fall back to `unit_stable_verify`.
-9. `docs/specs/system_constraints/stable/s_system_constraints.md` is treated by default as a formal side product of unit `unit_promote`.
+9. `docs/specs/system_constraints.md` is treated by default as a formal side product of unit `unit_promote`.
 10. `docs/specs/shared_contracts/candidate/*.md` are draft-layer shared truth files and follow candidate-layer commit rules by default.
 
 ---
@@ -47,7 +47,7 @@ Rules:
 1. The commit must update or create the corresponding `stable`.
 2. The commit must delete the round's `docs/specs/units/candidate/c_unit_{unit}.md` and that unit's round-specific candidate appendix files under `docs/specs/units/candidate/appendix/` or an equivalent dedicated subdirectory. If the round also handled Shared Contract files, it must also resolve the corresponding `docs/specs/shared_contracts/candidate/*.md` or `docs/specs/shared_contracts/stable/*.md`.
 3. If `_check_result/{unit}.md`, `_verify_result/{unit}.md`, `_plans/draft/{unit}.md`, or `_plans/active/{unit}.md` exist for the round, they must be deleted in the same commit.
-4. If the unit candidate contains a closed `system_constraints_change_proposal` that is promoted in the same round, the same commit must also update `docs/specs/system_constraints/stable/s_system_constraints.md`.
+4. If the unit candidate contains a closed `system_constraints_change_proposal` that is promoted in the same round, the same commit must also update `docs/specs/system_constraints.md`.
 
 ---
 
@@ -64,7 +64,7 @@ Versions use `MAJOR.MINOR.PATCH`.
 3. `PATCH`
    - implementation-only fix or alignment-only fix against the current aligned layer
 
-### 4.2 `s_system_constraints.md`
+### 4.2 `system_constraints.md`
 
 1. `MAJOR`
    - incompatible global constraint change
@@ -97,8 +97,8 @@ Notes:
 
 Rules:
 
-1. The default closure scope of `unit_promote` includes only the round's unit `stable`, any linked update to `s_system_constraints.md`, any Shared Contract handled in the round, and cleanup of the round's candidate main file, candidate appendix files, and candidate-side process files.
-2. Promotion does not by itself force a Shared Contract to be absorbed into `s_system_constraints.md` or unit `stable`.
+1. The default closure scope of `unit_promote` includes only the round's unit `stable`, any linked update to `system_constraints.md`, any Shared Contract handled in the round, and cleanup of the round's candidate main file, candidate appendix files, and candidate-side process files.
+2. Promotion does not by itself force a Shared Contract to be absorbed into `system_constraints.md` or unit `stable`.
 3. A Shared Contract may remain an independent stable shared truth after promotion.
 4. This repository does not currently require maintaining a root `VERSION` file during `unit_promote`.
 5. This repository does not currently require creating a Git tag during `unit_promote`.
@@ -112,7 +112,7 @@ Rules:
 If the task changes only `docs/specs/*.md`:
 
 1. If it changes `docs/specs/units/candidate/c_unit_{unit}.md`, candidate appendix files under `docs/specs/units/candidate/appendix/` or an equivalent dedicated subdirectory, or `docs/specs/shared_contracts/candidate/*.md`, commit when the round has reached a reviewable checkpoint. Purely temporary incomplete draft saves do not require their own commit.
-2. If it changes `docs/specs/units/stable/*.md`, stable appendix files under `docs/specs/units/stable/appendix/*.md` or an equivalent dedicated subdirectory, `docs/specs/shared_contracts/stable/*.md`, `docs/specs/system_constraints/stable/*.md`, `docs/specs/_status.md`, `docs/specs/_check_result/*.md`, `docs/specs/_verify_result/*.md`, or `docs/specs/_plans/**/*.md`, it should normally be committed in the current task.
+2. If it changes `docs/specs/units/stable/*.md`, stable appendix files under `docs/specs/units/stable/appendix/*.md` or an equivalent dedicated subdirectory, `docs/specs/shared_contracts/stable/*.md`, `docs/specs/system_constraints.md`, `docs/specs/_status.md`, `docs/specs/_check_result/*.md`, `docs/specs/_verify_result/*.md`, or `docs/specs/_plans/**/*.md`, it should normally be committed in the current task.
 3. `docs/specs/_plans/draft/*.md` are planning working artifacts; they may be committed together with a reviewable checkpoint, but a blocked planning round does not require a standalone commit solely to preserve draft accumulation.
 4. If `stable` changes, treat it as a formal contract change. If the task hits `unit_promote`, follow the promotion-commit rules.
 5. If a `candidate` change belongs to the same command flow as the corresponding code implementation, plan file, check result, verify result, or promotion commit, commit the checkpoint as one traceable unit instead of leaving candidate-only drift in the worktree.

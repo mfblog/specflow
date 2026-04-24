@@ -11,7 +11,7 @@ By default it handles:
 1. promoting the candidate version into the formal version
 2. updating state files
 3. cleaning this round's candidate and process files
-4. updating `s_system_constraints.md` when a closed unit-carried global proposal is ready
+4. updating `system_constraints.md` when a closed unit-carried global proposal is ready
 5. consuming the `unit_verify -> unit_promote` handoff only when verification still covers the current round
 
 ### 2.1 Lifecycle-State Advance Inheritance
@@ -25,7 +25,7 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
 2. `_status.md` says `Next Command=unit_promote`
 3. a latest valid `_verify_result/{unit}.md` still covers the current candidate, current implementation, and current formal global baseline state
 4. implementation alignment is complete and no blocking verification issue remains
-5. the candidate's `system_constraints_stable_ref` matches the current formal global baseline state
+5. the candidate's `system_constraints_ref` matches the current formal global baseline state
 6. read required candidate appendix files and any Shared Contract files already bound by the unit candidate or otherwise already known to be touched by this promotion round, and decide how each touched Shared Contract file will be handled after promotion
    - if any touched candidate-layer Shared Contract file already has a stable-layer sibling, also read that file's `promotion_owner_unit`
 7. read `specflow/framework/docs/agent_guidelines/recovery_policy.md` before promotion
@@ -83,18 +83,18 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
      - write exactly one next `promotion_owner_unit`
      - do not leave it as a candidate-layer duplicate of the just-landed stable truth
    - if current repository truth is insufficient to define that retained next-round draft or its next `promotion_owner_unit` safely, stop before file mutation and reroute through `shared_ops:{natural-language request}`
-   - if part of its conclusion has become a project-wide default rule, also absorb that specific conclusion into `s_system_constraints.md`
+   - if part of its conclusion has become a project-wide default rule, also absorb that specific conclusion into `system_constraints.md`
    - do not absorb a Shared Contract into unit `stable` merely because promotion happened
    - do not treat promotion itself as a reason to delete a still-needed Shared Contract
    - if the round changed a shared item that has both stable-layer and candidate-layer files, resolve which units are expected to remain bound to each layer after promotion from the repository-wide binding view before continuing
    - if this round's topology change or linked `system_constraints` absorption would leave a touched Shared Contract file with no formal bound units, this promotion round owns resolving that file's terminal state instead of leaving orphaned shared truth for later cleanup
-   - if such a touched file now has no formal bound units and cleanup is legal under `spec_policy.md`, delete it in this round when it has been replaced by the promoted target or when its remaining conclusion has been fully absorbed into `s_system_constraints.md`
+   - if such a touched file now has no formal bound units and cleanup is legal under `spec_policy.md`, delete it in this round when it has been replaced by the promoted target or when its remaining conclusion has been fully absorbed into `system_constraints.md`
    - if such a touched file now has no formal bound units and the round intentionally keeps it as independently authored shared truth, write that same file with:
      - `unbound_retention: intentional`
      - `unbound_retention_reason: <why this unbound state is intentional now>`
      - `unbound_retention_owner: unit_promote`
    - if the required post-promotion truth shape is still unclear, or the round cannot safely judge whether an unbound touched file should be deleted or kept as independently authored shared truth, stop promotion and require rerouting through `shared_ops:{natural-language request}` from current repository truth instead of guessing a unit-local-only continuation
-10. if the unit candidate contains a closed `system_constraints_change_proposal` that this round has implemented and verified, absorb the promoted conclusion into `docs/specs/system_constraints/stable/s_system_constraints.md`
+10. if the unit candidate contains a closed `system_constraints_change_proposal` that this round has implemented and verified, absorb the promoted conclusion into `docs/specs/system_constraints.md`
 11. generate or update `docs/specs/units/stable/s_unit_{unit}.md`
 12. if current-round candidate appendix files exist, in the same promotion round either:
    - migrate retained content to `docs/specs/units/stable/appendix/` or an equivalent dedicated subdirectory

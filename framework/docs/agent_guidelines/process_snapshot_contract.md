@@ -52,11 +52,11 @@ Every gate-bearing process file covered by this contract must record:
    - `<file_prefix>@<version>`
 5. `truth_fingerprint`
    - the Section 6 fingerprint of `truth_file_ref`
-6. `system_constraints_stable_file_ref`
+6. `system_constraints_file_ref`
    - the currently bound stable system-constraints file, or `none`
-7. `system_constraints_stable_version_ref`
+7. `system_constraints_version_ref`
    - the currently bound stable system-constraints version, or `none`
-8. `system_constraints_stable_fingerprint`
+8. `system_constraints_fingerprint`
    - the fingerprint of the currently bound stable system-constraints file, or `none`
 
 Gate-bearing process files are:
@@ -84,11 +84,11 @@ Every unit active plan file must record:
    - the Section 6 fingerprint of `spec_file_ref`
 4. `unit_appendix_snapshot`
    - the normalized appendix snapshot of the current candidate-layer unit truth, or `none`
-5. `system_constraints_stable_file_ref`
+5. `system_constraints_file_ref`
    - the currently bound stable system-constraints file, or `none`
-6. `system_constraints_stable_version_ref`
+6. `system_constraints_version_ref`
    - the currently bound stable system-constraints version, or `none`
-7. `system_constraints_stable_fingerprint`
+7. `system_constraints_fingerprint`
    - the fingerprint of the currently bound stable system-constraints file, or `none`
 8. `shared_contract_snapshot`
    - the normalized shared snapshot of the current candidate-layer unit truth, or `none`
@@ -206,7 +206,7 @@ This same fingerprint contract applies to:
 3. appendix file fingerprints
 4. `unit_snapshot` item fingerprints
 5. `shared_contract_snapshot` item fingerprints
-6. `system_constraints_stable_fingerprint`
+6. `system_constraints_fingerprint`
 
 ## 7. Text Normalization Rules
 

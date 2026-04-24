@@ -38,14 +38,14 @@ Only a new independent full-scope run of `unit_stable_verify` may produce that a
 5. the module has valid `stable`
 6. there is actual implementation context that must be checked
 7. read any explicitly referenced stable appendix files or bound stable Shared Contract files
-8. read `s_system_constraints.md` if the stable truth explicitly records `system_constraints_stable_ref`, or if the verification scenario otherwise requires global-baseline or shared-mechanism judgment
+8. read `system_constraints.md` if the stable truth explicitly records `system_constraints_ref`, or if the verification scenario otherwise requires global-baseline or shared-mechanism judgment
 9. read the git policy if commit-triggering files may change
 
 ## 4. Procedure
 
 1. read `docs/specs/units/stable/s_unit_{unit}.md` and any required appendix or Shared Contract files
-2. if the stable truth explicitly records `system_constraints_stable_ref`, or if the verification scenario otherwise requires global-baseline or shared-mechanism judgment, read `s_system_constraints.md`
-3. if the stable truth explicitly records `system_constraints_stable_ref`, judge whether that recorded reference still matches the current formal global baseline state
+2. if the stable truth explicitly records `system_constraints_ref`, or if the verification scenario otherwise requires global-baseline or shared-mechanism judgment, read `system_constraints.md`
+3. if the stable truth explicitly records `system_constraints_ref`, judge whether that recorded reference still matches the current formal global baseline state
 4. verify current code against key protocols, main flow, error handling, and acceptance criteria in `stable`
 5. build a structured verification evidence matrix covering at least:
    - `Spec Item`
@@ -64,7 +64,7 @@ Only a new independent full-scope run of `unit_stable_verify` may produce that a
 9. classify deviations with the shared severity meanings defined by `specflow/framework/docs/agent_guidelines/severity_policy.md`
 10. conclude:
    - if explicitly referenced stable appendix truth changed enough that the current stable-alignment claim must be re-judged, the result can only be "stable truth drift exists; rerun stable verification against the current stable truth"
-   - if the recorded `system_constraints_stable_ref` no longer matches the current formal global baseline state, the result can only be "global-baseline drift exists; rerun stable verification against the current formal baseline"
+   - if the recorded `system_constraints_ref` no longer matches the current formal global baseline state, the result can only be "global-baseline drift exists; rerun stable verification against the current formal baseline"
    - if any `fail` exists, the result can only be "drift exists; return to stable first"
    - `partial` and `not_checked` are non-blocking only when `specflow/framework/docs/agent_guidelines/downgrade_policy.md` allows downgrade for the current evidence state
    - if key deviations are cleared and evidence is complete, the result is "still aligned with stable"
@@ -91,7 +91,7 @@ Only a new independent full-scope run of `unit_stable_verify` may produce that a
 1. verification conclusion
 2. structured verification evidence matrix
 3. `Coverage Summary`
-4. formal global baseline alignment result when `system_constraints_stable_ref` is part of the stable truth
+4. formal global baseline alignment result when `system_constraints_ref` is part of the stable truth
 5. downgrade decision when `partial` or `not_checked` exists
 6. deviation list
 7. `fallback_reason_code` when stable alignment cannot be claimed safely

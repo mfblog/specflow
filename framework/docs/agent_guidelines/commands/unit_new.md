@@ -17,7 +17,7 @@ By default this command handles:
 1. first-time project initiation for a new unit
 2. units that do not yet have any formally effective version
 3. creation of the first `candidate`
-4. initialization of `system_constraints_stable_ref` and `shared_contract_refs`
+4. initialization of `system_constraints_ref` and `shared_contract_refs`
 
 It does not:
 
@@ -43,7 +43,7 @@ Only a new independent full-scope run of `unit_new` may produce that advancing r
 
 ## 4. Procedure
 
-1. if `s_system_constraints.md` exists, read it as the current formal global baseline; otherwise continue with the "no formal global baseline yet" state
+1. if `system_constraints.md` exists, read it as the current formal global baseline; otherwise continue with the "no formal global baseline yet" state
 2. decide whether the first candidate already reuses existing shared truth:
    - if no, the round may initialize `shared_contract_refs=none`
    - if yes, the round must bind that shared truth explicitly in the first candidate instead of using `none`
@@ -52,7 +52,7 @@ Only a new independent full-scope run of `unit_new` may produce that advancing r
 5. initialize `frontmatter.version` to `0.1.0`
 6. ensure the file covers the core sections of a formal Spec
 7. initialize `Global Constraint Alignment`:
-   - `system_constraints_stable_ref=s_system_constraints@<current_version>` if the formal global baseline exists, otherwise `none`
+   - `system_constraints_ref=system_constraints@<current_version>` if the formal global baseline exists, otherwise `none`
    - write `shared_contract_refs=none` only when the first candidate does not yet reuse shared truth
    - if the first candidate already reuses existing shared truth, write the explicit `shared_contract_refs` set using the Shared Contract binding contract from `specflow/framework/docs/agent_guidelines/spec_policy.md` Section 6.1 and explain that reuse in the candidate body in the same round
    - `shared_mechanism_reuse_summary`
