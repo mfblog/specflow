@@ -53,11 +53,11 @@ Every gate-bearing process file covered by this contract must record:
 5. `truth_fingerprint`
    - the Section 6 fingerprint of `truth_file_ref`
 6. `system_constraints_file_ref`
-   - the currently bound stable system-constraints file, or `none`
+   - the currently bound system-constraints file, or `none`
 7. `system_constraints_version_ref`
-   - the currently bound stable system-constraints version, or `none`
+   - the currently bound system-constraints version, or `none`
 8. `system_constraints_fingerprint`
-   - the fingerprint of the currently bound stable system-constraints file, or `none`
+   - the fingerprint of the currently bound system-constraints file, or `none`
 
 Gate-bearing process files are:
 
@@ -85,11 +85,11 @@ Every unit active plan file must record:
 4. `unit_appendix_snapshot`
    - the normalized appendix snapshot of the current candidate-layer unit truth, or `none`
 5. `system_constraints_file_ref`
-   - the currently bound stable system-constraints file, or `none`
+   - the currently bound system-constraints file, or `none`
 6. `system_constraints_version_ref`
-   - the currently bound stable system-constraints version, or `none`
+   - the currently bound system-constraints version, or `none`
 7. `system_constraints_fingerprint`
-   - the fingerprint of the currently bound stable system-constraints file, or `none`
+   - the fingerprint of the currently bound system-constraints file, or `none`
 8. `shared_contract_snapshot`
    - the normalized shared snapshot of the current candidate-layer unit truth, or `none`
 
@@ -255,7 +255,7 @@ At minimum:
 
 1. for gate-bearing files, rebuild the common `truth_*` fields
 2. for unit plan files, rebuild `spec_file_ref`, `spec_version_ref`, and `spec_fingerprint`
-3. rebuild the currently bound `system_constraints_stable_*` fields
+3. rebuild the currently bound `system_constraints_*` fields
 4. rebuild the object-specific snapshot fields allowed for that object type
 5. compare stored and rebuilt values exactly
 
