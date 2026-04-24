@@ -41,7 +41,7 @@ It must answer these sections:
    - support-surface paths
    - conflict resolution order
 5. `Global Constraint Alignment`
-   - which stable `system_constraints` version currently constrains the repository mapping
+   - which `system_constraints` version currently constrains the repository mapping
 6. `Drift Handling`
    - what counts as mapping drift
    - which consuming command must stop when the mapping no longer matches the repository

@@ -724,7 +724,7 @@ func writeSnapshotUsage(w io.Writer) {
 
 func writeStatusUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl status set-object --type project|scenario|unit --object OBJECT --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl status set-object --type scenario|unit --object OBJECT --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl status set-unit --unit UNIT --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
 }
 
