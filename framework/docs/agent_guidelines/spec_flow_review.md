@@ -4,12 +4,13 @@
 
 `spec_flow_review` reviews the governance mechanism itself.
 
-It answers four questions:
+It answers five questions:
 
 1. whether the governance rule set still closes the full Spec Flow
 2. whether the tooling layer still matches the rule layer
 3. whether shared-governance and impact-reconciliation semantics still converge with the command core
-4. whether the repository may still claim one coherent governance baseline
+4. whether governance documents can bootstrap an executor that does not already know `specFlow`
+5. whether the repository may still claim one coherent governance baseline
 
 Plain input `spec_flow_review` means the default governance-baseline review defined in this file unless the user explicitly narrows scope.
 
@@ -37,14 +38,18 @@ The default scope includes:
    - `specflow/templates/root/AGENTS.md`
    - `specflow/templates/root/GEMINI.md`
    - `specflow/templates/root/CLAUDE.md`
-5. entry registry and project-standard governance files
+5. project entry files
+   - `AGENTS.md`
+   - `GEMINI.md`
+   - `CLAUDE.md`
+6. entry registry and project-standard governance files
    - `specflow/framework/docs/agent_guidelines/entry_index_registry.md`
    - `specflow/framework/docs/agent_guidelines/project_standards_policy.md`
    - `specflow/framework/docs/agent_guidelines/project_standard_create.md`
    - `specflow/templates/root/docs/project_standards/_registry.md`
    - `docs/project_standards/_registry.md`
    - the active registered project-local standards in scope
-6. tooling contract and tooling source
+7. tooling contract and tooling source
    - `specflow/framework/docs/agent_guidelines/tooling_execution_policy.md`
    - `specflow/tooling/README.md`
    - `specflow/tooling/cmd/**/*.go`
@@ -58,8 +63,10 @@ Default scope must explicitly include:
    - at minimum `impact_sync_policy.md`, `process_snapshot_contract.md`, `recovery_policy.md`, template `_status.md`, and the process README files
 3. the tooling execution contract set
    - at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, and the in-scope tooling source files
+4. the executor-bootstrap clarity standard
+   - at minimum `executor_bootstrap_clarity.md`, entry files, routing policy files, command policy files, command files, shared-governance files, review policy files, and process-state contract files in the current review scope
 
-If any one of those three coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
+If any one of those four coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
 
 ## 3. Review Blocks
 
@@ -67,6 +74,8 @@ For the default governance-baseline review, the execution-local `review_plan` mu
 
 1. `review_and_command_core`
    - `spec_flow_review.md`
+   - `spec_flow_design_review.md`
+   - `executor_bootstrap_clarity.md`
    - `spec_policy.md`
    - `command_policy.md`
    - `natural_language_routing.md`
@@ -110,6 +119,9 @@ For the default governance-baseline review, the execution-local `review_plan` mu
    - `entry_index_registry.md`
    - `project_standards_policy.md`
    - `project_standard_create.md`
+   - `AGENTS.md`
+   - `GEMINI.md`
+   - `CLAUDE.md`
    - `specflow/templates/root/AGENTS.md`
    - `specflow/templates/root/GEMINI.md`
    - `specflow/templates/root/CLAUDE.md`
@@ -121,9 +133,33 @@ For the default governance-baseline review, the execution-local `review_plan` mu
    - `specflow/tooling/README.md`
    - `specflow/tooling/cmd/**/*.go`
    - `specflow/tooling/internal/**/*.go`
+7. `executor_bootstrap_clarity`
+   - `executor_bootstrap_clarity.md`
+   - `spec_flow_review.md`
+   - `spec_flow_design_review.md`
+   - `AGENTS.md`
+   - `GEMINI.md`
+   - `CLAUDE.md`
+   - `specflow/templates/root/AGENTS.md`
+   - `specflow/templates/root/GEMINI.md`
+   - `specflow/templates/root/CLAUDE.md`
+   - `natural_language_routing.md`
+   - `command_policy.md`
+   - `implementation_change_policy.md`
+   - `checkpoint_protocol.md`
+   - `shared_ops.md`
+   - `commands/*.md`
+   - `specflow/templates/root/docs/specs/_status.md`
+   - `specflow/templates/root/docs/specs/_check_result/README.md`
+   - `specflow/templates/root/docs/specs/_plans/README.md`
+   - `specflow/templates/root/docs/specs/_plans/draft/README.md`
+   - `specflow/templates/root/docs/specs/_plans/active/README.md`
+   - `specflow/templates/root/docs/specs/_verify_result/README.md`
 
 `repository_mapping` and `scenario` do not become independent review blocks.
 They are reviewed inside `review_and_command_core`, plus their process and tooling contracts in the other fixed blocks.
+`executor_bootstrap_clarity` is a cross-cutting review block.
+Files may appear in this block and in their owner block at the same time.
 
 ## 4. Required Cross-Block Convergence Checks
 
@@ -139,6 +175,10 @@ For the default governance-baseline review, the minimum cross-block convergence 
 8. `process_and_state_contracts <-> impact_reconciliation`
 9. `process_and_state_contracts <-> tooling_execution_contract`
 10. `entry_and_project_local_extension <-> tooling_execution_contract`
+11. `executor_bootstrap_clarity <-> review_and_command_core`
+12. `executor_bootstrap_clarity <-> shared_governance`
+13. `executor_bootstrap_clarity <-> process_and_state_contracts`
+14. `executor_bootstrap_clarity <-> entry_and_project_local_extension`
 
 If a narrowed review still crosses one of those boundaries and the owner block is not included, the review must stop without `pass`.
 
@@ -154,6 +194,7 @@ Before execution:
    - shared-governance coverage
    - impact-reconciliation coverage
    - tooling coverage
+   - executor-bootstrap clarity coverage
 6. if project-local governance standards are registered, resolve the active in-scope entries from `docs/project_standards/_registry.md`
 
 If any in-scope file cannot be assigned to a review block, do not issue `pass`.
@@ -167,11 +208,12 @@ If any in-scope file cannot be assigned to a review block, do not issue `pass`.
    - side effects
    - contract drift
    - missing ownership
-4. complete the required cross-block convergence checks
-5. produce findings ordered by governance risk
+4. review the `executor_bootstrap_clarity` block against `specflow/framework/docs/agent_guidelines/executor_bootstrap_clarity.md`
+5. complete the required cross-block convergence checks
+6. produce findings ordered by governance risk
    - every real finding must use the fixed finding contract from Section 7.1
    - do not collapse a real finding into a one-line conclusion with no repair guidance
-6. issue the final result only after block review and cross-block convergence are both complete
+7. issue the final result only after block review, executor-bootstrap clarity review, and cross-block convergence are all complete
 
 ## 7. Output Contract
 
@@ -184,15 +226,16 @@ The output must report at least:
 5. the shared-governance coverage result
 6. the impact-reconciliation coverage result
 7. the tooling coverage result
-8. the cross-block convergence results
-9. the findings result:
+8. the executor-bootstrap clarity result
+9. the cross-block convergence results
+10. the findings result:
    - explicit `none` when no real finding exists
    - otherwise every finding must satisfy Section 7.1
-10. the final conclusion:
+11. the final conclusion:
    - `pass`
    - `blocked`
 
-If the output does not explicitly report Items 5 through 9, the review is not complete.
+If the output does not explicitly report Items 5 through 10, the review is not complete.
 
 ### 7.1 Finding Contract
 
