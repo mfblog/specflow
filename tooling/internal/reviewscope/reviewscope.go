@@ -18,6 +18,8 @@ type SpecFlowScope struct {
 	SharedGovernanceFiles      []string
 	TemplateGovernanceFiles    []string
 	TemplateEntryFiles         []string
+	ProjectEntryFiles          []string
+	ExecutorBootstrapFiles     []string
 	ProjectRegistryFiles       []string
 	RegistryDiagnostics        []string
 	ToolingContractFiles       []string
@@ -65,6 +67,11 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/templates/root/GEMINI.md",
 		"specflow/templates/root/CLAUDE.md",
 	}
+	projectEntryFiles := []string{
+		"AGENTS.md",
+		"GEMINI.md",
+		"CLAUDE.md",
+	}
 	projectRegistryFiles := []string{
 		"docs/project_standards/_registry.md",
 	}
@@ -72,6 +79,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/docs/agent_guidelines/tooling_execution_policy.md",
 		"specflow/tooling/README.md",
 	}
+	bootstrapFiles := executorBootstrapFiles(projectEntryFiles, templateEntryFiles, templateGovernanceFiles)
 
 	toolingCmdFiles, err := walkRelativeFiles(repoRoot, "specflow/tooling/cmd", ".go")
 	if err != nil {
@@ -90,6 +98,8 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	required := append([]string{}, sharedFiles...)
 	required = append(required, templateGovernanceFiles...)
 	required = append(required, templateEntryFiles...)
+	required = append(required, projectEntryFiles...)
+	required = append(required, bootstrapFiles...)
 	required = append(required, projectRegistryFiles...)
 	required = append(required, toolingContractFiles...)
 	if err := ensureRelativeFiles(repoRoot, required); err != nil {
@@ -113,12 +123,31 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	scope.SharedGovernanceFiles = sharedFiles
 	scope.TemplateGovernanceFiles = templateGovernanceFiles
 	scope.TemplateEntryFiles = templateEntryFiles
+	scope.ProjectEntryFiles = projectEntryFiles
+	scope.ExecutorBootstrapFiles = bootstrapFiles
 	scope.ProjectRegistryFiles = projectRegistryFiles
 	scope.RegistryDiagnostics = sortAndDedupe(validation.Diagnostics)
 	scope.ToolingContractFiles = toolingContractFiles
 	scope.ToolingSourceFiles = sortAndDedupe(toolingSourceFiles)
 	scope.ActiveProjectStandardFiles = sortAndDedupe(activeStandardFiles)
 	return scope, nil
+}
+
+func executorBootstrapFiles(projectEntryFiles, templateEntryFiles, templateGovernanceFiles []string) []string {
+	files := []string{
+		"specflow/framework/docs/agent_guidelines/executor_bootstrap_clarity.md",
+		"specflow/framework/docs/agent_guidelines/spec_flow_review.md",
+		"specflow/framework/docs/agent_guidelines/spec_flow_design_review.md",
+		"specflow/framework/docs/agent_guidelines/natural_language_routing.md",
+		"specflow/framework/docs/agent_guidelines/command_policy.md",
+		"specflow/framework/docs/agent_guidelines/implementation_change_policy.md",
+		"specflow/framework/docs/agent_guidelines/checkpoint_protocol.md",
+		"specflow/framework/docs/agent_guidelines/shared_ops.md",
+	}
+	files = append(files, projectEntryFiles...)
+	files = append(files, templateEntryFiles...)
+	files = append(files, templateGovernanceFiles...)
+	return sortAndDedupe(files)
 }
 
 func globRelative(repoRoot, pattern string) ([]string, error) {

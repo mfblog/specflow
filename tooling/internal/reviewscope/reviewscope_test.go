@@ -9,6 +9,12 @@ import (
 func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceInputs(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_review.md"), "# review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_design_review.md"), "# design review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/executor_bootstrap_clarity.md"), "# bootstrap\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/natural_language_routing.md"), "# routing\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/command_policy.md"), "# command policy\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/implementation_change_policy.md"), "# implementation policy\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/checkpoint_protocol.md"), "# checkpoint\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/tooling_execution_policy.md"), "# tooling\n")
 	for _, name := range []string{
 		"shared_ops.md",
@@ -32,6 +38,9 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWrite(t, filepath.Join(repoRoot, "AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWrite(t, filepath.Join(repoRoot, "GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWrite(t, filepath.Join(repoRoot, "CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
 		"# Registry\n\n"+
@@ -55,11 +64,23 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if len(scope.RegistryDiagnostics) == 0 {
 		t.Fatalf("expected registry diagnostics, got none")
 	}
+	if !containsString(scope.ExecutorBootstrapFiles, "specflow/framework/docs/agent_guidelines/executor_bootstrap_clarity.md") {
+		t.Fatalf("expected executor bootstrap clarity file in scope, got %+v", scope.ExecutorBootstrapFiles)
+	}
+	if !containsString(scope.ProjectEntryFiles, "AGENTS.md") {
+		t.Fatalf("expected project entry files in scope, got %+v", scope.ProjectEntryFiles)
+	}
 }
 
 func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_review.md"), "# review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_design_review.md"), "# design review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/executor_bootstrap_clarity.md"), "# bootstrap\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/natural_language_routing.md"), "# routing\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/command_policy.md"), "# command policy\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/implementation_change_policy.md"), "# implementation policy\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/checkpoint_protocol.md"), "# checkpoint\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/tooling_execution_policy.md"), "# tooling\n")
 	for _, name := range []string{
 		"shared_ops.md",
@@ -83,6 +104,9 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWrite(t, filepath.Join(repoRoot, "AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWrite(t, filepath.Join(repoRoot, "GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWrite(t, filepath.Join(repoRoot, "CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
 		"# Registry\n\n"+
@@ -116,4 +140,13 @@ func mustWrite(t *testing.T, path, content string) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
