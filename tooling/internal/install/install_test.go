@@ -62,8 +62,8 @@ func TestDoctorFailsWhenProjectStandardsRegistryIsMissing(t *testing.T) {
 
 func TestInitAppendsManagedBlockToExistingEntryFile(t *testing.T) {
 	repoRoot := t.TempDir()
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/root/AGENTS.md\tAGENTS.md\tframework\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/templates/root/AGENTS.md"), "template host\n<!-- SPECFLOW:BEGIN -->\nmanaged body\n<!-- SPECFLOW:END -->\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "template host\n<!-- SPECFLOW:BEGIN -->\nmanaged body\n<!-- SPECFLOW:END -->\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "AGENTS.md"), "host content\n")
 
 	result, err := Init(repoRoot, false)
@@ -90,8 +90,8 @@ func TestInitAppendsManagedBlockToExistingEntryFile(t *testing.T) {
 func setupDoctorRepo(t *testing.T, repoRoot string) string {
 	t.Helper()
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), strings.Join([]string{
-		"templates/root/.githooks/pre-commit\t.githooks/pre-commit\tframework",
-		"templates/root/docs/project_standards/_registry.md\tdocs/project_standards/_registry.md\tproject",
+		"templates/.githooks/pre-commit\t.githooks/pre-commit\tframework",
+		"templates/docs/project_standards/_registry.md\tdocs/project_standards/_registry.md\tproject",
 	}, "\n")+"\n")
 	mustWriteFile(t, filepath.Join(repoRoot, ".githooks/pre-commit"), "#!/usr/bin/env bash\nspecflow/tooling/bin/specflowctl-linux-amd64 entry sync --stage\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), "# registry\n")

@@ -597,13 +597,13 @@ tooling 层很有用，但它不是新手第一天最该学的东西。
 
 如果你想真的把整套系统吃透，或者准备自己重构这套机制，建议按这个顺序读：
 
-1. `framework/docs/agent_guidelines/spec_policy.md`
-2. `framework/docs/agent_guidelines/command_policy.md`
-3. `framework/docs/agent_guidelines/natural_language_routing.md`
-4. `framework/docs/agent_guidelines/git_policy.md`
-5. `framework/docs/agent_guidelines/shared_ops.md`
-6. `framework/docs/agent_guidelines/spec_flow_review.md`
-7. `framework/docs/agent_guidelines/commands/` 下的命令文档
+1. `framework/spec_policy.md`
+2. `framework/command_policy.md`
+3. `framework/natural_language_routing.md`
+4. `framework/git_policy.md`
+5. `framework/shared_*.md` 下的 shared 治理流程文档
+6. `framework/spec_flow_review.md`
+7. `framework/commands/` 下的命令文档
 8. 安装到项目侧的 `docs/` 文件
 
 ## 文件所有权

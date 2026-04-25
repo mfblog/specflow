@@ -601,13 +601,13 @@ Its default scope now covers both the governance baseline documents and the gove
 
 If you want to deeply understand or redesign the system, read in this order:
 
-1. `framework/docs/agent_guidelines/spec_policy.md`
-2. `framework/docs/agent_guidelines/command_policy.md`
-3. `framework/docs/agent_guidelines/natural_language_routing.md`
-4. `framework/docs/agent_guidelines/git_policy.md`
-5. `framework/docs/agent_guidelines/shared_ops.md`
-6. `framework/docs/agent_guidelines/spec_flow_review.md`
-7. the command docs under `framework/docs/agent_guidelines/commands/`
+1. `framework/spec_policy.md`
+2. `framework/command_policy.md`
+3. `framework/natural_language_routing.md`
+4. `framework/git_policy.md`
+5. the shared-governance flow docs under `framework/shared_*.md`
+6. `framework/spec_flow_review.md`
+7. the command docs under `framework/commands/`
 8. the installed project-side files under `docs/`
 
 ## File Ownership

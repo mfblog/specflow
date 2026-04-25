@@ -8,16 +8,23 @@ import (
 
 func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceInputs(t *testing.T) {
 	repoRoot := t.TempDir()
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_review.md"), "# review\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_design_review.md"), "# design review\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/agent_operability_standard.md"), "# operability\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/natural_language_routing.md"), "# routing\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/command_policy.md"), "# command policy\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/implementation_change_policy.md"), "# implementation policy\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/checkpoint_protocol.md"), "# checkpoint\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/tooling_execution_policy.md"), "# tooling\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_review.md"), "# review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_design_review.md"), "# design review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/agent_operability_standard.md"), "# operability\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/natural_language_routing.md"), "# routing\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/command_policy.md"), "# command policy\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/implementation_change_policy.md"), "# implementation policy\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/checkpoint_protocol.md"), "# checkpoint\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/tooling_execution_policy.md"), "# tooling\n")
 	for _, name := range []string{
-		"shared_ops.md",
+		"candidate_handoff_contract.md",
+		"downgrade_policy.md",
+		"process_snapshot_contract.md",
+		"recovery_policy.md",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
+	}
+	for _, name := range []string{
 		"shared_new.md",
 		"shared_extract.md",
 		"shared_bind.md",
@@ -25,19 +32,26 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 		"shared_sync.md",
 		"shared_escape.md",
 	} {
-		mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines", name), "# "+name+"\n")
+		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
 	}
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/commands/unit_check.md"), "# unit_check\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_status.md"), "# status\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_check_result/README.md"), "# check\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_plans/README.md"), "# plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_plans/draft/README.md"), "# draft plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_plans/active/README.md"), "# active plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_verify_result/README.md"), "# verify\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/project_standards/_registry.md"), "# template registry\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	writeGuidanceSkillFiles(t, repoRoot)
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_status.md"), "# status\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_check_result/README.md"), "# check\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/README.md"), "# plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/draft/README.md"), "# draft plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/active/README.md"), "# active plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_verify_result/README.md"), "# verify\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/project_standards/_registry.md"), "# template registry\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_check_result/README.md"), "# project check\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/README.md"), "# project plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/README.md"), "# project draft plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/active/README.md"), "# project active plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_verify_result/README.md"), "# project verify\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# repository mapping\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
@@ -53,6 +67,7 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\nfunc main() {}\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/internal/demo/demo.go"), "package demo\nfunc Value() string { return \"demo\" }\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module example.com/specflow\n\ngo 1.22\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/go.sum"), "example.com/mod v1.0.0 h1:demo\n")
 
 	scope, err := CollectDefaultSpecFlowScope(repoRoot)
 	if err != nil {
@@ -64,26 +79,69 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if len(scope.RegistryDiagnostics) == 0 {
 		t.Fatalf("expected registry diagnostics, got none")
 	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/docs/agent_guidelines/agent_operability_standard.md") {
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/agent_operability_standard.md") {
 		t.Fatalf("expected agent operability file in scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/commands/unit_check.md") {
+		t.Fatalf("expected command files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.GuidanceSkillFiles, "specflow/framework/skills/using-specflow-guidance/SKILL.md") {
+		t.Fatalf("expected guidance skill files in scope, got %+v", scope.GuidanceSkillFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/skills/using-specflow-guidance/SKILL.md") {
+		t.Fatalf("expected guidance skill files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/shared_sync.md") {
+		t.Fatalf("expected shared-governance files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/process_snapshot_contract.md") {
+		t.Fatalf("expected process-state contract files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/tooling_execution_policy.md") {
+		t.Fatalf("expected tooling execution policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/tooling/README.md") {
+		t.Fatalf("expected tooling README in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.ProjectProcessStateFiles, "docs/specs/_verify_result/README.md") {
+		t.Fatalf("expected project-side process files in scope, got %+v", scope.ProjectProcessStateFiles)
+	}
+	if !containsString(scope.ProjectRepositoryTruthFiles, "docs/specs/repository_mapping.md") {
+		t.Fatalf("expected repository mapping truth in scope, got %+v", scope.ProjectRepositoryTruthFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "docs/specs/_verify_result/README.md") {
+		t.Fatalf("expected project-side process files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
 	if !containsString(scope.ProjectEntryFiles, "AGENTS.md") {
 		t.Fatalf("expected project entry files in scope, got %+v", scope.ProjectEntryFiles)
+	}
+	if !containsString(scope.ToolingSourceFiles, "specflow/tooling/go.mod") {
+		t.Fatalf("expected tooling go.mod in tooling source scope, got %+v", scope.ToolingSourceFiles)
+	}
+	if !containsString(scope.ToolingSourceFiles, "specflow/tooling/go.sum") {
+		t.Fatalf("expected tooling go.sum in tooling source scope when present, got %+v", scope.ToolingSourceFiles)
 	}
 }
 
 func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *testing.T) {
 	repoRoot := t.TempDir()
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_review.md"), "# review\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/spec_flow_design_review.md"), "# design review\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/agent_operability_standard.md"), "# operability\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/natural_language_routing.md"), "# routing\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/command_policy.md"), "# command policy\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/implementation_change_policy.md"), "# implementation policy\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/checkpoint_protocol.md"), "# checkpoint\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/tooling_execution_policy.md"), "# tooling\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_review.md"), "# review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_design_review.md"), "# design review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/agent_operability_standard.md"), "# operability\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/natural_language_routing.md"), "# routing\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/command_policy.md"), "# command policy\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/implementation_change_policy.md"), "# implementation policy\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/checkpoint_protocol.md"), "# checkpoint\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/tooling_execution_policy.md"), "# tooling\n")
 	for _, name := range []string{
-		"shared_ops.md",
+		"candidate_handoff_contract.md",
+		"downgrade_policy.md",
+		"process_snapshot_contract.md",
+		"recovery_policy.md",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
+	}
+	for _, name := range []string{
 		"shared_new.md",
 		"shared_extract.md",
 		"shared_bind.md",
@@ -91,19 +149,26 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 		"shared_sync.md",
 		"shared_escape.md",
 	} {
-		mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines", name), "# "+name+"\n")
+		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
 	}
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines/commands/unit_check.md"), "# unit_check\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_status.md"), "# status\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_check_result/README.md"), "# check\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_plans/README.md"), "# plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_plans/draft/README.md"), "# draft plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_plans/active/README.md"), "# active plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/specs/_verify_result/README.md"), "# verify\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/docs/project_standards/_registry.md"), "# template registry\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/root/CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	writeGuidanceSkillFiles(t, repoRoot)
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_status.md"), "# status\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_check_result/README.md"), "# check\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/README.md"), "# plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/draft/README.md"), "# draft plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/active/README.md"), "# active plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_verify_result/README.md"), "# verify\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/project_standards/_registry.md"), "# template registry\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_check_result/README.md"), "# project check\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/README.md"), "# project plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/README.md"), "# project draft plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/active/README.md"), "# project active plans\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_verify_result/README.md"), "# project verify\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# repository mapping\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
@@ -139,6 +204,20 @@ func mustWrite(t *testing.T, path, content string) {
 	}
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func writeGuidanceSkillFiles(t *testing.T, repoRoot string) {
+	t.Helper()
+	for _, relPath := range []string{
+		"specflow/framework/skills/using-specflow-guidance/SKILL.md",
+		"specflow/framework/skills/project-framing/SKILL.md",
+		"specflow/framework/skills/scope-cutting/SKILL.md",
+		"specflow/framework/skills/solution-design/SKILL.md",
+		"specflow/framework/skills/design-quality-review/SKILL.md",
+		"specflow/framework/skills/spec-writeback-guidance/SKILL.md",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# skill\n")
 	}
 }
 
