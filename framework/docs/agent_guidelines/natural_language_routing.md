@@ -16,13 +16,13 @@ It answers seven questions:
 6. which smallest legal next step owns the first action
 7. when routing must stop at a checkpoint instead of guessing
 
-This file defines the routing and intent-closure rules for natural-language requests.
+This file defines the routing and intent-closure rules for non-exact natural-language requests.
 It does not replace standard commands.
 It decides which existing command, governance flow, or checkpoint is legal to enter first.
 
 ---
 
-## 2. Entry Rule
+## 2. Entry Shape Rule
 
 Users may start `specFlow` work with ordinary natural language.
 
@@ -40,19 +40,35 @@ Rules:
 
 1. users are not required to choose a standard command before work can start
 2. users may still use explicit command syntax when they want exact control
-3. executors must route by repository truth and intent closure, not by keywords alone
-4. when the route is not stable, executors must stop and ask only for the smallest missing input that blocks routing
+3. executors must separate request shape from request intent
+4. executors must route by repository truth and intent closure, not by keywords alone
+5. when the route is not stable, executors must stop and ask only for the smallest missing input that blocks routing
+
+There are only three entry shapes:
+
+1. exact standard command
+   - the request matches one `unit` or `scenario` command form defined by `command_policy.md`
+   - route through `command_policy.md` and the matching command file
+2. exact governance review entry
+   - the request is exactly `spec_flow_review` or `spec_flow_design_review`, with or without an explicit narrowing phrase
+   - route through the matching review policy
+3. natural-language request
+   - every non-exact request that describes desired work, including requests that mention implementation, review, shared truth, mapping, or system constraints
+   - route through this file first
+
+Direct implementation is not an entry shape.
+It is an intent fragment that may appear inside a natural-language request.
 
 ---
 
 ## 3. Scope
 
-Natural language routing may route into:
+Natural language routing may identify fragments that later route into:
 
 1. standard `unit` commands
 2. standard `scenario` commands
 3. governance review flows
-4. direct implementation classification through `implementation_change_policy.md`
+4. implementation classification through `implementation_change_policy.md`
 5. repository mapping handling
 6. shared-governance internal routing through `shared_ops.md`
 7. system-constraint boundary handling through the responsible unit candidate truth
@@ -73,13 +89,15 @@ Before routing, read only the truth needed for the request.
 
 Fixed read rules:
 
-1. if the user gives explicit standard command syntax, follow `command_policy.md` and that command file
-2. if the request may modify repo-tracked code, tests, or implementation-side files, read `implementation_change_policy.md` first
-3. if the request names existing formal `unit` or `scenario` objects, read `docs/specs/_status.md` before resolving their current-layer files
-4. if the request depends on path ownership, repository structure, support surfaces, or object boundaries, read `docs/specs/repository_mapping.md`
-5. if the request depends on cross-unit shared truth, shared binding, shared topology, or shared impact, read `shared_ops.md` and the relevant Shared Contract files
-6. if the request may affect global default rules, shared mechanisms promoted into the global baseline, or explicit global exceptions, read `docs/specs/system_constraints.md`
-7. if the request is a governance review, read the governance file that defines that review scope before reading object state
+1. if the request is an exact standard command, stop natural-language routing and follow `command_policy.md` plus the matching command file
+2. if the request is an exact governance review entry, stop natural-language routing and follow the matching review policy
+3. if the request is not an exact entry, identify intent fragments before choosing a command or governance flow
+4. if any fragment may modify repo-tracked code, tests, config, migrations, build scripts, or other implementation-side files, read `implementation_change_policy.md` before any implementation-side edit
+5. if the request names existing formal `unit` or `scenario` objects, read `docs/specs/_status.md` before resolving their current-layer files
+6. if the request depends on path ownership, repository structure, support surfaces, or object boundaries, read `docs/specs/repository_mapping.md`
+7. if the request depends on cross-unit shared truth, shared binding, shared topology, or shared impact, read `shared_ops.md` and the relevant Shared Contract files
+8. if the request may affect global default rules, shared mechanisms promoted into the global baseline, or explicit global exceptions, read `docs/specs/system_constraints.md`
+9. if a governance-review fragment remains after natural-language parsing, read the governance file that defines that review scope before reading unrelated object state
 
 The executor must not read every file by default.
 The executor must read enough current truth to prove the route, the missing blocker, or the safe first step.
@@ -91,6 +109,8 @@ The executor must read enough current truth to prove the route, the missing bloc
 The executor must break a natural-language request into intent fragments before routing.
 
 An intent fragment is the smallest recognizable part of the request that may need its own governance owner.
+Fragments are not mutually exclusive.
+One request may contain implementation, unit truth, shared truth, and review fragments at the same time.
 
 Allowed fragment families are:
 
@@ -105,7 +125,7 @@ Allowed fragment families are:
 5. `system_constraints`
    - the request may change a repository-wide default rule, global mechanism, prohibition, or explicit exception
 6. `implementation`
-   - the request asks for repo-tracked code, tests, or implementation-side files to change
+   - the request asks to create, modify, or delete repo-tracked code, tests, config, migrations, build scripts, or other implementation-side files
 7. `governance_review`
    - the request asks to review the governance mechanism or design
 8. `explanation_only`
@@ -119,20 +139,28 @@ For each fragment, the executor must record these facts in working judgment befo
 4. the missing information, if any
 5. whether the fragment may change formal behavior, boundary, acceptance, shared, or system truth
 
+Implementation fragment rules:
+
+1. the presence of an `implementation` fragment does not mean the request may start from code
+2. `implementation_change_policy.md` decides whether implementation may continue under current truth
+3. if that policy returns `truth_writeback_required` or `boundary_unclear`, route to the required truth or boundary step before implementation
+4. if a request has both implementation and truth fragments, truth routing wins unless the policy proves that implementation is already allowed by current truth
+
 ---
 
-## 6. Routing Order
+## 6. Routing Procedure
 
-After intent fragments are identified, route in this order:
+Route in this order:
 
-1. explicit standard command syntax
-2. governance review requests
-3. direct implementation requests through `implementation_change_policy.md`
-4. repository mapping boundary checks
-5. existing `unit` or `scenario` object state through `_status.md`
-6. shared-governance internal routing through `shared_ops.md`
-7. system-constraint boundary handling through the responsible unit candidate truth
-8. explanation-only handling
+1. if the request is an exact standard command, leave this file and execute command routing through `command_policy.md`
+2. if the request is an exact governance review entry, leave this file and execute the matching review policy
+3. otherwise treat the request as natural language and identify all intent fragments
+4. apply mandatory gates for every fragment, especially `implementation_change_policy.md` for implementation fragments
+5. resolve repository mapping boundary checks before claiming `unit` or `scenario` ownership
+6. resolve existing `unit` or `scenario` object state through `_status.md`
+7. route shared-truth fragments through `shared_ops.md`
+8. route system-constraint boundary handling through the responsible unit candidate truth
+9. handle explanation-only fragments only after confirming that no mutation or governance route is required
 
 This order is a decision order, not permission to skip required reads.
 If a later family is needed to decide an earlier family safely, read the later family's truth as input before choosing the route.

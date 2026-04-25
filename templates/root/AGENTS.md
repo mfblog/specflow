@@ -15,52 +15,101 @@ Keep repository-specific rules outside the managed block. `specFlow` tooling may
 ## specFlow Addendum
 
 `specFlow` treats Specs and registered governance documents as the source of truth.
-This addendum is only an entry index.
-It tells the executor when to enter `specFlow` and which policy file owns the detailed rules.
+This addendum is the bootstrap guide for an executor that does not already know `specFlow`.
+It gives only the concepts and routing rules needed to choose the first authoritative policy file.
+Detailed lifecycle, file, and command rules live in the policy files linked below.
 
-### 1. When To Use specFlow
+### 1. What specFlow Is
 
-Use `specFlow` rules when the request involves any of the following:
+`specFlow` is a governance flow for changing project truth and implementation in the right order.
 
-1. natural-language project design, implementation, verification, promotion, or governance work
-2. explicit `unit` or `scenario` command syntax
-3. governance review entries such as `spec_flow_review` or `spec_flow_design_review`
-4. direct modification of repo-tracked code, tests, Specs, governance files, or implementation-side files
-5. repository mapping, path ownership, object boundaries, Shared Contract truth, shared-governance routing, system constraints, or project-local standards
+Core rule:
+
+1. formal truth is written in Specs and registered governance files
+2. commands and routing flows act on that truth
+3. implementation must not invent behavior that the current truth does not already allow
+
+### 2. Core Terms Must Not Be Guessed
+
+These terms are project-specific.
+Do not interpret them by ordinary software-engineering habit before reading the relevant policy.
+
+1. `Spec`
+   - a source-of-truth file, not a normal explanation document
+2. `unit`
+   - a governed object, not automatically a directory, package, service, or module name
+3. `scenario`
+   - an end-to-end trigger-to-outcome chain, not a unit and not direct implementation ownership
+4. `stable`
+   - accepted truth
+5. `candidate`
+   - current proposed truth for a change round
+6. `_status.md`
+   - a state index, not behavior truth
+7. `repository_mapping.md`
+   - the truth for path ownership, object boundaries, and repository structure
+8. `shared_contract`
+   - shared truth reused across formal objects
+9. `shared_ops`
+   - an internal shared-governance router, not a user-facing command
+10. `implementation_change_policy.md`
+   - the mandatory gate before any direct implementation-side modification
+
+### 3. Entry Shapes
+
+First classify only the request shape.
+Do not treat these shapes as the user's full intent.
+
+1. Exact standard command
+   - the user gives explicit `unit` or `scenario` command syntax defined by `command_policy.md`
+   - read `specflow/framework/docs/agent_guidelines/command_policy.md`
+   - then read the matching file under `specflow/framework/docs/agent_guidelines/commands/`
+2. Exact governance review entry
+   - the user gives `spec_flow_review` or `spec_flow_design_review`
+   - read the matching review policy directly
+3. Natural-language request
+   - every non-exact request that asks for project design, implementation, verification, promotion, explanation, governance, repository mapping, shared truth, system constraints, or project-local standards
+   - read `specflow/framework/docs/agent_guidelines/natural_language_routing.md`
 
 If a request is outside these areas, follow the host agent rules.
 
-### 2. First Files To Read
+### 4. Intent Fragments And Mandatory Gates
 
-Choose the first policy file by request shape:
+A natural-language request may contain several intent fragments at the same time.
+Do not force it into one exclusive category.
 
-1. Natural-language `specFlow` request:
-   - read `specflow/framework/docs/agent_guidelines/natural_language_routing.md`
-2. Explicit `unit` or `scenario` command:
-   - read `specflow/framework/docs/agent_guidelines/command_policy.md`
-   - then read the matching file under `specflow/framework/docs/agent_guidelines/commands/`
-3. Direct implementation request:
-   - read `specflow/framework/docs/agent_guidelines/implementation_change_policy.md` before any code or implementation-side edit
-4. Governance review:
-   - `spec_flow_review` -> `specflow/framework/docs/agent_guidelines/spec_flow_review.md`
-   - `spec_flow_design_review` -> `specflow/framework/docs/agent_guidelines/spec_flow_design_review.md`
-5. Repository mapping, shared governance, system constraints, git handling, or project-local standards:
-   - start from the relevant policy listed in Section 4
+Common fragments include:
 
-### 3. Hard Rules
+1. implementation work
+   - creating, modifying, or deleting repo-tracked code, tests, config, migrations, build scripts, or other implementation-side files
+2. `unit` truth
+3. `scenario` truth
+4. repository mapping or path ownership
+5. shared truth or Shared Contract binding
+6. system constraints or global defaults
+7. governance review
+8. explanation-only work
+
+Mandatory gate:
+
+1. if any fragment asks for implementation-side modification, read `specflow/framework/docs/agent_guidelines/implementation_change_policy.md` before any file edit
+2. if that policy returns `truth_writeback_required` or `boundary_unclear`, do not start from code
+3. if the request has both implementation and truth fragments, route truth first unless the policy proves the implementation is already allowed by current truth
+
+### 5. Hard Stops
 
 1. Do not guess behavior by bypassing source-of-truth files under `docs/specs/`.
 2. If you are unsure whether a change is a behavior change, treat it as a behavior change.
 3. Behavior changes must not start from code.
-4. Direct implementation requests must be classified through `implementation_change_policy.md`; `truth_writeback_required` and `boundary_unclear` must not start from code.
-5. Do not guess `unit` or `scenario` boundaries from directory shape alone; use `docs/specs/repository_mapping.md`.
-6. `shared_ops` is an internal shared-governance router, not a user-facing command.
+4. Do not guess `unit` or `scenario` boundaries from directory shape alone; use `docs/specs/repository_mapping.md`.
+5. Do not treat chat-only agreement as durable truth.
+6. Do not ask the user to choose internal shared flow names; natural-language routing enters shared governance when needed.
 7. Plain `spec_flow_review` and `spec_flow_design_review` use their default scopes unless the user explicitly narrows them.
 8. Registered entry index files must keep their managed blocks consistent before commit.
 9. For commit requirements and exceptions, read `specflow/framework/docs/agent_guidelines/git_policy.md`.
 10. When Spec, command, routing, and git rules conflict, stop and return to the relevant policy file instead of guessing.
 
-### 4. Where Details Live
+### 6. Where Details Live
 
 Use these files for the detailed rules:
 
