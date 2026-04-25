@@ -10,7 +10,7 @@ import (
 func TestInspectOnlyReadsRegisteredEntrySection(t *testing.T) {
 	repoRoot := t.TempDir()
 
-	registryDir := filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines")
+	registryDir := filepath.Join(repoRoot, "specflow/framework")
 	if err := os.MkdirAll(registryDir, 0o755); err != nil {
 		t.Fatalf("mkdir registry dir: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestInspectOnlyReadsRegisteredEntrySection(t *testing.T) {
 func TestInspectSuggestsOnlyCurrentRoundChangedRegisteredFile(t *testing.T) {
 	repoRoot := t.TempDir()
 
-	registryDir := filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines")
+	registryDir := filepath.Join(repoRoot, "specflow/framework")
 	if err := os.MkdirAll(registryDir, 0o755); err != nil {
 		t.Fatalf("mkdir registry dir: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestInspectSuggestsOnlyCurrentRoundChangedRegisteredFile(t *testing.T) {
 func TestInspectTreatsUntrackedRegisteredEntryFileAsCurrentRoundChanged(t *testing.T) {
 	repoRoot := t.TempDir()
 
-	registryDir := filepath.Join(repoRoot, "specflow/framework/docs/agent_guidelines")
+	registryDir := filepath.Join(repoRoot, "specflow/framework")
 	if err := os.MkdirAll(registryDir, 0o755); err != nil {
 		t.Fatalf("mkdir registry dir: %v", err)
 	}

@@ -16,7 +16,7 @@ import (
 const (
 	managedBegin = "<!-- SPECFLOW:BEGIN -->"
 	managedEnd   = "<!-- SPECFLOW:END -->"
-	registryPath = "specflow/framework/docs/agent_guidelines/entry_index_registry.md"
+	registryPath = "specflow/framework/entry_index_registry.md"
 )
 
 var registeredEntryPattern = regexp.MustCompile("^- `([^`]*)`$")

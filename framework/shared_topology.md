@@ -1,0 +1,159 @@
+# Shared Topology Flow
+
+## 1. Purpose
+
+`shared_topology` is the internal flow for Shared Contract structural change and terminal-state resolution.
+
+It answers four questions:
+
+1. whether the current request is really about Shared Contract topology rather than simple authoring, extraction, binding, or impact closure
+2. which touched shared objects remain, which new shared objects must exist, and which old ones must end in this round
+3. which unit candidate-side bindings and body explanations must be rewritten because of that topology change
+4. how the repository must be reconciled after the topology change lands
+
+This is not a user-facing command entry.
+The user reaches it through natural-language routing when that routing enters the shared-governance branch.
+
+---
+
+## 2. Scope
+
+By default it handles requests where one or more existing `shared_contract` objects need structural topology change or terminal-state resolution.
+
+It may:
+
+1. split one shared object into multiple shared objects
+2. merge multiple shared objects into one shared object
+3. rename, replace, or retire an existing shared object
+4. explicitly keep a touched unbound shared file as independently authored shared truth when that outcome is written clearly in the same round
+5. rewrite affected unit candidate-side `shared_contract_refs` and body-level consumption explanations when the topology change changes what those units consume
+6. create, update, or delete candidate-layer Shared Contract files as required by the topology change
+7. delete touched stable-layer Shared Contract files only when they are already unbound and cleanup is legal under `spec_policy.md`
+8. keep an existing stable-layer Shared Contract file unchanged when the topology plan intentionally leaves it in place
+9. trigger `shared_sync` after any shared-truth or binding writeback
+10. stop at a shared-governance checkpoint when legal unit writeback targets do not exist yet
+
+It does not:
+
+1. replace `shared_bind` when the main task is only one unit binding to an unchanged existing shared object
+2. replace `shared_new` when the main task is first-time shared authoring with no existing shared topology change
+3. replace `shared_extract` when the main task is only extracting unit-local truth into one shared object
+4. create or update a stable-layer Shared Contract file directly just to carry new topology semantics or a new `shared_version`
+5. create an independent Shared Contract lifecycle outside shared governance
+
+---
+
+## 3. Preconditions
+
+Before execution:
+
+1. read `specflow/framework/spec_policy.md`
+2. read `specflow/framework/command_policy.md`
+3. read `specflow/framework/shared_sync.md`
+4. read `specflow/framework/git_policy.md` because Shared Contract semantic version rules apply
+5. read `docs/specs/_status.md`
+6. read each touched `shared_contract` file that may be split, merged, renamed, replaced, retired, or explicitly kept
+7. build the repository-wide affected-unit review set for the touched shared objects from current repository truth before topology planning:
+   - start from the formal unit set recorded in `_status.md`
+   - read every additional current-layer unit main file needed to judge which units currently bind each touched shared object through `shared_contract_refs`
+   - do not treat only the user-named units or currently obvious consumers as sufficient when other units may still bind the touched shared objects
+8. resolve every affected unit's current layer from `_status.md` before reading its main Spec
+9. read every affected unit current-layer main file needed to derive the real binding set from `shared_contract_refs`
+10. if any affected unit is currently at `stable` and the topology change would require unit truth writeback, also read `specflow/framework/commands/unit_fork.md`
+11. read `docs/specs/system_constraints.md` when the topology request may cross into project-wide default-rule promotion
+12. if this round may raise a checkpoint, read `specflow/framework/checkpoint_protocol.md`
+
+---
+
+## 4. Procedure
+
+1. confirm the request is really about Shared Contract topology change or terminal-state resolution rather than `shared_new`, `shared_extract`, `shared_bind`, or `shared_sync`
+2. resolve the complete repository-wide affected-unit set for the touched shared objects from unit `shared_contract_refs` rather than from `bound_objects`
+3. if current repository truth is insufficient to derive that complete affected-unit set safely, stop this flow and return control to `shared_escape` through shared-governance routing instead of guessing
+4. if any affected unit current layer is `stable` and the topology change would require unit truth writeback:
+   - raise a blocking shared-governance checkpoint with `type=prerequisite_action`
+   - require `unit_fork:{unit}` for each such unit before topology writeback continues
+   - set `required_writeback_target` to the corresponding unit candidate main file set because chat-only agreement does not create legal topology-writeback targets
+5. decide the current-round topology plan explicitly against that complete affected-unit set:
+   - which touched shared object identity remains the same
+   - which new shared object identities must be created
+   - which touched shared files must be deleted in this round
+   - which touched shared files will remain intentionally unbound as independently authored shared truth
+6. if the current repository truth is not sufficient to stabilize Step 5, stop this flow and return control to `shared_escape` through shared-governance routing instead of guessing
+7. create, update, or delete the touched candidate-layer Shared Contract files according to the topology plan:
+   - if the round creates the first file for a brand-new shared object, initialize `shared_version=0.1.0`
+   - if the round opens or rewrites a candidate-layer file for a shared object that already has a stable-layer sibling, set that candidate file's `shared_version` to the intended next stable version according to Shared Contract semantic version rules
+   - for each candidate-layer file from the previous bullet, write exactly one `promotion_owner_unit` into that file:
+     - the owner must be a formal unit from the affected-unit set or another formal unit explicitly required by the topology plan
+     - that owner is the only unit round allowed to land that candidate-layer shared file as the next stable-layer Shared Contract file
+     - the owner unit may remain bound to the current stable-layer shared sibling until a later legal unit candidate round rewrites its `shared_contract_refs`
+     - if current repository truth is insufficient to name one stable owner for such a file, stop this flow and return control to `shared_escape` through shared-governance routing instead of guessing
+   - if the topology plan needs new or changed stable-layer shared semantics, do not write that stable-layer file directly in this flow; write or update the corresponding candidate-layer shared file first, carry the intended next stable `shared_version` there, and let a later legal promotion produce the stable-layer file
+8. rewrite every affected unit candidate-side `shared_contract_refs` and body-level consumption explanation required by the topology plan
+   - any written `shared_contract_refs` must use the Shared Contract binding contract from `specflow/framework/spec_policy.md` Section 6.1
+9. for each touched shared file that has no formal bound units after Step 8:
+   - delete it in the same round when the topology plan treats it as retired and cleanup is legal under `spec_policy.md`
+   - otherwise keep it only when the current round writes that same Shared Contract file with the fixed intentional-unbound retention frontmatter from `spec_policy.md`:
+     - `unbound_retention: intentional`
+     - `unbound_retention_reason: <why this unbound state is intentional now>`
+     - `unbound_retention_owner: shared_topology`
+   - reject closure if neither deletion nor explicit keep-writeback has happened
+10. for each touched shared file that still has one or more formal bound units after Step 8, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
+11. update `bound_objects` only as declarative metadata so every remaining touched shared file matches the real binding set implied by the repository-wide unit-side `shared_contract_refs` plus this round's prepared unit writeback
+   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --shared-ids shared_x,shared_y` and additional `--shared-refs` filters when the active flow has already identified exact touched files
+12. after any write to `docs/specs/shared_contracts/**` or any unit `shared_contract_refs`, execute `shared_sync` before claiming closure
+   - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
+13. if `shared_sync` stops because repository truth is insufficient to continue safely, return control to `shared_escape` through shared-governance routing instead of inventing a flow-local checkpoint
+
+---
+
+## 5. Stop Conditions
+
+Stop when one of the following is true:
+
+1. the topology change is complete, every touched shared file's terminal state is resolved, and `shared_sync` has finished reconciliation
+2. the request is not really topology change and must be re-routed to another shared flow
+3. one or more affected units are currently at `stable` and the flow has raised a shared-governance checkpoint for `unit_fork` first
+4. repository truth is insufficient to continue safely, so control has returned to `shared_escape` through shared-governance routing
+5. the topology plan requires new or changed stable-layer shared semantics, so this flow has completed the current-round candidate-layer Shared Contract writeback and any required `shared_sync` without direct stable-layer writeback; any later stable-layer Shared Contract file must be produced by a legal promotion rather than by this flow
+6. the request has crossed into `system_constraints_change_proposal`, so control has returned to `shared_escape` through shared-governance routing for checkpoint handling instead of continuing here
+7. the topology plan would leave a next-round candidate-layer shared file for an already-stable shared object without a stable `promotion_owner_unit`
+
+---
+
+## 6. Output Contract
+
+The output must include at least:
+
+1. the recognized topology intent and why it belongs to `shared_topology`
+2. the touched shared objects and the repository-wide affected units
+3. the explicit topology result for this round:
+   - which shared objects remain
+   - which new shared objects were created
+   - which touched shared files were deleted
+   - which touched shared files remain intentionally unbound and why
+4. the Shared Contract file writeback result, including the written `shared_version` for each created or updated candidate-layer file
+5. for each created or rewritten candidate-layer file that already has a stable-layer sibling, the written `promotion_owner_unit`
+6. the unit candidate-side retarget or rewrite result
+7. the `bound_objects` reconciliation result for each remaining touched shared file
+8. the `shared_sync` result, including affected units and fallback if any
+9. the checkpoint result when candidate writeback could not legally start yet
+10. whether the flow had to stop with candidate-layer shared truth prepared for a later legal promotion instead of writing a stable-layer shared file directly
+11. the git close-out result when governance files or commit-triggering files were changed
+
+Allowed checkpoint types:
+
+1. `prerequisite_action`
+
+---
+
+## 7. Non-Goals
+
+`shared_topology` does not:
+
+1. guess whether an unstable boundary should become shared or stay unit-local
+2. replace `shared_escape` for decomposition when the repository truth is still ambiguous
+3. allow silent retention of touched unbound shared files with no explicit keep-or-delete result
+4. modify unit `stable` truth directly
+5. create or update a stable-layer Shared Contract file directly to introduce new topology semantics or a newly chosen `shared_version`
+6. absorb Shared Contract conclusions into `system_constraints` automatically
