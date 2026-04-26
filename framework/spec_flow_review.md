@@ -19,7 +19,140 @@ It reviews the mechanism that governs business truth.
 It does not prove that the current governance design is sensible, humane, or worth using as designed.
 That judgment belongs to `spec_flow_design_review`.
 
-## 2. Default Scope
+## 2. Review Standard
+
+`spec_flow_review` judges whether the in-scope governance rules are correct, closed, coherent, executable, and handoff-safe.
+
+It does not pass a review only because the required files were read or the required slices were visited.
+Each in-scope rule, file, slice, and cross-convergence path must satisfy the standards in this section.
+
+The fixed standards are `content validity`, `logical closure`, `chain closure`, `governance closure and ownership`, `contract drift`, `cross-convergence`, `agent operability`, and `tooling boundary`.
+
+### 2.1 Content Validity
+
+Governance content must be valid rule information.
+It must not use wrong statements, unsupported claims, empty explanation, or text with no execution effect to create only apparent closure.
+
+Content is valid only when:
+
+1. each rule claim is supported by its owner file, template contract, tooling source, or another current in-scope governance rule
+2. names, terms, states, command forms, field names, paths, inputs, and outputs really exist where the document says they exist
+3. producer and consumer files accept the same names, states, field shapes, inputs, outputs, and result meanings
+4. examples and explanatory text do not direct an executor toward an action that conflicts with the formal rule
+5. each local rule changes at least one allowed action, forbidden action, stop condition, output, dependency order, writeback target, or resume path
+6. each rule can execute against the current repository structure or explicitly stops when the required repository object is absent
+
+If a statement is logically closed only because it rests on a wrong premise, wrong interface, wrong owner, wrong path, missing consumer, or impossible action, the affected slice must not be marked `passed`.
+
+This review may judge whether governance content is wrong, unsupported, unowned, unconsumed, inconsistent with an actual interface, or not executable.
+It must not judge whether the whole governance design is too heavy, humane enough, or worth maintaining as designed.
+Those design-value judgments belong to `spec_flow_design_review`.
+
+If a discovered concern is a design-value concern rather than a governance-correctness concern, report that boundary and point to `spec_flow_design_review`.
+Do not use a design-value concern by itself as a `spec_flow_review` finding.
+
+### 2.2 Logical Closure
+
+Each in-scope governance file must be internally closed.
+
+A file is internally closed only when a capable executor can determine from that file and its explicit links:
+
+1. the entry condition for the rule or flow
+2. the governing owner
+3. what action is allowed
+4. what action is forbidden
+5. what must be read before action
+6. where durable writeback or process-state writeback may happen
+7. when execution must stop
+8. what output or stop report is required
+9. how execution resumes after a stop, checkpoint, repair, or downstream handoff
+
+If one of those items is intentionally owned elsewhere, the file must link or name the owner clearly enough that the executor does not guess.
+
+### 2.3 Chain Closure
+
+When an in-scope file is one step in a governance chain, the review must include the in-scope files it calls, hands off to, consumes, or depends on.
+
+A governance chain is closed only when:
+
+1. the calling file and owner file describe the same governed object
+2. outputs from one step are accepted by the next step with the same meaning
+3. status values and result values are fixed and shared by every producer and consumer that uses them
+4. permission boundaries match across the handoff
+5. stop conditions have a legal resume owner or next action
+6. downstream side effects are either closed in the same chain or explicitly handed to the correct owner
+7. no step requires the executor to fill a missing interface, owner, state transition, or branch condition from memory or ordinary term meaning
+
+If a chain is missing one required file, contains a conflicting interface, or only works by executor inference, the related local or cross-convergence slice must not be marked `passed`.
+
+### 2.4 Governance Closure And Ownership
+
+Each in-scope owner area must close from a legal entry to one legal next action, final result, or required stop.
+
+The review must find a real finding when an in-scope rule can cause:
+
+1. ambiguous entry selection
+2. missing truth, process-state, tooling, recovery, or git close-out ownership
+3. bypass of a required command gate, truth writeback gate, shared-governance gate, impact-reconciliation gate, recovery gate, or close-out gate
+4. a side effect with no downstream owner
+5. a branch that never rejoins a legal command, review, repair, or stop path
+6. chat agreement, repository history, directory shape, or ordinary term meaning to substitute for durable governance truth
+
+### 2.5 Contract Drift
+
+Governance contracts must not drift across rule documents, templates, run-state files, tooling contracts, and tooling source.
+
+Contract drift exists when two in-scope surfaces define or consume the same governance object differently, including:
+
+1. different command names or entry forms
+2. different state values or result values
+3. different required fields or writeback containers
+4. different path ownership rules
+5. different lifecycle advancement or fallback meanings
+6. different tooling responsibilities
+7. different freshness, fingerprint, cleanup, sync, or validation rules
+
+Any contract drift that can change execution, stop behavior, review judgment, or downstream ownership is a finding.
+
+### 2.6 Cross-Convergence
+
+Locally correct rules must still compose into one coherent governance baseline.
+
+The review must test cross-convergence wherever one rule area depends on another rule area.
+At minimum, cross-convergence covers routing, commands, truth writeback, implementation gates, shared governance, impact reconciliation, process state, entry files, project-local standards, tooling, recovery, and git close-out when those areas are in scope.
+
+If a narrowed review crosses a boundary whose owner slice is not included, the narrowed review must stop or explicitly remain non-baseline.
+It must not claim default governance-baseline `pass`.
+
+### 2.7 Agent Operability
+
+Governance files must be operable by a capable executor without prior `specFlow` memory.
+
+Default full-scope `spec_flow_review` must read and consume `specflow/framework/agent_operability_standard.md`.
+A narrowed review must read and consume that standard whenever the narrowed scope includes entry behavior, routing, commands, checkpoints, shared governance, process state, entry files, or tooling contracts.
+
+Agent-operability review must cover execution clarity, content economy, and formal rule voice.
+A pass claim for an in-scope governance file must not ignore an applicable agent-operability failure.
+
+### 2.8 Tooling Boundary
+
+Governance tooling may execute only mechanical work already decided by governance rules, prior human judgment, or explicit caller parameters.
+Tooling must not become a second semantic source of truth.
+
+Default full-scope `spec_flow_review` must read and consume `specflow/framework/tooling_execution_policy.md`.
+A narrowed review must read and consume that policy whenever the narrowed scope includes governance tooling, tooling contracts, run-state tooling, tooling source, or document/source agreement for tooling.
+
+The tooling review must verify tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness rules, and agreement between tooling source and tooling-governing documents.
+
+### 2.9 Relationship To The Slice Catalog
+
+The baseline slice catalog is an execution organization for this review.
+It is not the review standard by itself.
+
+Every local slice, cross-convergence slice, and dynamic slice must be judged against this section.
+Coverage without the standards in this section is not sufficient for `pass`.
+
+## 3. Default Scope
 
 The default scope includes:
 
@@ -93,15 +226,18 @@ Default scope must explicitly include:
 
 If any one of those five coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
 
-## 3. Baseline Slice Catalog
+## 4. Baseline Slice Catalog
 
 For the default governance-baseline review, the executor must use the baseline slice catalog below.
 
 Baseline slices are the minimum review outline.
 They do not limit what the review may discover.
-If the review discovers a material risk that is not fully covered by a baseline slice, the executor must add a dynamic slice under Section 4.
+If the review discovers a material risk that is not fully covered by a baseline slice, the executor must add a dynamic slice under Section 5.
 
-### 3.1 Local Baseline Slices
+The baseline slice catalog organizes review execution.
+It does not replace the Review Standard in Section 2.
+
+### 4.1 Local Baseline Slices
 
 Local slices review one owner area for internal closure, side effects, contract drift, missing ownership, and local agent operability.
 
@@ -132,7 +268,7 @@ Local slices review one owner area for internal closure, side effects, contract 
    - reviews the agent-operability result recorded by each local slice against `agent_operability_standard.md`
    - verifies that local slice conclusions did not rely on prior conversation, ordinary term meanings, or avoidable repeated reading
 
-### 3.2 Cross-Convergence Baseline Slices
+### 4.2 Cross-Convergence Baseline Slices
 
 Cross-convergence slices review whether locally correct rules still compose into one coherent governance baseline.
 
@@ -154,7 +290,7 @@ Cross-convergence slices review whether locally correct rules still compose into
 
 The final result must not issue `pass` until every required local baseline slice, every required cross-convergence baseline slice, and every dynamic slice is closed as `passed` or `skipped_not_in_scope`.
 
-## 4. Dynamic Slices
+## 5. Dynamic Slices
 
 Dynamic slices extend the baseline catalog during execution.
 They are required when a discovered risk is not fully covered by an existing baseline slice.
@@ -181,7 +317,7 @@ Rules:
    - `exit_condition`
    - `status`
 
-## 5. Full-Scope Review Run State
+## 6. Full-Scope Review Run State
 
 Default full-scope `spec_flow_review` uses a run-state process file.
 
@@ -200,7 +336,7 @@ docs/specs/_governance_review/spec_flow_review/{review_run_id}.md
 YYYYMMDD-HHMMSS-{scope_label}
 ```
 
-### 5.1 When To Use Run State
+### 6.1 When To Use Run State
 
 Rules:
 
@@ -209,7 +345,7 @@ Rules:
 3. a narrowed review may use a run-state file only when the user explicitly asks for resumable slice review
 4. project-instance truth under `docs/specs/` remains outside default governance-baseline review even though the run-state file itself is read for resume handling
 
-### 5.1.1 Run-State Tooling Boundary
+### 6.1.1 Run-State Tooling Boundary
 
 Run-state files contain both mechanical fields and review judgment fields.
 
@@ -237,18 +373,18 @@ Rules:
 6. tooling must not write finding content
 7. tooling must not decide final `pass` or `blocked`
 
-### 5.2 Startup Procedure
+### 6.2 Startup Procedure
 
 At the start of a full-scope review:
 
 1. inspect `docs/specs/_governance_review/spec_flow_review/` for unclosed run-state files
 2. if no unclosed run-state file exists, create a new run-state file and start at `scope_inventory`
-3. if one unclosed run-state file exists, run the basic validity check from Section 5.3
+3. if one unclosed run-state file exists, run the basic validity check from Section 6.3
 4. if the basic validity check fails, delete the old run-state file, report the deletion reason, create a new run-state file, and start at `scope_inventory`
-5. if the basic validity check passes, apply the timestamp rules from Section 5.4
+5. if the basic validity check passes, apply the timestamp rules from Section 6.4
 6. if multiple unclosed run-state files exist, stop and ask the user to choose which run to continue or to allow cleanup
 
-### 5.3 Basic Validity Check
+### 6.3 Basic Validity Check
 
 The basic validity check verifies only that the run-state file can be used as a progress file.
 It does not judge whether old review conclusions are still semantically correct.
@@ -262,10 +398,10 @@ The file is valid only when:
    - `in_progress`
    - `blocked_on_finding`
    - `ready_for_final`
-5. all required run fields from Section 7.1 exist
-6. `created_at` and `last_updated_at` use the timestamp format from Section 5.4
+5. all required run fields from Section 8.1 exist
+6. `created_at` and `last_updated_at` use the timestamp format from Section 6.4
 7. the baseline and dynamic slice tables can be parsed
-8. every slice status is one of the fixed slice status values from Section 5.6
+8. every slice status is one of the fixed slice status values from Section 6.6
 9. every baseline slice has `parent_slice_id` set to `none`
 10. every dynamic slice has `parent_slice_id` set to an existing baseline or dynamic slice in the same run-state file
 
@@ -281,7 +417,7 @@ The basic validity check must not decide:
 2. whether old slice conclusions remain semantically trustworthy after framework changes
 3. whether current `specFlow` design is still worthwhile
 
-### 5.4 Timestamp Reuse Rules
+### 6.4 Timestamp Reuse Rules
 
 The run-state file must update `last_updated_at` whenever a slice status, active slice, finding list, blocked reason, or resume step changes.
 
@@ -305,9 +441,9 @@ Reuse rules:
 5. if the run-state age is older than 7 days, delete the old run-state file and create a new run unless the user explicitly requests continuing that exact run
 
 When a user chooses to reuse an old run-state file, that choice accepts the old progress record as the continuation basis.
-The executor still must refresh file fingerprints and stale statuses under Section 5.5.
+The executor still must refresh file fingerprints and stale statuses under Section 6.5.
 
-### 5.5 Stale Slice Handling
+### 6.5 Stale Slice Handling
 
 Every slice must record `input_files` and `input_fingerprint`.
 
@@ -319,7 +455,7 @@ On reuse:
 4. keep unaffected slices in their current status
 5. add dynamic slices for newly discovered risks
 
-### 5.5.1 Slice Input Fingerprint Contract
+### 6.5.1 Slice Input Fingerprint Contract
 
 Slice input fingerprints use the same text normalization rules as `specflow/framework/process_snapshot_contract.md`.
 
@@ -352,7 +488,7 @@ Rules:
 4. executors must not use filesystem timestamps, file size, git metadata, or conversation history as fingerprint input
 5. dynamic slices use the same fingerprint contract as baseline slices
 
-### 5.6 Run And Slice Status Values
+### 6.6 Run And Slice Status Values
 
 Run status values are fixed:
 
@@ -376,12 +512,12 @@ Blocked rules:
 2. while blocked, the next review action must be the repair path or re-review of affected slices
 3. a blocked run must not advance to final conclusion until all blocking findings are resolved and affected slices are re-reviewed
 
-## 6. Procedure
+## 7. Procedure
 
 For full-scope review:
 
 1. collect the default in-scope governance files
-2. execute the run-state startup procedure from Section 5.2
+2. execute the run-state startup procedure from Section 6.2
 3. build or refresh the baseline slice table
 4. review local baseline slices
 5. add required dynamic slices when new risks are discovered
@@ -389,7 +525,7 @@ For full-scope review:
 7. review any cross-convergence dynamic slices
 8. refresh stale statuses whenever an input file changes during the run
 9. produce findings ordered by governance risk
-   - every real finding must use the fixed finding contract from Section 7.2
+   - every real finding must use the fixed finding contract from Section 8.2
    - do not collapse a real finding into a one-line conclusion with no repair guidance
 10. issue the final result only after all required baseline and dynamic slices are closed
 
@@ -400,7 +536,7 @@ For narrowed review:
 3. add dynamic slices when the narrowed review discovers uncovered risks inside the narrowed scope
 4. do not claim default governance-baseline `pass`
 
-## 7. Output Contract
+## 8. Output Contract
 
 The output must report at least:
 
@@ -418,14 +554,14 @@ The output must report at least:
 12. the cross-convergence results
 13. the findings result:
    - explicit `none` when no real finding exists
-   - otherwise every finding must satisfy Section 7.2
+   - otherwise every finding must satisfy Section 8.2
 14. the final conclusion:
    - `pass`
    - `blocked`
 
 If the output does not explicitly report Items 7 through 13, the review is not complete.
 
-### 7.1 Run-State File Shape
+### 8.1 Run-State File Shape
 
 The run-state file must contain these run fields:
 
@@ -464,7 +600,7 @@ Each slice entry must contain:
 13. `exit_condition`
 14. `resume_next_step`
 
-### 7.2 Finding Contract
+### 8.2 Finding Contract
 
 When `spec_flow_review` reports a real finding, that finding must be written as one self-contained repairable unit.
 
@@ -497,7 +633,7 @@ Additional rules:
 4. if more than one plausible repair exists and the review cannot justify one minimal correct fix, the finding must say that the repair path is still unresolved and the review must not present a guessed fix as settled
 5. when no real finding exists, the output must say so explicitly instead of omitting the finding section
 
-## 8. Non-Goals
+## 9. Non-Goals
 
 This flow does not:
 
