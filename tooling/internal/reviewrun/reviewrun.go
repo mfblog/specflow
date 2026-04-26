@@ -3,6 +3,7 @@ package reviewrun
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -62,7 +63,7 @@ var scoreColumns = []string{
 
 type flowConfig struct {
 	Flow                string
-	RunStateDir         string
+	RunStatePath        string
 	ScopeLabel          string
 	RunIDSuffix         string
 	Title               string
@@ -153,15 +154,9 @@ type scoreEntry struct {
 	ResumeNextStep string
 }
 
-type runStateFile struct {
-	Path        string
-	State       runState
+type fixedRunStateFile struct {
 	LastUpdated time.Time
-}
-
-type invalidRunStateFile struct {
-	Path   string
-	Reason string
+	Reason      string
 }
 
 func ConfiguredFlows() []string {
@@ -173,7 +168,7 @@ func configForFlow(flow string) (flowConfig, error) {
 	case FlowSpecFlowReview:
 		return flowConfig{
 			Flow:                FlowSpecFlowReview,
-			RunStateDir:         "docs/specs/_governance_review/spec_flow_review",
+			RunStatePath:        "docs/specs/_governance_review/spec_flow_review.md",
 			ScopeLabel:          "default_governance_baseline",
 			RunIDSuffix:         "default_governance_baseline",
 			Title:               "Spec Flow Review Run State",
@@ -185,7 +180,7 @@ func configForFlow(flow string) (flowConfig, error) {
 	case FlowSpecFlowDesignReview:
 		return flowConfig{
 			Flow:                FlowSpecFlowDesignReview,
-			RunStateDir:         "docs/specs/_governance_review/spec_flow_design_review",
+			RunStatePath:        "docs/specs/_governance_review/spec_flow_design_review.md",
 			ScopeLabel:          "default_design_baseline",
 			RunIDSuffix:         "default_design_baseline",
 			Title:               "Spec Flow Design Review Run State",
@@ -206,39 +201,33 @@ func Init(repoRoot, flow string, now time.Time) (InitResult, error) {
 		return InitResult{}, err
 	}
 	now = now.UTC()
-	if err := os.MkdirAll(filepath.Join(repoRoot, filepath.FromSlash(config.RunStateDir)), 0o755); err != nil {
+	file := filepath.Join(repoRoot, filepath.FromSlash(config.RunStatePath))
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
 		return InitResult{}, err
 	}
 
-	openFiles, invalidFiles, err := findOpenRunStates(repoRoot, config, now)
+	existing, err := inspectFixedRunState(repoRoot, config, file, now)
 	if err != nil {
 		return InitResult{}, err
 	}
 	result := InitResult{}
-	if len(openFiles)+len(invalidFiles) > 1 {
-		return InitResult{}, fmt.Errorf("multiple unclosed %s run-state files found: %s", config.Flow, joinRunStateCandidates(openFiles, invalidFiles))
-	}
-	for _, invalidFile := range invalidFiles {
-		if err := os.Remove(invalidFile.Path); err != nil {
-			return InitResult{}, err
+	if existing != nil {
+		if existing.Reason == "" {
+			age := now.Sub(existing.LastUpdated)
+			switch {
+			case age <= 2*time.Hour:
+				return InitResult{File: file, Reused: true}, nil
+			case age <= 7*24*time.Hour:
+				return InitResult{}, fmt.Errorf("open run-state file requires manual reuse decision before run-init can continue: %s last_updated_at=%s age=%s", file, formatUTC(existing.LastUpdated), age.Round(time.Second))
+			default:
+				existing.Reason = "expired_over_7_days"
+			}
 		}
-		result.DeletedFiles = append(result.DeletedFiles, DeletedRunStateFile{File: invalidFile.Path, Reason: invalidFile.Reason})
-	}
-	if len(openFiles) > 1 {
-		return InitResult{}, fmt.Errorf("multiple open %s run-state files found: %s", config.Flow, joinRunStatePaths(openFiles))
-	}
-	if len(openFiles) == 1 {
-		age := now.Sub(openFiles[0].LastUpdated)
-		switch {
-		case age <= 2*time.Hour:
-			return InitResult{File: openFiles[0].Path, Reused: true}, nil
-		case age <= 7*24*time.Hour:
-			return InitResult{}, fmt.Errorf("open run-state file requires manual reuse decision before run-init can continue: %s last_updated_at=%s age=%s", openFiles[0].Path, formatUTC(openFiles[0].LastUpdated), age.Round(time.Second))
-		default:
-			if err := os.Remove(openFiles[0].Path); err != nil {
+		if existing.Reason != "missing" {
+			if err := os.Remove(file); err != nil {
 				return InitResult{}, err
 			}
-			result.DeletedFiles = append(result.DeletedFiles, DeletedRunStateFile{File: openFiles[0].Path, Reason: "expired_over_7_days"})
+			result.DeletedFiles = append(result.DeletedFiles, DeletedRunStateFile{File: file, Reason: existing.Reason})
 		}
 	}
 
@@ -274,7 +263,6 @@ func Init(repoRoot, flow string, now time.Time) (InitResult, error) {
 		state.Score = buildScoreState()
 	}
 
-	file := filepath.Join(repoRoot, filepath.FromSlash(config.RunStateDir), runID+".md")
 	if err := os.WriteFile(file, []byte(renderState(config, state)), 0o644); err != nil {
 		return InitResult{}, err
 	}
@@ -403,63 +391,27 @@ func Touch(repoRoot, flow, file string, now time.Time) (TouchResult, error) {
 	return TouchResult{File: file, LastUpdatedAtUTC: formatUTC(now)}, nil
 }
 
-func findOpenRunStates(repoRoot string, config flowConfig, now time.Time) ([]runStateFile, []invalidRunStateFile, error) {
-	dir := filepath.Join(repoRoot, filepath.FromSlash(config.RunStateDir))
-	matches, err := filepath.Glob(filepath.Join(dir, "*.md"))
+func inspectFixedRunState(repoRoot string, config flowConfig, file string, now time.Time) (*fixedRunStateFile, error) {
+	state, err := parseFile(file)
 	if err != nil {
-		return nil, nil, err
-	}
-	openFiles := []runStateFile{}
-	invalidFiles := []invalidRunStateFile{}
-	for _, file := range matches {
-		state, err := parseFile(file)
-		if err != nil {
-			invalidFiles = append(invalidFiles, invalidRunStateFile{Path: file, Reason: "invalid_run_state"})
-			continue
+		if errors.Is(err, os.ErrNotExist) {
+			return &fixedRunStateFile{Reason: "missing"}, nil
 		}
-		status := strings.TrimSpace(state.Fields["status"])
-		if status == statusClosedPass || status == statusClosedBlocked {
-			continue
-		}
-		diagnostics := validateState(repoRoot, config, state, now)
-		if len(diagnostics) > 0 {
-			invalidFiles = append(invalidFiles, invalidRunStateFile{Path: file, Reason: "invalid_run_state"})
-			continue
-		}
-		lastUpdated, err := parseTimestamp(state.Fields["last_updated_at"])
-		if err != nil {
-			invalidFiles = append(invalidFiles, invalidRunStateFile{Path: file, Reason: "invalid_run_state"})
-			continue
-		}
-		openFiles = append(openFiles, runStateFile{Path: file, State: state, LastUpdated: lastUpdated})
+		return &fixedRunStateFile{Reason: "invalid_run_state"}, nil
 	}
-	sort.Slice(openFiles, func(i, j int) bool {
-		return openFiles[i].Path < openFiles[j].Path
-	})
-	sort.Slice(invalidFiles, func(i, j int) bool {
-		return invalidFiles[i].Path < invalidFiles[j].Path
-	})
-	return openFiles, invalidFiles, nil
-}
-
-func joinRunStatePaths(files []runStateFile) string {
-	paths := make([]string, 0, len(files))
-	for _, file := range files {
-		paths = append(paths, file.Path)
+	status := strings.TrimSpace(state.Fields["status"])
+	if status == statusClosedPass || status == statusClosedBlocked {
+		return &fixedRunStateFile{Reason: "closed_run_state"}, nil
 	}
-	return strings.Join(paths, ", ")
-}
-
-func joinRunStateCandidates(openFiles []runStateFile, invalidFiles []invalidRunStateFile) string {
-	paths := make([]string, 0, len(openFiles)+len(invalidFiles))
-	for _, file := range openFiles {
-		paths = append(paths, file.Path)
+	diagnostics := validateState(repoRoot, config, state, now)
+	if len(diagnostics) > 0 {
+		return &fixedRunStateFile{Reason: "invalid_run_state"}, nil
 	}
-	for _, file := range invalidFiles {
-		paths = append(paths, file.Path)
+	lastUpdated, err := parseTimestamp(state.Fields["last_updated_at"])
+	if err != nil {
+		return &fixedRunStateFile{Reason: "invalid_run_state"}, nil
 	}
-	sort.Strings(paths)
-	return strings.Join(paths, ", ")
+	return &fixedRunStateFile{LastUpdated: lastUpdated}, nil
 }
 
 func validateState(repoRoot string, config flowConfig, state runState, now time.Time) []string {

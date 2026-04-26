@@ -151,14 +151,19 @@ It records review progress, baseline slice status, dynamic risk slice status, sc
 The run-state path is:
 
 ```text
-docs/specs/_governance_review/spec_flow_design_review/{review_run_id}.md
+docs/specs/_governance_review/spec_flow_design_review.md
 ```
 
-`review_run_id` must use this shape:
+`review_run_id` is a field inside the run-state file.
+It must use this shape:
 
 ```text
 YYYYMMDD-HHMMSS-default_design_baseline
 ```
+
+There must be at most one `spec_flow_design_review` run-state file in the repository at any time.
+Starting a new full-scope default design review must delete the previous `spec_flow_design_review` run-state file before writing the new run state.
+The file name must not contain the run ID, because the run ID identifies the review round inside the file rather than creating a history archive.
 
 Rules:
 
@@ -180,6 +185,15 @@ Rules:
    - finding severity
    - hard-blocker judgment
    - final `pass | blocked` conclusion
+7. the startup procedure must inspect only `docs/specs/_governance_review/spec_flow_design_review.md`
+8. if the fixed run-state file does not exist, the startup procedure must create a new run-state file and begin at `design_foundation`
+9. if the fixed run-state file is closed or structurally invalid, the startup procedure must delete it, report the deletion reason, create a new run-state file, and begin at `design_foundation`
+10. if the fixed run-state file is valid, open, and last updated no more than two hours before startup, the startup procedure may reuse it automatically; before review work continues, the executor must refresh fingerprints, mark stale slices, and resume from the recorded active slice
+11. if the fixed run-state file is valid, open, and last updated more than two hours but no more than seven days before startup, the startup procedure must stop for an explicit manual decision to either reuse the file or delete it and start a new run
+    - if the decision is reuse, the executor must refresh fingerprints, mark stale slices, and resume from the recorded active slice
+    - if the decision is delete, the startup procedure must delete the file, create a new run-state file, and begin at `design_foundation`
+12. if the fixed run-state file is valid, open, and last updated more than seven days before startup, the startup procedure must delete it as expired, report the deletion reason, create a new run-state file, and begin at `design_foundation`
+13. the startup procedure must not scan a per-flow subdirectory or preserve old closed run-state files as review history
 
 ### 5.2 Baseline Slice Catalog
 

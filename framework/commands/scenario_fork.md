@@ -13,6 +13,7 @@ Only a new independent full-scope run of `scenario_fork` may produce that advanc
 
 1. `_status.md` says `Object Type=scenario`, `Active Layer=stable`, `Next Command=scenario_fork`
 2. stable scenario truth exists
+3. if candidate truth, candidate-side process files, `_status.md`, or other commit-triggering governance files may change, read the git policy first
 
 ## 4. Procedure
 
@@ -24,6 +25,7 @@ Only a new independent full-scope run of `scenario_fork` may produce that advanc
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=scenario_check`
+6. perform git close-out if required
 
 ## 5. Output Contract
 
@@ -38,8 +40,9 @@ The output must report:
 7. `next step`
 8. `why this next step`
 9. `next-stage entry gap`
-10. the `user-facing close-out block` required by `specflow/framework/command_policy.md` Section 8.6
-11. if a future extension introduces a checkpoint stop, the same close-out block must also report `resume signal`
+10. git close-out result
+11. the `user-facing close-out block` required by `specflow/framework/command_policy.md` Section 8.6
+12. if a future extension introduces a checkpoint stop, the same close-out block must also report `resume signal`
 
 ## 6. Non-Goals
 

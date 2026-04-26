@@ -14,6 +14,7 @@ Only a new independent full-scope run of `scenario_verify` may produce that adva
 1. `_status.md` says `Object Type=scenario`, `Active Layer=candidate`, `Next Command=scenario_verify`
 2. current valid `_check_result/scenario/{scenario}.md` exists
 3. read `specflow/framework/candidate_handoff_contract.md`
+4. if `_verify_result/scenario/{scenario}.md`, `_status.md`, or other commit-triggering governance files may change, read the git policy first
 
 ## 4. Procedure
 
@@ -24,6 +25,7 @@ Only a new independent full-scope run of `scenario_verify` may produce that adva
 5. report `affected_units` when implementation work is still required downstream
 6. if pass, write `_verify_result/scenario/{scenario}.md` so it satisfies the `scenario_verify -> scenario_promote` handoff, then advance `Next Command=scenario_promote`
 7. if the check handoff is invalid or repository mapping, unit, shared-contract, or baseline bindings drifted, fall back to `scenario_check` with the matching allowed `fallback_reason_code`
+8. perform git close-out if required
 
 ## 5. Output Contract
 
@@ -38,8 +40,9 @@ The output must report:
 7. `next step`
 8. `why this next step`
 9. `next-stage entry gap`
-10. the `user-facing close-out block` required by `specflow/framework/command_policy.md` Section 8.6
-11. if a future extension introduces a checkpoint stop, the same close-out block must also report `resume signal`
+10. git close-out result
+11. the `user-facing close-out block` required by `specflow/framework/command_policy.md` Section 8.6
+12. if a future extension introduces a checkpoint stop, the same close-out block must also report `resume signal`
 
 ## 6. Non-Goals
 
