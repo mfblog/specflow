@@ -44,7 +44,7 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	if !result.Created {
 		t.Fatalf("expected created run-state, got %+v", result)
 	}
-	if !strings.Contains(filepath.ToSlash(result.File), "docs/specs/_governance_review/spec_flow_design_review/20260426-103000-default_design_baseline.md") {
+	if !strings.Contains(filepath.ToSlash(result.File), "docs/specs/_governance_review/spec_flow_design_review.md") {
 		t.Fatalf("expected design review run-state path, got %s", result.File)
 	}
 	content := mustRead(t, result.File)
@@ -273,8 +273,9 @@ func TestInitDeletesExpiredRunAndCreatesNewRun(t *testing.T) {
 	if !result.Created || len(result.DeletedFiles) != 1 || result.DeletedFiles[0].File != file || result.DeletedFiles[0].Reason != "expired_over_7_days" {
 		t.Fatalf("expected expired file deletion and new file creation, got %+v", result)
 	}
-	if _, err := os.Stat(file); !os.IsNotExist(err) {
-		t.Fatalf("expected old expired file removed, stat err=%v", err)
+	recreated := mustParse(t, file)
+	if recreated.Fields["review_run_id"] != "20260426-103100-default_governance_baseline" {
+		t.Fatalf("expected new run id in fixed file, got %s", recreated.Fields["review_run_id"])
 	}
 }
 
@@ -291,27 +292,28 @@ func TestInitDeletesInvalidRunAndCreatesNewRun(t *testing.T) {
 	if !result.Created || len(result.DeletedFiles) != 1 || result.DeletedFiles[0].File != file || result.DeletedFiles[0].Reason != "invalid_run_state" {
 		t.Fatalf("expected invalid file deletion and new file creation, got %+v", result)
 	}
-	if _, err := os.Stat(file); !os.IsNotExist(err) {
-		t.Fatalf("expected old invalid file removed, stat err=%v", err)
+	recreated := mustParse(t, file)
+	if recreated.Fields["review_run_id"] != "20260426-103100-default_governance_baseline" {
+		t.Fatalf("expected new run id in fixed file, got %s", recreated.Fields["review_run_id"])
 	}
 }
 
-func TestInitStopsWhenMultipleUnclosedCandidatesExist(t *testing.T) {
+func TestInitDeletesClosedRunAndCreatesNewRun(t *testing.T) {
 	repoRoot, file, now := createInitializedRun(t)
 	state := mustParse(t, file)
-	state.Fields["status"] = "done"
-	invalidFile := filepath.Join(repoRoot, filepath.FromSlash(mustConfig(t, FlowSpecFlowReview).RunStateDir), "invalid-open.md")
-	mustWrite(t, invalidFile, renderState(mustConfig(t, FlowSpecFlowReview), state))
+	state.Fields["status"] = statusClosedPass
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
 
-	_, err := Init(repoRoot, FlowSpecFlowReview, now.Add(time.Minute))
-	if err == nil || !strings.Contains(err.Error(), "multiple unclosed spec_flow_review run-state files found") {
-		t.Fatalf("expected multiple unclosed error, got %v", err)
+	result, err := Init(repoRoot, FlowSpecFlowReview, now.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("Init: %v", err)
 	}
-	if _, err := os.Stat(file); err != nil {
-		t.Fatalf("expected valid open file to remain, stat err=%v", err)
+	if !result.Created || result.File != file || len(result.DeletedFiles) != 1 || result.DeletedFiles[0].File != file || result.DeletedFiles[0].Reason != "closed_run_state" {
+		t.Fatalf("expected closed file deletion and fixed path recreation, got %+v", result)
 	}
-	if _, err := os.Stat(invalidFile); err != nil {
-		t.Fatalf("expected invalid open file to remain, stat err=%v", err)
+	recreated := mustParse(t, file)
+	if recreated.Fields["review_run_id"] != "20260426-103100-default_governance_baseline" {
+		t.Fatalf("expected new run id in fixed file, got %s", recreated.Fields["review_run_id"])
 	}
 }
 

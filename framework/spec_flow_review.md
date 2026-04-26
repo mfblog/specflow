@@ -327,14 +327,19 @@ It records review progress, slice inputs, stale status, findings, and resume pos
 The run-state path is:
 
 ```text
-docs/specs/_governance_review/spec_flow_review/{review_run_id}.md
+docs/specs/_governance_review/spec_flow_review.md
 ```
 
-`review_run_id` must use this shape:
+`review_run_id` is a field inside the run-state file.
+It must use this shape:
 
 ```text
 YYYYMMDD-HHMMSS-{scope_label}
 ```
+
+There must be at most one `spec_flow_review` run-state file in the repository at any time.
+Starting a new full-scope default review must delete the previous `spec_flow_review` run-state file before writing the new run state.
+The file name must not contain the run ID, because the run ID identifies the review round inside the file rather than creating a history archive.
 
 ### 6.1 When To Use Run State
 
@@ -365,7 +370,7 @@ The deterministic tooling entry is `specflowctl review run-* --flow spec_flow_re
 
 Rules:
 
-1. `review run-init --flow spec_flow_review` creates or reuses the full-scope run-state file
+1. `review run-init --flow spec_flow_review` creates, reuses, deletes, or recreates the fixed full-scope run-state file
 2. `review run-validate --flow spec_flow_review` checks the run-state file shape and fixed status values
 3. `review run-refresh --flow spec_flow_review` recomputes slice fingerprints and marks affected `passed` slices as `stale`
 4. `review run-touch --flow spec_flow_review` updates only `last_updated_at`
@@ -377,12 +382,13 @@ Rules:
 
 At the start of a full-scope review:
 
-1. inspect `docs/specs/_governance_review/spec_flow_review/` for unclosed run-state files
+1. inspect `docs/specs/_governance_review/spec_flow_review.md`
 2. if no unclosed run-state file exists, create a new run-state file and start at `scope_inventory`
 3. if one unclosed run-state file exists, run the basic validity check from Section 6.3
 4. if the basic validity check fails, delete the old run-state file, report the deletion reason, create a new run-state file, and start at `scope_inventory`
 5. if the basic validity check passes, apply the timestamp rules from Section 6.4
-6. if multiple unclosed run-state files exist, stop and ask the user to choose which run to continue or to allow cleanup
+6. if the existing file is in `closed_pass` or `closed_blocked`, delete it, report the deletion reason, create a new run-state file, and start at `scope_inventory`
+7. the startup procedure must not scan a per-flow subdirectory or preserve old closed run-state files as review history
 
 ### 6.3 Basic Validity Check
 
@@ -555,6 +561,9 @@ The output must report at least:
 13. the findings result:
    - explicit `none` when no real finding exists
    - otherwise every finding must satisfy Section 8.2
+   - when real findings exist, the final or stop report shown to the user must include every minimum required field from Section 8.2 for each finding
+   - a run-state file may store the same finding fields, but pointing to that file does not satisfy the user-facing report requirement
+   - do not summarize a real finding only as a problem statement, impact statement, or blocked reason
 14. the final conclusion:
    - `pass`
    - `blocked`

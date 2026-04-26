@@ -94,8 +94,8 @@ The `review run-*` commands require an explicit review flow:
 They maintain only mechanical fields in:
 
 ```text
-docs/specs/_governance_review/spec_flow_review/{review_run_id}.md
-docs/specs/_governance_review/spec_flow_design_review/{review_run_id}.md
+docs/specs/_governance_review/spec_flow_review.md
+docs/specs/_governance_review/spec_flow_design_review.md
 ```
 
 Rules:
@@ -106,6 +106,14 @@ Rules:
 4. tooling must not change `pending`, `blocked`, or `skipped_not_in_scope` into a passing judgment
 5. tooling may create and validate the `spec_flow_design_review` score-state skeleton
 6. tooling must not write findings, severities, question scores, score basis, hard-blocker judgments, or final `pass | blocked` conclusions
+7. each review flow uses one fixed run-state file
+8. when the fixed run-state file is missing, tooling creates the file for a new full-scope review
+9. when a new full-scope review starts after a closed or invalid run-state file, tooling deletes the old fixed file before writing the new run state
+10. when the fixed run-state file is valid and open, `run-init` applies the owning review policy's age rule:
+   - no more than two hours old: reuse automatically
+   - more than two hours and no more than seven days old: stop for a manual reuse-or-delete decision
+   - more than seven days old: delete as expired and create a new run state
+11. after reusing an open run-state file, callers must run `review run-refresh` before continuing review work so changed inputs become stale slices instead of hidden drift
 
 ## Tooling Input Set
 
@@ -158,9 +166,9 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 review collect-default-scope --flow spec_flow_design_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-init --flow spec_flow_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-init --flow spec_flow_design_review
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-validate --flow spec_flow_review --file docs/specs/_governance_review/spec_flow_review/20260426-103000-default_governance_baseline.md
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-refresh --flow spec_flow_design_review --file docs/specs/_governance_review/spec_flow_design_review/20260426-103000-default_design_baseline.md
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-touch --flow spec_flow_design_review --file docs/specs/_governance_review/spec_flow_design_review/20260426-103000-default_design_baseline.md
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-validate --flow spec_flow_review --file docs/specs/_governance_review/spec_flow_review.md
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-refresh --flow spec_flow_design_review --file docs/specs/_governance_review/spec_flow_design_review.md
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-touch --flow spec_flow_design_review --file docs/specs/_governance_review/spec_flow_design_review.md
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --unit ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --unit ai --from-command unit_promote --reason evidence_incomplete
 ./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type scenario --object task_execution --stable yes --candidate no --active-layer stable --next-command scenario_fork

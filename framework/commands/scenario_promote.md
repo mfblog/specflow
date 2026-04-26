@@ -15,6 +15,7 @@ Only a new independent full-scope run of `scenario_promote` may produce that adv
 2. current valid `_verify_result/scenario/{scenario}.md` exists
 3. read `specflow/framework/candidate_handoff_contract.md`
 4. read `specflow/framework/recovery_policy.md` before promotion
+5. read the git policy before promotion
 
 ## 4. Procedure
 
@@ -37,6 +38,7 @@ Only a new independent full-scope run of `scenario_promote` may produce that adv
    - current-round scenario `_check_result/scenario/{scenario}.md`
    - current-round scenario `_verify_result/scenario/{scenario}.md`
 10. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
+11. perform git close-out if required
 
 ## 5. Output Contract
 
@@ -57,8 +59,9 @@ The output must report:
 13. `next step`
 14. `why this next step`
 15. `next-stage entry gap`
-16. the `user-facing close-out block` required by `specflow/framework/command_policy.md` Section 8.6
-17. when promotion recovery occurred, the same close-out block must also report `resume signal`
+16. git close-out result
+17. the `user-facing close-out block` required by `specflow/framework/command_policy.md` Section 8.6
+18. when promotion recovery occurred, the same close-out block must also report `resume signal`
 
 Allowed checkpoint types:
 
