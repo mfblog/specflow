@@ -14,12 +14,14 @@ This skill is a bridge into existing specFlow routing. It does not create a new 
 ## Process
 
 1. Identify which approved conclusions affect behavior, boundary, acceptance, shared truth, repository mapping, or system constraints.
-2. Read `natural_language_routing.md` and route by intent fragments.
-3. Read `repository_mapping.md` when ownership, object boundaries, or support surfaces matter.
-4. Read `implementation_change_policy.md` before any implementation-side edit.
-5. Write only current approved truth into the proper candidate, appendix, Shared Contract, repository mapping, or system constraint proposal path.
-6. Do not copy design discussion history, rejected options, or patch-note language into candidate truth.
-7. After writeback, route to the smallest legal next step, normally `unit_check` for affected candidate unit truth.
+2. Restate the approved conclusion as current truth content, not as a transcript of the discussion.
+3. Read `natural_language_routing.md` and route by goal diagnosis, work shape, and intent fragments.
+4. Read `repository_mapping.md` when ownership, object boundaries, or support surfaces matter.
+5. Read `implementation_change_policy.md` before any implementation-side edit.
+6. Write only current approved truth into the proper candidate, appendix, Shared Contract, repository mapping, or system constraint proposal path.
+7. Do not copy design discussion history, rejected options, or patch-note language into candidate truth.
+8. After writeback, route to the smallest legal next step, normally `unit_check` for affected candidate unit truth.
+9. If the approved conclusion describes a larger development chain, write only the durable truth owned by the selected target and rerun routing from current repository truth for the next step.
 
 ## Output Shape
 
@@ -31,6 +33,7 @@ Report:
 4. `excluded_discussion_material`
 5. `next_legal_step`
 6. `why_next_step_is_legal`
+7. `user_visible_state_summary`
 
 ## Boundaries
 
@@ -38,3 +41,5 @@ Report:
 2. Do not implement from chat-only design.
 3. Do not create `_plans/active` or `_verify_result`.
 4. Do not ask the user to choose internal shared-governance flow names.
+5. Do not treat a guidance conclusion as durable until it has been written into the required truth target.
+6. Do not claim the whole user goal is complete when only the first truth writeback step has landed.

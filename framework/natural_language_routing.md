@@ -4,7 +4,10 @@
 
 Natural language routing is the default user entry for `specFlow`.
 
-It exists because users often know the change they want, but they usually do not know which command, object family, or governance flow should own that change.
+It exists because users often know the outcome they want, but they usually do not know which command, object family, or governance flow should own that work.
+
+Natural language routing is a user-goal governance entry, not a command-alias system.
+It must diagnose the user's goal in ordinary language, read the current repository truth needed for that diagnosis, choose the legal specFlow route internally, and explain the current state and next action in language the user can understand.
 
 It answers seven questions:
 
@@ -16,7 +19,7 @@ It answers seven questions:
 6. which smallest legal next step owns the first action
 7. when routing must stop at a checkpoint instead of guessing
 
-This file defines the routing and intent-closure rules for non-exact natural-language requests.
+This file defines the routing, goal-diagnosis, chain-assembly, and intent-closure rules for non-exact natural-language requests.
 It does not replace standard commands.
 It decides which existing command, governance flow, or checkpoint is legal to enter first.
 
@@ -43,6 +46,8 @@ Rules:
 3. executors must separate request shape from request intent
 4. executors must route by repository truth and intent closure, not by keywords alone
 5. when the route is not stable, executors must stop and ask only for the smallest missing input that blocks routing
+6. executors must not require users to understand or choose specFlow object-family names before routing
+7. executor-facing object names such as `unit`, `scenario`, `shared_contract`, `system_constraints`, and `repository_mapping` may be used in internal route reports, but user questions must be phrased as ordinary goal, scope, outcome, or verification questions
 
 There are only three entry shapes:
 
@@ -58,6 +63,43 @@ There are only three entry shapes:
 
 Direct implementation is not an entry shape.
 It is an intent fragment that may appear inside a natural-language request.
+
+---
+
+## 2.1 User-Facing Intake
+
+Natural-language intake must start from the user's goal, not from command names.
+
+The executor must translate user wording into specFlow ownership internally.
+It must not ask the user to classify the request as a `unit`, `scenario`, `shared_contract`, `system_constraints`, or `repository_mapping` request unless the user already chose those terms and the route still needs confirmation about their intended meaning.
+
+For user-facing communication:
+
+1. describe the user's goal in ordinary language
+2. describe the current project state in ordinary language
+3. describe the next action in ordinary language
+4. describe why that action is required by the current project state
+5. describe the expected result of the next action
+6. describe only the remaining blocker that the user can answer or verify
+
+Examples of allowed user-facing questions:
+
+```text
+Do you want to change one local capability, or prove a full user flow from input to final result?
+What result should a user see when this works?
+Which behavior should stay out of the first version?
+Can you confirm whether this manual effect is acceptable after the automated checks have passed?
+```
+
+Examples of disallowed user-facing questions:
+
+```text
+Is this a unit or a scenario?
+Should I route this to shared_bind or shared_topology?
+Which specFlow command family owns this?
+```
+
+The executor may still name internal object families in final or stop reports when doing so helps traceability, but those names must not be the user's required decision vocabulary.
 
 ---
 
@@ -82,6 +124,8 @@ Natural language routing does not:
 4. allow chat-only decisions to replace durable truth
 5. authorize a full multi-step chain to run automatically just because a sequence can be described
 6. make guidance output durable truth before it is written into candidate, appendix, Shared Contract, repository mapping, or system-constraint truth
+7. create a persistent `feature`, `project_flow`, or other umbrella lifecycle object above `unit` and `scenario`
+8. force every user request into an end-to-end scenario when current repository truth and user wording prove a narrower legal route
 
 ---
 
@@ -136,6 +180,10 @@ Allowed fragment families are:
 9. `explanation_only`
    - the request asks only for explanation and does not need repository mutation
 
+Intent fragments are executor-facing.
+They are not the user's required vocabulary.
+When a user describes a messy or non-technical request, the executor must still infer these fragments from the user's goal and current repository truth instead of asking the user to name them.
+
 For each fragment, the executor must record these facts in working judgment before routing:
 
 1. the recognized intent
@@ -161,23 +209,166 @@ Guidance fragment rules:
 
 ---
 
+## 5.1 Work Shape Classification
+
+Before choosing a formal owner, classify the user request by work shape.
+Work shape is the ordinary-language form of the requested work, not the specFlow object that will own it.
+
+Allowed work shapes are:
+
+1. `end_to_end_outcome`
+   - the user wants a visible result across a full trigger-to-outcome path
+   - typical owner shape: `scenario` plus any affected `unit`, `shared_contract`, or baseline work
+2. `local_capability_change`
+   - the user wants one bounded capability or behavior changed without asking to prove a full user flow
+   - typical owner shape: one `unit`, or repository mapping first when ownership is unclear
+3. `flow_verification`
+   - the user wants to know whether a declared path, integration, or user flow works
+   - typical owner shape: `scenario` verification or stable verification
+4. `shared_rule_change`
+   - the user wants one rule reused by more than one formal object
+   - typical owner shape: shared-governance branch
+5. `global_constraint_change`
+   - the user wants a repository-wide default, prohibition, mechanism rule, or explicit exception changed
+   - typical owner shape: system-constraint handling through the responsible current candidate truth
+6. `structure_or_ownership_change`
+   - the user asks where paths, boundaries, support surfaces, or object ownership belong
+   - typical owner shape: `repository_mapping`
+7. `implementation_repair_or_adjustment`
+   - the user asks to fix, refactor, optimize, test, or edit code or implementation-side artifacts
+   - typical owner shape: implementation classification before any implementation-side edit
+8. `governance_mechanism_change`
+   - the user asks to change specFlow rules, command behavior, project standards, or governance entry behavior
+   - typical owner shape: the relevant framework or standards rule file, with required governance close-out
+9. `explanation_only`
+   - the user asks to understand current behavior or current governance state without requesting mutation
+
+Rules:
+
+1. classify from the user's desired outcome, stated scope, current repository truth, and required verification meaning
+2. do not classify from keywords alone
+3. one request may have multiple work shapes
+4. when multiple shapes are present, choose the first legal step by the routing procedure and record the remaining chain in `routing_steps_contract` when safe
+5. if the user clearly limits the work to a local capability, local path, local rule, or local verification, do not force an `end_to_end_outcome` route unless current truth proves that the local request cannot be safely handled without the broader flow
+6. if the user describes a user-visible outcome, a complete workflow, or a trigger-to-result promise, test whether `end_to_end_outcome` is the governing work shape before selecting a local-only route
+
+---
+
 ## 6. Routing Procedure
 
 Route in this order:
 
 1. if the request is an exact standard command, leave this file and execute command routing through `command_policy.md`
 2. if the request is an exact governance review entry, leave this file and execute the matching review policy
-3. otherwise treat the request as natural language and identify all intent fragments
-4. apply mandatory gates for every fragment, especially `implementation_change_policy.md` for implementation fragments
-5. resolve repository mapping boundary checks before claiming `unit` or `scenario` ownership
-6. resolve existing `unit` or `scenario` object state through `_status.md`
-7. route shared-truth fragments through the Shared Governance Branch in this file
-8. route system-constraint boundary handling through the responsible unit candidate truth
-9. route guidance fragments through the smallest applicable guidance skill when the request is not yet clear enough for formal truth writeback or a standard command
-10. handle explanation-only fragments only after confirming that no mutation, guidance, or governance route is required
+3. otherwise treat the request as natural language and perform goal diagnosis
+4. classify the work shape before choosing the formal owner
+5. identify all intent fragments needed to route the classified work shapes
+6. apply mandatory gates for every fragment, especially `implementation_change_policy.md` for implementation fragments
+7. resolve repository mapping boundary checks before claiming `unit` or `scenario` ownership
+8. resolve existing `unit` or `scenario` object state through `_status.md`
+9. route shared-truth fragments through the Shared Governance Branch in this file
+10. route system-constraint boundary handling through the responsible unit candidate truth
+11. route guidance fragments through the smallest applicable guidance skill when the request is not yet clear enough for formal truth writeback or a standard command
+12. assemble the internal development chain when the request spans more than one formal object or work shape
+13. handle explanation-only fragments only after confirming that no mutation, guidance, or governance route is required
 
 This order is a decision order, not permission to skip required reads.
 If a later family is needed to decide an earlier family safely, read the later family's truth as input before choosing the route.
+
+---
+
+## 6.1 Goal Diagnosis
+
+Goal diagnosis is mandatory for every non-exact natural-language request.
+
+The executor must record these facts in working judgment before selecting the first route:
+
+1. `user_goal_summary`
+   - the requested outcome in ordinary language
+2. `success_meaning`
+   - what would prove to the user that the work is complete
+3. `scope_signal`
+   - whether the user described a local capability, an end-to-end flow, a shared rule, a global rule, repository structure, implementation repair, governance change, or only an explanation
+4. `current_state_signal`
+   - which current repository truth was needed to understand the state
+5. `risk_signal`
+   - whether proceeding without truth writeback could encode a new behavior, boundary, acceptance, shared, system, or repository-structure decision
+6. `missing_user_input`
+   - the smallest ordinary-language fact that the user must provide, if any
+
+Rules:
+
+1. do not ask the user for facts that can be derived from repository truth
+2. do not ask the user to choose an internal command or governance-flow name
+3. when the goal is messy or contradictory, ask only for the missing outcome, boundary, or success fact that blocks routing
+4. when a recommended legal route can already be derived from current truth, take that route and explain the reason instead of asking a broad preference question
+
+---
+
+## 6.2 Formal Owner Resolution
+
+After goal diagnosis and work-shape classification, resolve the formal owner from current repository truth.
+
+Formal owner resolution must use:
+
+1. `docs/specs/_status.md` for existing command-target object state
+2. `docs/specs/repository_mapping.md` for path ownership, object boundaries, support surfaces, and current formal object maps
+3. the current-layer Spec for the candidate or stable object when behavior truth may already exist
+4. bound Shared Contract files when shared rules may own or constrain the request
+5. `docs/specs/system_constraints.md` when global defaults, shared mechanisms, prohibitions, or exceptions may own or constrain the request
+6. the relevant framework or project-standard rule file when the request changes governance behavior
+
+Rules:
+
+1. do not guess formal ownership from directory names, user labels, or keyword matches alone
+2. do not ask the user to choose between formal owner names when repository truth can resolve the owner
+3. when more than one owner remains plausible and the choice changes formal truth, stop through a `decision` checkpoint using ordinary-language options
+4. when ownership depends on missing repository-structure truth, the smallest legal next step is repository mapping writeback
+5. when a request is local in user wording but current truth proves a downstream scenario, shared rule, or global baseline is affected, include that impact in the internal chain and explain the user-visible consequence
+
+---
+
+## 6.3 Development Chain Assembly
+
+Development chain assembly is required when one user goal spans multiple formal owners or when one formal owner may invalidate downstream owners.
+
+The chain is an internal execution model.
+It must not become a new lifecycle object.
+
+Allowed chain components are existing specFlow routes only:
+
+1. `scenario` chain for trigger-to-outcome truth and end-to-end verification
+2. `unit` chain for unit truth, planning, implementation, verification, and promotion
+3. shared-governance branch for shared truth and shared impact reconciliation
+4. system-constraint handling through the responsible candidate truth or declared governance route
+5. repository mapping writeback for ownership and structure truth
+6. implementation classification for direct code or test changes
+
+For an `end_to_end_outcome`, the normal internal chain is:
+
+```text
+user goal -> scenario truth -> unit_refs -> affected unit chains -> scenario verification -> scenario promotion
+```
+
+For a local capability change, the normal internal chain is:
+
+```text
+user goal -> formal owner resolution -> current owner lifecycle next step -> downstream impact reconciliation when required
+```
+
+For shared or global changes, the normal internal chain is:
+
+```text
+user goal -> shared/system owner resolution -> required truth writeback -> downstream impact reconciliation -> affected unit or scenario rerouting
+```
+
+Rules:
+
+1. chain assembly may describe the whole likely route, but it authorizes only the current smallest legal step
+2. after every truth writeback, lifecycle-state update, or process-file invalidation, rerun natural-language routing from current repository truth before continuing later chain steps
+3. `scenario_verify` may report `affected_units`, but those units must re-enter their own legal unit command chain; scenario commands must not perform unit-local repair
+4. when a local request is already legally bounded and does not require end-to-end proof, do not create or require a scenario solely because scenarios exist
+5. when an end-to-end promise cannot be proven by a local unit result alone, do not claim user-goal closure until the scenario side of the chain is verified or the missing scenario truth is explicitly routed
 
 ---
 
@@ -276,12 +467,18 @@ It must include at least:
 
 1. `recognized_intent`
 2. `intent_fragments`
-3. `step_order`
-4. `current_step`
-5. `remaining_steps`
-6. `why_order_is_safe`
-7. `durability=execution_local`
-8. `resume_rule=rerun_natural_language_routing_from_current_truth_if_interrupted`
+3. `user_goal_summary`
+4. `work_shape`
+5. `formal_owner_judgment`
+6. `internal_chain`
+7. `step_order`
+8. `current_step`
+9. `remaining_steps`
+10. `user_visible_next_action`
+11. `blocked_question_plain_language`
+12. `why_order_is_safe`
+13. `durability=execution_local`
+14. `resume_rule=rerun_natural_language_routing_from_current_truth_if_interrupted`
 
 Rules:
 
@@ -289,6 +486,9 @@ Rules:
 2. `remaining_steps` must not be treated as authorization to continue after the first step without rerouting from current truth
 3. if the first step changes truth, later steps must be revalidated against the updated truth
 4. a contract may describe the whole safe sequence, but it authorizes entry only into `current_step`
+5. `internal_chain` records the executor's current chain understanding only; it is not a durable project plan and must not bypass command gates
+6. `user_visible_next_action` must be phrased as the action the user can understand, even when `current_step` names an internal command or governance flow
+7. `blocked_question_plain_language` must be `none` unless the route is blocked by a user-answerable fact; when present, it must ask for the smallest missing ordinary-language input
 
 ---
 
@@ -309,6 +509,7 @@ Rules:
 3. `prerequisite_action` is used when one upstream command or truth writeback target must exist before the route can continue
 4. `required_writeback_target` must name the durable target when the answer affects behavior, boundary, shared, system, or acceptance truth
 5. `resume_next_step` must be rerunning natural language routing from current repository truth unless a more specific command file declares a narrower legal resume
+6. checkpoint questions raised from natural-language routing must be phrased in ordinary user-goal language, not as a demand to choose an internal object family or command name
 
 Natural language routing must not use checkpoints to avoid technical investigation that the executor can perform.
 
@@ -466,6 +667,24 @@ When natural language routing is the active entry, the output must include:
 7. why that next step is legal
 8. when guidance was routed, the guidance skill selected and whether its expected result is discussion-only or candidate writeback
 
+### 11.1 User-Facing Report Contract
+
+The user-facing part of the output must also include ordinary-language statements for:
+
+1. `current state`
+   - what the repository truth says now
+2. `next action`
+   - what will be done first
+3. `why this action`
+   - why this is the legal and useful next action
+4. `expected result`
+   - what should be true after the next action completes
+5. `remaining gap`
+   - what still cannot be claimed after this step, if anything
+
+The output must not make the user understand internal object-family names before they can evaluate the state or next action.
+Internal names may be included as traceability details after the ordinary-language explanation.
+
 If the output starts an existing standard command, the command's own output contract controls the final close-out.
 
 ---
@@ -481,3 +700,5 @@ Natural language routing does not:
 5. create a direct user-facing shared command shape
 6. create compatibility aliases for retired user-facing shared entries
 7. let guidance skills replace candidate truth, command gates, or verification evidence
+8. make users responsible for selecting internal specFlow object families or internal shared-governance flow names
+9. claim an end-to-end user goal is complete when only a local capability step has been completed and the required chain verification is still missing

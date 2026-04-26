@@ -14,15 +14,18 @@ The goal is to clarify the original problem, not to design implementation. The o
 ## Process
 
 1. Read only the repository context needed to understand whether an existing unit, scenario, shared contract, or boundary may own the idea.
-2. Ask one focused question at a time when user intent cannot be discovered from repository truth.
-3. Clarify these minimum facts:
+2. Translate the user's wording into ordinary-language goal, actor, desired outcome, and success meaning before naming internal specFlow owners.
+3. Ask one focused question at a time when user intent cannot be discovered from repository truth.
+   - phrase the question in user-goal language
+   - do not ask the user to choose `unit`, `scenario`, `shared_contract`, `system_constraints`, or `repository_mapping`
+4. Clarify these minimum facts:
    - target user or actor
    - problem or need
    - desired outcome
    - success criteria
    - first version non-goals
-4. When a fact becomes confirmed and affects formal behavior, mark it as candidate-writeback material.
-5. Do not continue into implementation planning.
+5. When a fact becomes confirmed and affects formal behavior, mark it as candidate-writeback material.
+6. Do not continue into implementation planning.
 
 ## Output Shape
 

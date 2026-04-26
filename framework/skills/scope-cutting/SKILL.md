@@ -15,9 +15,11 @@ The output is a discussion-stage scope decision. It becomes durable only after c
 
 1. Separate the full vision from the first candidate round.
 2. Identify independent capabilities that should not be forced into one unit or scenario change.
-3. Recommend the smallest version that can prove the user-facing goal.
-4. State what is explicitly out of scope for this round.
-5. If multiple formal owners are plausible, stop and route through repository mapping or the relevant specFlow boundary rule instead of guessing.
+3. Identify whether the first useful proof is a local capability result, a trigger-to-outcome flow, a shared rule, a global rule, or a structure/ownership decision.
+4. Recommend the smallest version that can prove the user-facing goal.
+5. State what is explicitly out of scope for this round.
+6. If multiple formal owners are plausible, stop and route through repository mapping or the relevant specFlow boundary rule instead of guessing.
+7. Do not ask the user to choose an internal owner name when the real missing input is the desired outcome, local boundary, or success criterion.
 
 ## Output Shape
 
@@ -28,6 +30,7 @@ The output is a discussion-stage scope decision. It becomes durable only after c
 5. `recommended_first_round`
 6. `why_this_round_is_first`
 7. `candidate_writeback_items`
+8. `plain_language_next_question`
 
 ## Boundaries
 

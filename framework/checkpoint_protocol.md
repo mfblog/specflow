@@ -83,6 +83,8 @@ Field meanings:
    - use literal `none` only when the active governance flow is not bound to exactly one formal unit, for example a cross-unit shared-governance checkpoint
 5. `question_or_action`
    - the exact input or verification the user must provide
+   - it must be phrased in ordinary user-goal language unless the user already chose the relevant internal specFlow term
+   - it must not require the user to choose an internal object family, command name, or internal shared-governance flow name
 6. `why_blocking`
    - the minimal explanation of why the command cannot close correctly yet
 7. `required_writeback_target`
@@ -103,6 +105,8 @@ Checkpoint resume must follow these rules:
 3. if the checkpoint conclusion changes behavior truth, boundary truth, or acceptance truth, that conclusion must be written back to the current candidate, required appendix, shared-contract file, or other flow-declared truth target before resume
 4. executors must not treat chat-only conclusions as durable truth
 5. `resume_next_step` must be the smallest legal step, not the most convenient step
+6. a checkpoint answer does not become durable truth until it is written to the required truth target when writeback is required
+7. after a checkpoint answer that changes behavior, boundary, acceptance, shared truth, system truth, or repository ownership, the active flow must reroute or re-judge from current repository truth instead of continuing from the pre-checkpoint assumption
 
 Writeback rules:
 
@@ -124,6 +128,8 @@ Executors must not use checkpoints to:
 3. replace required automated work with manual work
 4. create a second workflow outside the command chain
 5. keep asking open-ended preference questions that do not materially affect the active command
+6. transfer technical investigation, repository reading, or formal owner resolution to the user when the executor can resolve it from repository truth
+7. ask the user to choose between internal labels such as `unit`, `scenario`, `shared_contract`, `system_constraints`, or internal shared flow names when an ordinary-language question about goal, scope, outcome, or verification would identify the missing blocker
 
 Additional type boundaries:
 
