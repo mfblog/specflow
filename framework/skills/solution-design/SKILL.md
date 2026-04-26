@@ -21,8 +21,10 @@ The design is still discussion-stage material. Only the approved direction writt
    - cost
    - likely unit, scenario, shared contract, or system constraint impact
    - verification implication
-4. Recommend one approach with the shortest path that satisfies the confirmed goal.
-5. Ask for only the decision that blocks candidate writeback.
+4. Explain likely formal-object impact as an executor-facing consequence, not as terminology the user must already understand.
+5. Recommend one approach with the shortest path that satisfies the confirmed goal.
+6. Ask for only the ordinary-language decision that blocks candidate writeback.
+7. If the selected approach spans a user-flow anchor and one or more local capability chains, describe that as a development chain and still route only to the first legal writeback step.
 
 ## Output Shape
 
@@ -33,9 +35,11 @@ The design is still discussion-stage material. Only the approved direction writt
 5. `verification_implications`
 6. `candidate_writeback_items`
 7. `decision_needed`
+8. `plain_language_decision_question`
 
 ## Boundaries
 
 1. Do not preserve multiple unresolved options in candidate truth as if they were all current behavior.
 2. Do not choose a Shared Contract, system constraint, or repository mapping owner by directory shape alone.
 3. Do not begin implementation from a selected option until formal truth writeback and the required command gates have passed.
+4. Do not ask the user to choose internal command names or object-family names when the design choice can be framed as a user-facing behavior, scope, or verification decision.

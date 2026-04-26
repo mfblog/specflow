@@ -16,6 +16,9 @@ It answers five questions:
 
 `scenario_xxx` is the formal trigger-to-outcome chain object.
 
+It is the normal formal anchor for a user-visible end-to-end outcome, but it is not the mandatory starting point for every user request.
+Natural-language routing decides whether the user's goal requires a scenario, a local unit route, shared governance, system-constraint handling, repository mapping, implementation classification, or explanation only.
+
 It answers:
 
 1. where the chain starts
@@ -62,6 +65,12 @@ Binding rules:
 4. `scenario candidate` may bind candidate-layer dependencies, but the bound layer must be explicit
 5. `scenario` is downstream of `repository_mapping`, `unit`, `shared_contract`, and `system_constraints`
 
+User-facing routing rule:
+
+1. users do not need to know or name `unit_refs`
+2. executors must derive and explain scenario-to-unit binding from current repository truth and the user-visible flow
+3. if the bound units cannot be derived safely, the executor must ask for the smallest ordinary-language missing flow or outcome fact, or route to repository mapping when ownership truth is missing
+
 ## 5. Lifecycle Responsibility
 
 `scenario` owns:
@@ -94,6 +103,8 @@ Additional rules:
 
 1. reporting `affected_units` does not repair or advance those units automatically
 2. if implementation work is needed, those units must re-enter their own legal `unit` command chain
+3. natural-language routing may use `affected_units` to assemble the next internal development chain, but the next executable step must still be each affected unit's current legal command route
+4. a scenario verification result must not claim the user-visible end-to-end goal is complete while any required affected unit still has unresolved implementation, verification, truth, binding, or baseline work
 
 ## 7. Invalidation Rules
 

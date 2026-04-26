@@ -22,6 +22,9 @@ In plain words:
 1. `Spec` is the truth
 2. `Command` is the action
 
+Commands are not the user's required vocabulary.
+Natural-language routing may translate an ordinary user goal into one or more command chains internally, but each command still owns only its own lifecycle boundary and may advance only by its own command rules.
+
 ## 3. Command-Target Object Families
 
 This repository has two command-target object families:
@@ -94,6 +97,9 @@ Additional rules:
 
 The default user-facing entry is natural language.
 
+Natural-language entry is a user-goal governance entry, not a command-alias system.
+It diagnoses the user's goal, reads the current repository truth needed for routing, chooses the legal specFlow route internally, and reports the current state and next action in ordinary language.
+
 Natural-language requests must follow:
 
 1. `specflow/framework/natural_language_routing.md`
@@ -101,12 +107,15 @@ Natural-language requests must follow:
 
 Rules:
 
-1. a natural-language request must first be resolved into intent fragments
-2. the executor must read the current repository truth needed to prove the route
-3. if the request can be safely decomposed, only the first smallest legal step may be entered in the current handling round
-4. if the request is missing target, scope, success meaning, acceptance meaning, or boundary truth, the executor must stop through the checkpoint protocol instead of guessing
-5. if the request touches cross-unit shared truth, route into the shared-governance branch defined by `natural_language_routing.md`
-6. direct shared command shapes are not user-facing command forms
+1. a natural-language request must first be diagnosed as a user goal before command ownership is chosen
+2. the executor must classify the work shape and resolve formal ownership from current repository truth
+3. the executor must read the current repository truth needed to prove the route
+4. if the request can be safely decomposed, only the first smallest legal step may be entered in the current handling round
+5. natural-language routing may assemble an internal chain across multiple existing command families or governance flows, but that chain is not permission to skip a command gate or continue after the first step without rerouting from current truth
+6. if the request is missing target, scope, success meaning, acceptance meaning, or boundary truth, the executor must stop through the checkpoint protocol instead of guessing
+7. checkpoint questions and ordinary user-facing route reports must not require the user to choose internal object-family names or internal shared-governance flow names
+8. if the request touches cross-unit shared truth, route into the shared-governance branch defined by `natural_language_routing.md`
+9. direct shared command shapes are not user-facing command forms
 
 ### 5.4 Shared Governance Internal Routing
 
@@ -131,6 +140,8 @@ Rules:
 4. implementation verification
 5. promotion into stable unit truth
 
+`unit` commands may be one part of a larger natural-language development chain, but they do not own end-to-end user-flow closure unless that closure is already represented as unit-local acceptance truth.
+
 ### 6.2 Scenario
 
 `scenario` commands own:
@@ -145,6 +156,9 @@ Rules:
 1. implementation planning
 2. implementation editing
 3. unit-local repair
+
+When a scenario route discovers that implementation work is still required in affected units, those units must return to their own legal `unit` command chains.
+Scenario commands must not repair or advance unit implementation on behalf of those units.
 
 ### 6.3 Repository Mapping
 
