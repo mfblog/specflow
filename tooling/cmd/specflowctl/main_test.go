@@ -146,6 +146,9 @@ func createCLITestRepo(t *testing.T) string {
 		"## Formal Objects\n\n"+
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n"+
 		"|---|---|---|---|---|---|---|\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), "# System Constraints\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo Candidate\n")
 	return repoRoot
 }
 

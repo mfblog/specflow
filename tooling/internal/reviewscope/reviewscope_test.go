@@ -49,6 +49,8 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/README.md"), "# project draft plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/active/README.md"), "# project active plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_verify_result/README.md"), "# project verify\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_governance_review/spec_flow_review.md"), "# ignored run state\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# demo candidate\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
@@ -56,6 +58,8 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), "# System Constraints\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
 		"# Registry\n\n"+
 		"## Active Standards\n\n"+
@@ -112,6 +116,21 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	}
 	if containsString(scope.AgentOperabilityFiles, "docs/specs/repository_mapping.md") {
 		t.Fatalf("expected project repository truth to stay outside agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/_status.md") {
+		t.Fatalf("expected project status in compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
+	}
+	if !containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/repository_mapping.md") {
+		t.Fatalf("expected project repository mapping in compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
+	}
+	if !containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/system_constraints.md") {
+		t.Fatalf("expected project system constraints in compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
+	}
+	if !containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/units/candidate/c_unit_demo.md") {
+		t.Fatalf("expected project truth file shape input in compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
+	}
+	if containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/_governance_review/spec_flow_review.md") {
+		t.Fatalf("expected active governance review run state outside compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
 	}
 	if !containsString(scope.ProjectEntryFiles, "AGENTS.md") {
 		t.Fatalf("expected project entry files in scope, got %+v", scope.ProjectEntryFiles)
@@ -177,6 +196,8 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 	mustWrite(t, filepath.Join(repoRoot, "GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), "# System Constraints\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
 		"# Registry\n\n"+
 		"## Active Standards\n\n"+
