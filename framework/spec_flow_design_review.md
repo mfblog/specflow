@@ -33,6 +33,7 @@ That default scope includes:
    - `spec_policy.md`
    - `command_policy.md`
    - `natural_language_routing.md`
+   - `onboarding_decision_policy.md`
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
    - `scenario_policy.md`
@@ -92,6 +93,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `spec_policy.md`
    - `command_policy.md`
    - `natural_language_routing.md`
+   - `onboarding_decision_policy.md`
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
    - `scenario_policy.md`
@@ -128,6 +130,9 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `specflow/templates/AGENTS.md`
    - `specflow/templates/GEMINI.md`
    - `specflow/templates/CLAUDE.md`
+
+Onboarding and evidence appendix design must be judged as part of `design_foundation`.
+The review must judge whether that design solves the real historical-project and partially implemented project onboarding problem, avoids creating an unnecessary lifecycle state, keeps evidence separate from implementation truth, and makes the current position and next action understandable to normal users and executors.
 
 ## 4. Required Cross-Block Convergence Checks
 
@@ -194,6 +199,12 @@ Rules:
     - if the decision is delete, the startup procedure must delete the file, create a new run-state file, and begin at `design_foundation`
 12. if the fixed run-state file is valid, open, and last updated more than seven days before startup, the startup procedure must delete it as expired, report the deletion reason, create a new run-state file, and begin at `design_foundation`
 13. the startup procedure must not scan a per-flow subdirectory or preserve old closed run-state files as review history
+
+Structural validation rule:
+
+1. `review run-validate --flow spec_flow_design_review` checks file shape and all fixed status values, including closed statuses; it is not a reuse decision.
+2. closed run-state files may be structurally valid, but they are not open and must not be reused by startup.
+3. freshness refresh applies only to an open run-state file.
 
 ### 5.2 Baseline Slice Catalog
 

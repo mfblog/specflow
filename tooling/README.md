@@ -59,9 +59,9 @@ For shared-change reconciliation, the current mechanical entry remains `shared s
 9. `review run-init --flow <review_flow>`
    - create or reuse the full-scope run-state file for the explicit review flow
 10. `review run-validate --flow <review_flow>`
-   - validate required run-state fields, timestamps, fixed statuses, baseline slices, score state when present, and dynamic slice parent links
+   - validate required run-state fields, timestamps, all fixed statuses including closed statuses, baseline slices, score state when present, and dynamic slice parent links
 11. `review run-refresh --flow <review_flow>`
-   - recompute slice input fingerprints, mark changed `passed` slices as `stale`, and refresh `last_updated_at`
+   - recompute slice input fingerprints for an open run-state file, mark changed `passed` slices as `stale`, and refresh `last_updated_at`
 12. `review run-touch --flow <review_flow>`
    - refresh only `last_updated_at`
 13. `snapshot rebuild`
@@ -109,11 +109,14 @@ Rules:
 7. each review flow uses one fixed run-state file
 8. when the fixed run-state file is missing, tooling creates the file for a new full-scope review
 9. when a new full-scope review starts after a closed or invalid run-state file, tooling deletes the old fixed file before writing the new run state
-10. when the fixed run-state file is valid and open, `run-init` applies the owning review policy's age rule:
+10. `run-validate` checks structural validity only; a closed run-state file can validate successfully while still remaining unavailable for reuse
+11. when the fixed run-state file is valid and open, `run-init` applies the owning review policy's age rule:
    - no more than two hours old: reuse automatically
-   - more than two hours and no more than seven days old: stop for a manual reuse-or-delete decision
+   - for `spec_flow_review`, more than two hours and no more than 24 hours old: stop for a manual reuse-or-delete decision
+   - for `spec_flow_review`, more than 24 hours and no more than seven days old: stop for a manual reuse-or-delete decision and recommend deleting the old run state and starting a new run
+   - for `spec_flow_design_review`, more than two hours and no more than seven days old: stop for a manual reuse-or-delete decision
    - more than seven days old: delete as expired and create a new run state
-11. after reusing an open run-state file, callers must run `review run-refresh` before continuing review work so changed inputs become stale slices instead of hidden drift
+12. after reusing an open run-state file, callers must run `review run-refresh` before continuing review work so changed inputs become stale slices instead of hidden drift
 
 ## Tooling Input Set
 

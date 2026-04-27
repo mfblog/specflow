@@ -60,7 +60,6 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	}
 	sharedFiles := []string{
 		"specflow/framework/natural_language_routing.md",
-		"specflow/framework/onboarding_decision_policy.md",
 		"specflow/framework/shared_new.md",
 		"specflow/framework/shared_extract.md",
 		"specflow/framework/shared_bind.md",

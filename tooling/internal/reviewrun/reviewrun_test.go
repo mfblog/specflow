@@ -26,6 +26,15 @@ func TestInitCreatesValidRunState(t *testing.T) {
 	if !strings.Contains(content, "| scope_inventory | baseline | local | pending |") {
 		t.Fatalf("expected baseline slice table in run-state:\n%s", content)
 	}
+	state := mustParse(t, result.File)
+	routingSlice := findSlice(t, state, "routing_and_command_policy")
+	if !containsString(routingSlice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
+		t.Fatalf("expected onboarding policy in routing slice, got %+v", routingSlice.InputFiles)
+	}
+	truthSlice := findSlice(t, state, "truth_and_implementation_gates")
+	if !containsString(truthSlice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
+		t.Fatalf("expected onboarding policy in truth gate slice, got %+v", truthSlice.InputFiles)
+	}
 
 	validation := ValidateFile(repoRoot, FlowSpecFlowReview, result.File, now)
 	if !validation.Valid {
@@ -63,6 +72,11 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	}
 	if !strings.Contains(content, "## Score State") || !strings.Contains(content, "| q8 | pending | none |") {
 		t.Fatalf("expected q1-q8 score state in run-state:\n%s", content)
+	}
+	state := mustParse(t, result.File)
+	designFoundation := findSlice(t, state, "design_foundation")
+	if !containsString(designFoundation.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
+		t.Fatalf("expected onboarding decision policy in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
 
 	validation := ValidateFile(repoRoot, FlowSpecFlowDesignReview, result.File, now)
@@ -198,6 +212,68 @@ func TestValidateRejectsInvalidRunStatus(t *testing.T) {
 	}
 }
 
+func TestValidateAcceptsClosedRunStateShape(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	state.Fields["status"] = statusClosedPass
+	state.Fields["active_slice"] = "none"
+	state.Fields["resume_next_step"] = "none"
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+
+	validation := ValidateFile(repoRoot, FlowSpecFlowReview, file, now)
+	if !validation.Valid {
+		t.Fatalf("expected closed run-state shape to validate, got diagnostics: %+v", validation.Diagnostics)
+	}
+}
+
+func TestValidateAcceptsClosedDesignRunStateShape(t *testing.T) {
+	repoRoot := createReviewRunRepo(t)
+	now := time.Date(2026, 4, 26, 10, 30, 0, 0, time.UTC)
+	result, err := Init(repoRoot, FlowSpecFlowDesignReview, now)
+	if err != nil {
+		t.Fatalf("Init design review: %v", err)
+	}
+	state := mustParse(t, result.File)
+	state.Fields["status"] = statusClosedBlocked
+	state.Fields["active_slice"] = "none"
+	state.Fields["resume_next_step"] = "none"
+	mustWrite(t, result.File, renderState(mustConfig(t, FlowSpecFlowDesignReview), state))
+
+	validation := ValidateFile(repoRoot, FlowSpecFlowDesignReview, result.File, now)
+	if !validation.Valid {
+		t.Fatalf("expected closed design run-state shape to validate, got diagnostics: %+v", validation.Diagnostics)
+	}
+}
+
+func TestRefreshRejectsClosedRunState(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	state.Fields["status"] = statusClosedPass
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+
+	_, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Minute))
+	if err == nil || !strings.Contains(err.Error(), "closed run-state files cannot be reused") {
+		t.Fatalf("expected closed run-state refresh rejection, got %v", err)
+	}
+}
+
+func TestTouchAcceptsClosedRunStateShape(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	state.Fields["status"] = statusClosedPass
+	state.Fields["active_slice"] = "none"
+	state.Fields["resume_next_step"] = "none"
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+
+	result, err := Touch(repoRoot, FlowSpecFlowReview, file, now.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("expected touch to update closed run-state timestamp, got %v", err)
+	}
+	if result.LastUpdatedAtUTC != "2026-04-26T10:31:00Z" {
+		t.Fatalf("unexpected touch timestamp: %+v", result)
+	}
+}
+
 func TestValidateRejectsInvalidSliceStatus(t *testing.T) {
 	repoRoot, file, now := createInitializedRun(t)
 	state := mustParse(t, file)
@@ -257,6 +333,47 @@ func TestInitDoesNotAutoReuseRunOlderThanTwoHours(t *testing.T) {
 	_, err := Init(repoRoot, FlowSpecFlowReview, now)
 	if err == nil || !strings.Contains(err.Error(), "requires manual reuse decision") {
 		t.Fatalf("expected manual reuse decision error, got %v", err)
+	}
+}
+
+func TestInitRecommendsRestartForSpecFlowReviewRunOlderThanTwentyFourHours(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	state.Fields["last_updated_at"] = formatUTC(now.Add(-25 * time.Hour))
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+
+	_, err := Init(repoRoot, FlowSpecFlowReview, now)
+	if err == nil {
+		t.Fatalf("expected manual reuse decision error")
+	}
+	if !strings.Contains(err.Error(), "requires manual reuse decision") {
+		t.Fatalf("expected manual reuse decision error, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "recommendation=delete old run-state and start a new run") {
+		t.Fatalf("expected restart recommendation, got %v", err)
+	}
+}
+
+func TestInitDoesNotRecommendRestartForDesignReviewRunOlderThanTwentyFourHours(t *testing.T) {
+	repoRoot := createReviewRunRepo(t)
+	now := time.Date(2026, 4, 26, 10, 30, 0, 0, time.UTC)
+	result, err := Init(repoRoot, FlowSpecFlowDesignReview, now)
+	if err != nil {
+		t.Fatalf("Init design review: %v", err)
+	}
+	state := mustParse(t, result.File)
+	state.Fields["last_updated_at"] = formatUTC(now.Add(-25 * time.Hour))
+	mustWrite(t, result.File, renderState(mustConfig(t, FlowSpecFlowDesignReview), state))
+
+	_, err = Init(repoRoot, FlowSpecFlowDesignReview, now)
+	if err == nil {
+		t.Fatalf("expected manual reuse decision error")
+	}
+	if !strings.Contains(err.Error(), "requires manual reuse decision") {
+		t.Fatalf("expected manual reuse decision error, got %v", err)
+	}
+	if strings.Contains(err.Error(), "recommendation=delete old run-state and start a new run") {
+		t.Fatalf("did not expect design review restart recommendation, got %v", err)
 	}
 }
 
@@ -466,6 +583,9 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 	}
 	if !containsString(slice.InputFiles, "docs/specs/units/candidate/c_unit_demo.md") {
 		t.Fatalf("expected current project truth file input, got %+v", slice.InputFiles)
+	}
+	if !containsString(slice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
+		t.Fatalf("expected onboarding policy input for source field compatibility, got %+v", slice.InputFiles)
 	}
 	if containsString(slice.InputFiles, "docs/specs/_governance_review/spec_flow_review.md") {
 		t.Fatalf("expected active review run state outside compatibility fingerprint, got %+v", slice.InputFiles)

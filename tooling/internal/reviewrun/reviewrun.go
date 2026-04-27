@@ -70,9 +70,17 @@ type flowConfig struct {
 	InitialActiveSlice  string
 	InitialResumeStep   string
 	UsesScoreState      bool
+	RecommendRestartAge time.Duration
 	CollectScope        func(string) (reviewscope.SpecFlowScope, error)
 	BaselineDefinitions func() []sliceDefinition
 }
+
+type validationMode int
+
+const (
+	validateShape validationMode = iota
+	validateOpenRun
+)
 
 type Result struct {
 	File string
@@ -174,6 +182,7 @@ func configForFlow(flow string) (flowConfig, error) {
 			Title:               "Spec Flow Review Run State",
 			InitialActiveSlice:  "scope_inventory",
 			InitialResumeStep:   "review slice scope_inventory",
+			RecommendRestartAge: 24 * time.Hour,
 			CollectScope:        reviewscope.CollectDefaultSpecFlowScope,
 			BaselineDefinitions: specFlowReviewBaselineDefinitions,
 		}, nil
@@ -218,7 +227,11 @@ func Init(repoRoot, flow string, now time.Time) (InitResult, error) {
 			case age <= 2*time.Hour:
 				return InitResult{File: file, Reused: true}, nil
 			case age <= 7*24*time.Hour:
-				return InitResult{}, fmt.Errorf("open run-state file requires manual reuse decision before run-init can continue: %s last_updated_at=%s age=%s", file, formatUTC(existing.LastUpdated), age.Round(time.Second))
+				message := fmt.Sprintf("open run-state file requires manual reuse decision before run-init can continue: %s last_updated_at=%s age=%s", file, formatUTC(existing.LastUpdated), age.Round(time.Second))
+				if config.RecommendRestartAge > 0 && age > config.RecommendRestartAge {
+					message += "; recommendation=delete old run-state and start a new run"
+				}
+				return InitResult{}, errors.New(message)
 			default:
 				existing.Reason = "expired_over_7_days"
 			}
@@ -283,7 +296,7 @@ func ValidateFile(repoRoot, flow, file string, now time.Time) ValidationResult {
 		result.Diagnostics = append(result.Diagnostics, err.Error())
 		return result
 	}
-	result.Diagnostics = validateState(repoRoot, config, state, now.UTC())
+	result.Diagnostics = validateState(repoRoot, config, state, now.UTC(), validateShape)
 	result.Valid = len(result.Diagnostics) == 0
 	return result
 }
@@ -298,7 +311,7 @@ func Refresh(repoRoot, flow, file string, now time.Time) (RefreshResult, error) 
 	if err != nil {
 		return RefreshResult{}, err
 	}
-	if diagnostics := validateState(repoRoot, config, state, now); len(diagnostics) > 0 {
+	if diagnostics := validateState(repoRoot, config, state, now, validateOpenRun); len(diagnostics) > 0 {
 		return RefreshResult{}, fmt.Errorf("run-state validation failed: %s", strings.Join(diagnostics, "; "))
 	}
 
@@ -381,7 +394,7 @@ func Touch(repoRoot, flow, file string, now time.Time) (TouchResult, error) {
 	if err != nil {
 		return TouchResult{}, err
 	}
-	if diagnostics := validateState(repoRoot, config, state, now); len(diagnostics) > 0 {
+	if diagnostics := validateState(repoRoot, config, state, now, validateShape); len(diagnostics) > 0 {
 		return TouchResult{}, fmt.Errorf("run-state validation failed: %s", strings.Join(diagnostics, "; "))
 	}
 	state.Fields["last_updated_at"] = formatUTC(now)
@@ -403,7 +416,7 @@ func inspectFixedRunState(repoRoot string, config flowConfig, file string, now t
 	if status == statusClosedPass || status == statusClosedBlocked {
 		return &fixedRunStateFile{Reason: "closed_run_state"}, nil
 	}
-	diagnostics := validateState(repoRoot, config, state, now)
+	diagnostics := validateState(repoRoot, config, state, now, validateOpenRun)
 	if len(diagnostics) > 0 {
 		return &fixedRunStateFile{Reason: "invalid_run_state"}, nil
 	}
@@ -414,7 +427,7 @@ func inspectFixedRunState(repoRoot string, config flowConfig, file string, now t
 	return &fixedRunStateFile{LastUpdated: lastUpdated}, nil
 }
 
-func validateState(repoRoot string, config flowConfig, state runState, now time.Time) []string {
+func validateState(repoRoot string, config flowConfig, state runState, now time.Time, mode validationMode) []string {
 	diagnostics := []string{}
 	requiredFields := []string{
 		"review_flow",
@@ -441,12 +454,11 @@ func validateState(repoRoot string, config flowConfig, state runState, now time.
 	if state.Fields["scope_label"] != config.ScopeLabel {
 		diagnostics = append(diagnostics, "scope_label must be "+config.ScopeLabel)
 	}
-	if !isOpenRunStatus(state.Fields["status"]) {
-		if state.Fields["status"] == statusClosedPass || state.Fields["status"] == statusClosedBlocked {
-			diagnostics = append(diagnostics, "closed run-state files cannot be reused")
-		} else {
-			diagnostics = append(diagnostics, "invalid run status: "+state.Fields["status"])
-		}
+	status := strings.TrimSpace(state.Fields["status"])
+	if !isRunStatus(status) {
+		diagnostics = append(diagnostics, "invalid run status: "+state.Fields["status"])
+	} else if mode == validateOpenRun && !isOpenRunStatus(status) {
+		diagnostics = append(diagnostics, "closed run-state files cannot be reused")
 	}
 	for _, field := range []string{"created_at", "last_updated_at"} {
 		if _, err := parseTimestamp(state.Fields[field]); err != nil {
@@ -735,6 +747,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
 					"specflow/framework/command_policy.md",
+					"specflow/framework/onboarding_decision_policy.md",
 					"specflow/framework/process_snapshot_contract.md",
 					"specflow/framework/repository_mapping_policy.md",
 					"specflow/framework/scenario_policy.md",
@@ -1274,6 +1287,10 @@ func isOpenRunStatus(status string) bool {
 	default:
 		return false
 	}
+}
+
+func isRunStatus(status string) bool {
+	return isOpenRunStatus(status) || status == statusClosedPass || status == statusClosedBlocked
 }
 
 func isSliceStatus(status string) bool {
