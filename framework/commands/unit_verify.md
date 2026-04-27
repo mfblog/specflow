@@ -20,8 +20,8 @@ By default it handles:
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
-When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/command_policy.md`.
-Only a new independent full-scope run of `unit_verify` may produce that advancing result; later local confirmation, narrowed evidence refresh, or scoped follow-up review must not advance lifecycle state.
+Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
+This file states only `unit_verify`-local entry, output, and stop rules.
 
 ## 3. Preconditions
 

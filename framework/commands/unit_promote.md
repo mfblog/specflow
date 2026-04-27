@@ -14,10 +14,21 @@ By default it handles:
 4. updating `system_constraints.md` when a closed unit-carried global proposal is ready
 5. consuming the `unit_verify -> unit_promote` handoff only when verification still covers the current round
 
-### 2.1 Lifecycle-State Advance Inheritance
+### 2.1 Command Read Summary
 
-When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/command_policy.md`.
-Only a new independent full-scope run of `unit_promote` may produce that advancing result; later local confirmation or scoped follow-up review must not advance lifecycle state.
+Read this summary before the detailed rules below.
+It is navigation only and does not replace the preconditions, procedure, stop conditions, or output contract.
+
+1. `unit_promote` exists to land the verified candidate as the active stable truth and clean the completed candidate round.
+2. The minimum inputs are the current candidate, latest valid `_verify_result/unit/{unit}.md`, required appendix files, touched or bound Shared Contract files, current global baseline, and recovery policy.
+3. Promotion must stop before truth-file mutation if verification, bindings, shared truth, or baseline no longer match the current round.
+4. If mutation has started and promotion cannot safely complete, incomplete-promotion recovery restores candidate semantics and sends the object back to the smallest restart point.
+5. Shared Contract topology, terminal-state handling, `bound_objects`, `promotion_owner_unit`, and post-promotion `shared_sync` remain detailed closure rules; this summary does not shorten them.
+
+### 2.2 Lifecycle-State Advance Inheritance
+
+Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
+This file states only `unit_promote`-local entry, output, and stop rules.
 
 ## 3. Preconditions
 

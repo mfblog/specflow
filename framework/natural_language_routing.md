@@ -25,6 +25,40 @@ It decides which existing command, governance flow, or checkpoint is legal to en
 
 ---
 
+## 1.1 First Read Path
+
+Use this path before reading the full file.
+It is a navigation rule only and does not weaken the detailed rules below.
+
+1. If the request exactly matches a standard command shape, stop here and read:
+   - `specflow/framework/command_policy.md`
+   - the matching file under `specflow/framework/commands/`
+2. If the request is exactly `spec_flow_review` or `spec_flow_design_review`, with or without an explicit narrowing phrase, stop here and read the matching review policy.
+3. If the request asks for code, test, config, migration, build-script, or other implementation-side edits, read:
+   - this file through Section 6
+   - `specflow/framework/implementation_change_policy.md` before any implementation-side edit
+4. If the request asks for a local capability or behavior change, read:
+   - this file through Section 7
+   - `docs/specs/_status.md` when an existing `unit` or `scenario` is named
+   - `docs/specs/repository_mapping.md` only when path ownership, object boundary, or support-surface ownership matters
+5. If the request asks for an end-to-end user-visible result, read:
+   - this file through Section 6.3
+   - `specflow/framework/scenario_policy.md`
+   - current `unit` and `scenario` truth only after current-layer resolution from `_status.md`
+6. If the request asks for cross-unit shared truth, shared binding, shared topology, or shared impact, read:
+   - this file through Section 10
+   - the selected shared-governance flow reached by Section 10.1
+7. If the request asks for project-local standards, governance entry behavior, command behavior, or review design, read:
+   - this file through Section 7
+   - the named framework or project-standard owner file
+   - `specflow/framework/git_policy.md` before git close-out when framework, Spec, or registered entry files may change
+8. If the request asks only for explanation, read only enough current truth to answer without mutating files.
+
+After the first read path identifies the likely route, continue through the detailed sections required by that route.
+If any later rule requires a wider read, follow the later rule.
+
+---
+
 ## 2. Entry Shape Rule
 
 Users may start `specFlow` work with ordinary natural language.

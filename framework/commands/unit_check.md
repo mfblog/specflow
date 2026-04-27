@@ -34,10 +34,21 @@ By default this command reviews:
 10. whether the candidate records a coherent current design rather than an over-broad, unresolved, or chat-dependent proposal
 11. whether the candidate source fields and evidence appendix requirements from `onboarding_decision_policy.md` are satisfied
 
-### 2.1 Lifecycle-State Advance Inheritance
+### 2.1 Command Read Summary
 
-When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/command_policy.md`.
-Only a new independent full-scope run of `unit_check` may produce that advancing result; later local confirmation, repair-side reassessment, or scoped follow-up review must not advance lifecycle state.
+Read this summary before the detailed rules below.
+It is navigation only and does not replace the preconditions, procedure, stop conditions, or output contract.
+
+1. `unit_check` exists to decide whether the current candidate is strong enough to become implementation input.
+2. The minimum inputs are the current candidate main Spec, required appendix files, bound Shared Contract files, current global baseline when relevant, and registered project-local standards that apply to the command-owned extension surface.
+3. A pass writes the current `_check_result/unit/{unit}.md` pass gate and advances the object to `unit_plan`.
+4. A non-pass result must not write a failed check-result file; it either reports a blocker, asks for a checkpoint, or requires candidate-side repair before a fresh full-scope `unit_check` rerun.
+5. Evidence appendix text proves what was reviewed; it does not become implementation truth.
+
+### 2.2 Lifecycle-State Advance Inheritance
+
+Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
+This file states only `unit_check`-local entry, output, stop, and fresh-rerun rules.
 
 `unit_check` is not a "minimum can-move-forward review."
 `unit_check pass` always means:

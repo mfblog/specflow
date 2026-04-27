@@ -283,6 +283,28 @@ User-facing close-out language rules:
 7. traceability details may appear only in a short execution note after the user-facing close-out block
 8. the execution note may record internal state, command names, file paths, and policy inputs, but it must not be required for the user to understand the conclusion, next step, reason, or remaining gap
 
+### 8.7 Command-File Economy Contract
+
+Command files inherit the shared command rules in this section by default.
+
+Rules:
+
+1. command files must not restate the full text of Section 8.5 when a short inheritance sentence is enough
+2. command files must state only command-local additions when they tighten rerun entry, checkpoint handling, fallback handling, output fields, or stop conditions
+3. command files must not create a second definition for the user-facing close-out block; they may only add command-local fields or stricter wording requirements on top of Section 8.6
+4. command files must not restate `git_policy.md`; they must state only whether commit-triggering files may change and must report the git close-out result when required
+5. command files may include a short read summary before dense procedure text; that summary is navigation only and must not override the command's preconditions, procedure, stop conditions, or output contract
+
+### 8.8 Lifecycle-Advance Inheritance
+
+Every standard command inherits the authoritative and non-authoritative result contract from Section 8.5.
+
+Rules:
+
+1. when a command advances `_status.md`, writes a formal pass gate, or writes a formal verification pass, that advancement is valid only from a new independent full-scope run of that command
+2. command-local follow-up checks after a non-pass result remain non-authoritative unless the command file explicitly defines a resumable checkpoint
+3. command files may tighten how a fresh full-scope rerun is recognized, but they must not allow a repair-only or scoped follow-up to advance lifecycle state
+
 ## 9. Non-Goals
 
 This file does not:
