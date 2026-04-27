@@ -119,7 +119,9 @@ Any contract drift that can change execution, stop behavior, review judgment, or
 Locally correct rules must still compose into one coherent governance baseline.
 
 The review must test cross-convergence wherever one rule area depends on another rule area.
-At minimum, cross-convergence covers routing, commands, truth writeback, implementation gates, shared governance, impact reconciliation, process state, entry files, project-local standards, tooling, recovery, and git close-out when those areas are in scope.
+At minimum, cross-convergence covers routing, commands, truth writeback, implementation gates, onboarding source decision, shared governance, impact reconciliation, process state, entry files, project-local standards, tooling, recovery, and git close-out when those areas are in scope.
+
+When onboarding source decision is in scope, the review must verify that candidate source fields, candidate main Spec text, evidence appendix handling, implementation permission, and lifecycle gates converge without allowing observed implementation behavior to become implementation truth outside the candidate main Spec.
 
 If a narrowed review crosses a boundary whose owner slice is not included, the narrowed review must stop or explicitly remain non-baseline.
 It must not claim default governance-baseline `pass`.
@@ -158,6 +160,7 @@ The compatibility check may judge only:
 3. agreement between project-instance process files and the template-side process contracts
 4. agreement between project-instance object references and `docs/specs/_status.md`, `docs/specs/repository_mapping.md`, and current framework path rules
 5. whether existing project-instance files use names, states, command forms, and reference formats that the current framework can consume
+6. candidate source metadata shape for current `unit` and `scenario` candidates, including `source_basis`, `evidence_appendix_ref`, required evidence appendix reference presence, and evidence appendix file shape when the current framework requires one
 
 The compatibility check must not judge:
 
@@ -166,8 +169,9 @@ The compatibility check must not judge:
 3. whether a candidate or stable Spec should make different design decisions
 4. whether implementation actually satisfies a unit, scenario, or shared contract
 5. whether the current governance design is worth using
+6. whether an evidence appendix's observed behavior is business-correct or should be retained
 
-If the project-instance compatibility check finds old file shape, unsupported status values, missing required references, invalid binding format, or unreadable process-state shape, it is a `spec_flow_review` finding because the framework cannot safely operate on the current project instance.
+If the project-instance compatibility check finds old file shape, unsupported status values, missing required references, invalid binding format, missing candidate source fields, invalid evidence appendix references, missing required evidence appendix files, or unreadable process-state shape, it is a `spec_flow_review` finding because the framework cannot safely operate on the current project instance.
 If the discovered concern is only about the truth content being wrong, incomplete, or undesirable as business truth, report that it is outside this check and route it to the owning command, shared-governance flow, repository-mapping flow, or design review.
 
 ### 2.10 Relationship To The Slice Catalog
@@ -253,20 +257,22 @@ The active full-scope run-state file is governed by the run-state procedure in S
 
 Default scope must explicitly include:
 
-1. the shared-governance rule set
-   - at minimum `natural_language_routing.md`, `onboarding_decision_policy.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`
-2. the guidance-skill rule set
+1. the onboarding source decision rule set
+   - at minimum `natural_language_routing.md` where it enters onboarding source decision, `onboarding_decision_policy.md`, `spec_policy.md`, `implementation_change_policy.md`, `unit_new.md`, `unit_check.md`, `unit_plan.md`, `unit_impl.md`, `unit_promote.md`, `scenario_new.md`, `scenario_check.md`, `scenario_promote.md`, and `candidate_handoff_contract.md`
+2. the shared-governance rule set
+   - at minimum `natural_language_routing.md` only where it defines the shared-governance branch, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`
+3. the guidance-skill rule set
    - at minimum `using-specflow-guidance/SKILL.md`, `project-framing/SKILL.md`, `scope-cutting/SKILL.md`, `solution-design/SKILL.md`, `design-quality-review/SKILL.md`, and `spec-writeback-guidance/SKILL.md`
-3. the impact-reconciliation rule set
+4. the impact-reconciliation rule set
    - at minimum `impact_sync_policy.md`, `process_snapshot_contract.md`, `recovery_policy.md`, template `_status.md`, and the template-side process README files
-4. the tooling execution contract set
+5. the tooling execution contract set
    - at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, and the in-scope tooling source files
-5. the agent-operability standard
-   - at minimum `agent_operability_standard.md`, entry files, routing policy files, command policy files, command files, shared-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
-6. the project-instance compatibility check
+6. the agent-operability standard
+   - at minimum `agent_operability_standard.md`, entry files, routing policy files, onboarding source decision files, command policy files, command files, shared-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
+7. the project-instance compatibility check
    - at minimum project-instance status, repository mapping, system constraints, existing process files, and existing formal truth files under `docs/specs/`, limited by Section 2.9
 
-If any one of those six coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
+If any one of those seven coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
 
 ## 4. Baseline Slice Catalog
 
@@ -291,10 +297,10 @@ Local slices review one owner area for internal closure, side effects, contract 
    - verifies review entry meaning, output contracts, finding contracts, and stop behavior
 3. `routing_and_command_policy`
    - reviews `natural_language_routing.md`, `onboarding_decision_policy.md`, `command_policy.md`, `scenario_policy.md`, `commands/*.md`, and `skills/*/SKILL.md`
-   - verifies exact command routing, natural-language routing, unit command progression, scenario command progression, and guidance entry behavior
+   - verifies exact command routing, natural-language routing, onboarding source routing, unit command progression, scenario command progression, and guidance entry behavior
 4. `truth_and_implementation_gates`
    - reviews `spec_policy.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `onboarding_decision_policy.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, `recovery_policy.md`, and `git_policy.md`
-   - verifies truth ownership, implementation diversion, handoff, fallback, recovery, and close-out rules
+   - verifies truth ownership, candidate source fields, evidence appendix ownership, implementation diversion, handoff, fallback, recovery, and close-out rules
 5. `shared_governance`
    - reviews `natural_language_routing.md` only where it defines the shared-governance branch
    - reviews `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`
@@ -303,8 +309,8 @@ Local slices review one owner area for internal closure, side effects, contract 
    - verifies process-state contracts, snapshot invalidation, impact handling, and governance-review run-state boundaries
 7. `project_instance_contract_compatibility`
    - reviews the current project-instance files under `docs/specs/` only for format and contract compatibility with current framework rules
-   - verifies status shape, repository mapping shape, system constraints shape, process-file shape, formal object file shape, reference format, status values, command names, and shared binding format
-   - must not judge unit, scenario, or shared-contract business truth correctness
+   - verifies status shape, repository mapping shape, system constraints shape, process-file shape, formal object file shape, candidate source metadata shape, evidence appendix reference shape, evidence appendix file shape, reference format, status values, command names, and shared binding format
+   - must not judge unit, scenario, shared-contract, or evidence-appendix business truth correctness
 8. `entry_and_project_extension`
    - reviews `entry_index_registry.md`, `project_standards_policy.md`, `project_standard_create.md`, registered entry files, template entry files, template project-standard registry, project registry, and active project-local standards in scope
 9. `tooling_execution`
@@ -323,7 +329,7 @@ Cross-convergence slices review whether locally correct rules still compose into
 2. `command_to_process_state_convergence`
    - verifies command pass, fallback, cleanup, snapshot, and process-file consumption rules converge
 3. `truth_to_implementation_convergence`
-   - verifies truth writeback, repository mapping, implementation gates, handoff, recovery, and git close-out converge
+   - verifies truth writeback, onboarding source decision, repository mapping, implementation gates, evidence appendix non-truth handling, handoff, recovery, and git close-out converge
 4. `shared_to_impact_convergence`
    - verifies shared-governance changes correctly converge with impact reconciliation and downstream process-state invalidation
 5. `entry_extension_to_review_convergence`
@@ -419,9 +425,9 @@ The deterministic tooling entry is `specflowctl review run-* --flow spec_flow_re
 Rules:
 
 1. `review run-init --flow spec_flow_review` creates, reuses, deletes, or recreates the fixed full-scope run-state file
-2. `review run-validate --flow spec_flow_review` checks the run-state file shape and fixed status values
-3. `review run-refresh --flow spec_flow_review` recomputes slice fingerprints and marks affected `passed` slices as `stale`
-4. `review run-touch --flow spec_flow_review` updates only `last_updated_at`
+2. `review run-validate --flow spec_flow_review` checks the run-state file shape and all fixed status values, including closed statuses; it is not a reuse decision
+3. `review run-refresh --flow spec_flow_review` recomputes slice fingerprints and marks affected `passed` slices as `stale` only for an open run-state file
+4. `review run-touch --flow spec_flow_review` updates only `last_updated_at` on a structurally valid run-state file
 5. tooling must not decide whether a slice has passed review
 6. tooling must not write finding content
 7. tooling must not decide final `pass` or `blocked`
@@ -440,10 +446,11 @@ At the start of a full-scope review:
 
 ### 6.3 Basic Validity Check
 
-The basic validity check verifies only that the run-state file can be used as a progress file.
+The basic validity check verifies only that the run-state file can be used as an open progress file.
 It does not judge whether old review conclusions are still semantically correct.
+It is different from `review run-validate`, which validates file shape and fixed status values without deciding reuse.
 
-The file is valid only when:
+For startup reuse, the file is open-valid only when:
 
 1. the file can be read
 2. `review_flow` is `spec_flow_review`
@@ -462,8 +469,9 @@ The file is valid only when:
 Rules:
 
 1. `closed_pass` and `closed_blocked` are closed states and must not be reused
-2. any other run status value is invalid and fails the basic validity check
-3. if `last_updated_at` cannot be parsed, the file fails the basic validity check
+2. `review run-validate` may still report a closed run-state file as structurally valid when all required fields, tables, timestamps, and fixed status values are valid
+3. any other run status value is invalid and fails the basic validity check
+4. if `last_updated_at` cannot be parsed, the file fails the basic validity check
 
 The basic validity check must not decide:
 

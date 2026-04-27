@@ -97,6 +97,12 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/skills/using-specflow-guidance/SKILL.md") {
 		t.Fatalf("expected guidance skill files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
+	if containsString(scope.SharedGovernanceFiles, "specflow/framework/onboarding_decision_policy.md") {
+		t.Fatalf("expected onboarding decision policy outside shared-governance scope, got %+v", scope.SharedGovernanceFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/onboarding_decision_policy.md") {
+		t.Fatalf("expected onboarding decision policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/shared_sync.md") {
 		t.Fatalf("expected shared-governance files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
@@ -280,6 +286,9 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	}
 	if !containsString(scope.TemplateGovernanceFiles, "specflow/templates/docs/specs/_governance_review/README.md") {
 		t.Fatalf("expected governance review process contract in design scope, got %+v", scope.TemplateGovernanceFiles)
+	}
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/onboarding_decision_policy.md") {
+		t.Fatalf("expected onboarding decision policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
 }
 
