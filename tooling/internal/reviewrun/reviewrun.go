@@ -667,7 +667,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Does the default governance baseline scope include every required governance input family.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.GuidanceSkillFiles, scope.SharedGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ActiveProjectStandardFiles)
+				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.GuidanceSkillFiles, scope.SharedGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ActiveProjectStandardFiles)
 			},
 		},
 		{
@@ -725,6 +725,20 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 					"specflow/framework/process_snapshot_contract.md",
 					"specflow/framework/recovery_policy.md",
 				}, scope.TemplateGovernanceFiles)
+			},
+		},
+		{
+			ID:             "project_instance_contract_compatibility",
+			SliceType:      "local",
+			ReviewQuestion: "Do current project-instance SpecFlow files remain format-compatible with framework contracts without judging business truth.",
+			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
+				return union([]string{
+					"specflow/framework/command_policy.md",
+					"specflow/framework/process_snapshot_contract.md",
+					"specflow/framework/repository_mapping_policy.md",
+					"specflow/framework/scenario_policy.md",
+					"specflow/framework/spec_policy.md",
+				}, scope.SharedGovernanceFiles, scope.TemplateGovernanceFiles, scope.ProjectInstanceCompatibilityFiles)
 			},
 		},
 		{
@@ -798,11 +812,18 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			InputFiles:     reviewDependencyFiles("tooling_execution", "process_and_impact_state", "review_entry_policy"),
 		},
 		{
+			ID:             "project_instance_to_framework_convergence",
+			SliceType:      "cross_convergence",
+			ReviewQuestion: "Does project-instance compatibility converge with routing, command, process-state, mapping, shared, and tooling rules without judging business truth.",
+			DependsOn:      []string{"project_instance_contract_compatibility", "routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates", "shared_governance", "tooling_execution"},
+			InputFiles:     reviewDependencyFiles("project_instance_contract_compatibility", "routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates", "shared_governance", "tooling_execution"),
+		},
+		{
 			ID:             "agent_operability_path_walk",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Can an agent walk from entry instructions through routing, commands, and checkpoints without hidden decisions.",
-			DependsOn:      []string{"agent_operability_local", "routing_and_command_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state"},
-			InputFiles:     reviewDependencyFiles("agent_operability_local", "routing_and_command_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state"),
+			DependsOn:      []string{"agent_operability_local", "routing_and_command_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state", "project_instance_contract_compatibility"},
+			InputFiles:     reviewDependencyFiles("agent_operability_local", "routing_and_command_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state", "project_instance_contract_compatibility"),
 		},
 	}
 }

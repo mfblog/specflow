@@ -12,20 +12,21 @@ import (
 )
 
 type SpecFlowScope struct {
-	Scenario                   string
-	FrameworkGuidelineFiles    []string
-	CommandFiles               []string
-	GuidanceSkillFiles         []string
-	SharedGovernanceFiles      []string
-	TemplateGovernanceFiles    []string
-	TemplateEntryFiles         []string
-	ProjectEntryFiles          []string
-	AgentOperabilityFiles      []string
-	ProjectRegistryFiles       []string
-	RegistryDiagnostics        []string
-	ToolingContractFiles       []string
-	ToolingSourceFiles         []string
-	ActiveProjectStandardFiles []string
+	Scenario                          string
+	FrameworkGuidelineFiles           []string
+	CommandFiles                      []string
+	GuidanceSkillFiles                []string
+	SharedGovernanceFiles             []string
+	TemplateGovernanceFiles           []string
+	TemplateEntryFiles                []string
+	ProjectEntryFiles                 []string
+	AgentOperabilityFiles             []string
+	ProjectInstanceCompatibilityFiles []string
+	ProjectRegistryFiles              []string
+	RegistryDiagnostics               []string
+	ToolingContractFiles              []string
+	ToolingSourceFiles                []string
+	ActiveProjectStandardFiles        []string
 }
 
 func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
@@ -103,6 +104,10 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/recovery_policy.md",
 	}
 	agentOperabilityFiles := collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, guidanceSkillFiles, sharedFiles, processStateContractFiles, toolingContractFiles)
+	projectInstanceCompatibilityFiles, err := collectProjectInstanceCompatibilityFiles(repoRoot)
+	if err != nil {
+		return scope, err
+	}
 
 	toolingCmdFiles, err := walkRelativeFiles(repoRoot, "specflow/tooling/cmd", ".go")
 	if err != nil {
@@ -156,6 +161,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	scope.TemplateEntryFiles = templateEntryFiles
 	scope.ProjectEntryFiles = projectEntryFiles
 	scope.AgentOperabilityFiles = agentOperabilityFiles
+	scope.ProjectInstanceCompatibilityFiles = projectInstanceCompatibilityFiles
 	scope.ProjectRegistryFiles = projectRegistryFiles
 	scope.RegistryDiagnostics = sortAndDedupe(validation.Diagnostics)
 	scope.ToolingContractFiles = toolingContractFiles
@@ -278,6 +284,49 @@ func collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templat
 	files = append(files, toolingContractFiles...)
 	files = append(files, templateProcessStateFiles...)
 	return sortAndDedupe(files)
+}
+
+func collectProjectInstanceCompatibilityFiles(repoRoot string) ([]string, error) {
+	required := []string{
+		"docs/specs/_status.md",
+		"docs/specs/repository_mapping.md",
+		"docs/specs/system_constraints.md",
+	}
+	if err := ensureRelativeFiles(repoRoot, required); err != nil {
+		return nil, err
+	}
+
+	root := filepath.Join(repoRoot, filepath.FromSlash("docs/specs"))
+	if _, err := os.Stat(root); err != nil {
+		return nil, fmt.Errorf("required scope directory missing: docs/specs")
+	}
+
+	result := append([]string{}, required...)
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(d.Name(), ".md") {
+			return nil
+		}
+		rel, err := filepath.Rel(repoRoot, path)
+		if err != nil {
+			return err
+		}
+		relPath := filepath.ToSlash(rel)
+		if strings.HasPrefix(relPath, "docs/specs/_governance_review/") {
+			return nil
+		}
+		result = append(result, relPath)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return sortAndDedupe(result), nil
 }
 
 func globRelative(repoRoot, pattern string) ([]string, error) {

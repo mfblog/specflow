@@ -448,6 +448,33 @@ func TestRefreshMarksMissingPassedInputStale(t *testing.T) {
 	}
 }
 
+func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
+	repoRoot, file, _ := createInitializedRun(t)
+	state := mustParse(t, file)
+	slice := findSlice(t, state, "project_instance_contract_compatibility")
+	if slice.SliceType != "local" {
+		t.Fatalf("expected project instance compatibility to be local, got %s", slice.SliceType)
+	}
+	if !containsString(slice.InputFiles, "docs/specs/_status.md") {
+		t.Fatalf("expected project status input, got %+v", slice.InputFiles)
+	}
+	if !containsString(slice.InputFiles, "docs/specs/repository_mapping.md") {
+		t.Fatalf("expected repository mapping input, got %+v", slice.InputFiles)
+	}
+	if !containsString(slice.InputFiles, "docs/specs/system_constraints.md") {
+		t.Fatalf("expected system constraints input, got %+v", slice.InputFiles)
+	}
+	if !containsString(slice.InputFiles, "docs/specs/units/candidate/c_unit_demo.md") {
+		t.Fatalf("expected current project truth file input, got %+v", slice.InputFiles)
+	}
+	if containsString(slice.InputFiles, "docs/specs/_governance_review/spec_flow_review.md") {
+		t.Fatalf("expected active review run state outside compatibility fingerprint, got %+v", slice.InputFiles)
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md")); err != nil {
+		t.Fatalf("expected fixture project truth file: %v", err)
+	}
+}
+
 func createInitializedRun(t *testing.T) (string, string, time.Time) {
 	t.Helper()
 	repoRoot := createReviewRunRepo(t)
@@ -538,6 +565,10 @@ func createReviewRunRepo(t *testing.T) string {
 		"## Formal Objects\n\n"+
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n"+
 		"|---|---|---|---|---|---|---|\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), "# System Constraints\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo Candidate\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_governance_review/spec_flow_review.md"), "# ignored run state\n")
 	return repoRoot
 }
 

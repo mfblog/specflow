@@ -26,7 +26,7 @@ That judgment belongs to `spec_flow_design_review`.
 It does not pass a review only because the required files were read or the required slices were visited.
 Each in-scope rule, file, slice, and cross-convergence path must satisfy the standards in this section.
 
-The fixed standards are `content validity`, `logical closure`, `chain closure`, `governance closure and ownership`, `contract drift`, `cross-convergence`, `agent operability`, and `tooling boundary`.
+The fixed standards are `content validity`, `logical closure`, `chain closure`, `governance closure and ownership`, `contract drift`, `cross-convergence`, `agent operability`, `tooling boundary`, and `project-instance compatibility`.
 
 ### 2.1 Content Validity
 
@@ -144,7 +144,33 @@ A narrowed review must read and consume that policy whenever the narrowed scope 
 
 The tooling review must verify tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness rules, and agreement between tooling source and tooling-governing documents.
 
-### 2.9 Relationship To The Slice Catalog
+### 2.9 Project-Instance Compatibility
+
+Default full-scope `spec_flow_review` must perform a narrow project-instance compatibility check for `docs/specs/`.
+
+This check verifies only whether the current project's SpecFlow instance files can still be read and consumed by the current framework contracts, templates, commands, and tooling.
+It does not review business truth correctness.
+
+The compatibility check may judge only:
+
+1. required file presence for current project-instance entry points
+2. required section, table, field, frontmatter, status value, command name, reference, and binding shape
+3. agreement between project-instance process files and the template-side process contracts
+4. agreement between project-instance object references and `docs/specs/_status.md`, `docs/specs/repository_mapping.md`, and current framework path rules
+5. whether existing project-instance files use names, states, command forms, and reference formats that the current framework can consume
+
+The compatibility check must not judge:
+
+1. whether a unit, scenario, or shared contract describes the right business behavior
+2. whether acceptance criteria are sufficient for the product
+3. whether a candidate or stable Spec should make different design decisions
+4. whether implementation actually satisfies a unit, scenario, or shared contract
+5. whether the current governance design is worth using
+
+If the project-instance compatibility check finds old file shape, unsupported status values, missing required references, invalid binding format, or unreadable process-state shape, it is a `spec_flow_review` finding because the framework cannot safely operate on the current project instance.
+If the discovered concern is only about the truth content being wrong, incomplete, or undesirable as business truth, report that it is outside this check and route it to the owning command, shared-governance flow, repository-mapping flow, or design review.
+
+### 2.10 Relationship To The Slice Catalog
 
 The baseline slice catalog is an execution organization for this review.
 It is not the review standard by itself.
@@ -194,9 +220,9 @@ The default scope includes:
    - `specflow/tooling/manifest.tsv`
    - `specflow/tooling/go.sum` when it exists
 
-Default scope excludes project-instance truth and project-instance state files under `docs/specs/`.
+Default scope excludes project-instance truth and project-instance state files under `docs/specs/` from business-truth review.
 
-Excluded files include:
+Files excluded from business-truth review include:
 
 1. `docs/specs/repository_mapping.md`
 2. `docs/specs/_status.md`
@@ -209,7 +235,21 @@ Excluded files include:
 9. `docs/specs/_verify_result/**`
 10. `docs/specs/_governance_review/**`
 
-Those files may be reviewed only when the user explicitly narrows `spec_flow_review` to project-instance state, or when a command, repository-mapping flow, shared-governance flow, or verification flow consumes them under its own policy.
+Those files may be reviewed for business-truth correctness only when the user explicitly narrows `spec_flow_review` to project-instance state, or when a command, repository-mapping flow, shared-governance flow, or verification flow consumes them under its own policy.
+
+Default full-scope `spec_flow_review` must still perform the project-instance compatibility check from Section 2.9.
+This check is narrow and does not turn `docs/specs/` into default business-truth review scope.
+
+The compatibility input surface includes:
+
+1. `docs/specs/_status.md`
+2. `docs/specs/repository_mapping.md`
+3. `docs/specs/system_constraints.md`
+4. existing project process files under `docs/specs/_check_result/**`, `docs/specs/_plans/**`, and `docs/specs/_verify_result/**`
+5. existing project truth files under `docs/specs/units/**`, `docs/specs/scenarios/**`, and `docs/specs/shared_contracts/**`, only for file shape, required fields, references, and binding format
+
+`docs/specs/_governance_review/**` is not part of the compatibility input fingerprint.
+The active full-scope run-state file is governed by the run-state procedure in Section 6, because including that file in its own slice fingerprint would create self-referential stale state.
 
 Default scope must explicitly include:
 
@@ -223,8 +263,10 @@ Default scope must explicitly include:
    - at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, and the in-scope tooling source files
 5. the agent-operability standard
    - at minimum `agent_operability_standard.md`, entry files, routing policy files, command policy files, command files, shared-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
+6. the project-instance compatibility check
+   - at minimum project-instance status, repository mapping, system constraints, existing process files, and existing formal truth files under `docs/specs/`, limited by Section 2.9
 
-If any one of those five coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
+If any one of those six coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
 
 ## 4. Baseline Slice Catalog
 
@@ -259,12 +301,16 @@ Local slices review one owner area for internal closure, side effects, contract 
 6. `process_and_impact_state`
    - reviews `impact_sync_policy.md`, `process_snapshot_contract.md`, `recovery_policy.md`, template `_status.md`, template `_check_result`, template `_plans`, template `_verify_result`, and template `_governance_review`
    - verifies process-state contracts, snapshot invalidation, impact handling, and governance-review run-state boundaries
-7. `entry_and_project_extension`
+7. `project_instance_contract_compatibility`
+   - reviews the current project-instance files under `docs/specs/` only for format and contract compatibility with current framework rules
+   - verifies status shape, repository mapping shape, system constraints shape, process-file shape, formal object file shape, reference format, status values, command names, and shared binding format
+   - must not judge unit, scenario, or shared-contract business truth correctness
+8. `entry_and_project_extension`
    - reviews `entry_index_registry.md`, `project_standards_policy.md`, `project_standard_create.md`, registered entry files, template entry files, template project-standard registry, project registry, and active project-local standards in scope
-8. `tooling_execution`
+9. `tooling_execution`
    - reviews `tooling_execution_policy.md`, `specflow/tooling/README.md`, and in-scope tooling source files
    - verifies tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness, and document/source agreement
-9. `agent_operability_local`
+10. `agent_operability_local`
    - reviews the agent-operability result recorded by each local slice against `agent_operability_standard.md`
    - verifies that local slice conclusions did not rely on prior conversation, ordinary term meanings, or avoidable repeated reading
 
@@ -284,7 +330,9 @@ Cross-convergence slices review whether locally correct rules still compose into
    - verifies entry files and project-local standards cannot bypass the framework baseline, narrow default scope silently, or change review meaning without owner rules
 6. `tooling_to_rule_convergence`
    - verifies tooling executes only rule-decided mechanical work and does not become a second semantic source of truth
-7. `agent_operability_path_walk`
+7. `project_instance_to_framework_convergence`
+   - verifies the project-instance compatibility check composes with routing, command, process-state, repository-mapping, shared-binding, and tooling rules without judging business truth content
+8. `agent_operability_path_walk`
    - walks representative execution paths across routing, command, shared, process-state, entry, and tooling rules
    - verifies a new executor can proceed from request to next legal action without hidden context
 
@@ -556,19 +604,20 @@ The output must report at least:
 8. the guidance-skill coverage result
 9. the impact-reconciliation coverage result
 10. the tooling coverage result
-11. the agent-operability result, including local slice results and path-walk result
-12. the cross-convergence results
-13. the findings result:
+11. the project-instance compatibility result
+12. the agent-operability result, including local slice results and path-walk result
+13. the cross-convergence results
+14. the findings result:
    - explicit `none` when no real finding exists
    - otherwise every finding must satisfy Section 8.2
    - when real findings exist, the final or stop report shown to the user must include every minimum required field from Section 8.2 for each finding
    - a run-state file may store the same finding fields, but pointing to that file does not satisfy the user-facing report requirement
    - do not summarize a real finding only as a problem statement, impact statement, or blocked reason
-14. the final conclusion:
+15. the final conclusion:
    - `pass`
    - `blocked`
 
-If the output does not explicitly report Items 7 through 13, the review is not complete.
+If the output does not explicitly report Items 7 through 14, the review is not complete.
 
 ### 8.1 Run-State File Shape
 
