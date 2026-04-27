@@ -60,6 +60,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	}
 	sharedFiles := []string{
 		"specflow/framework/natural_language_routing.md",
+		"specflow/framework/onboarding_decision_policy.md",
 		"specflow/framework/shared_new.md",
 		"specflow/framework/shared_extract.md",
 		"specflow/framework/shared_bind.md",
@@ -189,6 +190,7 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/spec_policy.md",
 		"specflow/framework/command_policy.md",
 		"specflow/framework/natural_language_routing.md",
+		"specflow/framework/onboarding_decision_policy.md",
 		"specflow/framework/implementation_change_policy.md",
 		"specflow/framework/repository_mapping_policy.md",
 		"specflow/framework/scenario_policy.md",
@@ -272,6 +274,7 @@ func collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templat
 		"specflow/framework/spec_flow_design_review.md",
 		"specflow/framework/natural_language_routing.md",
 		"specflow/framework/command_policy.md",
+		"specflow/framework/onboarding_decision_policy.md",
 		"specflow/framework/implementation_change_policy.md",
 		"specflow/framework/checkpoint_protocol.md",
 	}

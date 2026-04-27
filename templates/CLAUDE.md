@@ -114,12 +114,13 @@ Use these files for the detailed rules:
 2. `specflow/framework/command_policy.md`: standard command forms, command families, lifecycle order, and shared gate rules
 3. `specflow/framework/spec_policy.md`: Spec objects, layers, source-of-truth boundaries, and file ownership rules
 4. `specflow/framework/implementation_change_policy.md`: direct implementation classification and diversion rules
-5. `specflow/framework/repository_mapping_policy.md`: repository structure and path-ownership governance
-6. `specflow/framework/checkpoint_protocol.md`: checkpoint fields, stop reports, and resume behavior
-7. `docs/specs/repository_mapping.md`: current project structure truth
-8. `docs/specs/system_constraints.md`: current global technical baseline and system constraints
-9. `specflow/framework/skills/using-specflow-guidance/SKILL.md`: guidance entry when a request is not ready for formal truth writeback
-10. `specflow/framework/shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`: internal shared-governance flows reached by natural-language routing
-11. `specflow/framework/git_policy.md`: commit boundaries and git handling
-12. `specflow/framework/entry_index_registry.md`: registered entry files and managed-block sync rules
+5. `specflow/framework/onboarding_decision_policy.md`: candidate source decision and evidence appendix requirements for new, historical, or partially implemented scopes
+6. `specflow/framework/repository_mapping_policy.md`: repository structure and path-ownership governance
+7. `specflow/framework/checkpoint_protocol.md`: checkpoint fields, stop reports, and resume behavior
+8. `docs/specs/repository_mapping.md`: current project structure truth
+9. `docs/specs/system_constraints.md`: current global technical baseline and system constraints
+10. `specflow/framework/skills/using-specflow-guidance/SKILL.md`: guidance entry when a request is not ready for formal truth writeback
+11. `specflow/framework/shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`: internal shared-governance flows reached by natural-language routing
+12. `specflow/framework/git_policy.md`: commit boundaries and git handling
+13. `specflow/framework/entry_index_registry.md`: registered entry files and managed-block sync rules
 <!-- SPECFLOW:END -->

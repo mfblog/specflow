@@ -688,7 +688,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Do routing and command policies send each request to the correct governed next step.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union([]string{"specflow/framework/natural_language_routing.md", "specflow/framework/command_policy.md", "specflow/framework/scenario_policy.md"}, scope.CommandFiles, scope.GuidanceSkillFiles)
+				return union([]string{"specflow/framework/natural_language_routing.md", "specflow/framework/onboarding_decision_policy.md", "specflow/framework/command_policy.md", "specflow/framework/scenario_policy.md"}, scope.CommandFiles, scope.GuidanceSkillFiles)
 			},
 		},
 		{
@@ -700,6 +700,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 					"specflow/framework/spec_policy.md",
 					"specflow/framework/repository_mapping_policy.md",
 					"specflow/framework/implementation_change_policy.md",
+					"specflow/framework/onboarding_decision_policy.md",
 					"specflow/framework/candidate_handoff_contract.md",
 					"specflow/framework/downgrade_policy.md",
 					"specflow/framework/recovery_policy.md",

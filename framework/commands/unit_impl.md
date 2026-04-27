@@ -36,45 +36,46 @@ Only a new independent full-scope run of `unit_impl` may produce that advancing 
 3. read the current `_check_result/unit/{unit}.md`
 4. read the current `_plans/active/{unit}.md`
 5. validate all required bindings of the pass gate and plan file according to the candidate handoff contract
-6. if any binding is invalid, stop immediately:
+6. when a required appendix is an evidence appendix, treat it only as reviewed evidence covered by the pass gate; it must not supply implementation requirements, acceptance criteria, or behavior rules
+7. if any binding is invalid, stop immediately:
    - delete `_check_result/unit/{unit}.md`
    - delete `_plans/draft/{unit}.md`
    - delete `_plans/active/{unit}.md`
    - delete `_verify_result/unit/{unit}.md` if it exists
    - fall back `_status.md` to `unit_check`
-7. if `system_constraints_ref` no longer matches the current formal global baseline state, stop immediately:
+8. if `system_constraints_ref` no longer matches the current formal global baseline state, stop immediately:
    - delete `_check_result/unit/{unit}.md`
    - delete `_plans/draft/{unit}.md`
    - delete `_plans/active/{unit}.md`
    - delete `_verify_result/unit/{unit}.md` if it exists
    - fall back to `unit_check`
-8. only when both pass gate and plan are still valid may implementation continue
-9. implement slice by slice in the order defined by the current plan unless the plan itself declares a dependency-safe different order
-10. for each slice, use the recorded objective, file scope, dependencies, verification action, and done condition as the execution boundary
-11. do not collapse a blocked slice into a vague whole-unit status; record clearly which slice is complete, blocked, or still pending
-12. treat a slice as truly advanced only when at least one of the following is now true:
+9. only when both pass gate and plan are still valid may implementation continue
+10. implement slice by slice in the order defined by the current plan unless the plan itself declares a dependency-safe different order
+11. for each slice, use the recorded objective, file scope, dependencies, verification action, and done condition as the execution boundary
+12. do not collapse a blocked slice into a vague whole-unit status; record clearly which slice is complete, blocked, or still pending
+13. treat a slice as truly advanced only when at least one of the following is now true:
    - an execution surface has been cut over to its target path
    - a named retirement target is now confirmed as no longer required
-13. when implementation discovers additional legacy paths, legacy helpers, legacy patches, or legacy wrappers that were not yet fully modeled:
+14. when implementation discovers additional legacy paths, legacy helpers, legacy patches, or legacy wrappers that were not yet fully modeled:
    - keep the work in `unit_impl` if the discovery only deepens implementation facts
    - write the discovery back into the current active plan under the round's implementation-progress sections
    - do not restart the round from `unit_plan` unless the discovery proves candidate truth itself is insufficient
-14. if implementation discovers that the active plan's convergence target cannot stand without a new behavior or boundary decision:
+15. if implementation discovers that the active plan's convergence target cannot stand without a new behavior or boundary decision:
    - stop treating the issue as implementation-only
    - fall back to `unit_check`
-15. run necessary verification for the slices advanced in this round, or record clearly what could not be run
-16. write slice completion status, blockers, verification results, and retirement progression back into `_plans/active/{unit}.md`
-17. ensure the active plan write-back records at minimum:
+16. run necessary verification for the slices advanced in this round, or record clearly what could not be run
+17. write slice completion status, blockers, verification results, and retirement progression back into `_plans/active/{unit}.md`
+18. ensure the active plan write-back records at minimum:
    - `Takeover Progress`
    - `Retirement Progress`
    - `Newly Confirmed Legacy`
    - `Residual Legacy Dependencies`
    - for each advanced slice: `execution_surface`, `cutover_result`, `retirement_result`, and `verification_note`
-18. update `_status.md`:
+19. update `_status.md`:
    - if implementation is ready for verification -> `Next Command=unit_verify`
    - if implementation is still blocked -> keep `Next Command=unit_impl`
    - if candidate truth or formal global baseline drift means closure must restart -> `Next Command=unit_check`
-19. perform git close-out if required
+20. perform git close-out if required
 
 ## 5. Stop Conditions
 

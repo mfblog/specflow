@@ -100,6 +100,8 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
    - migrate retained content to `docs/specs/units/stable/appendix/` or an equivalent dedicated subdirectory
    - absorb the content into `docs/specs/units/stable/s_unit_{unit}.md`
    - delete candidate appendix files no longer needed
+   - delete evidence appendix files by default because they are current-round evidence, not stable behavior truth
+   - absorb only the small amount of background needed for stable readers into the stable main Spec; do not migrate evidence appendix files as stable appendix files unless a command-specific rule explicitly makes them stable supporting truth
 13. do not delete `docs/specs/units/candidate/c_unit_{unit}.md` until `_status.md` has already been updated to `Candidate=no`
 14. update `_status.md` to the promoted stable state:
    - `Stable=yes`
@@ -157,19 +159,20 @@ Only a new independent full-scope run of `unit_promote` may produce that advanci
 8. `bound_objects` writeback result for every remaining touched Shared Contract file after post-promotion topology was decided
 9. terminal-state result for any touched Shared Contract file that became unbound in this round
 10. Shared Contract reconciliation result when the round changed shared truth or bindings
-11. cleanup result
-12. `handoff validation result`
-13. fallback cleanup result when verification became invalid before promotion could start
-14. `fallback_reason_code` if verification became invalid
-15. fallback reason if verification became invalid
-16. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
-17. recovery-state explanation if incomplete promotion occurred
-18. when post-promotion `shared_sync` was executed, the passed `current_stable_landing_unit` value
-19. when post-promotion `shared_sync` was executed, the passed `stable_landing_shared_refs` value
-20. when post-promotion `shared_sync` was executed, the passed `bound_objects_only_shared_file_refs` value when present
-21. when promotion stopped because post-promotion Shared Contract topology, retained candidate next-round draft shape, `promotion_owner_unit`, unbound-file terminal state, or post-promotion `shared_sync` uncertainty was unclear, the required next step through natural-language shared governance
-22. git close-out result
-23. follow-up state explanation
+11. evidence appendix deletion or absorption result
+12. cleanup result
+13. `handoff validation result`
+14. fallback cleanup result when verification became invalid before promotion could start
+15. `fallback_reason_code` if verification became invalid
+16. fallback reason if verification became invalid
+17. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
+18. recovery-state explanation if incomplete promotion occurred
+19. when post-promotion `shared_sync` was executed, the passed `current_stable_landing_unit` value
+20. when post-promotion `shared_sync` was executed, the passed `stable_landing_shared_refs` value
+21. when post-promotion `shared_sync` was executed, the passed `bound_objects_only_shared_file_refs` value when present
+22. when promotion stopped because post-promotion Shared Contract topology, retained candidate next-round draft shape, `promotion_owner_unit`, unbound-file terminal state, or post-promotion `shared_sync` uncertainty was unclear, the required next step through natural-language shared governance
+23. git close-out result
+24. follow-up state explanation
    - when promotion succeeds, the follow-up state must explicitly confirm:
      - `Stable=yes`
      - `Candidate=no`

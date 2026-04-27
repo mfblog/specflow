@@ -254,7 +254,7 @@ The active full-scope run-state file is governed by the run-state procedure in S
 Default scope must explicitly include:
 
 1. the shared-governance rule set
-   - at minimum `natural_language_routing.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`
+   - at minimum `natural_language_routing.md`, `onboarding_decision_policy.md`, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`
 2. the guidance-skill rule set
    - at minimum `using-specflow-guidance/SKILL.md`, `project-framing/SKILL.md`, `scope-cutting/SKILL.md`, `solution-design/SKILL.md`, `design-quality-review/SKILL.md`, and `spec-writeback-guidance/SKILL.md`
 3. the impact-reconciliation rule set
@@ -290,10 +290,10 @@ Local slices review one owner area for internal closure, side effects, contract 
    - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `severity_policy.md`, and `checkpoint_protocol.md`
    - verifies review entry meaning, output contracts, finding contracts, and stop behavior
 3. `routing_and_command_policy`
-   - reviews `natural_language_routing.md`, `command_policy.md`, `scenario_policy.md`, `commands/*.md`, and `skills/*/SKILL.md`
+   - reviews `natural_language_routing.md`, `onboarding_decision_policy.md`, `command_policy.md`, `scenario_policy.md`, `commands/*.md`, and `skills/*/SKILL.md`
    - verifies exact command routing, natural-language routing, unit command progression, scenario command progression, and guidance entry behavior
 4. `truth_and_implementation_gates`
-   - reviews `spec_policy.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, `recovery_policy.md`, and `git_policy.md`
+   - reviews `spec_policy.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `onboarding_decision_policy.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, `recovery_policy.md`, and `git_policy.md`
    - verifies truth ownership, implementation diversion, handoff, fallback, recovery, and close-out rules
 5. `shared_governance`
    - reviews `natural_language_routing.md` only where it defines the shared-governance branch

@@ -75,6 +75,7 @@ func createCLITestRepo(t *testing.T) string {
 		"spec_flow_design_review.md",
 		"agent_operability_standard.md",
 		"natural_language_routing.md",
+		"onboarding_decision_policy.md",
 		"command_policy.md",
 		"implementation_change_policy.md",
 		"checkpoint_protocol.md",

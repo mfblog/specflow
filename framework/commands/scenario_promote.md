@@ -35,6 +35,7 @@ Only a new independent full-scope run of `scenario_promote` may produce that adv
    - `Next Command=scenario_fork`
 9. only after `_status.md` has already been updated to `Candidate=no`, delete:
    - `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
+   - current-round scenario evidence appendix files
    - current-round scenario `_check_result/scenario/{scenario}.md`
    - current-round scenario `_verify_result/scenario/{scenario}.md`
 10. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
@@ -46,22 +47,23 @@ The output must report:
 
 1. stable truth file write result
 2. candidate truth file delete result
-3. `_check_result/scenario/{scenario}.md` and `_verify_result/scenario/{scenario}.md` cleanup result
-4. lifecycle-state transition result
-5. `_status.md` update result
-6. `handoff validation result`
-7. fallback cleanup result when verification became invalid before promotion could start
-8. `fallback_reason_code` if verification became invalid
-9. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
-10. recovery-state explanation if incomplete promotion occurred
-11. `round conclusion`
-12. `current state`
-13. `next step`
-14. `why this next step`
-15. `next-stage entry gap`
-16. git close-out result
-17. the `user-facing close-out block` required by `specflow/framework/command_policy.md` Section 8.6
-18. when promotion recovery occurred, the same close-out block must also report `resume signal`
+3. evidence appendix deletion or absorption result
+4. `_check_result/scenario/{scenario}.md` and `_verify_result/scenario/{scenario}.md` cleanup result
+5. lifecycle-state transition result
+6. `_status.md` update result
+7. `handoff validation result`
+8. fallback cleanup result when verification became invalid before promotion could start
+9. `fallback_reason_code` if verification became invalid
+10. `fallback_reason_code=promotion_recovery` when incomplete promotion recovery occurred
+11. recovery-state explanation if incomplete promotion occurred
+12. `round conclusion`
+13. `current state`
+14. `next step`
+15. `why this next step`
+16. `next-stage entry gap`
+17. git close-out result
+18. the `user-facing close-out block` required by `specflow/framework/command_policy.md` Section 8.6
+19. when promotion recovery occurred, the same close-out block must also report `resume signal`
 
 Allowed checkpoint types:
 
