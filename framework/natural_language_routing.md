@@ -140,10 +140,11 @@ Natural language routing may identify fragments that later route into:
 2. standard `scenario` commands
 3. governance review flows
 4. implementation classification through `implementation_change_policy.md`
-5. repository mapping handling
-6. shared-governance branching into the internal shared flows
-7. system-constraint boundary handling through the responsible unit candidate truth
-8. framework skills under `specflow/framework/skills/`
+5. onboarding source decision through `onboarding_decision_policy.md`
+6. repository mapping handling
+7. shared-governance branching into the internal shared flows
+8. system-constraint boundary handling through the responsible unit candidate truth
+9. framework skills under `specflow/framework/skills/`
 
 Natural language routing does not:
 
@@ -155,6 +156,7 @@ Natural language routing does not:
 6. make guidance output durable truth before it is written into candidate, appendix, Shared Contract, repository mapping, or system-constraint truth
 7. create a persistent `feature`, `project_flow`, or other umbrella lifecycle object above `unit` and `scenario`
 8. force every user request into an end-to-end scenario when current repository truth and user wording prove a narrower legal route
+9. infer a candidate's source from user wording alone when repository truth and current implementation shape must decide whether onboarding evidence is required
 
 ---
 
@@ -173,7 +175,8 @@ Fixed read rules:
 7. if the request depends on cross-unit shared truth, shared binding, shared topology, or shared impact, use the Shared Governance Branch in this file and read the relevant Shared Contract files plus the selected internal shared-flow file
 8. if the request may affect global default rules, shared mechanisms promoted into the global baseline, or explicit global exceptions, read `docs/specs/system_constraints.md`
 9. if a governance-review fragment remains after natural-language parsing, read the governance file that defines that review scope before reading unrelated object state
-10. if a `guidance` fragment is present, read `specflow/framework/skills/using-specflow-guidance/SKILL.md` and then only the specific guidance skill needed for the current blocker
+10. if the target scope has no current formal truth, the current candidate is missing candidate source fields, a direct implementation request touches an unmapped or unowned behavior scope, or candidate behavior may depend on existing implementation, read `specflow/framework/onboarding_decision_policy.md`
+11. if a `guidance` fragment is present, read `specflow/framework/skills/using-specflow-guidance/SKILL.md` and then only the specific guidance skill needed for the current blocker
 
 The executor must not read every file by default.
 The executor must read enough current truth to prove the route, the missing blocker, or the safe first step.
@@ -295,11 +298,12 @@ Route in this order:
 6. apply mandatory gates for every fragment, especially `implementation_change_policy.md` for implementation fragments
 7. resolve repository mapping boundary checks before claiming `unit` or `scenario` ownership
 8. resolve existing `unit` or `scenario` object state through `_status.md`
-9. route shared-truth fragments through the Shared Governance Branch in this file
-10. route system-constraint boundary handling through the responsible unit candidate truth
-11. route guidance fragments through the smallest applicable guidance skill when the request is not yet clear enough for formal truth writeback or a standard command
-12. assemble the internal development chain when the request spans more than one formal object or work shape
-13. handle explanation-only fragments only after confirming that no mutation, guidance, or governance route is required
+9. apply onboarding source decision when the target has no formal truth, has candidate source drift, or may use existing implementation as candidate evidence
+10. route shared-truth fragments through the Shared Governance Branch in this file
+11. route system-constraint boundary handling through the responsible unit candidate truth
+12. route guidance fragments through the smallest applicable guidance skill when the request is not yet clear enough for formal truth writeback or a standard command
+13. assemble the internal development chain when the request spans more than one formal object or work shape
+14. handle explanation-only fragments only after confirming that no mutation, guidance, or governance route is required
 
 This order is a decision order, not permission to skip required reads.
 If a later family is needed to decide an earlier family safely, read the later family's truth as input before choosing the route.

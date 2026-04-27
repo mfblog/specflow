@@ -26,6 +26,7 @@ Shared rules:
 1. both families support `stable` and `candidate`
 2. both families enter `docs/specs/_status.md`
 3. only these two families are standard command targets
+4. every candidate main Spec for these families records `source_basis` and `evidence_appendix_ref` as defined by `onboarding_decision_policy.md`
 
 Family differences:
 
@@ -261,6 +262,11 @@ Each current-layer unit truth must record:
 1. `system_constraints_ref`
 2. `shared_contract_refs`
 
+Each candidate-layer unit main file must additionally record these frontmatter fields:
+
+1. `source_basis`
+2. `evidence_appendix_ref`
+
 `unit` does not formally record `scenario_refs`.
 
 ### 5.2 `scenario`
@@ -271,6 +277,11 @@ Each current-layer scenario truth must record:
 2. `unit_refs`
 3. `shared_contract_refs`
 4. `system_constraints_ref`
+
+Each candidate-layer scenario main file must additionally record these frontmatter fields:
+
+1. `source_basis`
+2. `evidence_appendix_ref`
 
 ### 5.3 `repository_mapping`
 
@@ -384,6 +395,10 @@ Object-owned snapshot extensions are fixed by object type:
    - `shared_contract_snapshot`
 
 Process files become invalid when their required current truth or required current bindings no longer match.
+
+Candidate evidence appendix files are candidate appendix files for snapshot and invalidation purposes.
+Their inclusion in `unit_appendix_snapshot` or the scenario candidate snapshot proves which evidence was reviewed by the gate, but it does not make the evidence appendix an implementation truth source.
+Implementation and verification commands must use the candidate main Spec, retained behavior rules, bound Shared Contract files, and `system_constraints.md` as truth.
 
 The exact snapshot field definitions come from `process_snapshot_contract.md`.
 

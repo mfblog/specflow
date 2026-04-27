@@ -88,6 +88,8 @@ Before consumption, `unit_plan` must re-validate:
 ### 3.3 Allowed Entry Condition
 
 `unit_plan` may continue only when the pass gate still covers the current candidate round exactly.
+When `unit_appendix_snapshot` includes a candidate evidence appendix, the snapshot means only that the same evidence appendix was reviewed by the gate.
+It does not allow `unit_plan` to derive implementation requirements from that appendix.
 
 ### 3.4 Smallest Fallback
 
@@ -131,6 +133,8 @@ Before consumption, `unit_impl` must re-validate:
 ### 4.3 Allowed Entry Condition
 
 `unit_impl` may continue only when both the pass gate and the plan still cover the same current candidate round.
+When a candidate evidence appendix is present in the pass gate or plan appendix snapshot, `unit_impl` must treat it as reviewed evidence only.
+Implementation requirements come from the candidate main Spec, the active plan, bound Shared Contract files, and the current global baseline.
 
 ### 4.4 Smallest Fallback
 

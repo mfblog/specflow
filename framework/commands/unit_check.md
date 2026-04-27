@@ -32,6 +32,7 @@ By default this command reviews:
 8. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
 9. whether any registered project-local review standard applies on a `unit_check`-owned generic review extension surface and tightens the closure decision for the current candidate
 10. whether the candidate records a coherent current design rather than an over-broad, unresolved, or chat-dependent proposal
+11. whether the candidate source fields and evidence appendix requirements from `onboarding_decision_policy.md` are satisfied
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
@@ -123,6 +124,7 @@ Project-local review extension contract:
 8. if this round may raise a checkpoint, read `specflow/framework/checkpoint_protocol.md`
 9. if `_check_result/unit/{unit}.md`, `_status.md`, candidate truth, or other commit-triggering governance files may change, read the git policy first
 10. if referenced appendix files have directory drift, fix that first and rerun the pre-check
+11. read `specflow/framework/onboarding_decision_policy.md`
 
 ## 4. Procedure
 
@@ -163,36 +165,43 @@ Project-local review extension contract:
 13. process `shared_contract_refs`:
    - if current behavior depends on Shared Contract truth but bindings are missing or incomplete, the result can only be `blocked` or `fix_required`
    - if bindings exist but the body does not explain which behavior chain reuses them, the result can only be `blocked` or `fix_required`
-14. process shared-candidate signals:
+14. process candidate source fields:
+   - `source_basis` must be one of `new_design`, `existing_implementation`, `mixed`, or `replacement`
+   - `evidence_appendix_ref` must be present
+   - if `source_basis=existing_implementation` or `source_basis=mixed`, `evidence_appendix_ref` must name an existing candidate evidence appendix and that appendix must be read
+   - if `source_basis=new_design` or `source_basis=replacement`, `evidence_appendix_ref` must be `none`
+   - evidence appendix conflicts or unknowns that still affect selected candidate behavior are critical completeness gaps unless the candidate main Spec explicitly makes a bounded selected rule that no longer depends on them
+   - evidence appendix text must not be treated as implementation truth; only the candidate main Spec and bound formal truth may constrain implementation
+15. process shared-candidate signals:
    - by default, shared-candidate hints only trigger a suggestion to enter natural-language shared governance
    - if the current required reading range already confirms a dual source of truth, report it directly as a blocking issue with `fallback_reason_code=shared_truth_conflict`
-15. determine whether a blocking checkpoint is the correct stop form:
+16. determine whether a blocking checkpoint is the correct stop form:
    - use `clarification` when user intent, boundary meaning, or acceptance meaning is still missing from truth
    - use `decision` when multiple materially different directions remain and the user must choose one
-16. checkpoint rules:
+17. checkpoint rules:
    - a checkpoint is not `pass`
    - if a checkpoint conclusion changes behavior truth, it must be written back to candidate or appendix before `unit_check` may be rerun
    - do not write `_check_result/unit/{unit}.md` for checkpoint-only stops
-17. merge conclusions in this order:
+18. merge conclusions in this order:
    - `progressability`
    - `content completeness`
    - `Candidate Design Quality`
    - overall gate conclusion
-18. merge rules:
+19. merge rules:
    - if `progressability` fails -> only `blocked` or `fix_required`
    - if any `critical` completeness gap exists -> only `blocked` or `fix_required`
    - if `Candidate Design Quality` fails on scope, selected direction, acceptance usefulness, or chat-dependent truth -> only `blocked` or `fix_required`
    - if only `important` or `elaboration` issues remain, `pass` is still possible
-19. if the result is `pass`, create or update `docs/specs/_check_result/unit/{unit}.md`
+20. if the result is `pass`, create or update `docs/specs/_check_result/unit/{unit}.md`
    - when a supported project-local review extension surface was consumed and this file allows project-side extension write-back for that surface, write the corresponding `project_review_extensions` items together with the pass gate
-20. if the result is not `pass`, do not write a failed `_check_result/unit/{unit}.md`; delete an old pass gate if it is no longer valid
-21. if the result is `blocked` or `fix_required`, close the current `unit_check` run after writing any required findings:
+21. if the result is not `pass`, do not write a failed `_check_result/unit/{unit}.md`; delete an old pass gate if it is no longer valid
+22. if the result is `blocked` or `fix_required`, close the current `unit_check` run after writing any required findings:
    - any later truth repair belongs to follow-up work, not to a still-open `unit_check`
    - any later repair-side reassessment or scoped follow-up review remains non-authoritative unless a new fresh full-scope `unit_check` run is entered through command routing
-22. update `_status.md`:
+23. update `_status.md`:
    - if pass -> `Next Command=unit_plan`
    - otherwise -> `Next Command=unit_check`
-23. perform git close-out if required
+24. perform git close-out if required
 
 ## 5. Stop Conditions
 
@@ -211,25 +220,26 @@ The output should include:
 1. overall conclusion
 2. severity summary
 3. formal global baseline alignment result
-4. the gate conclusion set:
+4. candidate source and evidence appendix result
+5. the gate conclusion set:
    - `progressability`
    - `content completeness`
    - `Candidate Design Quality`
    - overall gate conclusion
-5. whether `Check Result Snapshot` was written back or an old gate was cleaned up
-6. `checkpoint result` when a checkpoint stop was raised
+6. whether `Check Result Snapshot` was written back or an old gate was cleaned up
+7. `checkpoint result` when a checkpoint stop was raised
    - when present, it must satisfy the fixed checkpoint fields defined by `specflow/framework/checkpoint_protocol.md`
-7. `fallback_reason_code` for blocked, fix-required, or checkpoint stops
-8. structured findings when `blocked` or `fix_required`
-9. next-step suggestion
-10. git close-out result
-11. `_status.md` update result
-12. when a project-local review extension surface was consumed:
+8. `fallback_reason_code` for blocked, fix-required, or checkpoint stops
+9. structured findings when `blocked` or `fix_required`
+10. next-step suggestion
+11. git close-out result
+12. `_status.md` update result
+13. when a project-local review extension surface was consumed:
    - which `surface` matched
    - which registered project-local standard file was used
    - how that surface affected `progressability`, `content completeness`, or structured findings
-13. when follow-up work only confirmed local repair or ran a scoped review instead of a new formal rerun, that this result was non-authoritative and did not change lifecycle state
-14. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
+14. when follow-up work only confirmed local repair or ran a scoped review instead of a new formal rerun, that this result was non-authoritative and did not change lifecycle state
+15. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - when a checkpoint was raised, also report `resume signal`
    - if `Next Command=unit_check`, `why this next step` must explicitly state whether the blocker is truth repair, user clarification, or a required decision rather than only repeating that closure is incomplete
@@ -258,6 +268,10 @@ Allowed checkpoint types:
 Allowed `fallback_reason_code` values:
 
 1. `truth_incomplete`
+2. `source_basis_missing`
+3. `evidence_appendix_missing`
+4. `evidence_conflict`
+5. `evidence_unknown`
 2. `baseline_drift`
 3. `shared_contract_drift`
 4. `shared_truth_conflict`
