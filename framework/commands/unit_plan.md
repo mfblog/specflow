@@ -18,10 +18,21 @@ By default it handles:
 8. stopping at a structured decision checkpoint only when key implementation direction is still not locked
 9. ensuring the active plan is executable without chat context, placeholders, or unstated verification meaning
 
-### 2.1 Lifecycle-State Advance Inheritance
+### 2.1 Command Read Summary
 
-When this command advances `_status.md`, that advancement inherits the authoritative / non-authoritative central contract defined in Section 8.5 of `specflow/framework/command_policy.md`.
-Only a new independent full-scope run of `unit_plan` may produce that advancing result; later local confirmation, research-side reassessment, or scoped follow-up review must not advance lifecycle state.
+Read this summary before the detailed rules below.
+It is navigation only and does not replace the preconditions, procedure, stop conditions, or output contract.
+
+1. `unit_plan` exists to turn a passed candidate into an executable implementation plan.
+2. The minimum inputs are the current candidate, current `_check_result/unit/{unit}.md`, required appendix and Shared Contract files, and current global baseline when relevant.
+3. A plan-ready result writes `docs/specs/_plans/active/{unit}.md` and advances the object to `unit_impl`.
+4. If candidate truth is incomplete, the command falls back to `unit_check`; if implementation facts or direction are still unresolved, it keeps planning state without creating a consumable active plan.
+5. Draft plans are work-in-progress only; downstream commands may consume only an active plan whose bindings still match current truth.
+
+### 2.2 Lifecycle-State Advance Inheritance
+
+Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
+This file states only `unit_plan`-local entry, output, and stop rules.
 
 ## 3. Preconditions
 
