@@ -595,6 +595,52 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 	}
 }
 
+func TestInitIncludesReaderRuntimeInToolingSlices(t *testing.T) {
+	_, file, _ := createInitializedRun(t)
+	state := mustParse(t, file)
+
+	toolingSlice := findSlice(t, state, "tooling_execution")
+	if !containsString(toolingSlice.InputFiles, "specflow/tooling/reader/web/app.js") {
+		t.Fatalf("expected reader app.js in tooling execution input files, got %+v", toolingSlice.InputFiles)
+	}
+
+	convergenceSlice := findSlice(t, state, "project_instance_to_framework_convergence")
+	if !containsString(convergenceSlice.InputFiles, "docs/specs/_status.md") {
+		t.Fatalf("expected project status in project/framework convergence input files, got %+v", convergenceSlice.InputFiles)
+	}
+	if !containsString(convergenceSlice.InputFiles, "specflow/tooling/reader/web/app.js") {
+		t.Fatalf("expected reader app.js in project/framework convergence input files, got %+v", convergenceSlice.InputFiles)
+	}
+}
+
+func TestRefreshMarksReaderRuntimeSlicesStale(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	setSliceStatus(t, &state, "tooling_execution", slicePassed)
+	setSliceStatus(t, &state, "project_instance_to_framework_convergence", slicePassed)
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/app.js"), "console.log('changed');\n")
+
+	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if !containsString(result.StaleSlices, "tooling_execution") {
+		t.Fatalf("expected tooling_execution stale after reader runtime change, got %+v", result.StaleSlices)
+	}
+	if !containsString(result.StaleSlices, "project_instance_to_framework_convergence") {
+		t.Fatalf("expected project_instance_to_framework_convergence stale after reader runtime change, got %+v", result.StaleSlices)
+	}
+
+	refreshed := mustParse(t, file)
+	if got := findSlice(t, refreshed, "tooling_execution").Status; got != sliceStale {
+		t.Fatalf("expected tooling_execution stale, got %s", got)
+	}
+	if got := findSlice(t, refreshed, "project_instance_to_framework_convergence").Status; got != sliceStale {
+		t.Fatalf("expected project_instance_to_framework_convergence stale, got %s", got)
+	}
+}
+
 func createInitializedRun(t *testing.T) (string, string, time.Time) {
 	t.Helper()
 	repoRoot := createReviewRunRepo(t)
@@ -676,6 +722,7 @@ func createReviewRunRepo(t *testing.T) string {
 	} {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
+	writeReviewReaderWebFiles(t, repoRoot)
 	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
 		"# Registry\n\n"+
 		"## Active Standards\n\n"+
@@ -691,6 +738,15 @@ func createReviewRunRepo(t *testing.T) string {
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo Candidate\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_governance_review/spec_flow_review.md"), "# ignored run state\n")
 	return repoRoot
+}
+
+func writeReviewReaderWebFiles(t *testing.T, repoRoot string) {
+	t.Helper()
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/index.html"), "<!doctype html>\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/styles.css"), "body { color: #111; }\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/app.js"), "console.log('demo');\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/cytoscape.min.js"), "window.cytoscape = function() {};\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/mermaid.min.js"), "window.mermaid = { initialize() {}, run() {} };\n")
 }
 
 func mustWrite(t *testing.T, path, content string) {

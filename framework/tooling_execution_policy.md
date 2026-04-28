@@ -74,12 +74,22 @@ The allowed action families are:
    - delete or reset process artifacts when a command-defined cleanup rule already says that cleanup must happen
 7. sync
    - align managed content or metadata when the source, target, and writeback contract are already explicit
+8. render
+   - expose a read-only local view derived from already-written truth files without creating, editing, or promoting truth
 
 Writeback rule:
 
 1. tooling may write only to locations whose writeback contract is already defined by governance rules
 2. tooling must not invent a new durable output container on its own
 3. execution-local caller parameters may narrow scope, but they must not redefine the governance meaning of the action
+
+Read-only reader rule:
+
+1. a local reader may read `docs/specs/**` and other declared support-surface truth inputs to build an in-memory view
+2. a local reader may expose that in-memory view through a local HTTP server
+3. a local reader must not write project files, advance lifecycle state, create process files, or store semantic conclusions outside process memory
+4. every displayed project-state conclusion must remain traceable to the source file path that produced it
+5. missing or unparseable input must be reported as a diagnostic instead of being repaired or semantically guessed by tooling
 
 ## 5. Forbidden Semantic Judgment
 
@@ -122,13 +132,15 @@ The required tooling-contract document set is:
    - `specflow/tooling/go.mod`
    - `specflow/tooling/manifest.tsv`
    - `specflow/tooling/go.sum` when it exists
+4. the runtime reader web files:
+   - `specflow/tooling/reader/web/**`
 
 Default `spec_flow_review` must not issue `pass` when any of the following is true:
 
 1. a tooling function is present but does not satisfy the necessity contract
 2. tooling performs forbidden semantic judgment
 3. tooling source and tooling-governing documents disagree about what the tooling is responsible for
-4. the review output did not explicitly report tooling coverage and result
+4. the review output did not explicitly report tooling coverage and result, including reader runtime coverage when reader web files exist
 
 ## 7. Compiled Tooling Freshness
 

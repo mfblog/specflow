@@ -679,7 +679,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Does the default governance baseline scope include every required governance input family.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.GuidanceSkillFiles, scope.SharedGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ActiveProjectStandardFiles)
+				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.GuidanceSkillFiles, scope.SharedGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingRuntimeFiles, scope.ActiveProjectStandardFiles)
 			},
 		},
 		{
@@ -772,7 +772,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Does deterministic tooling stay inside its mechanical execution boundary.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.ToolingContractFiles, scope.ToolingSourceFiles)
+				return union(scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingRuntimeFiles)
 			},
 		},
 		{

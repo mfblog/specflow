@@ -43,6 +43,23 @@ func TestReviewRunRequiresFlowCLI(t *testing.T) {
 	}
 }
 
+func TestReviewCollectDefaultScopePrintsToolingRuntimeFilesCLI(t *testing.T) {
+	repoRoot := createCLITestRepo(t)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	if err := runReview([]string{"collect-default-scope", "--flow", "spec_flow_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("collect-default-scope failed: %v\nstderr=%s", err, stderr.String())
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "Tooling runtime files") {
+		t.Fatalf("expected tooling runtime heading, got %s", output)
+	}
+	if !strings.Contains(output, "specflow/tooling/reader/web/app.js") {
+		t.Fatalf("expected reader app.js in collect-default-scope output, got %s", output)
+	}
+}
+
 func TestDesignReviewRunInitAndValidateCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
@@ -137,6 +154,7 @@ func createCLITestRepo(t *testing.T) string {
 	} {
 		writeCLITestFile(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
+	writeCLIReaderWebFiles(t, repoRoot)
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
 		"# Registry\n\n"+
 		"## Active Standards\n\n"+
@@ -161,4 +179,13 @@ func writeCLITestFile(t *testing.T, path, content string) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
+}
+
+func writeCLIReaderWebFiles(t *testing.T, repoRoot string) {
+	t.Helper()
+	writeCLITestFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/index.html"), "<!doctype html>\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/styles.css"), "body { color: #111; }\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/app.js"), "console.log('demo');\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/cytoscape.min.js"), "window.cytoscape = function() {};\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/mermaid.min.js"), "window.mermaid = { initialize() {}, run() {} };\n")
 }

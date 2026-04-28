@@ -215,7 +215,7 @@ The default scope includes:
    - `specflow/templates/docs/project_standards/_registry.md`
    - `docs/project_standards/_registry.md`
    - the active registered project-local standards in scope
-8. tooling contract and tooling source input
+8. tooling contract, tooling source input, and reader runtime input
    - `specflow/framework/tooling_execution_policy.md`
    - `specflow/tooling/README.md`
    - `specflow/tooling/cmd/**/*.go`
@@ -223,6 +223,7 @@ The default scope includes:
    - `specflow/tooling/go.mod`
    - `specflow/tooling/manifest.tsv`
    - `specflow/tooling/go.sum` when it exists
+   - `specflow/tooling/reader/web/**`
 
 Default scope excludes project-instance truth and project-instance state files under `docs/specs/` from business-truth review.
 
@@ -266,7 +267,7 @@ Default scope must explicitly include:
 4. the impact-reconciliation rule set
    - at minimum `impact_sync_policy.md`, `process_snapshot_contract.md`, `recovery_policy.md`, template `_status.md`, and the template-side process README files
 5. the tooling execution contract set
-   - at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, and the in-scope tooling source files
+   - at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, the in-scope tooling source files, and the runtime reader web files
 6. the agent-operability standard
    - at minimum `agent_operability_standard.md`, entry files, routing policy files, onboarding source decision files, command policy files, command files, shared-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
 7. the project-instance compatibility check
@@ -314,8 +315,8 @@ Local slices review one owner area for internal closure, side effects, contract 
 8. `entry_and_project_extension`
    - reviews `entry_index_registry.md`, `project_standards_policy.md`, `project_standard_create.md`, registered entry files, template entry files, template project-standard registry, project registry, and active project-local standards in scope
 9. `tooling_execution`
-   - reviews `tooling_execution_policy.md`, `specflow/tooling/README.md`, and in-scope tooling source files
-   - verifies tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness, and document/source agreement
+   - reviews `tooling_execution_policy.md`, `specflow/tooling/README.md`, in-scope tooling source files, and runtime reader web files
+   - verifies tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness, reader runtime coverage, and document/source/runtime agreement
 10. `agent_operability_local`
    - reviews the agent-operability result recorded by each local slice against `agent_operability_standard.md`
    - verifies that local slice conclusions did not rely on prior conversation, ordinary term meanings, or avoidable repeated reading
@@ -611,7 +612,7 @@ The output must report at least:
 7. the shared-governance coverage result
 8. the guidance-skill coverage result
 9. the impact-reconciliation coverage result
-10. the tooling coverage result
+10. the tooling coverage result, including reader runtime coverage
 11. the project-instance compatibility result
 12. the agent-operability result, including local slice results and path-walk result
 13. the cross-convergence results

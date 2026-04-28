@@ -151,6 +151,7 @@ func Doctor(repoRoot string) (DoctorResult, error) {
 	}
 	checkHookPath(repoRoot, &result)
 	checkBinary(repoRoot, &result)
+	checkReaderWeb(repoRoot, &result)
 	checkHook(repoRoot, &result)
 	return result, nil
 }
@@ -295,7 +296,11 @@ func checkHookPath(repoRoot string, result *DoctorResult) {
 }
 
 func checkBinary(repoRoot string, result *DoctorResult) {
-	relPath := filepath.ToSlash(filepath.Join("specflow/tooling/bin", buildrelease.CurrentBinaryName()))
+	checkOneBinary(repoRoot, filepath.ToSlash(filepath.Join("specflow/tooling/bin", buildrelease.CurrentBinaryName())), result)
+	checkOneBinary(repoRoot, filepath.ToSlash(filepath.Join("specflow/tooling/bin", buildrelease.CurrentReaderBinaryName())), result)
+}
+
+func checkOneBinary(repoRoot, relPath string, result *DoctorResult) {
 	binaryPath := filepath.Join(repoRoot, filepath.FromSlash(relPath))
 	if _, err := os.Stat(binaryPath); err != nil {
 		result.Failures = append(result.Failures, fmt.Sprintf("MISSING %s", relPath))
@@ -328,6 +333,26 @@ func checkBinary(repoRoot string, result *DoctorResult) {
 			shortFingerprint(builtFingerprint),
 			shortFingerprint(liveFingerprint),
 		))
+	}
+}
+
+func checkReaderWeb(repoRoot string, result *DoctorResult) {
+	for _, relPath := range []string{
+		"specflow/tooling/reader/web/index.html",
+		"specflow/tooling/reader/web/styles.css",
+		"specflow/tooling/reader/web/app.js",
+		"specflow/tooling/reader/web/cytoscape.min.js",
+		"specflow/tooling/reader/web/mermaid.min.js",
+	} {
+		path := filepath.Join(repoRoot, filepath.FromSlash(relPath))
+		info, err := os.Stat(path)
+		if err != nil {
+			result.Failures = append(result.Failures, fmt.Sprintf("MISSING %s", relPath))
+			continue
+		}
+		if info.IsDir() {
+			result.Failures = append(result.Failures, fmt.Sprintf("INVALID %s is a directory", relPath))
+		}
 	}
 }
 
