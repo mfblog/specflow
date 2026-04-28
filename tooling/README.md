@@ -24,7 +24,8 @@ The tooling layer may:
 5. compare
 6. cleanup
 7. sync
-8. maintain mechanical review run-state fields
+8. render read-only local views
+9. maintain mechanical review run-state fields
 
 The tooling layer must not:
 
@@ -33,10 +34,15 @@ The tooling layer must not:
 3. replace shared-boundary judgment
 4. replace review severity or `pass | blocked` judgment
 5. become a second semantic source of truth
+6. write reader-derived conclusions back into project files
 
 `impact_sync` is a governance concept first.
 The current CLI exposes only the deterministic pieces already justified by rules.
 For shared-change reconciliation, the current mechanical entry remains `shared sync-impact`, but that entry must first compute `shared_sync` scope and exceptions and only then hand the fixed downstream object set to internal `impact_sync`.
+
+`specflow-reader` is a read-only local view over current truth files.
+It may parse `docs/specs/**`, build an in-memory graph, serve local HTML from `specflow/tooling/reader/web`, and refresh that view when truth files change.
+It must not edit files, advance lifecycle state, or store semantic conclusions outside process memory.
 
 ## Current Command Surface
 
@@ -84,6 +90,39 @@ For shared-change reconciliation, the current mechanical entry remains `shared s
 20. `shared reconcile-bound-objects`
    - rewrite Shared Contract `bound_objects` metadata from current formal bindings
 
+## Reader Command Surface
+
+`specflow-reader` is a separate binary from `specflowctl`.
+It starts one local reader server directly and has no public subcommands:
+
+```bash
+cd specflow/tooling/bin
+./specflow-reader-linux-amd64 --addr 127.0.0.1:17863
+```
+
+Rules:
+
+1. running `specflow-reader` starts a local HTTP server and prints the URL.
+2. the reader does not open a browser automatically.
+3. when `--repo-root` is omitted, it defaults to `../../..` from the current working directory.
+4. the server reads front-end files from `specflow/tooling/reader/web`.
+5. the server reads current project truth from `docs/specs/**`.
+6. the server keeps only an in-memory snapshot.
+7. file changes under `docs/specs/**` rebuild the in-memory snapshot and notify open pages.
+8. `/api/source` may return source text only from allowed truth and support files under the requested repository root.
+9. the hidden build-fingerprint query command is reserved for freshness checks.
+
+Reader front-end rules:
+
+1. `specflow/tooling/reader/web` is the only runtime source for reader HTML, CSS, and JavaScript.
+2. `specflow-reader` does not embed a fallback copy of the front-end.
+3. editing front-end files does not require rebuilding `specflow-reader`; refresh the browser after the file change.
+4. `doctor` reports missing required reader front-end files as installation failures.
+5. the reader front-end supports Chinese and English interface text.
+6. language switching affects only reader-owned UI text.
+7. Spec document source text, file paths, object IDs, command names, and version values are displayed as source data and must not be translated by the front-end.
+8. the selected reader language may be stored in browser-local state and must not be written into project files.
+
 ## Review Run-State Commands
 
 The `review run-*` commands require an explicit review flow:
@@ -120,6 +159,12 @@ Rules:
 
 ## Tooling Input Set
 
+The default `spec_flow_review` tooling review input set is:
+
+1. the framework tooling policy and this README
+2. the current tooling source input set listed below
+3. reader runtime files under `specflow/tooling/reader/web/**`
+
 The current tooling source input set is:
 
 1. `specflow/tooling/cmd/**/*.go`
@@ -129,6 +174,7 @@ The current tooling source input set is:
 5. `specflow/tooling/go.sum` when it exists
 
 The manifest is included because it controls which framework-managed and project-managed files `init`, `upgrade`, and `doctor` inspect or write.
+Reader front-end files under `specflow/tooling/reader/web/**` are runtime files, not binary freshness inputs.
 
 ## Unified Status Table
 
@@ -165,6 +211,7 @@ Examples:
 
 ```bash
 ./specflow/tooling/bin/specflowctl-linux-amd64 doctor
+./specflow/tooling/bin/specflow-reader-linux-amd64 --repo-root . --addr 127.0.0.1:17863
 ./specflow/tooling/bin/specflowctl-linux-amd64 review collect-default-scope --flow spec_flow_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review collect-default-scope --flow spec_flow_design_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-init --flow spec_flow_review

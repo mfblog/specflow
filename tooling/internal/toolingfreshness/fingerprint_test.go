@@ -69,12 +69,33 @@ func TestLiveFingerprintIgnoresNonToolingFiles(t *testing.T) {
 	}
 }
 
+func TestLiveFingerprintIgnoresReaderAssetChanges(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeToolingRepo(t, repoRoot)
+
+	first, _, err := LiveFingerprint(repoRoot)
+	if err != nil {
+		t.Fatalf("LiveFingerprint returned error: %v", err)
+	}
+
+	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/app.js"), "console.log('changed');\n")
+
+	second, _, err := LiveFingerprint(repoRoot)
+	if err != nil {
+		t.Fatalf("LiveFingerprint after reader asset change returned error: %v", err)
+	}
+	if first != second {
+		t.Fatalf("expected fingerprint to ignore reader asset change")
+	}
+}
+
 func writeToolingRepo(t *testing.T, repoRoot string) {
 	t.Helper()
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module github.com/Bingordinary/SpecFlow/specflow/tooling\n\ngo 1.22.2\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/internal/demo/demo.go"), "package demo\n\nfunc Value() string { return \"demo\" }\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/app.js"), "console.log('demo');\n")
 }
 
 func mustWriteFile(t *testing.T, path, content string) {

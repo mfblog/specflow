@@ -17,9 +17,12 @@ func TestLdflagsForFingerprintFixesBuildID(t *testing.T) {
 }
 
 func TestBuildCommandArgsDisablesVCSMetadata(t *testing.T) {
-	args := strings.Join(buildCommandArgs("flags", "out"), " ")
+	args := strings.Join(buildCommandArgs("flags", "out", "./cmd/specflowctl"), " ")
 
 	if !strings.Contains(args, "-buildvcs=false") {
 		t.Fatalf("expected build args to disable VCS metadata, got %q", args)
+	}
+	if !strings.Contains(args, "./cmd/specflowctl") {
+		t.Fatalf("expected build args to include package path, got %q", args)
 	}
 }
