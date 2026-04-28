@@ -279,14 +279,14 @@ Allowed checkpoint types:
 Allowed `fallback_reason_code` values:
 
 1. `truth_incomplete`
-2. `source_basis_missing`
-3. `evidence_appendix_missing`
-4. `evidence_conflict`
-5. `evidence_unknown`
 2. `baseline_drift`
 3. `shared_contract_drift`
 4. `shared_truth_conflict`
 5. `governance_drift`
+
+Candidate source-field and evidence-appendix blockers must use `truth_incomplete`.
+The output must name the exact source or evidence condition in the natural-language explanation after the standardized code.
+Do not introduce source-basis-specific or evidence-appendix-specific `fallback_reason_code` values in this command.
 
 ## 7. Non-Goals
 
