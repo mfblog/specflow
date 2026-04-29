@@ -35,9 +35,6 @@ func Serve(ctx context.Context, options ServeOptions, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := WatchSpecs(ctx, store); err != nil {
-		return err
-	}
 	handler, err := NewHandler(store)
 	if err != nil {
 		return err
@@ -77,7 +74,7 @@ func NewHandler(store *Store) (http.Handler, error) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		writeJSON(w, store.Snapshot())
+		writeJSON(w, store.RefreshSnapshot())
 	})
 	mux.HandleFunc("/api/source", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -90,34 +87,6 @@ func NewHandler(store *Store) (http.Handler, error) {
 			return
 		}
 		writeJSON(w, source)
-	})
-	mux.HandleFunc("/api/events", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		flusher, ok := w.(http.Flusher)
-		if !ok {
-			http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
-		events, cancel := store.Subscribe()
-		defer cancel()
-		for {
-			select {
-			case <-r.Context().Done():
-				return
-			case version, ok := <-events:
-				if !ok {
-					return
-				}
-				fmt.Fprintf(w, "event: snapshot\ndata: {\"version\":%d}\n\n", version)
-				flusher.Flush()
-			}
-		}
 	})
 	mux.Handle("/", noStore(http.FileServer(http.Dir(webRoot))))
 	return mux, nil

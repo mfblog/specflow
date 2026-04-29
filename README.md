@@ -306,6 +306,10 @@ Reader answers questions like:
 - how Spec documents, shared rules, and implementation paths connect
 - which source file produced a displayed state or relationship
 
+The reader refresh button requests a new snapshot from disk immediately.
+Open pages also poll the local reader server on a fixed interval.
+The reader does not rely on filesystem watch events.
+
 The three common views are:
 
 - `Status`: object layer and next step

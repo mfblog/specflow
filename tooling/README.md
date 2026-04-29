@@ -107,8 +107,8 @@ Rules:
 3. when `--repo-root` is omitted, it defaults to `../../..` from the current working directory.
 4. the server reads front-end files from `specflow/tooling/reader/web`.
 5. the server reads current project truth from `docs/specs/**`.
-6. the server keeps only an in-memory snapshot.
-7. file changes under `docs/specs/**` rebuild the in-memory snapshot and notify open pages.
+6. each `/api/snapshot` request rebuilds the displayed snapshot from disk before returning data.
+7. the server does not watch files and does not expose a server-sent event stream.
 8. `/api/source` may return source text only from allowed truth and support files under the requested repository root.
 9. the hidden build-fingerprint query command is reserved for freshness checks.
 
@@ -122,6 +122,8 @@ Reader front-end rules:
 6. language switching affects only reader-owned UI text.
 7. Spec document source text, file paths, object IDs, command names, and version values are displayed as source data and must not be translated by the front-end.
 8. the selected reader language may be stored in browser-local state and must not be written into project files.
+9. the front-end refresh button requests a new snapshot immediately.
+10. the front-end also polls `/api/snapshot` on a fixed interval so open pages converge to the latest disk state without relying on filesystem events.
 
 ## Review Run-State Commands
 
