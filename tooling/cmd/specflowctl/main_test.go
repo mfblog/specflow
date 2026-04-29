@@ -90,6 +90,7 @@ func createCLITestRepo(t *testing.T) string {
 	frameworkFiles := []string{
 		"spec_flow_review.md",
 		"spec_flow_design_review.md",
+		"spec_flow_migrate.md",
 		"agent_operability_standard.md",
 		"natural_language_routing.md",
 		"onboarding_decision_policy.md",
