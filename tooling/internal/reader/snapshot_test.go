@@ -37,6 +37,10 @@ func TestBuildSnapshotConnectsUnitSpecAndSharedContract(t *testing.T) {
 	if !hasEdge(snapshot.Edges, "unit:assistant", "shared:shared_runtime_model", "uses_shared") {
 		t.Fatalf("expected unit uses_shared edge, got %+v", snapshot.Edges)
 	}
+	truthNode := findNode(t, snapshot.Nodes, "file:docs/specs/units/candidate/c_unit_assistant.md")
+	if truthNode.Label != "assistant (candidate)" {
+		t.Fatalf("expected candidate layer in truth node label, got %q", truthNode.Label)
+	}
 
 	data, err := json.Marshal(snapshot)
 	if err != nil {
@@ -80,6 +84,17 @@ func findObject(t *testing.T, objects []ObjectView, kind, id string) ObjectView 
 	}
 	t.Fatalf("object %s/%s not found in %+v", kind, id, objects)
 	return ObjectView{}
+}
+
+func findNode(t *testing.T, nodes []GraphNode, id string) GraphNode {
+	t.Helper()
+	for _, node := range nodes {
+		if node.ID == id {
+			return node
+		}
+	}
+	t.Fatalf("node %s not found in %+v", id, nodes)
+	return GraphNode{}
 }
 
 func hasEdge(edges []GraphEdge, from, to, kind string) bool {

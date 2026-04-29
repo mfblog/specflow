@@ -794,7 +794,7 @@ function renderGraph() {
     ],
     minZoom: 0.35,
     maxZoom: 2.2,
-    wheelSensitivity: 0.55,
+    wheelSensitivity: 1.1,
     layout: { name: "preset", fit: false }
   });
   cy.ready(() => {
@@ -1329,18 +1329,25 @@ function compactLabel(node) {
       .replace("/**", "\n/**");
   }
   if (node.kind === "truth_file") {
-    return label
-      .replace(/^c_unit_/, "")
-      .replace(/^s_unit_/, "")
-      .replace(/^c_shared_/, "shared_")
-      .replace(/^s_shared_/, "shared_")
-      .replace(/_evidence\.md$/, "\nevidence")
-      .replace(/\.md$/, "");
+    return compactTruthFileLabel(label);
   }
   if (node.kind === "implementation_path") {
     return label.replace("/**", "\n/**");
   }
   return label;
+}
+
+function compactTruthFileLabel(label) {
+  const base = String(label || "").replace(/\.md$/, "");
+  const unitMatch = base.match(/^([cs])_unit_(.+)$/);
+  if (unitMatch) return `${unitMatch[2].replace(/_/g, " ")} (${truthLayerName(unitMatch[1])})`;
+  const sharedMatch = base.match(/^([cs])_shared_(.+)$/);
+  if (sharedMatch) return `shared ${sharedMatch[2].replace(/_/g, " ")} (${truthLayerName(sharedMatch[1])})`;
+  return base.replace(/_/g, " ");
+}
+
+function truthLayerName(prefix) {
+  return prefix === "s" ? "stable" : "candidate";
 }
 
 function edgeLabel(kind) {
