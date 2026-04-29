@@ -119,8 +119,15 @@ func NewHandler(store *Store) (http.Handler, error) {
 			}
 		}
 	})
-	mux.Handle("/", http.FileServer(http.Dir(webRoot)))
+	mux.Handle("/", noStore(http.FileServer(http.Dir(webRoot))))
 	return mux, nil
+}
+
+func noStore(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func ReaderWebRoot(repoRoot string) (string, error) {

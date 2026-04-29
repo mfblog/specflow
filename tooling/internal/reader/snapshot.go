@@ -84,7 +84,7 @@ func BuildSnapshot(repoRoot string) Snapshot {
 		for _, truth := range object.TruthPaths {
 			addSource(truth)
 			fileNode := "file:" + truth.Path
-			builder.addNode(GraphNode{ID: fileNode, Kind: "truth_file", Label: filepath.Base(truth.Path), Group: "truth", Source: ptr(SourceRef{Path: truth.Path})})
+			builder.addNode(GraphNode{ID: fileNode, Kind: "truth_file", Label: compactTruthFileLabel(filepath.Base(truth.Path)), Group: "truth", Source: ptr(SourceRef{Path: truth.Path})})
 			builder.addEdge(GraphEdge{ID: nodeID + "->" + fileNode, From: nodeID, To: fileNode, Kind: "described_by", Label: "described by", Source: ptr(truth)})
 		}
 		for _, impl := range object.ImplementationPaths {
@@ -108,7 +108,7 @@ func BuildSnapshot(repoRoot string) Snapshot {
 		for _, truth := range object.TruthPaths {
 			addSource(truth)
 			fileNode := "file:" + truth.Path
-			builder.addNode(GraphNode{ID: fileNode, Kind: "truth_file", Label: filepath.Base(truth.Path), Group: "truth", Source: ptr(SourceRef{Path: truth.Path})})
+			builder.addNode(GraphNode{ID: fileNode, Kind: "truth_file", Label: compactTruthFileLabel(filepath.Base(truth.Path)), Group: "truth", Source: ptr(SourceRef{Path: truth.Path})})
 			builder.addEdge(GraphEdge{ID: sharedNode + "->" + fileNode, From: sharedNode, To: fileNode, Kind: "described_by", Label: "described by", Source: ptr(truth)})
 		}
 		for _, bound := range object.BoundObjects {
@@ -249,6 +249,22 @@ func firstTitle(text, fallback string) string {
 		}
 	}
 	return filepath.Base(fallback)
+}
+
+func compactTruthFileLabel(filename string) string {
+	base := strings.TrimSuffix(filename, ".md")
+	switch {
+	case strings.HasPrefix(base, "c_unit_"):
+		return strings.ReplaceAll(strings.TrimPrefix(base, "c_unit_"), "_", " ") + " (candidate)"
+	case strings.HasPrefix(base, "s_unit_"):
+		return strings.ReplaceAll(strings.TrimPrefix(base, "s_unit_"), "_", " ") + " (stable)"
+	case strings.HasPrefix(base, "c_shared_"):
+		return "shared " + strings.ReplaceAll(strings.TrimPrefix(base, "c_shared_"), "_", " ") + " (candidate)"
+	case strings.HasPrefix(base, "s_shared_"):
+		return "shared " + strings.ReplaceAll(strings.TrimPrefix(base, "s_shared_"), "_", " ") + " (stable)"
+	default:
+		return strings.ReplaceAll(base, "_", " ")
+	}
 }
 
 func extractSharedIDs(text string) []string {

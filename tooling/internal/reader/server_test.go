@@ -75,6 +75,9 @@ func TestStaticWebFilesAreServedFromDisk(t *testing.T) {
 	if !strings.Contains(rec.Body.String(), "disk asset") {
 		t.Fatalf("expected app.js to be served from disk, got %q", rec.Body.String())
 	}
+	if rec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("expected static files to disable browser cache, got %q", rec.Header().Get("Cache-Control"))
+	}
 }
 
 func TestNewHandlerRequiresReaderWebAssets(t *testing.T) {
