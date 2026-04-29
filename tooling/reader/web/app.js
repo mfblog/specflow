@@ -7,9 +7,11 @@ let activeTruthOwnerID = null;
 let activeDocMode = "rendered";
 let mermaidReady = false;
 let activeSpecflowNavGroup = "unit";
+let snapshotRequestInFlight = false;
 
 const LANGUAGE_STORAGE_KEY = "specflow-reader-language";
 const SUPPORTED_LANGUAGES = ["zh-CN", "en"];
+const SNAPSHOT_POLL_INTERVAL_MS = 5000;
 let currentLanguage = readStoredLanguage();
 
 const TRANSLATIONS = {
@@ -470,9 +472,15 @@ function applyStaticText() {
 }
 
 async function loadSnapshot() {
-  const response = await fetch("/api/snapshot");
-  snapshot = await response.json();
-  render();
+  if (snapshotRequestInFlight) return;
+  snapshotRequestInFlight = true;
+  try {
+    const response = await fetch("/api/snapshot");
+    snapshot = await response.json();
+    render();
+  } finally {
+    snapshotRequestInFlight = false;
+  }
 }
 
 function render() {
@@ -1839,9 +1847,8 @@ function renderTable(lines) {
   }).join("")}</table>`;
 }
 
-function connectEvents() {
-  const events = new EventSource("/api/events");
-  events.addEventListener("snapshot", () => loadSnapshot());
+function startSnapshotPolling() {
+  window.setInterval(loadSnapshot, SNAPSHOT_POLL_INTERVAL_MS);
 }
 
 function escapeHTML(value) {
@@ -1956,5 +1963,5 @@ function navigateToSpecDocument(path) {
 
 applyStaticText();
 loadSnapshot();
-connectEvents();
+startSnapshotPolling();
 setDocMode("rendered");

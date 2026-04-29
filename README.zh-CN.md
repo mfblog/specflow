@@ -305,6 +305,10 @@ Reader 主要回答这些问题：
 - Spec 文档、共享规则和实现路径之间怎么连接
 - 哪些内容来自 `_status.md`、`repository_mapping.md` 或具体 Spec 文件
 
+Reader 的刷新按钮会立刻从磁盘重新读取一次快照。
+已打开的页面也会按固定间隔轮询本地 reader 服务。
+Reader 不依赖文件监听事件。
+
 Reader 里通常先看三个视图：
 
 - `状态`：看对象当前层和下一步
