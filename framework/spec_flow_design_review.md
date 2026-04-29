@@ -33,6 +33,7 @@ That default scope includes:
    - `spec_policy.md`
    - `command_policy.md`
    - `natural_language_routing.md`
+   - `spec_flow_migrate.md`
    - `onboarding_decision_policy.md`
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
@@ -93,6 +94,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `spec_policy.md`
    - `command_policy.md`
    - `natural_language_routing.md`
+   - `spec_flow_migrate.md`
    - `onboarding_decision_policy.md`
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
@@ -133,6 +135,9 @@ For the default design-baseline review, the execution-local `review_plan` must u
 
 Onboarding and evidence appendix design must be judged as part of `design_foundation`.
 The review must judge whether that design solves the real historical-project and partially implemented project onboarding problem, avoids creating an unnecessary lifecycle state, keeps evidence separate from implementation truth, and makes the current position and next action understandable to normal users and executors.
+
+Project-instance migration design must be judged as part of `design_foundation`.
+The review must judge whether `spec_flow_migrate` solves the real framework-update migration problem without turning old-format compatibility into a permanent second path, without hiding business-truth decisions inside mechanical updates, and without adding a heavier workflow than project-instance format migration requires.
 
 ## 4. Required Cross-Block Convergence Checks
 

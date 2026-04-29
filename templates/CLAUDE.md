@@ -27,6 +27,7 @@ Before editing files or advancing lifecycle state, do this:
 2. Classify the entry shape.
    - Exact standard command: read `specflow/framework/command_policy.md`, then read the matching command file under `specflow/framework/commands/`.
    - Exact governance review entry: if the request is `spec_flow_review` or `spec_flow_design_review`, with or without an explicit narrowing phrase, read the matching review policy directly.
+   - Exact project-instance migration entry: if the request is `spec_flow_migrate`, with or without an explicit narrowing phrase, read `specflow/framework/spec_flow_migrate.md` directly.
    - Natural-language request: read `specflow/framework/natural_language_routing.md` before choosing any command, governance flow, or implementation step.
 3. Continue from the first policy file you read.
    - For lifecycle, file, command, checkpoint, and output details, follow the routed policy files.
@@ -112,15 +113,16 @@ Use these files for the detailed rules:
 
 1. `specflow/framework/natural_language_routing.md`: natural-language intent closure, routing, missing intent, and multi-step request handling
 2. `specflow/framework/command_policy.md`: standard command forms, command families, lifecycle order, and shared gate rules
-3. `specflow/framework/spec_policy.md`: Spec objects, layers, source-of-truth boundaries, and file ownership rules
-4. `specflow/framework/implementation_change_policy.md`: direct implementation classification and diversion rules
-5. `specflow/framework/onboarding_decision_policy.md`: candidate source decision and evidence appendix requirements for new, historical, or partially implemented scopes
-6. `specflow/framework/repository_mapping_policy.md`: repository structure and path-ownership governance
-7. `specflow/framework/checkpoint_protocol.md`: checkpoint fields, stop reports, and resume behavior
-8. `docs/specs/repository_mapping.md`: current project structure truth
-9. `docs/specs/system_constraints.md`: current global technical baseline and system constraints
-10. `specflow/framework/skills/using-specflow-guidance/SKILL.md`: guidance entry when a request is not ready for formal truth writeback
-11. `specflow/framework/shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`: internal shared-governance flows reached by natural-language routing
-12. `specflow/framework/git_policy.md`: commit boundaries and git handling
-13. `specflow/framework/entry_index_registry.md`: registered entry files and managed-block sync rules
+3. `specflow/framework/spec_flow_migrate.md`: project-instance migration after framework rule updates
+4. `specflow/framework/spec_policy.md`: Spec objects, layers, source-of-truth boundaries, and file ownership rules
+5. `specflow/framework/implementation_change_policy.md`: direct implementation classification and diversion rules
+6. `specflow/framework/onboarding_decision_policy.md`: candidate source decision and evidence appendix requirements for new, historical, or partially implemented scopes
+7. `specflow/framework/repository_mapping_policy.md`: repository structure and path-ownership governance
+8. `specflow/framework/checkpoint_protocol.md`: checkpoint fields, stop reports, and resume behavior
+9. `docs/specs/repository_mapping.md`: current project structure truth
+10. `docs/specs/system_constraints.md`: current global technical baseline and system constraints
+11. `specflow/framework/skills/using-specflow-guidance/SKILL.md`: guidance entry when a request is not ready for formal truth writeback
+12. `specflow/framework/shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`: internal shared-governance flows reached by natural-language routing
+13. `specflow/framework/git_policy.md`: commit boundaries and git handling
+14. `specflow/framework/entry_index_registry.md`: registered entry files and managed-block sync rules
 <!-- SPECFLOW:END -->

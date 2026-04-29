@@ -92,27 +92,57 @@ How to read this:
 
 ## Add To Your Repository
 
-For most teams, the default setup is enough:
+For most teams, the simplest setup is:
 
-1. clone this repository somewhere else
-2. copy only the `specflow/` directory into your project root
-3. run `init` from your project root
+1. from your project root, clone this repository into a directory named `specflow`
+2. make sure the final path is `./specflow`
+3. add `specflow/` to `.gitignore` if your project should not commit the framework files
+4. run `init` from your project root
+
+The lowercase directory name matters.
+The published repository is named `SpecFlow`, so a plain `git clone https://github.com/Bingordinary/SpecFlow.git` creates `./SpecFlow`.
+The installed framework directory must instead be `./specflow`, because the documents and tools use paths such as `specflow/tooling/bin/` and `specflow/framework/`.
+
+You can either clone directly into the correct directory name, or clone first and then rename `SpecFlow` to `specflow`.
+
+After setup, your project should contain paths such as:
+
+- `specflow/framework/`
+- `specflow/templates/`
+- `specflow/tooling/`
 
 Shell example:
 
 ```bash
-git clone https://github.com/Bingordinary/SpecFlow.git /tmp/SpecFlow
-cp -R /tmp/SpecFlow/specflow ./specflow
+git clone https://github.com/Bingordinary/SpecFlow.git specflow
+printf "\nspecflow/\n" >> .gitignore
+```
+
+If you already cloned without a target directory:
+
+```bash
+mv SpecFlow specflow
+printf "\nspecflow/\n" >> .gitignore
 ```
 
 Windows PowerShell example:
 
 ```powershell
-git clone https://github.com/Bingordinary/SpecFlow.git $env:TEMP\SpecFlow
-Copy-Item -Recurse -Force $env:TEMP\SpecFlow\specflow .\specflow
+git clone https://github.com/Bingordinary/SpecFlow.git specflow
+Add-Content .gitignore "specflow/"
 ```
 
-If you need a long-term upstream sync workflow, treat that as a maintenance concern.
+If you already cloned without a target directory:
+
+```powershell
+Rename-Item .\SpecFlow specflow
+Add-Content .gitignore "specflow/"
+```
+
+If you ignore `specflow/`, each workspace must prepare it locally before using `specFlow`.
+If you want every clone of your project to include the exact same `specFlow` framework files, commit `specflow/` instead of ignoring it.
+
+If you need a long-term upstream sync workflow, treat that as a separate maintenance concern.
 See [tooling/README.md](./tooling/README.md) for tooling details.
 
 ## Quick Start
@@ -293,10 +323,19 @@ It helps you inspect current project state; it does not edit files and does not 
 Start it with:
 
 ```bash
-<specflow-reader-binary> serve --repo-root . --addr 127.0.0.1:17863
+<specflow-reader-binary> --repo-root . --addr 127.0.0.1:17863
 ```
 
 `<specflow-reader-binary>` means the platform-matching `specflow-reader` executable under `specflow/tooling/bin/`.
+It starts the local server directly; there is no `serve` subcommand.
+
+If your current working directory is the repository root, keep `--repo-root .`.
+If you first `cd specflow/tooling/bin` and then run the reader binary from that directory, `--repo-root` can be omitted because the default repository root is `../../..` from the current working directory:
+
+```bash
+cd specflow/tooling/bin
+./specflow-reader-linux-amd64 --addr 127.0.0.1:17863
+```
 
 Reader answers questions like:
 
@@ -349,6 +388,7 @@ Common entries:
 | Brand-new capability entering governance | `unit_new:{unit}` |
 | Accepted capability opening a new change round | `unit_fork:{unit}` |
 | Check whether implementation still matches accepted truth | `unit_stable_verify:{unit}` |
+| Existing project files need to match newer `specFlow` framework rules | `spec_flow_migrate` |
 
 Once an object enters the candidate chain, the common order is:
 
@@ -456,6 +496,20 @@ Common commands are:
 Reader also lives in the tooling layer, but it is read-only.
 See [tooling/README.md](./tooling/README.md) for the full tooling surface.
 
+### Update Notice
+
+After you pull or otherwise update `specflow/`, ask the agent to run:
+
+```bash
+spec_flow_migrate
+```
+
+`spec_flow_migrate` updates the project instance to match the current `specFlow` framework contracts.
+It scans project-side truth, state, process files, and managed entry blocks; applies only mechanically clear file-shape updates; and invalidates old process state when that state can no longer be trusted under the new rules.
+
+It is an agent-facing `specFlow` entry, not a `specflowctl migrate` binary subcommand.
+It must not change business truth or implementation code.
+
 ### Advanced Flows
 
 Beyond unit commands, `specFlow` has governance-oriented flows.
@@ -464,9 +518,11 @@ The most common ones are:
 
 - `spec_flow_review`
 - `spec_flow_design_review`
+- `spec_flow_migrate`
 - natural-language shared governance
 
-Use these when reviewing the governance system itself, not when simply moving one business capability forward.
+Use `spec_flow_review` and `spec_flow_design_review` when reviewing the governance system itself, not when simply moving one business capability forward.
+Use `spec_flow_migrate` after updating `specflow/`; see [Update Notice](#update-notice).
 
 ### Reading The Full Baseline
 
@@ -478,8 +534,9 @@ If you want to deeply understand or redesign the system, read in this order:
 4. `framework/git_policy.md`
 5. `framework/shared_*.md`
 6. `framework/spec_flow_review.md`
-7. `framework/commands/`
-8. the installed project-side `docs/` files
+7. `framework/spec_flow_migrate.md`
+8. `framework/commands/`
+9. the installed project-side `docs/` files
 
 ## File Ownership
 

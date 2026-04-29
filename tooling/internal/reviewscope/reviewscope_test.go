@@ -10,6 +10,7 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	repoRoot := t.TempDir()
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_review.md"), "# review\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_design_review.md"), "# design review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_migrate.md"), "# migrate\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/agent_operability_standard.md"), "# operability\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/natural_language_routing.md"), "# routing\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/onboarding_decision_policy.md"), "# onboarding\n")
@@ -104,6 +105,9 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding decision policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/spec_flow_migrate.md") {
+		t.Fatalf("expected migration policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/shared_sync.md") {
 		t.Fatalf("expected shared-governance files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
@@ -164,6 +168,7 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 	repoRoot := t.TempDir()
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_review.md"), "# review\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_design_review.md"), "# design review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_migrate.md"), "# migrate\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/agent_operability_standard.md"), "# operability\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/natural_language_routing.md"), "# routing\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/onboarding_decision_policy.md"), "# onboarding\n")
@@ -243,6 +248,7 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	repoRoot := t.TempDir()
 	for _, relPath := range []string{
 		"specflow/framework/spec_flow_design_review.md",
+		"specflow/framework/spec_flow_migrate.md",
 		"specflow/framework/agent_operability_standard.md",
 		"specflow/framework/spec_policy.md",
 		"specflow/framework/command_policy.md",
@@ -297,6 +303,9 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	}
 	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding decision policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/spec_flow_migrate.md") {
+		t.Fatalf("expected migration policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
 }
 

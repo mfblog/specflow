@@ -31,6 +31,9 @@ func TestInitCreatesValidRunState(t *testing.T) {
 	if !containsString(routingSlice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding policy in routing slice, got %+v", routingSlice.InputFiles)
 	}
+	if !containsString(routingSlice.InputFiles, "specflow/framework/spec_flow_migrate.md") {
+		t.Fatalf("expected migration policy in routing slice, got %+v", routingSlice.InputFiles)
+	}
 	truthSlice := findSlice(t, state, "truth_and_implementation_gates")
 	if !containsString(truthSlice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding policy in truth gate slice, got %+v", truthSlice.InputFiles)
@@ -77,6 +80,9 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	designFoundation := findSlice(t, state, "design_foundation")
 	if !containsString(designFoundation.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding decision policy in design foundation input files, got %+v", designFoundation.InputFiles)
+	}
+	if !containsString(designFoundation.InputFiles, "specflow/framework/spec_flow_migrate.md") {
+		t.Fatalf("expected migration policy in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
 
 	validation := ValidateFile(repoRoot, FlowSpecFlowDesignReview, result.File, now)
@@ -587,6 +593,9 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 	if !containsString(slice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding policy input for source field compatibility, got %+v", slice.InputFiles)
 	}
+	if !containsString(slice.InputFiles, "specflow/framework/spec_flow_migrate.md") {
+		t.Fatalf("expected migration policy input for project-instance migration compatibility, got %+v", slice.InputFiles)
+	}
 	if containsString(slice.InputFiles, "docs/specs/_governance_review/spec_flow_review.md") {
 		t.Fatalf("expected active review run state outside compatibility fingerprint, got %+v", slice.InputFiles)
 	}
@@ -658,6 +667,7 @@ func createReviewRunRepo(t *testing.T) string {
 	frameworkFiles := []string{
 		"spec_flow_review.md",
 		"spec_flow_design_review.md",
+		"spec_flow_migrate.md",
 		"agent_operability_standard.md",
 		"natural_language_routing.md",
 		"onboarding_decision_policy.md",

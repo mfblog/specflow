@@ -26,7 +26,7 @@ That judgment belongs to `spec_flow_design_review`.
 It does not pass a review only because the required files were read or the required slices were visited.
 Each in-scope rule, file, slice, and cross-convergence path must satisfy the standards in this section.
 
-The fixed standards are `content validity`, `logical closure`, `chain closure`, `governance closure and ownership`, `contract drift`, `cross-convergence`, `agent operability`, `tooling boundary`, and `project-instance compatibility`.
+The fixed standards are `content validity`, `logical closure`, `chain closure`, `governance closure and ownership`, `contract drift`, `cross-convergence`, `agent operability`, `tooling boundary`, `project-instance compatibility`, and `project-instance migration closure`.
 
 ### 2.1 Content Validity
 
@@ -119,7 +119,7 @@ Any contract drift that can change execution, stop behavior, review judgment, or
 Locally correct rules must still compose into one coherent governance baseline.
 
 The review must test cross-convergence wherever one rule area depends on another rule area.
-At minimum, cross-convergence covers routing, commands, truth writeback, implementation gates, onboarding source decision, shared governance, impact reconciliation, process state, entry files, project-local standards, tooling, recovery, and git close-out when those areas are in scope.
+At minimum, cross-convergence covers routing, commands, project-instance migration, truth writeback, implementation gates, onboarding source decision, shared governance, impact reconciliation, process state, entry files, project-local standards, tooling, recovery, and git close-out when those areas are in scope.
 
 When onboarding source decision is in scope, the review must verify that candidate source fields, candidate main Spec text, evidence appendix handling, implementation permission, and lifecycle gates converge without allowing observed implementation behavior to become implementation truth outside the candidate main Spec.
 
@@ -131,7 +131,7 @@ It must not claim default governance-baseline `pass`.
 Governance files must be operable by a capable executor without prior `specFlow` memory.
 
 Default full-scope `spec_flow_review` must read and consume `specflow/framework/agent_operability_standard.md`.
-A narrowed review must read and consume that standard whenever the narrowed scope includes entry behavior, routing, commands, checkpoints, shared governance, process state, entry files, or tooling contracts.
+A narrowed review must read and consume that standard whenever the narrowed scope includes entry behavior, routing, commands, project-instance migration, checkpoints, shared governance, process state, entry files, or tooling contracts.
 
 Agent-operability review must cover execution clarity, content economy, and formal rule voice.
 A pass claim for an in-scope governance file must not ignore an applicable agent-operability failure.
@@ -174,7 +174,28 @@ The compatibility check must not judge:
 If the project-instance compatibility check finds old file shape, unsupported status values, missing required references, invalid binding format, missing candidate source fields, invalid evidence appendix references, missing required evidence appendix files, or unreadable process-state shape, it is a `spec_flow_review` finding because the framework cannot safely operate on the current project instance.
 If the discovered concern is only about the truth content being wrong, incomplete, or undesirable as business truth, report that it is outside this check and route it to the owning command, shared-governance flow, repository-mapping flow, or design review.
 
-### 2.10 Relationship To The Slice Catalog
+### 2.10 Project-Instance Migration Closure
+
+Default full-scope `spec_flow_review` must review `spec_flow_migrate` as the owner of project-instance format migration after framework rule updates.
+
+The migration closure check verifies only whether the migration flow can safely update old project-instance files to the current framework shape.
+It does not review business truth correctness.
+
+The migration closure check must judge:
+
+1. exact entry routing for `spec_flow_migrate`
+2. natural-language routing for requests to update old project-instance files to current framework contracts
+3. migration read surface and target surface
+4. mechanical writeback boundaries
+5. forbidden compatibility aliases, fallback logic, and business-truth rewriting
+6. process-state invalidation after migrated truth or support files change
+7. registered entry managed-block handling
+8. checkpoint and output contracts for blocked migration
+9. agreement with tooling boundaries when existing tooling is used
+
+If migration can rewrite project files without a current rule-derived target, preserve stale process pass claims, choose business meaning, or leave invalidated downstream state without a legal next action, it is a `spec_flow_review` finding.
+
+### 2.11 Relationship To The Slice Catalog
 
 The baseline slice catalog is an execution organization for this review.
 It is not the review standard by itself.
@@ -272,8 +293,10 @@ Default scope must explicitly include:
    - at minimum `agent_operability_standard.md`, entry files, routing policy files, onboarding source decision files, command policy files, command files, shared-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
 7. the project-instance compatibility check
    - at minimum project-instance status, repository mapping, system constraints, existing process files, and existing formal truth files under `docs/specs/`, limited by Section 2.9
+8. the project-instance migration flow
+   - at minimum `spec_flow_migrate.md`, `natural_language_routing.md` where it routes project-instance migration, `command_policy.md` where it defines the non-command boundary, `checkpoint_protocol.md`, `process_snapshot_contract.md`, `recovery_policy.md`, `entry_index_registry.md`, and the template-side process and entry files that migration consumes
 
-If any one of those seven coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
+If any one of those eight coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
 
 ## 4. Baseline Slice Catalog
 
@@ -297,8 +320,8 @@ Local slices review one owner area for internal closure, side effects, contract 
    - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `severity_policy.md`, and `checkpoint_protocol.md`
    - verifies review entry meaning, output contracts, finding contracts, and stop behavior
 3. `routing_and_command_policy`
-   - reviews `natural_language_routing.md`, `onboarding_decision_policy.md`, `command_policy.md`, `scenario_policy.md`, `commands/*.md`, and `skills/*/SKILL.md`
-   - verifies exact command routing, natural-language routing, onboarding source routing, unit command progression, scenario command progression, and guidance entry behavior
+   - reviews `natural_language_routing.md`, `onboarding_decision_policy.md`, `command_policy.md`, `scenario_policy.md`, `spec_flow_migrate.md`, `commands/*.md`, and `skills/*/SKILL.md`
+   - verifies exact command routing, exact project-instance migration routing, natural-language routing, onboarding source routing, unit command progression, scenario command progression, and guidance entry behavior
 4. `truth_and_implementation_gates`
    - reviews `spec_policy.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `onboarding_decision_policy.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, `recovery_policy.md`, and `git_policy.md`
    - verifies truth ownership, candidate source fields, evidence appendix ownership, implementation diversion, handoff, fallback, recovery, and close-out rules
@@ -310,7 +333,8 @@ Local slices review one owner area for internal closure, side effects, contract 
    - verifies process-state contracts, snapshot invalidation, impact handling, and governance-review run-state boundaries
 7. `project_instance_contract_compatibility`
    - reviews the current project-instance files under `docs/specs/` only for format and contract compatibility with current framework rules
-   - verifies status shape, repository mapping shape, system constraints shape, process-file shape, formal object file shape, candidate source metadata shape, evidence appendix reference shape, evidence appendix file shape, reference format, status values, command names, and shared binding format
+   - reviews `spec_flow_migrate.md` as the migration owner for old project-instance shape discovered by this slice
+   - verifies status shape, repository mapping shape, system constraints shape, process-file shape, formal object file shape, candidate source metadata shape, evidence appendix reference shape, evidence appendix file shape, reference format, status values, command names, shared binding format, migration writeback boundary, migration state invalidation, migration checkpoint handling, and migration output closure
    - must not judge unit, scenario, shared-contract, or evidence-appendix business truth correctness
 8. `entry_and_project_extension`
    - reviews `entry_index_registry.md`, `project_standards_policy.md`, `project_standard_create.md`, registered entry files, template entry files, template project-standard registry, project registry, and active project-local standards in scope
@@ -326,7 +350,7 @@ Local slices review one owner area for internal closure, side effects, contract 
 Cross-convergence slices review whether locally correct rules still compose into one coherent governance baseline.
 
 1. `routing_to_command_convergence`
-   - verifies natural-language routing, exact command routing, guidance entry, and review entry behavior converge without ambiguous owner selection
+   - verifies natural-language routing, exact command routing, exact project-instance migration routing, guidance entry, and review entry behavior converge without ambiguous owner selection
 2. `command_to_process_state_convergence`
    - verifies command pass, fallback, cleanup, snapshot, and process-file consumption rules converge
 3. `truth_to_implementation_convergence`
@@ -336,9 +360,9 @@ Cross-convergence slices review whether locally correct rules still compose into
 5. `entry_extension_to_review_convergence`
    - verifies entry files and project-local standards cannot bypass the framework baseline, narrow default scope silently, or change review meaning without owner rules
 6. `tooling_to_rule_convergence`
-   - verifies tooling executes only rule-decided mechanical work and does not become a second semantic source of truth
+   - verifies tooling executes only rule-decided mechanical work, does not become a second semantic source of truth, and does not introduce a migration command unless a rule owner defines its mechanical surface
 7. `project_instance_to_framework_convergence`
-   - verifies the project-instance compatibility check composes with routing, command, process-state, repository-mapping, shared-binding, and tooling rules without judging business truth content
+   - verifies the project-instance compatibility check and `spec_flow_migrate` compose with routing, command, process-state, repository-mapping, shared-binding, entry-file, and tooling rules without judging business truth content
 8. `agent_operability_path_walk`
    - walks representative execution paths across routing, command, shared, process-state, entry, and tooling rules
    - verifies a new executor can proceed from request to next legal action without hidden context
@@ -613,7 +637,7 @@ The output must report at least:
 8. the guidance-skill coverage result
 9. the impact-reconciliation coverage result
 10. the tooling coverage result, including reader runtime coverage
-11. the project-instance compatibility result
+11. the project-instance compatibility and migration-flow result
 12. the agent-operability result, including local slice results and path-walk result
 13. the cross-convergence results
 14. the findings result:

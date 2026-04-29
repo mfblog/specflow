@@ -45,6 +45,7 @@ Non-command objects:
 2. `system_constraints` is not a standard command target
 3. `repository_mapping` is not a standard command target
 4. `impact_sync` is an internal governance flow, not a user-facing standard command
+5. `spec_flow_migrate` is a project-instance migration governance entry, not a standard command target
 
 ## 4. Command Forms
 
@@ -69,6 +70,7 @@ Additional rules:
 3. `repository_mapping` is not a legal standard command target
 4. natural-language routing is the default user-facing entry for requests that do not use explicit command syntax
 5. `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, `shared_sync`, `shared_escape`, and `impact_sync` are internal governance flows, not direct user-facing standard commands
+6. `spec_flow_migrate` is entered by its exact name and is governed by `specflow/framework/spec_flow_migrate.md`; it must not be written as `{command}:{unit}` or `{command}:{scenario}`
 
 ## 5. Standard Commands
 
@@ -117,8 +119,21 @@ Rules:
 7. checkpoint questions and ordinary user-facing route reports must not require the user to choose internal object-family names, command names, lifecycle state names, or internal shared-governance flow names
 8. if the request touches cross-unit shared truth, route into the shared-governance branch defined by `natural_language_routing.md`
 9. direct shared command shapes are not user-facing command forms
+10. natural-language requests to update old project-instance files to current `specFlow` framework contracts route to `specflow/framework/spec_flow_migrate.md`
 
-### 5.4 Shared Governance Internal Routing
+### 5.4 Project-Instance Migration Entry
+
+`spec_flow_migrate` owns project-instance format migration after a framework update.
+
+Rules:
+
+1. exact input `spec_flow_migrate` routes directly to `specflow/framework/spec_flow_migrate.md`
+2. `spec_flow_migrate` is not a `unit` or `scenario` lifecycle command
+3. `spec_flow_migrate` may not advance a `unit` or `scenario` lifecycle gate
+4. `spec_flow_migrate` may invalidate stale process state only under the migration policy and the shared process-state rules it links
+5. `spec_flow_migrate` must stop instead of choosing business meaning, object ownership, acceptance meaning, shared-truth ownership, or system-constraint meaning
+
+### 5.5 Shared Governance Internal Routing
 
 Shared governance is a branch of natural-language routing.
 

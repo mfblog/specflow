@@ -700,7 +700,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Do routing and command policies send each request to the correct governed next step.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union([]string{"specflow/framework/natural_language_routing.md", "specflow/framework/onboarding_decision_policy.md", "specflow/framework/command_policy.md", "specflow/framework/scenario_policy.md"}, scope.CommandFiles, scope.GuidanceSkillFiles)
+				return union([]string{"specflow/framework/natural_language_routing.md", "specflow/framework/onboarding_decision_policy.md", "specflow/framework/command_policy.md", "specflow/framework/scenario_policy.md", "specflow/framework/spec_flow_migrate.md"}, scope.CommandFiles, scope.GuidanceSkillFiles)
 			},
 		},
 		{
@@ -743,7 +743,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 		{
 			ID:             "project_instance_contract_compatibility",
 			SliceType:      "local",
-			ReviewQuestion: "Do current project-instance SpecFlow files remain format-compatible with framework contracts without judging business truth.",
+			ReviewQuestion: "Do current project-instance SpecFlow files and migration rules remain format-compatible with framework contracts without judging business truth.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
 					"specflow/framework/command_policy.md",
@@ -751,6 +751,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 					"specflow/framework/process_snapshot_contract.md",
 					"specflow/framework/repository_mapping_policy.md",
 					"specflow/framework/scenario_policy.md",
+					"specflow/framework/spec_flow_migrate.md",
 					"specflow/framework/spec_policy.md",
 				}, scope.SharedGovernanceFiles, scope.TemplateGovernanceFiles, scope.ProjectInstanceCompatibilityFiles)
 			},
