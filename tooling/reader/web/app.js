@@ -1,5 +1,5 @@
 let snapshot = null;
-let currentView = "status";
+let currentView = "review";
 let cy = null;
 let selectedNodeID = null;
 let activeInspectorTab = "info";
@@ -7,6 +7,7 @@ let activeTruthOwnerID = null;
 let activeDocMode = "rendered";
 let mermaidReady = false;
 let activeSpecflowNavGroup = "unit";
+let activeReviewNavGroup = "capability";
 let snapshotRequestInFlight = false;
 let snapshotDataSignature = "";
 
@@ -29,6 +30,7 @@ const TRANSLATIONS = {
       zh: "中文"
     },
     tabs: {
+      review: { title: "Spec 审核", subtitle: "本轮确认" },
       status: { title: "状态", subtitle: "进度对齐" },
       project: { title: "项目结构", subtitle: "仓库路径" },
       specflow: { subtitle: "治理层级" }
@@ -60,6 +62,11 @@ const TRANSLATIONS = {
       }
     },
     views: {
+      review: {
+        title: "Spec 审核",
+        summary: "按本轮需要确认的 Spec 主文件组织审核入口。参考文件只帮助理解，不作为本轮默认审核对象。",
+        nav: "待审核 Spec"
+      },
       project: {
         title: "项目结构",
         summary: "从仓库路径看实现位置：哪些代码或工程路径已经归到具体责任对象，先不展示 SpecFlow 自己的 Spec 文档和支撑文件。",
@@ -122,6 +129,53 @@ const TRANSLATIONS = {
       lifecycleHeading: "生命周期进度",
       lifecycleDescription: "蓝色节点表示状态文件记录的下一步；它不是自动判断通过，只表示当前应继续处理的位置。",
       lifecycleAria: "{label} 生命周期进度"
+    },
+    review: {
+      empty: "暂无待审核 Spec 主文件。",
+      emptyNav: "暂无待审核 Spec。",
+      emptyDetailTitle: "暂无待审核 Spec",
+      emptyDetail: "当前没有需要默认审核的 candidate 主文件。stable、evidence、项目结构和全局约束不会作为本轮默认审核对象。",
+      openSource: "打开 Spec 原文",
+      fileType: "审核对象",
+      object: "对应项目对象",
+      reviewTarget: "你要审核",
+      readingFocus: "阅读重点",
+      relationships: "相关关系",
+      relationEmpty: "暂无相关关系快照。",
+      afterReviewTitle: "审核后下一步",
+      afterReviewWithCommandPrefix: "审核完成后，把审核结果告诉当前执行者；需要继续推进时，下一步命令是",
+      afterReviewWithCommandSuffix: "。",
+      afterReviewNoCommand: "审核完成后，把审核结果告诉当前执行者；当前没有登记下一步命令。",
+      relation: {
+        implementation: "实现路径",
+        shared: "共享规则",
+        bound: "绑定对象",
+        evidence: "证据参考",
+        stable: "稳定基线参考",
+        mapping: "项目结构参考",
+        system: "全局约束参考"
+      },
+      types: {
+        capability: "待确认单元设计",
+        scenario: "待确认端到端设计",
+        shared: "待确认共享规则",
+        structure: "项目结构文件",
+        system: "全局约束文件"
+      },
+      targets: {
+        capability: "整份文件是否正确表达该能力的当前设计或规则。",
+        scenario: "整份文件是否正确表达从入口到最终结果的端到端链路。",
+        shared: "整份文件是否正确表达这条共享规则及其复用边界。",
+        structure: "整份文件是否正确表达当前项目结构、对象边界和路径归属。",
+        system: "整份文件是否正确表达全仓库约束、默认选择和例外。"
+      },
+      focus: {
+        capability: "责任边界、输入输出、错误处理、验收条件、共享规则引用",
+        scenario: "入口、经过的能力、最终结果、失败处理、验证方式",
+        shared: "复用对象、规则正文、绑定关系、是否仍是局部共享规则",
+        structure: "能力列表、场景列表、共享规则列表、路径归属、支撑文件边界",
+        system: "技术基线、默认选择、共享机制、禁止项、例外"
+      }
     },
     lifecycle: {
       scenario_new: "创建新的端到端流程设计",
@@ -209,6 +263,7 @@ const TRANSLATIONS = {
       zh: "Chinese"
     },
     tabs: {
+      review: { title: "Spec Review", subtitle: "Current round" },
       status: { title: "Status", subtitle: "Progress" },
       project: { title: "Project", subtitle: "Repository paths" },
       specflow: { subtitle: "Governance layers" }
@@ -240,6 +295,11 @@ const TRANSLATIONS = {
       }
     },
     views: {
+      review: {
+        title: "Spec Review",
+        summary: "Organizes review by the main Spec files that need confirmation in the current round. Reference files help reading but are not default review targets.",
+        nav: "Specs to review"
+      },
       project: {
         title: "Project Structure",
         summary: "Shows implementation locations from repository paths: which code or engineering paths are assigned to responsibility objects. SpecFlow's own Spec documents and support files are not shown here.",
@@ -302,6 +362,53 @@ const TRANSLATIONS = {
       lifecycleHeading: "Lifecycle Progress",
       lifecycleDescription: "The blue node is the next step recorded by the status file. It is not an automatic pass judgment; it only marks where work should continue.",
       lifecycleAria: "{label} lifecycle progress"
+    },
+    review: {
+      empty: "No main Spec files to review.",
+      emptyNav: "No Specs to review.",
+      emptyDetailTitle: "No Specs to review",
+      emptyDetail: "There are no candidate main files that need default review. Stable, evidence, project structure, and global constraints files are not default review targets for this round.",
+      openSource: "Open Spec source",
+      fileType: "Review object",
+      object: "Project object",
+      reviewTarget: "Review target",
+      readingFocus: "Reading focus",
+      relationships: "Relationships",
+      relationEmpty: "No relationship snapshot.",
+      afterReviewTitle: "After review",
+      afterReviewWithCommandPrefix: "After reviewing, tell the current executor the result. To continue, the next command is",
+      afterReviewWithCommandSuffix: ".",
+      afterReviewNoCommand: "After reviewing, tell the current executor the result. No next command is registered.",
+      relation: {
+        implementation: "Implementation paths",
+        shared: "Shared rules",
+        bound: "Bound objects",
+        evidence: "Evidence references",
+        stable: "Stable baseline references",
+        mapping: "Project structure reference",
+        system: "Global constraints reference"
+      },
+      types: {
+        capability: "Unit design to confirm",
+        scenario: "End-to-end design to confirm",
+        shared: "Shared rules to confirm",
+        structure: "Project structure file",
+        system: "Global constraints file"
+      },
+      targets: {
+        capability: "Whether the whole file correctly expresses this capability's current design or rules.",
+        scenario: "Whether the whole file correctly expresses the end-to-end chain from entry to final outcome.",
+        shared: "Whether the whole file correctly expresses this shared rule and its reuse boundary.",
+        structure: "Whether the whole file correctly expresses current project structure, object boundaries, and path ownership.",
+        system: "Whether the whole file correctly expresses repository-wide constraints, defaults, and exceptions."
+      },
+      focus: {
+        capability: "Responsibility boundary, inputs and outputs, error handling, acceptance conditions, shared rule references",
+        scenario: "Entry, participating capabilities, final outcome, failure handling, verification method",
+        shared: "Reusing objects, rule body, binding relationships, whether it remains a local shared rule",
+        structure: "Capability list, scenario list, shared rule list, path ownership, support-file boundary",
+        system: "Technical baseline, defaults, shared mechanisms, prohibitions, exceptions"
+      }
     },
     lifecycle: {
       scenario_new: "Create a new end-to-end flow design",
@@ -507,6 +614,7 @@ function snapshotSignature(value) {
 
 function render() {
   if (!snapshot) return;
+  document.body.classList.toggle("review-view-active", currentView === "review");
   document.body.classList.toggle("status-view-active", currentView === "status");
   const objects = list(snapshot.objects);
   projectMeta.textContent = `${snapshot.project.repo_root} · version ${snapshot.version} · ${t("counts.objects", { count: objects.length })}`;
@@ -573,6 +681,11 @@ function renderNav() {
     return;
   }
 
+  if (currentView === "review") {
+    renderReviewNav();
+    return;
+  }
+
   if (currentView === "status") {
     objectsForView().forEach((object) => {
       const button = document.createElement("button");
@@ -626,6 +739,53 @@ function renderSpecflowNav() {
     }
     renderNodeNavSection(section.key, section.items);
   });
+}
+
+function renderReviewNav() {
+  const items = reviewItems();
+  const sections = reviewTypeOrder()
+    .map((type) => ({ type, items: items.filter((item) => item.reviewType === type) }))
+    .filter((section) => section.items.length > 0);
+  if (sections.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "nav-empty";
+    empty.textContent = t("review.emptyNav");
+    navPanel.appendChild(empty);
+    return;
+  }
+  if (!sections.some((section) => section.type === activeReviewNavGroup)) {
+    activeReviewNavGroup = (sections[0] || {}).type || "capability";
+  }
+  sections.forEach((section) => renderReviewNavSection(section.type, section.items));
+}
+
+function renderReviewNavSection(type, items) {
+  const expanded = type === activeReviewNavGroup;
+  const section = document.createElement("section");
+  section.className = expanded ? "nav-section expanded" : "nav-section";
+
+  const header = document.createElement("button");
+  header.className = "nav-section-title";
+  header.type = "button";
+  header.setAttribute("aria-expanded", String(expanded));
+  header.innerHTML = `<span>${escapeHTML(reviewTypeLabel(type))}</span><em>${items.length}</em>`;
+  header.addEventListener("click", () => {
+    activeReviewNavGroup = type;
+    renderNav();
+  });
+  section.appendChild(header);
+
+  if (expanded) {
+    items.forEach((item) => {
+      const button = document.createElement("button");
+      button.className = item.id === selectedNodeID ? "nav-item active" : "nav-item";
+      button.type = "button";
+      button.innerHTML = `<strong>${escapeHTML(item.fileLabel)}</strong><span>${escapeHTML(reviewNavSubtitle(item))}</span>`;
+      button.addEventListener("click", () => focusReviewItem(item.id));
+      section.appendChild(button);
+    });
+  }
+  navPanel.appendChild(section);
 }
 
 function renderObjectNavSection(sectionKey, objects) {
@@ -731,6 +891,14 @@ function focusGraphNode(nodeID, zoom) {
 }
 
 function renderGraph() {
+  if (currentView === "review") {
+    if (cy) {
+      cy.destroy();
+      cy = null;
+    }
+    renderReviewBoard();
+    return;
+  }
   if (currentView === "status") {
     if (cy) {
       cy.destroy();
@@ -844,6 +1012,7 @@ function renderGraph() {
 }
 
 function graphForCurrentView() {
+  if (currentView === "review") return graphForReviewView();
   if (currentView === "project") return graphForProjectView();
   if (currentView === "specflow") return graphForSpecflowView();
   if (currentView === "status") return graphForStatusView();
@@ -861,6 +1030,19 @@ function graphForStatusView() {
       label: object.label,
       group: object.kind,
       source: firstSourceRef(object.sources)
+    })),
+    edges: []
+  };
+}
+
+function graphForReviewView() {
+  return {
+    nodes: reviewItems().map((item) => ({
+      id: item.id,
+      kind: item.reviewType,
+      label: item.fileLabel,
+      group: item.reviewType,
+      source: item.source
     })),
     edges: []
   };
@@ -1168,6 +1350,9 @@ function nodeExistsForGraph(nodeID, graph) {
 }
 
 function firstNodeIDForView(nodes) {
+  if (currentView === "review") {
+    return (nodes[0] || {}).id || null;
+  }
   if (currentView === "project") {
     const rootNode = nodes.find((node) => node.group === "root");
     return (rootNode || nodes[0] || {}).id || null;
@@ -1347,6 +1532,249 @@ function bindStatusBoardLinks() {
   });
 }
 
+function renderReviewBoard() {
+  graphView.innerHTML = "";
+}
+
+function focusReviewItem(itemID) {
+  const item = reviewItemByID(itemID);
+  if (item) activeReviewNavGroup = item.reviewType;
+  selectedNodeID = itemID;
+  renderNav();
+  renderGraph();
+  renderDetailForNode(itemID);
+}
+
+function reviewItems() {
+  const items = [];
+  const seen = new Set();
+  const addItem = (item) => {
+    if (!item || !item.path || !isReadableOriginalPath(item.path)) return;
+    const key = `${item.reviewType}:${item.path}:${item.object ? item.object.id : item.objectLabel}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push({
+      ...item,
+      id: `review:${item.reviewType}:${item.path}:${item.object ? item.object.id : item.objectLabel}`,
+      fileLabel: fileName(item.path),
+      source: item.source || { path: item.path },
+      nextCommand: item.object ? item.object.next_command : ""
+    });
+  };
+
+  list(snapshot.objects).forEach((object) => {
+    const reviewType = reviewTypeForObject(object);
+    if (!reviewType) return;
+    uniqueSources(object.truth_paths).filter((source) => isPrimaryReviewSource(source, object)).forEach((source) => {
+      addItem({
+        reviewType,
+        path: source.path,
+        source,
+        object,
+        objectLabel: object.label || object.id || t("fallback.undeclared")
+      });
+    });
+  });
+
+  return items.sort(compareReviewItems);
+}
+
+function reviewItemByID(itemID) {
+  return reviewItems().find((item) => item.id === itemID) || null;
+}
+
+function reviewItemByPath(path) {
+  if (currentView !== "review") return null;
+  return reviewItems().find((item) => item.path === path) || null;
+}
+
+function reviewTypeForObject(object) {
+  if (!object) return "";
+  if (object.kind === "unit") return "capability";
+  if (object.kind === "scenario") return "scenario";
+  if (object.kind === "shared_contract") return "shared";
+  return "";
+}
+
+function reviewTypeOrder() {
+  return ["capability", "shared", "scenario"];
+}
+
+function compareReviewItems(left, right) {
+  return Number(Boolean(right.nextCommand)) - Number(Boolean(left.nextCommand))
+    || reviewTypeOrder().indexOf(left.reviewType) - reviewTypeOrder().indexOf(right.reviewType)
+    || String(left.objectLabel || "").localeCompare(String(right.objectLabel || ""))
+    || String(left.path || "").localeCompare(String(right.path || ""));
+}
+
+function isPrimaryReviewSource(source, object) {
+  const path = String(source && source.path ? source.path : "");
+  if (!path.includes("/candidate/")) return false;
+  if (path.includes("/appendix/")) return false;
+  const name = fileName(path);
+  if (object.kind === "unit") return /^c_unit_[^/]+\.md$/.test(name);
+  if (object.kind === "scenario") return /^c_scenario_[^/]+\.md$/.test(name);
+  if (object.kind === "shared_contract") return /^c_shared_[^/]+\.md$/.test(name);
+  return false;
+}
+
+function isEvidenceReference(source) {
+  const path = String(source && source.path ? source.path : "");
+  return path.includes("/appendix/");
+}
+
+function isStableReference(source) {
+  const path = String(source && source.path ? source.path : "");
+  return path.includes("/stable/") || fileName(path).startsWith("s_");
+}
+
+function reviewTypeLabel(type) {
+  return t(`review.types.${type}`);
+}
+
+function reviewTarget(type) {
+  return t(`review.targets.${type}`);
+}
+
+function reviewFocusItems(type) {
+  return String(t(`review.focus.${type}`))
+    .split(/[、,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function reviewNavSubtitle(item) {
+  return item.objectLabel;
+}
+
+function reviewNextCommandText(item) {
+  const command = String(item && item.nextCommand ? item.nextCommand : "").trim();
+  const objectID = String(item && item.object && item.object.id ? item.object.id : "").trim();
+  if (!command || !objectID) return "";
+  return `${command}:${objectID}`;
+}
+
+function appendReviewPreviewHint(path) {
+  const item = reviewItemByPath(path);
+  if (!item) return;
+  const block = document.createElement("section");
+  block.className = "review-preview-hint";
+
+  const title = document.createElement("h2");
+  title.textContent = t("review.afterReviewTitle");
+  block.appendChild(title);
+
+  const paragraph = document.createElement("p");
+  const command = reviewNextCommandText(item);
+  if (command) {
+    paragraph.appendChild(document.createTextNode(`${t("review.afterReviewWithCommandPrefix")} `));
+    const code = document.createElement("code");
+    code.textContent = command;
+    paragraph.appendChild(code);
+    paragraph.appendChild(document.createTextNode(t("review.afterReviewWithCommandSuffix")));
+  } else {
+    paragraph.textContent = t("review.afterReviewNoCommand");
+  }
+  block.appendChild(paragraph);
+  sourceRendered.appendChild(block);
+}
+
+function reviewRelationSummary(item) {
+  const parts = reviewRelationGroups(item)
+    .map((group) => `${group.label} ${group.items.length}`);
+  return parts.length > 0 ? parts.join(" · ") : t("review.relationEmpty");
+}
+
+function reviewRelationGroups(item) {
+  const object = item ? item.object : null;
+  if (!object) return [];
+  const groups = [];
+  const implementation = list(object.implementation_paths).map((ref) => ref.path).filter(Boolean);
+  if (implementation.length > 0) groups.push({ label: t("review.relation.implementation"), items: implementation, linkable: false });
+  const shared = list(object.shared_refs).filter(Boolean);
+  if (shared.length > 0) groups.push({ label: t("review.relation.shared"), items: shared, linkable: false });
+  const bound = list(object.bound_objects).filter(Boolean);
+  if (bound.length > 0) groups.push({ label: t("review.relation.bound"), items: bound, linkable: false });
+  const evidence = uniqueSources(object.truth_paths)
+    .filter((ref) => isEvidenceReference(ref))
+    .map((ref) => ref.path);
+  if (evidence.length > 0) groups.push({ label: t("review.relation.evidence"), items: evidence, linkable: true });
+  const stable = uniqueSources(object.truth_paths)
+    .filter((ref) => isStableReference(ref))
+    .map((ref) => ref.path);
+  if (stable.length > 0) groups.push({ label: t("review.relation.stable"), items: stable, linkable: true });
+  if (snapshot.project.mapping_file) {
+    groups.push({ label: t("review.relation.mapping"), items: [snapshot.project.mapping_file], linkable: true });
+  }
+  if (snapshot.project.system_file) {
+    groups.push({ label: t("review.relation.system"), items: [snapshot.project.system_file], linkable: true });
+  }
+  return groups;
+}
+
+function renderReviewDetail(item) {
+  if (!item) {
+    detailPanel.innerHTML = `<h2>${escapeHTML(t("fallback.noObject"))}</h2>`;
+    updateTruthTab([]);
+    return;
+  }
+  detailPanel.innerHTML = `
+    <h2>${escapeHTML(item.fileLabel)}</h2>
+    <dl class="detail-grid">
+      <dt>${escapeHTML(t("review.fileType"))}</dt><dd>${escapeHTML(reviewTypeLabel(item.reviewType))}</dd>
+      <dt>${escapeHTML(t("review.object"))}</dt><dd>${escapeHTML(item.objectLabel)}</dd>
+      <dt>${escapeHTML(t("inspector.fields.file"))}</dt><dd>${escapeHTML(item.path)}</dd>
+    </dl>
+    <section class="review-detail-section">
+      <h2>${escapeHTML(t("review.reviewTarget"))}</h2>
+      <p>${escapeHTML(reviewTarget(item.reviewType))}</p>
+    </section>
+    <section class="review-detail-section">
+      <h2>${escapeHTML(t("review.readingFocus"))}</h2>
+      <ul class="review-focus-points">
+        ${reviewFocusItems(item.reviewType).map((focus) => `<li>${escapeHTML(focus)}</li>`).join("")}
+      </ul>
+    </section>
+    <section class="review-detail-section">
+      <h2>${escapeHTML(t("review.relationships"))}</h2>
+      ${renderReviewRelationGroups(item)}
+    </section>
+    <section class="review-detail-section">
+      ${renderSourceButton(item.path, t("review.openSource"))}
+    </section>
+  `;
+  bindInspectorLinks();
+  updateTruthTab([item.source], item.id, { activate: true });
+}
+
+function renderReviewEmptyDetail() {
+  detailPanel.innerHTML = `
+    <section class="review-empty-state">
+      <h2>${escapeHTML(t("review.emptyDetailTitle"))}</h2>
+      <p>${escapeHTML(t("review.emptyDetail"))}</p>
+    </section>
+  `;
+  updateTruthTab([], "review-empty");
+}
+
+function renderReviewRelationGroups(item) {
+  const groups = reviewRelationGroups(item);
+  if (groups.length === 0) return `<p class="empty-copy">${escapeHTML(t("review.relationEmpty"))}</p>`;
+  return groups.map((group) => {
+    const chips = group.items.map((value) => {
+      if (group.linkable) {
+        return `<button class="chip" type="button" data-source="${escapeAttr(value)}">${escapeHTML(value)}</button>`;
+      }
+      return `<span class="chip">${escapeHTML(value)}</span>`;
+    }).join("");
+    return `<h3 class="review-relation-title">${escapeHTML(group.label)}</h3><div class="chips">${chips}</div>`;
+  }).join("");
+}
+
+function fileName(path) {
+  return String(path || "").split("/").pop() || String(path || "");
+}
+
 function compactLabel(node) {
   const label = String(node.label || "");
   if (node.kind === "project_path") {
@@ -1443,6 +1871,15 @@ function renderDetail(object) {
 }
 
 function renderDetailForNode(nodeID) {
+  if (currentView === "review") {
+    const item = reviewItemByID(nodeID);
+    if (item) {
+      renderReviewDetail(item);
+      return;
+    }
+    renderReviewEmptyDetail();
+    return;
+  }
   const object = objectFromNode(nodeID);
   if (object) {
     renderDetail(object);
@@ -1506,9 +1943,10 @@ function uniqueSources(sources) {
   });
 }
 
-function updateTruthTab(truthRefs, ownerID) {
+function updateTruthTab(truthRefs, ownerID, options = {}) {
   const refs = uniqueSources(truthRefs).filter((ref) => isReadableOriginalPath(ref.path));
   const hasTruth = refs.length > 0;
+  const activateTruth = options.activate === true;
   truthTab.classList.toggle("hidden", !hasTruth);
   if (!hasTruth) {
     activeTruthOwnerID = null;
@@ -1520,9 +1958,9 @@ function updateTruthTab(truthRefs, ownerID) {
   }
   if (activeTruthOwnerID !== ownerID || !refs.some((ref) => ref.path === sourcePath.textContent)) {
     activeTruthOwnerID = ownerID;
-    openSource(refs[0].path, { activate: false });
+    openSource(refs[0].path, { activate: activateTruth });
   }
-  setInspectorTab(activeInspectorTab === "truth" ? "truth" : "info");
+  setInspectorTab(activateTruth || activeInspectorTab === "truth" ? "truth" : "info");
 }
 
 function setInspectorTab(tabName) {
@@ -1627,6 +2065,7 @@ async function openSource(path, options = {}) {
   sourcePath.textContent = source.path;
   sourceContent.textContent = source.content;
   sourceRendered.innerHTML = renderMarkdown(source.content);
+  appendReviewPreviewHint(source.path);
   bindRenderedDocLinks(source.path);
   renderMermaidBlocks();
   setDocMode(activeDocMode);
