@@ -64,7 +64,7 @@ const TRANSLATIONS = {
     views: {
       review: {
         title: "Spec 审核",
-        summary: "按本轮需要确认的 Spec 主文件组织审核入口。参考文件只帮助理解，不作为本轮默认审核对象。",
+        summary: "按本轮需要确认的 candidate 主文和非 evidence 附录组织审核入口。evidence、stable、项目结构和全局约束只作为参考。",
         nav: "待审核 Spec"
       },
       project: {
@@ -131,10 +131,10 @@ const TRANSLATIONS = {
       lifecycleAria: "{label} 生命周期进度"
     },
     review: {
-      empty: "暂无待审核 Spec 主文件。",
+      empty: "暂无待审核 candidate Spec。",
       emptyNav: "暂无待审核 Spec。",
       emptyDetailTitle: "暂无待审核 Spec",
-      emptyDetail: "当前没有需要默认审核的 candidate 主文件。stable、evidence、项目结构和全局约束不会作为本轮默认审核对象。",
+      emptyDetail: "当前没有需要默认审核的 candidate 主文或非 evidence 附录。stable、evidence、项目结构和全局约束不会作为本轮默认审核对象。",
       openSource: "打开 Spec 原文",
       fileType: "审核对象",
       object: "对应项目对象",
@@ -150,6 +150,7 @@ const TRANSLATIONS = {
         implementation: "实现路径",
         shared: "共享规则",
         bound: "绑定对象",
+        appendix: "附录文件",
         evidence: "证据参考",
         stable: "稳定基线参考",
         mapping: "项目结构参考",
@@ -297,7 +298,7 @@ const TRANSLATIONS = {
     views: {
       review: {
         title: "Spec Review",
-        summary: "Organizes review by the main Spec files that need confirmation in the current round. Reference files help reading but are not default review targets.",
+        summary: "Organizes review by candidate main Spec files and non-evidence appendices that need confirmation. Evidence, stable, project structure, and global constraints files remain references.",
         nav: "Specs to review"
       },
       project: {
@@ -364,10 +365,10 @@ const TRANSLATIONS = {
       lifecycleAria: "{label} lifecycle progress"
     },
     review: {
-      empty: "No main Spec files to review.",
+      empty: "No candidate Specs to review.",
       emptyNav: "No Specs to review.",
       emptyDetailTitle: "No Specs to review",
-      emptyDetail: "There are no candidate main files that need default review. Stable, evidence, project structure, and global constraints files are not default review targets for this round.",
+      emptyDetail: "There are no candidate main files or non-evidence appendices that need default review. Stable, evidence, project structure, and global constraints files are not default review targets for this round.",
       openSource: "Open Spec source",
       fileType: "Review object",
       object: "Project object",
@@ -383,6 +384,7 @@ const TRANSLATIONS = {
         implementation: "Implementation paths",
         shared: "Shared rules",
         bound: "Bound objects",
+        appendix: "Appendix files",
         evidence: "Evidence references",
         stable: "Stable baseline references",
         mapping: "Project structure reference",
@@ -1610,7 +1612,7 @@ function compareReviewItems(left, right) {
 function isPrimaryReviewSource(source, object) {
   const path = String(source && source.path ? source.path : "");
   if (!path.includes("/candidate/")) return false;
-  if (path.includes("/appendix/")) return false;
+  if (isEvidenceReference(source)) return false;
   const name = fileName(path);
   if (object.kind === "unit") return /^c_unit_[^/]+\.md$/.test(name);
   if (object.kind === "scenario") return /^c_scenario_[^/]+\.md$/.test(name);
@@ -1618,9 +1620,14 @@ function isPrimaryReviewSource(source, object) {
   return false;
 }
 
+function isAppendixReference(source) {
+  const path = String(source && source.path ? source.path : "");
+  return path.includes("/appendix/") && !isEvidenceReference(source);
+}
+
 function isEvidenceReference(source) {
   const path = String(source && source.path ? source.path : "");
-  return path.includes("/appendix/");
+  return path.includes("/appendix/") && /_evidence\.md$/.test(fileName(path));
 }
 
 function isStableReference(source) {
@@ -1695,6 +1702,10 @@ function reviewRelationGroups(item) {
   if (shared.length > 0) groups.push({ label: t("review.relation.shared"), items: shared, linkable: false });
   const bound = list(object.bound_objects).filter(Boolean);
   if (bound.length > 0) groups.push({ label: t("review.relation.bound"), items: bound, linkable: false });
+  const appendix = uniqueSources(object.truth_paths)
+    .filter((ref) => isAppendixReference(ref))
+    .map((ref) => ref.path);
+  if (appendix.length > 0) groups.push({ label: t("review.relation.appendix"), items: appendix, linkable: true });
   const evidence = uniqueSources(object.truth_paths)
     .filter((ref) => isEvidenceReference(ref))
     .map((ref) => ref.path);
