@@ -30,7 +30,7 @@ Therefore:
 Default review-target rule:
 
 1. the default governance review target is source and rule-level material
-2. compiled binaries under `specflow/tooling/bin/` are build artifacts, not the default source-of-truth review target
+2. compiled binaries under `specflow/tooling/bin/` are local build or release artifacts, not the default source-of-truth review target
 3. default `spec_flow_review` should review tooling source and tooling contract documents rather than platform binaries
 4. the framework policy owns the tooling boundary rules
 5. `specflow/tooling/README.md` owns the project-local tooling command surface and usage explanation
@@ -145,6 +145,8 @@ Default `spec_flow_review` must not issue `pass` when any of the following is tr
 ## 7. Compiled Tooling Freshness
 
 When governance tooling is executed through compiled binaries under `specflow/tooling/bin/`, the repository must prevent stale binaries from continuing to execute governance actions.
+That directory is a git-ignored local cache.
+Official platform binaries are produced from tagged source by the Release workflow and distributed as GitHub Release assets.
 
 Required rules:
 
@@ -160,12 +162,14 @@ Required rules:
 5. when the fingerprints differ, the binary must stop and require a rebuild instead of continuing
 6. the bypass surface for that freshness gate must stay minimal and cover only recovery or inspection entry points needed to rebuild or diagnose the binary state
 7. `doctor` must report stale current-platform binaries as failures rather than treating binary presence alone as sufficient
+8. compiled binaries must not be committed to git
 
 In plain words:
 
 1. "binary exists" is not enough
 2. "binary was rebuilt from the current source" is the required state
 3. stale binaries must fail closed rather than continuing silently
+4. release assets, not git history, carry official compiled binaries
 
 ## 8. Non-Goals
 

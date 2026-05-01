@@ -134,7 +134,7 @@ If the task changes a registered entry index file listed in `specflow/framework/
 4. if multiple registered entry files were modified and their managed blocks still differ, an explicit sync source must be chosen before continuing
    - use `specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>` before retrying the commit
 
-### 6.4 Tooling Binary Freshness
+### 6.4 Tooling Binary Freshness And Release Assets
 
 If the task changes current-binary tooling inputs under:
 
@@ -144,8 +144,13 @@ If the task changes current-binary tooling inputs under:
 4. `specflow/tooling/manifest.tsv`
 5. `specflow/tooling/go.sum`
 
-and the repository tracks compiled tooling binaries under `specflow/tooling/bin/`:
+then the task must not commit compiled binaries under `specflow/tooling/bin/`.
+That directory is a local cache and is ignored by git.
 
-1. from the repository root, run `cd specflow/tooling` and then `go run ./cmd/specflowctl build-release --repo-root ../..` in the current task
-2. include the refreshed tracked binaries in the same checkpoint or commit rather than leaving source/binary drift in the worktree
-3. do not treat binary presence alone as proof that the binaries are current; the required state is that the binaries were rebuilt from the current tooling input set
+Rules:
+
+1. use `go test ./...` under `specflow/tooling` to verify source changes before committing
+2. local binaries may be rebuilt with `go run ./cmd/specflowctl build-release --repo-root ../..`, but the resulting files remain untracked
+3. official platform binaries are created from a tagged source commit by the Release workflow and uploaded as GitHub Release assets
+4. release tags use `specflow-<12-character-commit>` and are created by the subtree publishing script
+5. do not treat binary presence alone as proof that the binaries are current; the required state is that the embedded build fingerprint matches the current tooling input set

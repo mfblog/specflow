@@ -154,6 +154,8 @@ After `specflow/` is in your repository, run this from the repository root:
 ```
 
 In this document, `<specflow-binary>` means the platform-matching `specflowctl` executable under `specflow/tooling/bin/`.
+That directory is a local cache.
+Download the matching binary from the GitHub Release for the installed source revision, or build it locally from source when developing the tooling.
 See [tooling/README.md](./tooling/README.md) for exact filenames.
 
 `init` installs the basic structure:
@@ -327,6 +329,7 @@ Start it with:
 ```
 
 `<specflow-reader-binary>` means the platform-matching `specflow-reader` executable under `specflow/tooling/bin/`.
+That binary is downloaded from the GitHub Release for the installed source revision, or built locally during tooling development.
 It starts the local server directly; there is no `serve` subcommand.
 
 If your current working directory is the repository root, keep `--repo-root .`.

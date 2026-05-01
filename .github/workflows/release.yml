@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "specflow-*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tooling/go.mod
+
+      - name: Build release binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo_root="$(mktemp -d)"
+          ln -s "${GITHUB_WORKSPACE}" "${repo_root}/specflow"
+          cd "${GITHUB_WORKSPACE}/tooling"
+          go run ./cmd/specflowctl build-release --repo-root "${repo_root}"
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${GITHUB_WORKSPACE}/tooling/bin"
+          sha256sum specflowctl-* specflow-reader-* > SHA256SUMS
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "SpecFlow release ${GITHUB_REF_NAME}." \
+            tooling/bin/specflowctl-* \
+            tooling/bin/specflow-reader-* \
+            tooling/bin/SHA256SUMS

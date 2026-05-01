@@ -6,12 +6,19 @@ The tooling layer exists only for fixed execution work whose meaning is already 
 
 ## Build
 
-Rebuild binaries from the repository root:
+`specflow/tooling/bin/` is a local binary cache.
+It is ignored by git and must not be committed.
+
+Rebuild local binaries from the repository root:
 
 ```bash
 cd specflow/tooling
 go run ./cmd/specflowctl build-release --repo-root ../..
 ```
+
+Official platform binaries are GitHub Release assets.
+Release tags use the source commit form `specflow-<12-character-commit>`.
+The release workflow builds binaries from the tagged source and uploads the binaries plus `SHA256SUMS`.
 
 ## Governance Boundary
 
@@ -200,7 +207,9 @@ Rules:
 
 ## Usage Examples
 
-Run ordinary governance commands from the repository root using the matching platform binary.
+Run ordinary governance commands from the repository root using the matching platform binary under `specflow/tooling/bin/`.
+For normal use, download the matching `specflowctl-*` and `specflow-reader-*` files from the GitHub Release for the installed source revision.
+For local tooling development, rebuild them with `build-release`.
 
 When developing the tooling itself, do not assume that ordinary commands may run through `go run`.
 The freshness gate requires an embedded build fingerprint for ordinary governance actions.
@@ -233,14 +242,17 @@ Examples:
 
 ## Freshness Rule
 
-Compiled binaries under `specflow/tooling/bin/` must fail closed when the embedded tooling fingerprint no longer matches current source.
+Compiled binaries under `specflow/tooling/bin/` are local cache files.
+They must fail closed when the embedded tooling fingerprint no longer matches current source.
 
-The normal recovery path is:
+The local development recovery path is:
 
 ```bash
 cd specflow/tooling
 go run ./cmd/specflowctl build-release --repo-root ../..
 ```
+
+The normal user recovery path is to download the matching release binaries again for the installed source revision.
 
 The minimal stale-binary recovery and inspection surface remains:
 
