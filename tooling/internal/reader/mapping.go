@@ -16,7 +16,7 @@ type repositoryMapping struct {
 type mappingUnit struct {
 	ID                  string
 	Responsibility      string
-	TruthPaths          []SourceRef
+	TruthSurfaceRule    string
 	ImplementationPaths []SourceRef
 }
 
@@ -129,19 +129,23 @@ func loadRepositoryMapping(repoRoot string) repositoryMapping {
 			}
 		case "unit_paths":
 			if id, ok := parseNumberedCodeSpan(trimmed); ok {
-				currentID = id
+				if _, known := result.Units[id]; known {
+					currentID = id
+				} else {
+					currentID = ""
+				}
 				currentPathKind = ""
-				unit := result.Units[id]
-				unit.ID = id
-				result.Units[id] = unit
 				continue
 			}
 			if currentID == "" {
 				continue
 			}
 			switch {
-			case strings.Contains(trimmed, "`truth_surface`"):
-				currentPathKind = "truth"
+			case strings.Contains(trimmed, "truth_surface_rule"):
+				currentPathKind = ""
+				unit := result.Units[currentID]
+				unit.TruthSurfaceRule = parseRuleValue(trimmed)
+				result.Units[currentID] = unit
 				continue
 			case strings.Contains(trimmed, "`implementation_surface`"):
 				currentPathKind = "implementation"
@@ -152,9 +156,6 @@ func loadRepositoryMapping(repoRoot string) repositoryMapping {
 					continue
 				}
 				unit := result.Units[currentID]
-				if currentPathKind == "truth" {
-					unit.TruthPaths = append(unit.TruthPaths, pathRef)
-				}
 				if currentPathKind == "implementation" {
 					unit.ImplementationPaths = append(unit.ImplementationPaths, pathRef)
 				}
@@ -179,6 +180,36 @@ func parseListCodePath(line, sourcePath string, sourceLine int) (SourceRef, bool
 		return SourceRef{}, false
 	}
 	return SourceRef{Path: filepath.ToSlash(value), Line: sourceLine, Label: sourcePath}, true
+}
+
+func parseRuleValue(line string) string {
+	spans := codeSpans(line)
+	if len(spans) >= 2 {
+		return spans[1]
+	}
+	if idx := strings.Index(line, ":"); idx >= 0 {
+		value := strings.TrimSpace(line[idx+1:])
+		return strings.Trim(value, "` ")
+	}
+	return ""
+}
+
+func codeSpans(line string) []string {
+	spans := []string{}
+	rest := line
+	for {
+		start := strings.Index(rest, "`")
+		if start < 0 {
+			return spans
+		}
+		rest = rest[start+1:]
+		end := strings.Index(rest, "`")
+		if end < 0 {
+			return spans
+		}
+		spans = append(spans, strings.TrimSpace(rest[:end]))
+		rest = rest[end+1:]
+	}
 }
 
 func extractFirstCodeSpan(line string) string {

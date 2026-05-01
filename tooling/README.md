@@ -60,34 +60,36 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - sync registered project-side entry managed blocks from one explicit source
 7. `registry validate`
    - validate `docs/project_standards/_registry.md`
-8. `review collect-default-scope --flow <review_flow>`
+8. `repository-mapping validate`
+   - validate `docs/specs/repository_mapping.md` path rules against `_status.md` and declared shared contract files
+9. `review collect-default-scope --flow <review_flow>`
    - collect the deterministic default scope for the explicit review flow
-9. `review run-init --flow <review_flow>`
+10. `review run-init --flow <review_flow>`
    - create or reuse the full-scope run-state file for the explicit review flow
-10. `review run-validate --flow <review_flow>`
+11. `review run-validate --flow <review_flow>`
    - validate required run-state fields, timestamps, all fixed statuses including closed statuses, baseline slices, score state when present, and dynamic slice parent links
-11. `review run-refresh --flow <review_flow>`
+12. `review run-refresh --flow <review_flow>`
    - recompute slice input fingerprints for an open run-state file, mark changed `passed` slices as `stale`, and refresh `last_updated_at`
-12. `review run-touch --flow <review_flow>`
+13. `review run-touch --flow <review_flow>`
    - refresh only `last_updated_at`
-13. `snapshot rebuild`
+14. `snapshot rebuild`
    - rebuild current process snapshots from bound truth
-14. `snapshot validate-process`
+15. `snapshot validate-process`
    - compare one process file against rebuilt current truth
-15. `process cleanup-fallback`
+16. `process cleanup-fallback`
    - execute deterministic unit fallback cleanup
-16. `process cleanup-success`
+17. `process cleanup-success`
    - execute deterministic unit success cleanup
-17. `status set-unit`
+18. `status set-unit`
    - write one deterministic `unit` row in `_status.md`
-18. `status set-object`
+19. `status set-object`
    - write one unified object row in `_status.md`
-19. `shared sync-impact`
+20. `shared sync-impact`
    - compute shared-specific scope, resolve shared-only exceptions into generic impact input, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
    - when stable landing self-exemption is needed, the caller must pass both `--stable-landing-unit` and exact `--stable-landing-shared-refs`
    - when a current-round Shared Contract file delta is proven to be limited to `bound_objects` metadata, the caller must pass its exact file path through `--bound-objects-only-shared-file-refs`
    - the caller may narrow the derived unit subset with `--units`, but at least one shared trigger input must still be provided through `--shared-refs` or `--shared-ids`
-20. `shared reconcile-bound-objects`
+21. `shared reconcile-bound-objects`
    - rewrite Shared Contract `bound_objects` metadata from current formal bindings
 
 ## Reader Command Surface

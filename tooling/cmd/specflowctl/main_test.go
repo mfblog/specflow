@@ -60,6 +60,36 @@ func TestReviewCollectDefaultScopePrintsToolingRuntimeFilesCLI(t *testing.T) {
 	}
 }
 
+func TestRepositoryMappingValidateCLI(t *testing.T) {
+	repoRoot := createCLITestRepo(t)
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
+		"# Spec Status\n\n"+
+		"## Formal Objects\n\n"+
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n"+
+		"|---|---|---|---|---|---|---|\n"+
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | test |\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), ""+
+		"# Repository Mapping\n\n"+
+		"### 2.1 Current Units\n\n"+
+		"1. `demo`\n"+
+		"   - demo unit\n\n"+
+		"### 4.6 Unit Truth Rules And Implementation Paths\n\n"+
+		"1. `demo`\n"+
+		"   - `truth_surface_rule`: `unit_default`\n"+
+		"   - `implementation_surface`\n"+
+		"     - current no exclusive implementation surface\n\n"+
+		"### 4.7 Conflict Rules\n")
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if err := runRepositoryMapping([]string{"validate", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("repository-mapping validate failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Repository mapping is valid.") {
+		t.Fatalf("expected valid output, got %s", stdout.String())
+	}
+}
+
 func TestDesignReviewRunInitAndValidateCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer

@@ -15,6 +15,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/install"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/projectstandards"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/repositorymapping"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewrun"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewscope"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/sharedsync"
@@ -60,6 +61,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runEntry(args[1:], stdout, stderr)
 	case "registry":
 		return runRegistry(args[1:], stdout, stderr)
+	case "repository-mapping":
+		return runRepositoryMapping(args[1:], stdout, stderr)
 	case "review":
 		return runReview(args[1:], stdout, stderr)
 	case "process":
@@ -269,6 +272,45 @@ func runRegistry(args []string, stdout, stderr io.Writer) error {
 	default:
 		writeRegistryUsage(stderr)
 		return fmt.Errorf("unknown registry subcommand %q", args[0])
+	}
+}
+
+func runRepositoryMapping(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		writeRepositoryMappingUsage(stderr)
+		return errors.New("missing repository-mapping subcommand")
+	}
+
+	switch args[0] {
+	case "validate":
+		fs := flag.NewFlagSet("repository-mapping validate", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+
+		result, err := repositorymapping.Validate(mustAbs(*repoRoot))
+		if err != nil {
+			return err
+		}
+
+		if result.Valid() {
+			fmt.Fprintln(stdout, "Repository mapping is valid.")
+			return nil
+		}
+
+		fmt.Fprintf(stdout, "Repository mapping is invalid. issues=%d\n", len(result.Diagnostics))
+		for _, diagnostic := range result.Diagnostics {
+			fmt.Fprintf(stdout, "- %s\n", diagnostic)
+		}
+		return errors.New("repository mapping validation failed")
+	case "-h", "--help", "help":
+		writeRepositoryMappingUsage(stdout)
+		return nil
+	default:
+		writeRepositoryMappingUsage(stderr)
+		return fmt.Errorf("unknown repository-mapping subcommand %q", args[0])
 	}
 }
 
@@ -809,6 +851,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  build-release Build platform binaries into specflow/tooling/bin")
 	fmt.Fprintln(w, "  entry    Check or sync registered entry-file managed blocks")
 	fmt.Fprintln(w, "  registry Validate docs/project_standards/_registry.md")
+	fmt.Fprintln(w, "  repository-mapping Validate docs/specs/repository_mapping.md")
 	fmt.Fprintln(w, "  review   Collect governance review scope or maintain run-state files")
 	fmt.Fprintln(w, "  process  Execute deterministic fallback cleanup")
 	fmt.Fprintln(w, "  shared   Execute deterministic shared-impact reconciliation helpers")
@@ -825,6 +868,11 @@ func writeEntryUsage(w io.Writer) {
 func writeRegistryUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl registry validate [--repo-root PATH]")
+}
+
+func writeRepositoryMappingUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl repository-mapping validate [--repo-root PATH]")
 }
 
 func writeReviewUsage(w io.Writer) {

@@ -136,11 +136,10 @@ func createReaderRepo(t *testing.T) string {
 		"1. `runtime_model`",
 		"   - `docs/specs/shared_contracts/candidate/c_shared_runtime_model.md`",
 		"",
-		"### 4.6 Unit Truth And Implementation Paths",
+		"### 4.6 Unit Truth Rules And Implementation Paths",
 		"",
 		"1. `assistant`",
-		"   - `truth_surface`",
-		"     - `docs/specs/units/candidate/c_unit_assistant.md`",
+		"   - `truth_surface_rule`: `unit_default`",
 		"   - `implementation_surface`",
 		"     - `CLI/internal/assistant/**`",
 	}, "\n")+"\n")

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
@@ -144,9 +145,13 @@ func buildObjectFromStatus(status statusfile.ObjectStatus, mapping repositoryMap
 	if status.ObjectType == "unit" {
 		if unit, ok := mapping.Units[status.Object]; ok {
 			object.Responsibility = unit.Responsibility
-			object.TruthPaths = unit.TruthPaths
 			object.ImplementationPaths = unit.ImplementationPaths
-			object.Sources = append(object.Sources, unit.TruthPaths...)
+		}
+	}
+	if status.ObjectType == "unit" || status.ObjectType == "scenario" {
+		if truthPath, err := specpaths.ObjectMainSpecFileRef(status.ObjectType, status.ActiveLayer, status.Object); err == nil {
+			object.TruthPaths = []SourceRef{{Path: truthPath, Label: "Active Truth"}}
+			object.Sources = appendSourceUnique(object.Sources, SourceRef{Path: truthPath, Label: "Active Truth"})
 		}
 	}
 	for _, truth := range object.TruthPaths {
