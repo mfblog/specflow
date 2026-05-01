@@ -163,6 +163,24 @@ Required columns are:
 `_status.md` is not behavior truth.
 It is the state index that commands must keep aligned with current governance state.
 
+### 3.7 Command-Target Truth Path Resolution
+
+Command-target truth paths are resolved from two inputs:
+
+1. `docs/specs/_status.md`
+   - selects the current `Active Layer` for each `unit` or `scenario`
+2. the fixed file templates in Sections 3.2 and 3.3
+   - define the stable and candidate main Spec file path for that object family
+
+Rules:
+
+1. `_status.md` is the only source for the current layer.
+2. `repository_mapping.md` records the truth-surface rule name for each command-target object, not the current active file path.
+3. A command must resolve the current main Spec path by applying the object's `Active Layer` to the fixed template for that object family.
+4. `unit_promote`, `unit_fork`, `scenario_promote`, and `scenario_fork` change `_status.md` and the relevant truth files; they must not update `repository_mapping.md` only because the active layer changed.
+5. `repository_mapping.md` changes only when the object map, path template rule, implementation surface, shared-contract truth path, support surface, governed root, ignore rule, or conflict rule changes.
+6. Process snapshots may keep historical `truth_file_ref` values because they describe the truth file used at the time the process snapshot was created.
+
 ## 4. Object Boundaries
 
 ### 4.1 `unit`
@@ -225,7 +243,7 @@ It answers these mandatory sections:
 4. `Path Ownership`
    - which roots are governed
    - which paths are ignored
-   - which paths map to which current formal object
+   - which path rules and implementation surfaces map to which current formal object
    - how conflicts are decided
 5. `Global Constraint Alignment`
    - which `system_constraints` version currently constrains the repository mapping

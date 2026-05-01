@@ -120,10 +120,11 @@ This file states only `unit_promote`-local entry, output, and stop rules.
    - `Active Layer=stable`
    - `Next Command=unit_fork`
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable yes --candidate no --active-layer stable --next-command unit_fork --notes <status-note>`
-15. if the round touched any Shared Contract file, before `shared_sync`, update `bound_objects` for every remaining touched Shared Contract file only after Step 11 has written the promoted unit stable truth and Step 14 has updated `_status.md`, so each surviving stable-layer or candidate-layer file matches the real post-promotion binding set implied by unit `shared_contract_refs`
+15. do not update `docs/specs/repository_mapping.md` only because this promotion changed the active layer from `candidate` to `stable`; the current unit main Spec path is resolved from `_status.md` plus the `unit_default` truth-surface rule
+16. if the round touched any Shared Contract file, before `shared_sync`, update `bound_objects` for every remaining touched Shared Contract file only after Step 11 has written the promoted unit stable truth and Step 14 has updated `_status.md`, so each surviving stable-layer or candidate-layer file matches the real post-promotion binding set implied by unit `shared_contract_refs`
    - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --units {unit}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
    - if a remaining touched Shared Contract file now has one or more formal bound units after this promotion round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-16. only after that update may physical deletion happen:
+17. only after that update may physical deletion happen:
    - `docs/specs/units/candidate/c_unit_{unit}.md`
    - current-round candidate appendix files
    - `_check_result/unit/{unit}.md`
@@ -131,8 +132,8 @@ This file states only `unit_promote`-local entry, output, and stop rules.
    - `_plans/active/{unit}.md`
    - `_verify_result/unit/{unit}.md`
    - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --unit {unit} --mode unit_promote`
-17. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
-18. if the round changed any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer and Step 15 has written the surviving shared-file metadata, even when no additional affected unit is known yet
+18. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
+19. if the round changed any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects the promoted stable layer and Step 16 has written the surviving shared-file metadata, even when no additional affected unit is known yet
    - this post-promotion `shared_sync` closes external affected-unit fallout and shared-state reconciliation; it must not overturn the promoted unit's own successful stable landing merely because the same promotion round also wrote the stable Shared Contract file or stable binding that the promoted unit now legally uses
    - pass execution-local `current_stable_landing_unit={unit}` into that `shared_sync` run
    - pass execution-local `stable_landing_shared_refs=<exact-shared-ref-list-written-by-this-landing>` into that same `shared_sync` run; `current_stable_landing_unit` alone is not sufficient
@@ -142,7 +143,7 @@ This file states only `unit_promote`-local entry, output, and stop rules.
      - immediately run incomplete promotion recovery according to `recovery_policy.md`
      - after recovery, require rerouting through natural-language shared governance from the restored candidate-layer repository truth
      - do not leave the repository in partially promoted semantics while waiting for shared-governance clarification
-19. perform git close-out if required
+20. perform git close-out if required
 
 ## 5. Stop Conditions
 

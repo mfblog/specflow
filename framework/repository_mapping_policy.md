@@ -38,7 +38,7 @@ It must answer these sections:
 4. `Path Ownership`
    - governed roots
    - ignore rules
-   - unit truth and implementation surfaces
+   - command-target truth path rules and implementation surfaces
    - shared-contract truth paths
    - support-surface paths
    - conflict resolution order
@@ -87,6 +87,7 @@ Consumption rules:
 2. a command may use `repository_mapping` to decide whether the target path belongs to a `unit`, `scenario`, `shared_contract`, `support_surface`, or `ignore`
 3. a command must not rewrite `repository_mapping` as an incidental side effect of implementation work
 4. when the command discovers that the mapping is incomplete or conflicts with the current repository, it must stop and require a `repository_mapping` truth update before continuing
+5. a command must not expect `repository_mapping` to name the current active `unit` or `scenario` main Spec file directly; it must resolve that file from `_status.md` and the templates defined by `spec_policy.md`
 
 ## 5. Drift Handling
 
@@ -96,10 +97,11 @@ At minimum, drift includes:
 
 1. a governed path is not mapped to any formal object, support surface, or ignore rule
 2. a path maps to more than one command-target object
-3. a declared unit truth path does not exist
+3. a command-target truth path resolved from `_status.md` and the declared path rule does not exist
 4. a declared shared-contract truth path does not exist
 5. a declared support surface has moved without the mapping being updated
 6. a consuming command's target path is outside the ownership declared for that target object
+7. a command-target object still lists a concrete current-layer truth file under its mapping entry instead of naming a truth-surface rule
 
 Handling rules:
 
@@ -118,7 +120,7 @@ Read `docs/specs/repository_mapping.md` when at least one of these is true:
 1. the task needs to decide which `unit`, `scenario`, `shared_contract`, `support_surface`, or `ignore` owns one or more repository paths
 2. the task creates, removes, moves, or renames repository paths under a governed root
 3. the task creates a new formal object or changes the object map of an existing formal object
-4. the task changes a declared truth path, implementation surface, shared-contract path, support-surface path, governed root, ignore rule, or conflict rule
+4. the task changes a declared truth-surface rule, implementation surface, shared-contract path, support-surface path, governed root, ignore rule, or conflict rule
 5. the task is a direct implementation request and the executor must classify whether the requested file changes fit the current formal object boundary
 6. the shared-governance branch or an internal shared flow must determine affected downstream objects from current repository structure
 7. a governance review, repository health check, or explicit user request asks whether repository structure and mapping still match
@@ -130,6 +132,7 @@ Do not read `docs/specs/repository_mapping.md` only for these tasks:
 3. validating process-file snapshots when the command does not need path ownership or object-boundary judgment
 4. reading or updating `system_constraints` when the change does not alter repository structure
 5. editing a current-layer truth file whose target path has already been resolved by the command and whose object boundary is not in question
+6. changing only a command-target object's `Active Layer` through a legal fork or promote command
 
 Read scope rules:
 
@@ -151,7 +154,7 @@ The default procedure is:
    - include current truth files resolved from `_status.md` for the target object
    - include parent or sibling paths only when conflict detection needs them
 2. classify each relevant path by the mapping's conflict order
-   - exact truth file path
+   - current command-target truth file path resolved from `_status.md` and the mapping's truth-surface rule
    - declared implementation surface
    - shared-contract truth path
    - support surface
@@ -163,13 +166,14 @@ The default procedure is:
    - a shared-governance flow may operate on declared shared-contract truth and binding metadata, but must not silently rewrite unit behavior truth
    - support-surface edits may continue only when the current task explicitly targets that support surface or a governance flow owns it
 4. check existence of declared files that are relevant to the current task
-   - target object truth files must exist when the object map says they exist
+   - target object truth files must exist when `_status.md` and the mapping's truth-surface rule resolve to them
    - selected shared-contract truth files must exist when they are part of the current binding or current shared scope
    - selected support-surface files or directories must exist when the task depends on them
 5. detect conflicts
    - a relevant path that maps to more than one command-target object is mapping drift
    - a relevant governed path that maps to no formal object, support surface, or ignore rule is mapping drift
    - a command target path outside the target object's declared ownership is mapping drift
+   - a command-target object entry that lists concrete active truth files instead of a truth-surface rule is mapping drift
 6. decide the result
    - if no drift is found, continue the original flow
    - if drift is found, stop the original flow before boundary-sensitive work continues

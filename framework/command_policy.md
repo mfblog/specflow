@@ -196,6 +196,16 @@ It does not own:
 4. unit-local behavior authoring
 5. scenario verification
 
+Command-target truth file resolution is not stored as a current concrete path in `repository_mapping`.
+Commands must resolve the current main Spec file by combining:
+
+1. the object row in `docs/specs/_status.md`
+2. the stable or candidate path template defined in `specflow/framework/spec_policy.md`
+3. the object's `truth_surface_rule` in `docs/specs/repository_mapping.md`
+
+Changing only `Active Layer` through `unit_fork`, `unit_promote`, `scenario_fork`, or `scenario_promote` does not require a repository mapping update.
+Repository mapping changes are required only when the object map, truth-surface rule, implementation surface, shared-contract path, support surface, governed root, ignore rule, or conflict rule changes.
+
 ## 7. Default Lifecycle Order
 
 ### 7.1 Unit

@@ -76,11 +76,12 @@ This file states only `unit_fork`-local entry, output, and stop rules.
    - `Active Layer=candidate`
    - `Next Command=unit_check`
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable yes --candidate yes --active-layer candidate --next-command unit_check --notes <status-note>`
-14. if the round changed any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects `Active Layer=candidate` for this unit, even when no additional affected unit is known yet
+14. do not update `docs/specs/repository_mapping.md` only because this fork changed the active layer from `stable` to `candidate`; the current unit main Spec path is resolved from `_status.md` plus the `unit_default` truth-surface rule
+15. if the round changed any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects `Active Layer=candidate` for this unit, even when no additional affected unit is known yet
    - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --units {unit}` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
    - if that `shared_sync` returns control because repository truth is still insufficient to continue safely, stop `unit_fork` as `blocked`, keep the newly created candidate-layer state in place, and reroute through natural-language shared governance from current repository truth instead of claiming Shared Contract side effects are closed
-15. perform git close-out if required
+16. perform git close-out if required
 
 ## 5. Stop Conditions
 
