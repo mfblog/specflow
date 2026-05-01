@@ -156,12 +156,15 @@ Linux amd64 示例：
 mkdir -p specflow/tooling/bin
 tag="specflow-tooling-$(specflow/tooling/scripts/tooling_fingerprint.sh --short)"
 base="https://github.com/Bingordinary/SpecFlow/releases/download/${tag}"
-curl -L -o specflow/tooling/bin/specflowctl-linux-amd64 "${base}/specflowctl-linux-amd64"
-curl -L -o specflow/tooling/bin/specflow-reader-linux-amd64 "${base}/specflow-reader-linux-amd64"
-curl -L -o specflow/tooling/bin/SHA256SUMS "${base}/SHA256SUMS"
+curl -fL -o specflow/tooling/bin/specflowctl-linux-amd64 "${base}/specflowctl-linux-amd64"
+curl -fL -o specflow/tooling/bin/specflow-reader-linux-amd64 "${base}/specflow-reader-linux-amd64"
+curl -fL -o specflow/tooling/bin/SHA256SUMS "${base}/SHA256SUMS"
 chmod +x specflow/tooling/bin/specflowctl-linux-amd64 specflow/tooling/bin/specflow-reader-linux-amd64
 (cd specflow/tooling/bin && sha256sum -c SHA256SUMS --ignore-missing)
 ```
+
+这些命令会替换 `specflow/tooling/bin/` 下已经存在的同名文件。
+这个目录只是本地缓存，所以替换这些文件就是正常的更新方式。
 
 Windows amd64 PowerShell 示例：
 
@@ -531,7 +534,19 @@ Reader 也在 tooling 层，但它是只读视图。
 
 ### 更新须知
 
-当你 pull 或用其他方式更新 `specflow/` 后，先让 agent 执行：
+当你 pull 或用其他方式更新 `specflow/` 后，只在当前 tooling 源码 fingerprint 需要另一份 Release binary 时，才需要刷新本地 binary。
+
+fingerprint 是直接从源码里的 tooling 输入算出来的，所以这个检查不依赖已有的 `specflowctl` binary：
+
+```bash
+specflow/tooling/scripts/tooling_fingerprint.sh --short
+```
+
+如果 `specflow/tooling/bin/` 不存在，或者已有 binary 报 stale，就重新执行[准备本地二进制文件](#准备本地二进制文件)里的下载命令。
+下载命令会覆盖本地缓存文件。
+每次 pull 后都跑一遍是安全的，但只有 tooling fingerprint 变化或本地 binary 缺失时才有必要。
+
+本地 binary 确认是当前版本后，再让 agent 执行：
 
 ```bash
 spec_flow_migrate

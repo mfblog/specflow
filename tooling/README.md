@@ -27,12 +27,16 @@ Download release binaries for the installed tooling source:
 mkdir -p specflow/tooling/bin
 tag="specflow-tooling-$(specflow/tooling/scripts/tooling_fingerprint.sh --short)"
 base="https://github.com/Bingordinary/SpecFlow/releases/download/${tag}"
-curl -L -o specflow/tooling/bin/specflowctl-linux-amd64 "${base}/specflowctl-linux-amd64"
-curl -L -o specflow/tooling/bin/specflow-reader-linux-amd64 "${base}/specflow-reader-linux-amd64"
-curl -L -o specflow/tooling/bin/SHA256SUMS "${base}/SHA256SUMS"
+curl -fL -o specflow/tooling/bin/specflowctl-linux-amd64 "${base}/specflowctl-linux-amd64"
+curl -fL -o specflow/tooling/bin/specflow-reader-linux-amd64 "${base}/specflow-reader-linux-amd64"
+curl -fL -o specflow/tooling/bin/SHA256SUMS "${base}/SHA256SUMS"
 chmod +x specflow/tooling/bin/specflowctl-linux-amd64 specflow/tooling/bin/specflow-reader-linux-amd64
 (cd specflow/tooling/bin && sha256sum -c SHA256SUMS --ignore-missing)
 ```
+
+The download commands replace existing files under `specflow/tooling/bin/`.
+Rerun them after pulling a `specflow/` update only when the tooling fingerprint changed, the local binaries are missing, or an existing binary reports that it is stale.
+Running them on every pull is safe, but it downloads the same Release again when the fingerprint did not change.
 
 Replace `linux-amd64` with the target platform suffix:
 `darwin-amd64`, `darwin-arm64`, `linux-amd64`, `linux-arm64`, `windows-amd64.exe`, or `windows-arm64.exe`.

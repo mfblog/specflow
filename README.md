@@ -157,12 +157,15 @@ For Linux amd64:
 mkdir -p specflow/tooling/bin
 tag="specflow-tooling-$(specflow/tooling/scripts/tooling_fingerprint.sh --short)"
 base="https://github.com/Bingordinary/SpecFlow/releases/download/${tag}"
-curl -L -o specflow/tooling/bin/specflowctl-linux-amd64 "${base}/specflowctl-linux-amd64"
-curl -L -o specflow/tooling/bin/specflow-reader-linux-amd64 "${base}/specflow-reader-linux-amd64"
-curl -L -o specflow/tooling/bin/SHA256SUMS "${base}/SHA256SUMS"
+curl -fL -o specflow/tooling/bin/specflowctl-linux-amd64 "${base}/specflowctl-linux-amd64"
+curl -fL -o specflow/tooling/bin/specflow-reader-linux-amd64 "${base}/specflow-reader-linux-amd64"
+curl -fL -o specflow/tooling/bin/SHA256SUMS "${base}/SHA256SUMS"
 chmod +x specflow/tooling/bin/specflowctl-linux-amd64 specflow/tooling/bin/specflow-reader-linux-amd64
 (cd specflow/tooling/bin && sha256sum -c SHA256SUMS --ignore-missing)
 ```
+
+These commands replace existing files under `specflow/tooling/bin/`.
+That directory is only a local cache, so replacing those files is the normal update path.
 
 For Windows amd64 PowerShell:
 
@@ -533,7 +536,19 @@ See [tooling/README.md](./tooling/README.md) for the full tooling surface.
 
 ### Update Notice
 
-After you pull or otherwise update `specflow/`, ask the agent to run:
+After you pull or otherwise update `specflow/`, refresh local binaries only when the installed tooling source fingerprint needs a different Release binary.
+
+The fingerprint is computed from tooling inputs in the source tree, so this check does not depend on an existing `specflowctl` binary:
+
+```bash
+specflow/tooling/scripts/tooling_fingerprint.sh --short
+```
+
+If `specflow/tooling/bin/` is missing, or if an existing binary reports that it is stale, rerun the download block in [Prepare Local Binaries](#prepare-local-binaries).
+The download block overwrites the local cache files.
+Running it after every pull is safe, but it is only necessary when the tooling fingerprint changed or the binaries are missing.
+
+After the local binaries are current, ask the agent to run:
 
 ```bash
 spec_flow_migrate
