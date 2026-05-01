@@ -63,7 +63,7 @@ func TestReviewRunRequiresFlowCLI(t *testing.T) {
 	}
 }
 
-func TestReviewCollectDefaultScopePrintsToolingRuntimeFilesCLI(t *testing.T) {
+func TestReviewCollectDefaultScopePrintsToolingScriptAndRuntimeFilesCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -72,6 +72,15 @@ func TestReviewCollectDefaultScopePrintsToolingRuntimeFilesCLI(t *testing.T) {
 		t.Fatalf("collect-default-scope failed: %v\nstderr=%s", err, stderr.String())
 	}
 	output := stdout.String()
+	if !strings.Contains(output, "Tooling script files") {
+		t.Fatalf("expected tooling script heading, got %s", output)
+	}
+	if !strings.Contains(output, "specflow/tooling/scripts/tooling_fingerprint.sh") {
+		t.Fatalf("expected shell fingerprint script in collect-default-scope output, got %s", output)
+	}
+	if !strings.Contains(output, "specflow/tooling/scripts/tooling_fingerprint.ps1") {
+		t.Fatalf("expected PowerShell fingerprint script in collect-default-scope output, got %s", output)
+	}
 	if !strings.Contains(output, "Tooling runtime files") {
 		t.Fatalf("expected tooling runtime heading, got %s", output)
 	}
@@ -202,6 +211,8 @@ func createCLITestRepo(t *testing.T) string {
 		"specflow/tooling/README.md",
 		"specflow/tooling/cmd/specflowctl/main.go",
 		"specflow/tooling/internal/demo/demo.go",
+		"specflow/tooling/scripts/tooling_fingerprint.sh",
+		"specflow/tooling/scripts/tooling_fingerprint.ps1",
 		"specflow/tooling/go.mod",
 		"specflow/tooling/manifest.tsv",
 	} {

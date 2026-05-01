@@ -604,11 +604,17 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 	}
 }
 
-func TestInitIncludesReaderRuntimeInToolingSlices(t *testing.T) {
+func TestInitIncludesToolingScriptAndReaderRuntimeInToolingSlices(t *testing.T) {
 	_, file, _ := createInitializedRun(t)
 	state := mustParse(t, file)
 
 	toolingSlice := findSlice(t, state, "tooling_execution")
+	if !containsString(toolingSlice.InputFiles, "specflow/tooling/scripts/tooling_fingerprint.sh") {
+		t.Fatalf("expected shell fingerprint script in tooling execution input files, got %+v", toolingSlice.InputFiles)
+	}
+	if !containsString(toolingSlice.InputFiles, "specflow/tooling/scripts/tooling_fingerprint.ps1") {
+		t.Fatalf("expected PowerShell fingerprint script in tooling execution input files, got %+v", toolingSlice.InputFiles)
+	}
 	if !containsString(toolingSlice.InputFiles, "specflow/tooling/reader/web/app.js") {
 		t.Fatalf("expected reader app.js in tooling execution input files, got %+v", toolingSlice.InputFiles)
 	}
@@ -619,6 +625,73 @@ func TestInitIncludesReaderRuntimeInToolingSlices(t *testing.T) {
 	}
 	if !containsString(convergenceSlice.InputFiles, "specflow/tooling/reader/web/app.js") {
 		t.Fatalf("expected reader app.js in project/framework convergence input files, got %+v", convergenceSlice.InputFiles)
+	}
+	if !containsString(convergenceSlice.InputFiles, "specflow/tooling/scripts/tooling_fingerprint.sh") {
+		t.Fatalf("expected shell fingerprint script in project/framework convergence input files, got %+v", convergenceSlice.InputFiles)
+	}
+}
+
+func TestRefreshMarksToolingScriptSlicesStale(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	setSliceStatus(t, &state, "tooling_execution", slicePassed)
+	setSliceStatus(t, &state, "project_instance_to_framework_convergence", slicePassed)
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/tooling_fingerprint.sh"), "#!/usr/bin/env bash\necho changed\n")
+
+	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if !containsString(result.StaleSlices, "tooling_execution") {
+		t.Fatalf("expected tooling_execution stale after tooling script change, got %+v", result.StaleSlices)
+	}
+	if !containsString(result.StaleSlices, "project_instance_to_framework_convergence") {
+		t.Fatalf("expected project_instance_to_framework_convergence stale after tooling script change, got %+v", result.StaleSlices)
+	}
+
+	refreshed := mustParse(t, file)
+	if got := findSlice(t, refreshed, "tooling_execution").Status; got != sliceStale {
+		t.Fatalf("expected tooling_execution stale, got %s", got)
+	}
+	if got := findSlice(t, refreshed, "project_instance_to_framework_convergence").Status; got != sliceStale {
+		t.Fatalf("expected project_instance_to_framework_convergence stale, got %s", got)
+	}
+}
+
+func TestRefreshUpdatesBaselineInputFilesWhenScopeDefinitionChanges(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	stripToolingScriptInputs(t, repoRoot, &state)
+	setSliceStatus(t, &state, "tooling_execution", slicePassed)
+	setSliceStatus(t, &state, "tooling_to_rule_convergence", slicePassed)
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+
+	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if !containsString(result.ChangedSlices, "scope_inventory") {
+		t.Fatalf("expected scope_inventory changed after baseline input update, got %+v", result.ChangedSlices)
+	}
+	if !containsString(result.ChangedSlices, "tooling_execution") {
+		t.Fatalf("expected tooling_execution changed after baseline input update, got %+v", result.ChangedSlices)
+	}
+
+	refreshed := mustParse(t, file)
+	scopeSlice := findSlice(t, refreshed, "scope_inventory")
+	if !containsString(scopeSlice.InputFiles, "specflow/tooling/scripts/tooling_fingerprint.sh") {
+		t.Fatalf("expected refreshed scope_inventory to include shell fingerprint script, got %+v", scopeSlice.InputFiles)
+	}
+	toolingSlice := findSlice(t, refreshed, "tooling_execution")
+	if !containsString(toolingSlice.InputFiles, "specflow/tooling/scripts/tooling_fingerprint.ps1") {
+		t.Fatalf("expected refreshed tooling_execution to include PowerShell fingerprint script, got %+v", toolingSlice.InputFiles)
+	}
+	if got := toolingSlice.Status; got != sliceStale {
+		t.Fatalf("expected tooling_execution stale after input list update, got %s", got)
+	}
+	if got := findSlice(t, refreshed, "tooling_to_rule_convergence").Status; got != sliceStale {
+		t.Fatalf("expected tooling_to_rule_convergence stale after input list update, got %s", got)
 	}
 }
 
@@ -727,6 +800,8 @@ func createReviewRunRepo(t *testing.T) string {
 		"specflow/tooling/README.md",
 		"specflow/tooling/cmd/specflowctl/main.go",
 		"specflow/tooling/internal/demo/demo.go",
+		"specflow/tooling/scripts/tooling_fingerprint.sh",
+		"specflow/tooling/scripts/tooling_fingerprint.ps1",
 		"specflow/tooling/go.mod",
 		"specflow/tooling/manifest.tsv",
 	} {
@@ -757,6 +832,32 @@ func writeReviewReaderWebFiles(t *testing.T, repoRoot string) {
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/app.js"), "console.log('demo');\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/cytoscape.min.js"), "window.cytoscape = function() {};\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/mermaid.min.js"), "window.mermaid = { initialize() {}, run() {} };\n")
+}
+
+func stripToolingScriptInputs(t *testing.T, repoRoot string, state *runState) {
+	t.Helper()
+	for i := range state.Baseline {
+		state.Baseline[i].InputFiles = withoutToolingScriptInputs(state.Baseline[i].InputFiles)
+		fingerprint, missing, err := computeFingerprint(repoRoot, state.Baseline[i].InputFiles)
+		if err != nil {
+			t.Fatalf("fingerprint %s: %v", state.Baseline[i].SliceID, err)
+		}
+		if len(missing) > 0 {
+			t.Fatalf("unexpected missing input for %s: %+v", state.Baseline[i].SliceID, missing)
+		}
+		state.Baseline[i].InputFingerprint = fingerprint
+	}
+}
+
+func withoutToolingScriptInputs(values []string) []string {
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if strings.HasPrefix(value, "specflow/tooling/scripts/") {
+			continue
+		}
+		result = append(result, value)
+	}
+	return result
 }
 
 func mustWrite(t *testing.T, path, content string) {

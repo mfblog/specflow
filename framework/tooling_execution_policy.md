@@ -126,13 +126,16 @@ The required tooling-contract document set is:
 
 1. this policy file for framework-level boundary rules
 2. `specflow/tooling/README.md` for the concrete command surface, build flow, recovery flow, and usage examples
-3. the in-scope tooling source input files:
+3. the current tooling source input files:
    - `specflow/tooling/cmd/**/*.go`
    - `specflow/tooling/internal/**/*.go`
    - `specflow/tooling/go.mod`
    - `specflow/tooling/manifest.tsv`
    - `specflow/tooling/go.sum` when it exists
-4. the runtime reader web files:
+4. the release helper script files:
+   - `specflow/tooling/scripts/tooling_fingerprint.sh`
+   - `specflow/tooling/scripts/tooling_fingerprint.ps1`
+5. the runtime reader web files:
    - `specflow/tooling/reader/web/**`
 
 Default `spec_flow_review` must not issue `pass` when any of the following is true:
@@ -163,6 +166,9 @@ Required rules:
 6. the bypass surface for that freshness gate must stay minimal and cover only recovery or inspection entry points needed to rebuild or diagnose the binary state
 7. `doctor` must report stale current-platform binaries as failures rather than treating binary presence alone as sufficient
 8. compiled binaries must not be committed to git
+
+Release helper scripts under `specflow/tooling/scripts/` are default review inputs because they select release binaries for the installed tooling source.
+They are not binary freshness inputs unless they change compiled binary behavior.
 
 In plain words:
 

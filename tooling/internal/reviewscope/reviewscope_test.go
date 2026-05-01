@@ -75,6 +75,7 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module example.com/specflow\n\ngo 1.22\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/go.sum"), "example.com/mod v1.0.0 h1:demo\n")
+	writeToolingScriptFiles(t, repoRoot)
 	writeReaderWebFiles(t, repoRoot)
 
 	scope, err := CollectDefaultSpecFlowScope(repoRoot)
@@ -156,6 +157,15 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if !containsString(scope.ToolingSourceFiles, "specflow/tooling/go.sum") {
 		t.Fatalf("expected tooling go.sum in tooling source scope when present, got %+v", scope.ToolingSourceFiles)
 	}
+	if !containsString(scope.ToolingScriptFiles, "specflow/tooling/scripts/tooling_fingerprint.sh") {
+		t.Fatalf("expected shell fingerprint script in tooling script scope, got %+v", scope.ToolingScriptFiles)
+	}
+	if !containsString(scope.ToolingScriptFiles, "specflow/tooling/scripts/tooling_fingerprint.ps1") {
+		t.Fatalf("expected PowerShell fingerprint script in tooling script scope, got %+v", scope.ToolingScriptFiles)
+	}
+	if containsString(scope.ToolingSourceFiles, "specflow/tooling/scripts/tooling_fingerprint.sh") {
+		t.Fatalf("expected shell fingerprint script outside tooling source scope, got %+v", scope.ToolingSourceFiles)
+	}
 	if !containsString(scope.ToolingRuntimeFiles, "specflow/tooling/reader/web/app.js") {
 		t.Fatalf("expected reader app.js in tooling runtime scope, got %+v", scope.ToolingRuntimeFiles)
 	}
@@ -230,6 +240,7 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/internal/demo/demo.go"), "package demo\nfunc Value() string { return \"demo\" }\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module example.com/specflow\n\ngo 1.22\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
+	writeToolingScriptFiles(t, repoRoot)
 	writeReaderWebFiles(t, repoRoot)
 
 	scope, err := CollectDefaultSpecFlowScope(repoRoot)
@@ -340,6 +351,12 @@ func writeReaderWebFiles(t *testing.T, repoRoot string) {
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/app.js"), "console.log('demo');\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/cytoscape.min.js"), "window.cytoscape = function() {};\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/mermaid.min.js"), "window.mermaid = { initialize() {}, run() {} };\n")
+}
+
+func writeToolingScriptFiles(t *testing.T, repoRoot string) {
+	t.Helper()
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/tooling_fingerprint.sh"), "#!/usr/bin/env bash\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/tooling_fingerprint.ps1"), "param()\n")
 }
 
 func containsString(values []string, target string) bool {

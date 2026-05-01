@@ -322,6 +322,31 @@ func Refresh(repoRoot, flow, file string, now time.Time) (RefreshResult, error) 
 	if diagnostics := validateState(repoRoot, config, state, now, validateOpenRun); len(diagnostics) > 0 {
 		return RefreshResult{}, fmt.Errorf("run-state validation failed: %s", strings.Join(diagnostics, "; "))
 	}
+	scope, err := config.CollectScope(repoRoot)
+	if err != nil {
+		return RefreshResult{}, err
+	}
+	definitionsByID := map[string]sliceDefinition{}
+	for _, definition := range config.BaselineDefinitions() {
+		definitionsByID[definition.ID] = definition
+	}
+	inputFilesChanged := map[string]bool{}
+	for i := range state.Baseline {
+		definition, ok := definitionsByID[state.Baseline[i].SliceID]
+		if !ok {
+			continue
+		}
+		currentInputFiles := definition.InputFiles(scope)
+		if !sameStringSlice(state.Baseline[i].InputFiles, currentInputFiles) {
+			inputFilesChanged[state.Baseline[i].SliceID] = true
+		}
+		state.Baseline[i].SliceType = definition.SliceType
+		state.Baseline[i].ReviewQuestion = definition.ReviewQuestion
+		state.Baseline[i].WhyAdded = "baseline_catalog"
+		state.Baseline[i].ParentSliceID = "none"
+		state.Baseline[i].InputFiles = currentInputFiles
+		state.Baseline[i].DependsOn = definition.DependsOn
+	}
 
 	result := RefreshResult{File: file, LastUpdatedAtUTC: formatUTC(now)}
 	staleSet := map[string]bool{}
@@ -337,7 +362,7 @@ func Refresh(repoRoot, flow, file string, now time.Time) (RefreshResult, error) 
 		if err != nil {
 			return RefreshResult{}, err
 		}
-		changed := len(missing) == 0 && fingerprint != allSlices[i].InputFingerprint
+		changed := len(missing) == 0 && (fingerprint != allSlices[i].InputFingerprint || inputFilesChanged[allSlices[i].SliceID])
 		if changed {
 			result.ChangedSlices = append(result.ChangedSlices, allSlices[i].SliceID)
 		}
@@ -687,7 +712,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Does the default governance baseline scope include every required governance input family.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.GuidanceSkillFiles, scope.SharedGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingRuntimeFiles, scope.ActiveProjectStandardFiles)
+				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.GuidanceSkillFiles, scope.SharedGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingScriptFiles, scope.ToolingRuntimeFiles, scope.ActiveProjectStandardFiles)
 			},
 		},
 		{
@@ -781,7 +806,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Does deterministic tooling stay inside its mechanical execution boundary.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingRuntimeFiles)
+				return union(scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingScriptFiles, scope.ToolingRuntimeFiles)
 			},
 		},
 		{
@@ -1354,6 +1379,18 @@ func union(sets ...[]string) []string {
 	}
 	sort.Strings(result)
 	return result
+}
+
+func sameStringSlice(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for i := range left {
+		if left[i] != right[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func parseList(value string) []string {

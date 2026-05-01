@@ -362,6 +362,9 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		writeList(stdout, "Project registry diagnostics", scope.RegistryDiagnostics)
 		writeList(stdout, "Tooling contract files", scope.ToolingContractFiles)
 		writeList(stdout, "Tooling source files", scope.ToolingSourceFiles)
+		if len(scope.ToolingScriptFiles) > 0 {
+			writeList(stdout, "Tooling script files", scope.ToolingScriptFiles)
+		}
 		if len(scope.ToolingRuntimeFiles) > 0 {
 			writeList(stdout, "Tooling runtime files", scope.ToolingRuntimeFiles)
 		}

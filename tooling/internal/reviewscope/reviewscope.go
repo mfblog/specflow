@@ -26,6 +26,7 @@ type SpecFlowScope struct {
 	RegistryDiagnostics               []string
 	ToolingContractFiles              []string
 	ToolingSourceFiles                []string
+	ToolingScriptFiles                []string
 	ToolingRuntimeFiles               []string
 	ActiveProjectStandardFiles        []string
 }
@@ -128,6 +129,10 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	if len(toolingSourceFiles) == 0 {
 		return scope, fmt.Errorf("default tooling source files are incomplete")
 	}
+	toolingScriptFiles := []string{
+		"specflow/tooling/scripts/tooling_fingerprint.sh",
+		"specflow/tooling/scripts/tooling_fingerprint.ps1",
+	}
 	toolingRuntimeFiles, err := walkRelativeFiles(repoRoot, "specflow/tooling/reader/web", "")
 	if err != nil {
 		return scope, err
@@ -145,6 +150,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	required = append(required, projectRegistryFiles...)
 	required = append(required, toolingContractFiles...)
 	required = append(required, toolingSourceFiles...)
+	required = append(required, toolingScriptFiles...)
 	required = append(required, toolingRuntimeFiles...)
 	if err := ensureRelativeFiles(repoRoot, required); err != nil {
 		return scope, err
@@ -175,6 +181,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	scope.RegistryDiagnostics = sortAndDedupe(validation.Diagnostics)
 	scope.ToolingContractFiles = toolingContractFiles
 	scope.ToolingSourceFiles = sortAndDedupe(toolingSourceFiles)
+	scope.ToolingScriptFiles = toolingScriptFiles
 	scope.ToolingRuntimeFiles = sortAndDedupe(toolingRuntimeFiles)
 	scope.ActiveProjectStandardFiles = sortAndDedupe(activeStandardFiles)
 	return scope, nil

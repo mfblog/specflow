@@ -195,7 +195,8 @@ The default `spec_flow_review` tooling review input set is:
 
 1. the framework tooling policy and this README
 2. the current tooling source input set listed below
-3. reader runtime files under `specflow/tooling/reader/web/**`
+3. the release helper script input set listed below
+4. reader runtime files under `specflow/tooling/reader/web/**`
 
 The current tooling source input set is:
 
@@ -205,8 +206,15 @@ The current tooling source input set is:
 4. `specflow/tooling/manifest.tsv`
 5. `specflow/tooling/go.sum` when it exists
 
+The release helper script input set is:
+
+1. `specflow/tooling/scripts/tooling_fingerprint.sh`
+2. `specflow/tooling/scripts/tooling_fingerprint.ps1`
+
 The manifest is included because it controls which framework-managed and project-managed files `init`, `upgrade`, and `doctor` inspect or write.
 Reader front-end files under `specflow/tooling/reader/web/**` are runtime files, not binary freshness inputs.
+Release helper scripts are review inputs because they select release binaries for the installed tooling source.
+They are not binary freshness inputs unless they change compiled binary behavior.
 
 ## Unified Status Table
 
