@@ -399,19 +399,18 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		flow := fs.String("flow", "", "review flow")
-		file := fs.String("file", "", "review run-state file")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 		if err := requireReviewFlow(*flow, stderr); err != nil {
 			return err
 		}
-		if strings.TrimSpace(*file) == "" {
-			writeReviewUsage(stderr)
-			return errors.New("file is required")
-		}
 		absRepoRoot := mustAbs(*repoRoot)
-		result := reviewrun.ValidateFile(absRepoRoot, *flow, resolvePath(absRepoRoot, *file), time.Now().UTC())
+		file, err := reviewrun.FixedRunStateFile(absRepoRoot, *flow)
+		if err != nil {
+			return err
+		}
+		result := reviewrun.ValidateFile(absRepoRoot, *flow, file, time.Now().UTC())
 		if result.Valid {
 			fmt.Fprintf(stdout, "Review run-state is valid: %s\n", result.File)
 			return nil
@@ -426,19 +425,18 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		flow := fs.String("flow", "", "review flow")
-		file := fs.String("file", "", "review run-state file")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 		if err := requireReviewFlow(*flow, stderr); err != nil {
 			return err
 		}
-		if strings.TrimSpace(*file) == "" {
-			writeReviewUsage(stderr)
-			return errors.New("file is required")
-		}
 		absRepoRoot := mustAbs(*repoRoot)
-		result, err := reviewrun.Refresh(absRepoRoot, *flow, resolvePath(absRepoRoot, *file), time.Now().UTC())
+		file, err := reviewrun.FixedRunStateFile(absRepoRoot, *flow)
+		if err != nil {
+			return err
+		}
+		result, err := reviewrun.Refresh(absRepoRoot, *flow, file, time.Now().UTC())
 		if err != nil {
 			return err
 		}
@@ -453,19 +451,18 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		flow := fs.String("flow", "", "review flow")
-		file := fs.String("file", "", "review run-state file")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 		if err := requireReviewFlow(*flow, stderr); err != nil {
 			return err
 		}
-		if strings.TrimSpace(*file) == "" {
-			writeReviewUsage(stderr)
-			return errors.New("file is required")
-		}
 		absRepoRoot := mustAbs(*repoRoot)
-		result, err := reviewrun.Touch(absRepoRoot, *flow, resolvePath(absRepoRoot, *file), time.Now().UTC())
+		file, err := reviewrun.FixedRunStateFile(absRepoRoot, *flow)
+		if err != nil {
+			return err
+		}
+		result, err := reviewrun.Touch(absRepoRoot, *flow, file, time.Now().UTC())
 		if err != nil {
 			return err
 		}
@@ -879,9 +876,9 @@ func writeReviewUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl review collect-default-scope --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl review run-init --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl review run-validate --flow spec_flow_review|spec_flow_design_review --file FILE [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl review run-refresh --flow spec_flow_review|spec_flow_design_review --file FILE [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl review run-touch --flow spec_flow_review|spec_flow_design_review --file FILE [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl review run-validate --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl review run-refresh --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl review run-touch --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
 }
 
 func requireReviewFlow(flow string, stderr io.Writer) error {

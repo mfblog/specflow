@@ -20,15 +20,35 @@ func TestReviewRunInitAndValidateCLI(t *testing.T) {
 	if !strings.Contains(output, "Review run-state created:") {
 		t.Fatalf("expected created output, got %s", output)
 	}
-	file := strings.TrimSpace(strings.TrimPrefix(output, "Review run-state created:"))
+	if !strings.Contains(output, "docs/specs/_governance_review/spec_flow_review.md") {
+		t.Fatalf("expected fixed spec_flow_review run-state path, got %s", output)
+	}
 
 	stdout.Reset()
 	stderr.Reset()
-	if err := runReview([]string{"run-validate", "--flow", "spec_flow_review", "--repo-root", repoRoot, "--file", file}, &stdout, &stderr); err != nil {
+	if err := runReview([]string{"run-validate", "--flow", "spec_flow_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
 		t.Fatalf("run-validate failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
 	}
 	if !strings.Contains(stdout.String(), "Review run-state is valid:") {
 		t.Fatalf("expected valid output, got %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := runReview([]string{"run-refresh", "--flow", "spec_flow_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("run-refresh failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Review run-state refreshed:") {
+		t.Fatalf("expected refreshed output, got %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := runReview([]string{"run-touch", "--flow", "spec_flow_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("run-touch failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Review run-state touched:") {
+		t.Fatalf("expected touched output, got %s", stdout.String())
 	}
 }
 
@@ -102,11 +122,13 @@ func TestDesignReviewRunInitAndValidateCLI(t *testing.T) {
 	if !strings.Contains(output, "Review run-state created:") || !strings.Contains(output, "spec_flow_design_review") {
 		t.Fatalf("expected design created output, got %s", output)
 	}
-	file := strings.TrimSpace(strings.TrimPrefix(output, "Review run-state created:"))
+	if !strings.Contains(output, "docs/specs/_governance_review/spec_flow_design_review.md") {
+		t.Fatalf("expected fixed spec_flow_design_review run-state path, got %s", output)
+	}
 
 	stdout.Reset()
 	stderr.Reset()
-	if err := runReview([]string{"run-validate", "--flow", "spec_flow_design_review", "--repo-root", repoRoot, "--file", file}, &stdout, &stderr); err != nil {
+	if err := runReview([]string{"run-validate", "--flow", "spec_flow_design_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
 		t.Fatalf("design run-validate failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
 	}
 	if !strings.Contains(stdout.String(), "Review run-state is valid:") {

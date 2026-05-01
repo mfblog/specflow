@@ -220,9 +220,9 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 review collect-default-scope --flow spec_flow_design_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-init --flow spec_flow_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-init --flow spec_flow_design_review
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-validate --flow spec_flow_review --file docs/specs/_governance_review/spec_flow_review.md
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-refresh --flow spec_flow_design_review --file docs/specs/_governance_review/spec_flow_design_review.md
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-touch --flow spec_flow_design_review --file docs/specs/_governance_review/spec_flow_design_review.md
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-validate --flow spec_flow_review
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-refresh --flow spec_flow_design_review
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-touch --flow spec_flow_design_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --unit ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --unit ai --from-command unit_promote --reason evidence_incomplete
 ./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type scenario --object task_execution --stable yes --candidate no --active-layer stable --next-command scenario_fork

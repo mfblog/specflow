@@ -171,6 +171,14 @@ func ConfiguredFlows() []string {
 	return []string{FlowSpecFlowReview, FlowSpecFlowDesignReview}
 }
 
+func FixedRunStateFile(repoRoot, flow string) (string, error) {
+	config, err := configForFlow(flow)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(repoRoot, filepath.FromSlash(config.RunStatePath)), nil
+}
+
 func configForFlow(flow string) (flowConfig, error) {
 	switch strings.TrimSpace(flow) {
 	case FlowSpecFlowReview:
