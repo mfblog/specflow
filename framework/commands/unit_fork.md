@@ -34,6 +34,7 @@ This file states only `unit_fork`-local entry, output, and stop rules.
 7. read the git policy if commit-triggering files may change
 8. if the round will create, update, or delete any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, read `shared_sync.md`
 9. if the round may remove, retarget, or otherwise change an existing Shared Contract binding, read every current-layer unit main file needed to derive the real binding set of each touched Shared Contract from `shared_contract_refs`
+10. read `specflow/framework/onboarding_decision_policy.md` for stable-fork candidate source handling
 
 ## 4. Procedure
 
@@ -41,25 +42,29 @@ This file states only `unit_fork`-local entry, output, and stop rules.
 2. read `system_constraints.md` if it exists; otherwise continue with no formal global baseline
 3. read `docs/specs/units/stable/s_unit_{unit}.md` and any explicitly referenced appendix files
 4. read bound stable Shared Contract files if any
-5. determine the target formal version for this round:
+5. apply the stable-fork candidate source rule from `specflow/framework/onboarding_decision_policy.md` Section 6.1
+   - if the fork uses only stable formal truth plus the current round's selected design changes, prepare `source_basis=new_design` and `evidence_appendix_ref=none`
+   - if the fork selects behavior from implementation, tests, runtime behavior, historical material, or other non-stable evidence, prepare the required `source_basis`, `evidence_appendix_ref`, and candidate evidence appendix in the same round
+   - if that source decision or evidence appendix is not ready, stop before writing the candidate main Spec
+6. determine the target formal version for this round:
    - compatible new capability -> next `MINOR`
    - incompatible change -> next `MAJOR`
    - compatible fix or alignment -> next `PATCH`
-6. generate `docs/specs/units/candidate/c_unit_{unit}.md` from the current stable file
-7. set candidate `frontmatter.version` to that target version
-8. write `system_constraints_ref`
+7. generate `docs/specs/units/candidate/c_unit_{unit}.md` from the current stable file and write the prepared `source_basis` and `evidence_appendix_ref` fields in the same candidate write
+8. set candidate `frontmatter.version` to that target version
+9. write `system_constraints_ref`
    - if the new round proposes a global baseline change, record it in `system_constraints_change_proposal` inside the unit candidate
-9. re-check `shared_contract_refs`:
+10. re-check `shared_contract_refs`:
    - interpret and rewrite that field using the Shared Contract binding contract from `specflow/framework/spec_policy.md` Section 6.1
    - judge Shared Contract bindings independently from whether `system_constraints.md` exists
    - if the stable layer depended on shared files and the candidate still depends on the same unchanged shared truth, keep binding those existing shared files in the candidate
    - create or bind candidate-layer shared files only when the current round changes the shared truth itself
    - write `shared_contract_refs=none` only when the current round no longer reuses shared contract truth
    - do not write `shared_contract_refs=none` merely because a shared-truth change for this round has not yet been formalized
-10. if Step 9 removes or retargets any existing Shared Contract binding:
-   - derive the real repository-wide binding set of each touched Shared Contract from current-layer unit `shared_contract_refs` plus the target unit candidate writeback prepared in Step 9
+11. if Step 10 removes or retargets any existing Shared Contract binding:
+   - derive the real repository-wide binding set of each touched Shared Contract from current-layer unit `shared_contract_refs` plus the target unit candidate writeback prepared in Step 10
    - if repository truth is insufficient to decide whether any touched Shared Contract file would become unbound after this round, stop and reroute through natural-language shared governance from current repository truth instead of leaving cleanup ownership implicit
-11. if the round changed shared bindings or shared files, resolve Shared Contract terminal state and `bound_objects` in the same round:
+12. if the round changed shared bindings or shared files, resolve Shared Contract terminal state and `bound_objects` in the same round:
    - if a touched Shared Contract file would have no formal bound units after this round, in the same round either delete it when cleanup is legal under `spec_policy.md` or explicitly keep it as independently authored shared truth by writing that file with:
      - `unbound_retention: intentional`
      - `unbound_retention_reason: <why this unbound state is intentional now>`
@@ -68,24 +73,24 @@ This file states only `unit_fork`-local entry, output, and stop rules.
    - if a touched Shared Contract file still has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
    - update `bound_objects` only as declarative metadata so each remaining touched Shared Contract file matches the real binding set implied by unit `shared_contract_refs`
    - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared reconcile-bound-objects --units {unit}` and additional `--shared-refs` / `--shared-ids` filters when the active flow has already identified them
-12. delete old `_check_result/unit/{unit}.md`, `_verify_result/unit/{unit}.md`, `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and previous-round candidate appendix files
+13. delete old `_check_result/unit/{unit}.md`, `_verify_result/unit/{unit}.md`, `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and previous-round candidate appendix files
    - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --unit {unit} --mode unit_fork`
-13. update `_status.md`:
+14. update `_status.md`:
    - `Stable=yes`
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=unit_check`
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable yes --candidate yes --active-layer candidate --next-command unit_check --notes <status-note>`
-14. do not update `docs/specs/repository_mapping.md` only because this fork changed the active layer from `stable` to `candidate`; the current unit main Spec path is resolved from `_status.md` plus the `unit_default` truth-surface rule
-15. if the round changed any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects `Active Layer=candidate` for this unit, even when no additional affected unit is known yet
+15. do not update `docs/specs/repository_mapping.md` only because this fork changed the active layer from `stable` to `candidate`; the current unit main Spec path is resolved from `_status.md` plus the `unit_default` truth-surface rule
+16. if the round changed any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, run `shared_sync` only after `_status.md` already reflects `Active Layer=candidate` for this unit, even when no additional affected unit is known yet
    - if any touched shared file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_shared_file_refs` with the exact file refs for those files
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> shared sync-impact --shared-refs <shared-ref> --units {unit}` or the corresponding `--shared-ids` form, and at least one shared trigger input must already be known before this deterministic execution starts
    - if that `shared_sync` returns control because repository truth is still insufficient to continue safely, stop `unit_fork` as `blocked`, keep the newly created candidate-layer state in place, and reroute through natural-language shared governance from current repository truth instead of claiming Shared Contract side effects are closed
-16. perform git close-out if required
+17. perform git close-out if required
 
 ## 5. Stop Conditions
 
-1. the new `candidate` exists
+1. the new `candidate` exists with valid `source_basis` and `evidence_appendix_ref`
 2. previous-round process files are cleaned up
 3. Shared Contract side effects are closed
 4. `_status.md` is updated
@@ -97,14 +102,16 @@ This file states only `unit_fork`-local entry, output, and stop rules.
 1. fork decision
 2. created file path
 3. initialized candidate version
-4. written formal global baseline reference or `none`
-5. Shared Contract terminal-state result when the round changed shared bindings or shared files
-6. cleanup result
-7. `_status.md` update result
-8. Shared Contract reconciliation result when the round changed shared truth or bindings
-9. when post-fork `shared_sync` could not continue safely, that the command stopped as `blocked` and must resume through natural-language shared governance
-10. git close-out result
-11. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
+4. initialized `source_basis`
+5. initialized `evidence_appendix_ref` and evidence appendix write result when required
+6. written formal global baseline reference or `none`
+7. Shared Contract terminal-state result when the round changed shared bindings or shared files
+8. cleanup result
+9. `_status.md` update result
+10. Shared Contract reconciliation result when the round changed shared truth or bindings
+11. when post-fork `shared_sync` could not continue safely, that the command stopped as `blocked` and must resume through natural-language shared governance
+12. git close-out result
+13. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
    - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
    - `current state` must explicitly confirm the candidate-layer state written to `_status.md`
    - if post-fork follow-up is blocked on shared governance, the block must name natural-language shared-governance rerouting as the immediate `next step`

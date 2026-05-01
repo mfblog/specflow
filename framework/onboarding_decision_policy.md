@@ -174,6 +174,30 @@ Apply this procedure to the target scope.
    - existing candidate with invalid source fields routes to candidate repair and then `unit_check` or `scenario_check`
    - stable-governed scope routes through stable command rules; behavior changes must open a candidate round first
 
+### 6.1 Stable-Fork Candidate Source
+
+This rule applies when `unit_fork` or `scenario_fork` creates a new candidate from an existing stable Spec.
+
+The stable Spec is already accepted formal truth.
+It is not existing-implementation evidence, and it does not require a candidate evidence appendix merely because the same behavior already exists in code.
+
+When the forked candidate is generated only from stable formal truth plus the current round's selected design changes, write these candidate source fields during the same candidate write:
+
+```yaml
+source_basis: new_design
+evidence_appendix_ref: none
+```
+
+In this stable-fork case, `source_basis=new_design` means the candidate is not using implementation, tests, runtime behavior, or historical material as the source of selected behavior truth.
+It does not mean every carried-forward stable rule was newly invented in this round.
+
+If the fork command selects behavior from implementation, tests, runtime behavior, historical material, or other non-stable evidence, it must use the normal source decision rules in Section 6:
+
+1. write `source_basis=existing_implementation` or `source_basis=mixed` and create the required candidate evidence appendix in the same round
+2. stop before candidate writeback when the evidence appendix or source decision is not ready
+
+`unit_fork` and `scenario_fork` must not create a candidate main Spec without both `source_basis` and `evidence_appendix_ref`.
+
 ---
 
 ## 7. Human Judgment Boundary
