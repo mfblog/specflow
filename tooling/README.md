@@ -17,14 +17,15 @@ go run ./cmd/specflowctl build-release --repo-root ../..
 ```
 
 Official platform binaries are GitHub Release assets.
-Release tags use the source commit form `specflow-<12-character-commit>`.
+Release tags use the tooling fingerprint form `specflow-tooling-<12-character-fingerprint>`.
 The release workflow builds binaries from the tagged source and uploads the binaries plus `SHA256SUMS`.
+The release is tied to the tooling input fingerprint, not to every source commit.
 
-Download release binaries for the installed source revision:
+Download release binaries for the installed tooling source:
 
 ```bash
 mkdir -p specflow/tooling/bin
-tag="specflow-$(git -C specflow rev-parse --short=12 HEAD)"
+tag="specflow-tooling-$(specflow/tooling/scripts/tooling_fingerprint.sh --short)"
 base="https://github.com/Bingordinary/SpecFlow/releases/download/${tag}"
 curl -L -o specflow/tooling/bin/specflowctl-linux-amd64 "${base}/specflowctl-linux-amd64"
 curl -L -o specflow/tooling/bin/specflow-reader-linux-amd64 "${base}/specflow-reader-linux-amd64"
@@ -224,7 +225,7 @@ Rules:
 ## Usage Examples
 
 Run ordinary governance commands from the repository root using the matching platform binary under `specflow/tooling/bin/`.
-For normal use, download the matching `specflowctl-*` and `specflow-reader-*` files from the GitHub Release for the installed source revision.
+For normal use, download the matching `specflowctl-*` and `specflow-reader-*` files from the GitHub Release for the installed tooling fingerprint.
 For local tooling development, rebuild them with `build-release`.
 
 When developing the tooling itself, do not assume that ordinary commands may run through `go run`.
@@ -268,7 +269,7 @@ cd specflow/tooling
 go run ./cmd/specflowctl build-release --repo-root ../..
 ```
 
-The normal user recovery path is to download the matching release binaries again for the installed source revision.
+The normal user recovery path is to download the matching release binaries again for the installed tooling fingerprint.
 
 The minimal stale-binary recovery and inspection surface remains:
 

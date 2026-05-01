@@ -152,5 +152,5 @@ Rules:
 1. use `go test ./...` under `specflow/tooling` to verify source changes before committing
 2. local binaries may be rebuilt with `go run ./cmd/specflowctl build-release --repo-root ../..`, but the resulting files remain untracked
 3. official platform binaries are created from a tagged source commit by the Release workflow and uploaded as GitHub Release assets
-4. release tags use `specflow-<12-character-commit>` and are created by the subtree publishing script
+4. release tags use `specflow-tooling-<12-character-tooling-fingerprint>` and are created by the subtree publishing script only when the tooling input fingerprint has not been released yet
 5. do not treat binary presence alone as proof that the binaries are current; the required state is that the embedded build fingerprint matches the current tooling input set

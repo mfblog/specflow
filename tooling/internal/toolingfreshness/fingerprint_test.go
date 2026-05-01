@@ -2,7 +2,9 @@ package toolingfreshness
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -86,6 +88,39 @@ func TestLiveFingerprintIgnoresReaderAssetChanges(t *testing.T) {
 	}
 	if first != second {
 		t.Fatalf("expected fingerprint to ignore reader asset change")
+	}
+}
+
+func TestShellFingerprintScriptMatchesLiveFingerprint(t *testing.T) {
+	if _, err := exec.LookPath("bash"); err != nil {
+		t.Skip("bash is not available")
+	}
+
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", "..", ".."))
+	if err != nil {
+		t.Fatalf("resolve repo root: %v", err)
+	}
+
+	want, _, err := LiveFingerprint(repoRoot)
+	if err != nil {
+		t.Fatalf("LiveFingerprint returned error: %v", err)
+	}
+
+	scriptPath := filepath.Join(repoRoot, "specflow", "tooling", "scripts", "tooling_fingerprint.sh")
+	out, err := exec.Command("bash", scriptPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("tooling_fingerprint.sh failed: %v\n%s", err, string(out))
+	}
+	if got := strings.TrimSpace(string(out)); got != want {
+		t.Fatalf("script fingerprint mismatch\ngot  %s\nwant %s", got, want)
+	}
+
+	shortOut, err := exec.Command("bash", scriptPath, "--short").CombinedOutput()
+	if err != nil {
+		t.Fatalf("tooling_fingerprint.sh --short failed: %v\n%s", err, string(shortOut))
+	}
+	if got, want := strings.TrimSpace(string(shortOut)), want[:12]; got != want {
+		t.Fatalf("script short fingerprint mismatch\ngot  %s\nwant %s", got, want)
 	}
 }
 

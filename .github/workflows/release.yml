@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "specflow-*"
+      - "specflow-tooling-*"
 
 permissions:
   contents: write
@@ -25,8 +25,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          repo_root="$(mktemp -d)"
+          repo_root="${RUNNER_TEMP}/specflow-release-root"
+          rm -rf "${repo_root}"
+          mkdir -p "${repo_root}"
           ln -s "${GITHUB_WORKSPACE}" "${repo_root}/specflow"
+          echo "SPECFLOW_RELEASE_REPO_ROOT=${repo_root}" >> "${GITHUB_ENV}"
           cd "${GITHUB_WORKSPACE}/tooling"
           go run ./cmd/specflowctl build-release --repo-root "${repo_root}"
 
@@ -43,10 +46,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          fingerprint="$("${SPECFLOW_RELEASE_REPO_ROOT}/specflow/tooling/scripts/tooling_fingerprint.sh")"
           gh release create "${GITHUB_REF_NAME}" \
             --repo "${GITHUB_REPOSITORY}" \
             --title "${GITHUB_REF_NAME}" \
-            --notes "SpecFlow release ${GITHUB_REF_NAME}." \
+            --notes "SpecFlow tooling release ${GITHUB_REF_NAME}. Tooling fingerprint: ${fingerprint}." \
             tooling/bin/specflowctl-* \
             tooling/bin/specflow-reader-* \
             tooling/bin/SHA256SUMS

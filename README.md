@@ -148,13 +148,14 @@ See [tooling/README.md](./tooling/README.md) for tooling details.
 ## Prepare Local Binaries
 
 `specflow/tooling/bin/` is not committed to git.
-Before running `init`, download the platform-matching binaries from the Release that matches your installed `specflow` source revision.
+Before running `init`, download the platform-matching binaries from the Release that matches your installed tooling source fingerprint.
+The Release is tied to the tooling input fingerprint, not to every `specflow` source commit.
 
 For Linux amd64:
 
 ```bash
 mkdir -p specflow/tooling/bin
-tag="specflow-$(git -C specflow rev-parse --short=12 HEAD)"
+tag="specflow-tooling-$(specflow/tooling/scripts/tooling_fingerprint.sh --short)"
 base="https://github.com/Bingordinary/SpecFlow/releases/download/${tag}"
 curl -L -o specflow/tooling/bin/specflowctl-linux-amd64 "${base}/specflowctl-linux-amd64"
 curl -L -o specflow/tooling/bin/specflow-reader-linux-amd64 "${base}/specflow-reader-linux-amd64"
@@ -166,7 +167,7 @@ chmod +x specflow/tooling/bin/specflowctl-linux-amd64 specflow/tooling/bin/specf
 For Windows amd64 PowerShell:
 
 ```powershell
-$tag = "specflow-" + (git -C specflow rev-parse --short=12 HEAD)
+$tag = "specflow-tooling-" + (& .\specflow\tooling\scripts\tooling_fingerprint.ps1 -Short)
 $base = "https://github.com/Bingordinary/SpecFlow/releases/download/$tag"
 New-Item -ItemType Directory -Force specflow/tooling/bin | Out-Null
 Invoke-WebRequest "$base/specflowctl-windows-amd64.exe" -OutFile "specflow/tooling/bin/specflowctl-windows-amd64.exe"
@@ -186,7 +187,7 @@ After `specflow/` is in your repository, run this from the repository root:
 
 In this document, `<specflow-binary>` means the platform-matching `specflowctl` executable under `specflow/tooling/bin/`.
 That directory is a local cache.
-Download the matching binary from the GitHub Release for the installed source revision, or build it locally from source when developing the tooling.
+Download the matching binary from the GitHub Release for the installed tooling fingerprint, or build it locally from source when developing the tooling.
 See [tooling/README.md](./tooling/README.md) for exact filenames.
 
 `init` installs the basic structure:
@@ -360,7 +361,7 @@ Start it with:
 ```
 
 `<specflow-reader-binary>` means the platform-matching `specflow-reader` executable under `specflow/tooling/bin/`.
-That binary is downloaded from the GitHub Release for the installed source revision, or built locally during tooling development.
+That binary is downloaded from the GitHub Release for the installed tooling fingerprint, or built locally during tooling development.
 It starts the local server directly; there is no `serve` subcommand.
 
 If your current working directory is the repository root, keep `--repo-root .`.
