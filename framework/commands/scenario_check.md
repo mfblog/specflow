@@ -7,7 +7,23 @@
 ## 2. Lifecycle-State Advance Inheritance
 
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
-This file states only `scenario_check`-local entry, output, and stop rules.
+This file states only `scenario_check`-local entry, output, stop, and fresh-rerun rules.
+
+`scenario_check` is not a failed-result storage command.
+It writes `_check_result/scenario/{scenario}.md` only when the current candidate scenario passes.
+
+Result semantics for non-pass conclusions are fixed:
+
+1. `blocked`
+   - use when the smallest correct next step requires user clarification, user decision, shared-truth closure, repository mapping correction, or another upstream governance repair outside this command's direct local repair surface
+   - if the blocker changes scenario behavior truth, the answer must be written back before `scenario_check` may pass
+2. `fix_required`
+   - use when the executor can already identify a concrete truth-side repair inside the current candidate scenario, scenario evidence appendix, or explicit binding surface
+   - no extra user choice is needed before that repair work starts
+   - after the repair, the scenario must return to a fresh full-scope `scenario_check`
+
+After `blocked` or `fix_required`, later repair work is non-authoritative until a fresh full-scope `scenario_check` run is entered through command routing.
+Scoped confirmation of the repaired fragment must not write `_check_result/scenario/{scenario}.md` or advance `_status.md` to `scenario_verify`.
 
 ## 3. Preconditions
 
@@ -34,27 +50,71 @@ This file states only `scenario_check`-local entry, output, and stop rules.
 4. verify `repository_mapping_ref` matches the current repository mapping
 5. verify entry, path, exit, and failure absorption are explicit enough to verify
 6. if pass, write `_check_result/scenario/{scenario}.md` so it satisfies the `scenario_check -> scenario_verify` handoff in `specflow/framework/candidate_handoff_contract.md`, then advance `Next Command=scenario_verify`
-7. if not pass, keep `Next Command=scenario_check`
+7. if not pass:
+   - conclude `blocked` or `fix_required`
+   - do not write a failed `_check_result/scenario/{scenario}.md`
+   - delete an old `_check_result/scenario/{scenario}.md` when it no longer covers the current candidate scenario, repository mapping, bound units, bound Shared Contract files, or formal global baseline state
+   - keep `_status.md` at `Next Command=scenario_check`
+   - report the standardized `fallback_reason_code` first, then the natural-language explanation
 8. perform git close-out if required
 
-## 5. Output Contract
+## 5. Stop Conditions
+
+1. whether the candidate scenario has enough trigger, path, outcome, and failure-absorption truth for end-to-end verification is clear
+2. whether candidate source and evidence appendix requirements are satisfied is clear
+3. whether repository mapping, bound units, bound Shared Contract files, and formal global baseline bindings still match current truth is clear
+4. if the round passes, `_check_result/scenario/{scenario}.md` holds the current pass gate
+5. if the round does not pass, no invalid old scenario check gate remains
+6. `_status.md` points to the real next executable step
+7. no repair-side reassessment or scoped follow-up review has been mistaken for a formal `scenario_check pass`
+
+## 6. Output Contract
 
 The output must report:
 
 1. `check gate result`
 2. candidate source and evidence appendix result
 3. `_check_result/scenario/{scenario}.md` write, delete, or keep result
-4. `_status.md` update result
-5. `round conclusion`
-6. `current state`
-7. `next step`
-8. `why this next step`
-9. `next-stage entry gap`
-10. git close-out result
-11. the `user-facing close-out block` required by `specflow/framework/command_policy.md` Section 8.6
-12. if a future extension introduces a checkpoint stop, the same close-out block must also report `resume signal`
+4. stale old gate cleanup decision when a previous `_check_result/scenario/{scenario}.md` exists
+5. `_status.md` update result
+6. `fallback_reason_code` for `blocked`, `fix_required`, or checkpoint stops
+7. structured findings when the result is `blocked` or `fix_required`
+8. whether any follow-up repair confirmation was non-authoritative and did not change lifecycle state
+9. `round conclusion`
+10. `current state`
+11. `next step`
+12. `why this next step`
+13. `next-stage entry gap`
+14. git close-out result
+15. the `user-facing close-out block` required by `specflow/framework/command_policy.md` Section 8.6
+16. if a future extension introduces a checkpoint stop, the same close-out block must also report `resume signal`
 
-## 6. Non-Goals
+When the result is `blocked` or `fix_required`, findings must be structured and must not be reduced to vague summaries.
+
+Allowed checkpoint types:
+
+1. none
+
+Allowed `fallback_reason_code` values:
+
+1. `truth_incomplete`
+2. `truth_drift`
+3. `binding_drift`
+4. `baseline_drift`
+5. `shared_contract_drift`
+6. `shared_truth_conflict`
+7. `governance_drift`
+
+Candidate source-field and evidence-appendix blockers must use `truth_incomplete`.
+Old gate mismatch caused by current candidate scenario truth changes must use `truth_drift`.
+Repository mapping or bound-unit snapshot mismatch must use `binding_drift`.
+Formal global baseline mismatch must use `baseline_drift`.
+Bound Shared Contract mismatch must use `shared_contract_drift`.
+Confirmed duplicate shared truth must use `shared_truth_conflict`.
+Missing or contradictory required governance rules must use `governance_drift`.
+The output must name the exact source, evidence, binding, or governance condition in the natural-language explanation after the standardized code.
+
+## 7. Non-Goals
 
 1. implementation planning
 2. direct code editing
