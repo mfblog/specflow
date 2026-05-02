@@ -142,10 +142,12 @@ const TRANSLATIONS = {
       readingFocus: "阅读重点",
       relationships: "相关关系",
       relationEmpty: "暂无相关关系快照。",
-      afterReviewTitle: "审核后下一步",
-      afterReviewWithCommandPrefix: "审核完成后，把审核结果告诉当前执行者；需要继续推进时，下一步命令是",
-      afterReviewWithCommandSuffix: "。",
-      afterReviewNoCommand: "审核完成后，把审核结果告诉当前执行者；当前没有登记下一步命令。",
+      progressTitle: "审核进度",
+      nextCommand: "下一步",
+      noNextCommand: "当前没有登记下一步",
+      copyNextCommand: "复制下一步命令",
+      copied: "已复制",
+      copyFailed: "复制失败",
       relation: {
         implementation: "实现路径",
         shared: "共享规则",
@@ -376,10 +378,12 @@ const TRANSLATIONS = {
       readingFocus: "Reading focus",
       relationships: "Relationships",
       relationEmpty: "No relationship snapshot.",
-      afterReviewTitle: "After review",
-      afterReviewWithCommandPrefix: "After reviewing, tell the current executor the result. To continue, the next command is",
-      afterReviewWithCommandSuffix: ".",
-      afterReviewNoCommand: "After reviewing, tell the current executor the result. No next command is registered.",
+      progressTitle: "Review progress",
+      nextCommand: "Next",
+      noNextCommand: "No next command is registered",
+      copyNextCommand: "Copy next command",
+      copied: "Copied",
+      copyFailed: "Copy failed",
       relation: {
         implementation: "Implementation paths",
         shared: "Shared rules",
@@ -1661,29 +1665,66 @@ function reviewNextCommandText(item) {
   return `${command}:${objectID}`;
 }
 
-function appendReviewPreviewHint(path) {
+function renderReviewProgressHeader(path) {
   const item = reviewItemByPath(path);
-  if (!item) return;
-  const block = document.createElement("section");
-  block.className = "review-preview-hint";
-
-  const title = document.createElement("h2");
-  title.textContent = t("review.afterReviewTitle");
-  block.appendChild(title);
-
-  const paragraph = document.createElement("p");
+  if (!item || !item.object) return "";
+  const steps = lifecycleSteps(item.object.kind);
+  const currentIndex = Math.max(steps.findIndex((step) => step.command === item.nextCommand), 0);
+  const progress = steps.length > 0 ? Math.round((currentIndex / Math.max(steps.length - 1, 1)) * 100) : 0;
   const command = reviewNextCommandText(item);
   if (command) {
-    paragraph.appendChild(document.createTextNode(`${t("review.afterReviewWithCommandPrefix")} `));
-    const code = document.createElement("code");
-    code.textContent = command;
-    paragraph.appendChild(code);
-    paragraph.appendChild(document.createTextNode(t("review.afterReviewWithCommandSuffix")));
-  } else {
-    paragraph.textContent = t("review.afterReviewNoCommand");
+    return `
+      <section class="review-progress-panel">
+        <div class="review-progress-head">
+          <h2>${escapeHTML(t("review.progressTitle"))}</h2>
+          <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(t("review.copyNextCommand"))}">
+            <span>${escapeHTML(t("review.nextCommand"))}</span>
+            <code>${escapeHTML(command)}</code>
+          </button>
+        </div>
+        <div class="lifecycle-track review-progress-track">
+          ${steps.map((step, index) => {
+            const stateClass = index < currentIndex ? "done" : index === currentIndex ? "current" : "future";
+            return `<span class="lifecycle-step ${stateClass}" title="${escapeAttr(step.command + " · " + step.label)}"><code>${escapeHTML(step.command)}</code></span>`;
+          }).join("")}
+        </div>
+        <div class="progress-line"><span style="width: ${progress}%"></span></div>
+      </section>
+    `;
   }
-  block.appendChild(paragraph);
-  sourceRendered.appendChild(block);
+  return `
+    <section class="review-progress-panel">
+      <div class="review-progress-head">
+        <h2>${escapeHTML(t("review.progressTitle"))}</h2>
+        <span class="review-next-empty">${escapeHTML(t("review.noNextCommand"))}</span>
+      </div>
+      <div class="lifecycle-track review-progress-track">
+        ${steps.map((step, index) => {
+          const stateClass = index < currentIndex ? "done" : index === currentIndex ? "current" : "future";
+          return `<span class="lifecycle-step ${stateClass}" title="${escapeAttr(step.command + " · " + step.label)}"><code>${escapeHTML(step.command)}</code></span>`;
+        }).join("")}
+      </div>
+      <div class="progress-line"><span style="width: ${progress}%"></span></div>
+    </section>
+  `;
+}
+
+function bindReviewProgressHeader() {
+  sourceRendered.querySelectorAll("[data-copy-next-command]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const command = button.dataset.copyNextCommand || "";
+      const originalHTML = button.innerHTML;
+      try {
+        await navigator.clipboard.writeText(command);
+        button.textContent = t("review.copied");
+      } catch {
+        button.textContent = t("review.copyFailed");
+      }
+      window.setTimeout(() => {
+        button.innerHTML = originalHTML;
+      }, 1200);
+    });
+  });
 }
 
 function reviewRelationSummary(item) {
@@ -2075,8 +2116,8 @@ async function openSource(path, options = {}) {
   const source = await response.json();
   sourcePath.textContent = source.path;
   sourceContent.textContent = source.content;
-  sourceRendered.innerHTML = renderMarkdown(source.content);
-  appendReviewPreviewHint(source.path);
+  sourceRendered.innerHTML = renderReviewProgressHeader(source.path) + renderMarkdown(source.content);
+  bindReviewProgressHeader();
   bindRenderedDocLinks(source.path);
   renderMermaidBlocks();
   setDocMode(activeDocMode);

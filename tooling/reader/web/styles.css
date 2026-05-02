@@ -554,29 +554,6 @@ button:hover {
   line-height: 1.5;
 }
 
-.review-preview-hint {
-  margin-top: 22px;
-  border: 1px solid #bfdbfe;
-  border-radius: 8px;
-  padding: 12px 14px;
-  background: #eff6ff;
-}
-
-.review-preview-hint h2 {
-  margin: 0 0 6px;
-  border-top: 0;
-  padding-top: 0;
-  color: #1d4ed8;
-  font-size: 15px;
-}
-
-.review-preview-hint p {
-  margin: 0;
-  color: var(--ink);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
 .status-view-active .layout {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -850,6 +827,63 @@ button:hover {
   height: 100%;
   border-radius: inherit;
   background: var(--accent);
+}
+
+.review-progress-panel {
+  margin: 0 0 18px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 12px;
+}
+
+.review-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.review-progress-head h2 {
+  margin: 0;
+  border-top: 0;
+  padding-top: 0;
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.review-progress-track {
+  margin-top: 0;
+}
+
+.review-next-command {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  border-color: #bfdbfe;
+  padding: 5px 9px;
+  background: #eff6ff;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.review-next-command code {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+}
+
+.review-progress-panel .lifecycle-step code {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.review-next-empty {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .detail-panel {

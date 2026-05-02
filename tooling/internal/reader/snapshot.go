@@ -2,6 +2,7 @@ package reader
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -20,6 +21,7 @@ type markdownDoc struct {
 }
 
 var sharedRefPattern = regexp.MustCompile("`?([cs]_shared_[A-Za-z0-9_]+@[0-9]+\\.[0-9]+\\.[0-9]+)`?")
+var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+\.md(?:#[^)]+)?)\)`)
 
 func BuildSnapshot(repoRoot string) Snapshot {
 	repoRoot, _ = filepath.Abs(repoRoot)
@@ -163,9 +165,61 @@ func buildObjectFromStatus(status statusfile.ObjectStatus, mapping repositoryMap
 			object.Version = doc.Frontmatter.Scalars["version"]
 		}
 		object.SharedRefs = appendUnique(object.SharedRefs, extractSharedIDs(doc.Text)...)
+		object.TruthPaths = appendSourceUnique(object.TruthPaths, appendixRefsForDoc(doc, docs)...)
 	}
 	sort.Strings(object.SharedRefs)
 	return object
+}
+
+func appendixRefsForDoc(doc markdownDoc, docs map[string]markdownDoc) []SourceRef {
+	refs := []SourceRef{}
+	evidenceRef := strings.TrimSpace(doc.Frontmatter.Scalars["evidence_appendix_ref"])
+	if evidenceRef != "" && evidenceRef != "none" {
+		if ref, ok := resolveDocRef(doc.RelPath, evidenceRef, docs); ok && isAppendixPath(ref.Path) {
+			ref.Label = "Evidence Appendix"
+			refs = appendSourceUnique(refs, ref)
+		}
+	}
+	for _, match := range markdownLinkPattern.FindAllStringSubmatch(doc.Text, -1) {
+		if len(match) != 2 {
+			continue
+		}
+		ref, ok := resolveDocRef(doc.RelPath, match[1], docs)
+		if !ok || !isAppendixPath(ref.Path) {
+			continue
+		}
+		ref.Label = "Appendix"
+		refs = appendSourceUnique(refs, ref)
+	}
+	return refs
+}
+
+func resolveDocRef(fromPath, rawRef string, docs map[string]markdownDoc) (SourceRef, bool) {
+	rawRef = strings.TrimSpace(rawRef)
+	rawRef = strings.Trim(rawRef, "<>")
+	if rawRef == "" || strings.Contains(rawRef, "://") || strings.HasPrefix(rawRef, "#") {
+		return SourceRef{}, false
+	}
+	if before, _, ok := strings.Cut(rawRef, "#"); ok {
+		rawRef = before
+	}
+	rawRef = strings.ReplaceAll(rawRef, "\\", "/")
+	refPath := rawRef
+	if !strings.HasPrefix(refPath, "docs/") {
+		refPath = path.Join(path.Dir(fromPath), refPath)
+	}
+	refPath = path.Clean(refPath)
+	if !strings.HasPrefix(refPath, "docs/specs/") {
+		return SourceRef{}, false
+	}
+	if _, ok := docs[refPath]; !ok {
+		return SourceRef{}, false
+	}
+	return SourceRef{Path: refPath}, true
+}
+
+func isAppendixPath(path string) bool {
+	return strings.Contains(path, "/appendix/")
 }
 
 func buildSharedObjects(mapping repositoryMapping, docs []markdownDoc) []ObjectView {

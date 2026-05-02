@@ -20,7 +20,12 @@ func TestBuildSnapshotConnectsUnitSpecAndSharedContract(t *testing.T) {
 	if unit.NextLabel != "检查设计是否足够支撑开发" {
 		t.Fatalf("expected translated next command, got %q", unit.NextLabel)
 	}
-	if len(unit.TruthPaths) != 1 || unit.TruthPaths[0].Path != "docs/specs/units/candidate/c_unit_assistant.md" {
+	expectedTruthPaths := []string{
+		"docs/specs/units/candidate/c_unit_assistant.md",
+		"docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md",
+		"docs/specs/units/candidate/appendix/c_unit_assistant_prompt.md",
+	}
+	if !sourcePathsEqual(unit.TruthPaths, expectedTruthPaths) {
 		t.Fatalf("unexpected truth paths: %+v", unit.TruthPaths)
 	}
 	if len(unit.SharedRefs) != 1 || unit.SharedRefs[0] != "shared_runtime_model" {
@@ -149,11 +154,23 @@ func createReaderRepo(t *testing.T) string {
 		"id: assistant",
 		"layer: candidate",
 		"version: 0.1.0",
+		"evidence_appendix_ref: docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md",
 		"---",
 		"",
 		"# Assistant",
 		"",
 		"1. `shared_contract_refs`: `c_shared_runtime_model@0.1.0`",
+		"2. Prompt details live in [`c_unit_assistant_prompt.md`](./appendix/c_unit_assistant_prompt.md).",
+	}, "\n")+"\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md"), strings.Join([]string{
+		"# Assistant Evidence",
+		"",
+		"Evidence notes.",
+	}, "\n")+"\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_prompt.md"), strings.Join([]string{
+		"# Assistant Prompt",
+		"",
+		"Prompt notes.",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate/c_shared_runtime_model.md"), strings.Join([]string{
 		"---",
@@ -167,6 +184,18 @@ func createReaderRepo(t *testing.T) string {
 		"# Shared Runtime Model",
 	}, "\n")+"\n")
 	return repoRoot
+}
+
+func sourcePathsEqual(refs []SourceRef, expected []string) bool {
+	if len(refs) != len(expected) {
+		return false
+	}
+	for idx, expectedPath := range expected {
+		if refs[idx].Path != expectedPath {
+			return false
+		}
+	}
+	return true
 }
 
 func writeReaderTestFile(t *testing.T, path, content string) {
