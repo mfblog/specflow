@@ -88,19 +88,25 @@
               <h2 data-i18n="inspector.truthTitle"></h2>
               <span id="source-path"></span>
             </div>
-            <div class="doc-mode-switch" data-i18n-attr="aria-label:docModeAria">
-              <button class="doc-mode active" data-doc-mode="rendered" type="button" data-i18n="docMode.rendered"></button>
-              <button class="doc-mode" data-doc-mode="raw" type="button" data-i18n="docMode.raw"></button>
+            <div class="truth-controls">
+              <button id="doc-guide-toggle" class="doc-guide-toggle" type="button"></button>
+              <div class="doc-mode-switch" data-i18n-attr="aria-label:docModeAria">
+                <button class="doc-mode active" data-doc-mode="rendered" type="button" data-i18n="docMode.rendered"></button>
+                <button class="doc-mode" data-doc-mode="raw" type="button" data-i18n="docMode.raw"></button>
+              </div>
             </div>
           </div>
-          <article id="source-rendered" class="markdown-doc"></article>
-          <pre id="source-content" class="hidden"></pre>
+          <div class="truth-body">
+            <nav id="doc-guide" class="doc-guide hidden" data-i18n-attr="aria-label:docGuideAria"></nav>
+            <article id="source-rendered" class="markdown-doc"></article>
+            <pre id="source-content" class="hidden"></pre>
+          </div>
         </section>
       </aside>
     </main>
 
     <script src="/cytoscape.min.js"></script>
     <script src="/mermaid.min.js"></script>
-    <script src="/app.js?v=20260502-review-progress"></script>
+    <script src="/app.js?v=20260502-side-guide"></script>
   </body>
 </html>

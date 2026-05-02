@@ -986,23 +986,107 @@ button:hover {
   border-bottom: 1px solid var(--line);
 }
 
+.truth-controls {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
 .doc-mode-switch {
   display: inline-flex;
   gap: 4px;
   flex: 0 0 auto;
 }
 
-.doc-mode {
+.doc-mode,
+.doc-guide-toggle {
   min-width: 46px;
   min-height: 28px;
   padding: 4px 8px;
   font-size: 12px;
 }
 
+.doc-guide-toggle[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: #eff6ff;
+  color: var(--accent);
+}
+
+.doc-guide-toggle:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
 .doc-mode.active {
   border-color: var(--accent);
   background: #eff6ff;
   color: var(--accent);
+}
+
+.truth-body {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.truth-panel.guide-closed .truth-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.doc-guide {
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+  padding: 9px 12px 10px;
+  background: #f8fafc;
+}
+
+.doc-guide-title {
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.doc-guide-list {
+  display: grid;
+  gap: 4px;
+}
+
+.doc-guide-item {
+  width: 100%;
+  min-height: 26px;
+  border: 0;
+  border-radius: 5px;
+  padding: 4px 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.doc-guide-item:hover,
+.doc-guide-item:focus-visible {
+  background: #eff6ff;
+  color: var(--accent);
+  outline: none;
+}
+
+.doc-guide-item.depth-2 {
+  padding-left: 18px;
+}
+
+.doc-guide-item.depth-3 {
+  padding-left: 30px;
+}
+
+.doc-guide-item.depth-4 {
+  padding-left: 42px;
 }
 
 #source-path {
@@ -1012,7 +1096,8 @@ button:hover {
 }
 
 #source-content {
-  flex: 1;
+  min-height: 0;
+  width: 100%;
   margin: 0;
   overflow: auto;
   padding: 12px;
@@ -1023,8 +1108,8 @@ button:hover {
 }
 
 .markdown-doc {
-  flex: 1;
   min-height: 0;
+  width: 100%;
   overflow: auto;
   padding: 16px 18px 28px;
   color: var(--ink);
@@ -1036,6 +1121,7 @@ button:hover {
 .markdown-doc h2,
 .markdown-doc h3,
 .markdown-doc h4 {
+  scroll-margin-top: 10px;
   margin: 18px 0 8px;
   line-height: 1.3;
 }

@@ -251,6 +251,25 @@ func TestValidateAcceptsClosedDesignRunStateShape(t *testing.T) {
 	}
 }
 
+func TestValidateAcceptsClosedDesignPassWithOptimizationRunStateShape(t *testing.T) {
+	repoRoot := createReviewRunRepo(t)
+	now := time.Date(2026, 4, 26, 10, 30, 0, 0, time.UTC)
+	result, err := Init(repoRoot, FlowSpecFlowDesignReview, now)
+	if err != nil {
+		t.Fatalf("Init design review: %v", err)
+	}
+	state := mustParse(t, result.File)
+	state.Fields["status"] = statusClosedPassWithOptimization
+	state.Fields["active_slice"] = "none"
+	state.Fields["resume_next_step"] = "none"
+	mustWrite(t, result.File, renderState(mustConfig(t, FlowSpecFlowDesignReview), state))
+
+	validation := ValidateFile(repoRoot, FlowSpecFlowDesignReview, result.File, now)
+	if !validation.Valid {
+		t.Fatalf("expected pass-with-optimization run-state shape to validate, got diagnostics: %+v", validation.Diagnostics)
+	}
+}
+
 func TestRefreshRejectsClosedRunState(t *testing.T) {
 	repoRoot, file, now := createInitializedRun(t)
 	state := mustParse(t, file)
@@ -437,6 +456,30 @@ func TestInitDeletesClosedRunAndCreatesNewRun(t *testing.T) {
 	recreated := mustParse(t, file)
 	if recreated.Fields["review_run_id"] != "20260426-103100-default_governance_baseline" {
 		t.Fatalf("expected new run id in fixed file, got %s", recreated.Fields["review_run_id"])
+	}
+}
+
+func TestInitDeletesClosedPassWithOptimizationRunAndCreatesNewRun(t *testing.T) {
+	repoRoot := createReviewRunRepo(t)
+	now := time.Date(2026, 4, 26, 10, 30, 0, 0, time.UTC)
+	result, err := Init(repoRoot, FlowSpecFlowDesignReview, now)
+	if err != nil {
+		t.Fatalf("Init design review: %v", err)
+	}
+	state := mustParse(t, result.File)
+	state.Fields["status"] = statusClosedPassWithOptimization
+	mustWrite(t, result.File, renderState(mustConfig(t, FlowSpecFlowDesignReview), state))
+
+	next, err := Init(repoRoot, FlowSpecFlowDesignReview, now.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("Init design review: %v", err)
+	}
+	if !next.Created || next.File != result.File || len(next.DeletedFiles) != 1 || next.DeletedFiles[0].File != result.File || next.DeletedFiles[0].Reason != "closed_run_state" {
+		t.Fatalf("expected pass-with-optimization file deletion and fixed path recreation, got %+v", next)
+	}
+	recreated := mustParse(t, result.File)
+	if recreated.Fields["review_run_id"] != "20260426-103100-default_design_baseline" {
+		t.Fatalf("expected new design run id in fixed file, got %s", recreated.Fields["review_run_id"])
 	}
 }
 

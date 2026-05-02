@@ -10,6 +10,8 @@ let activeSpecflowNavGroup = "unit";
 let activeReviewNavGroup = "capability";
 let snapshotRequestInFlight = false;
 let snapshotDataSignature = "";
+let activeSourceHeadings = [];
+let docGuideOpen = true;
 
 const LANGUAGE_STORAGE_KEY = "specflow-reader-language";
 const SUPPORTED_LANGUAGES = ["zh-CN", "en"];
@@ -24,6 +26,7 @@ const TRANSLATIONS = {
     resizeAria: "调整检查面板宽度",
     inspectorTabsAria: "节点检查",
     docModeAria: "Spec 文档显示模式",
+    docGuideAria: "Spec 文档导览",
     refresh: "刷新",
     language: {
       label: "语言",
@@ -237,6 +240,11 @@ const TRANSLATIONS = {
       raw: "原文"
     },
     source: {
+      guideTitle: "导览",
+      guideShow: "显示导览",
+      guideHide: "隐藏导览",
+      guideUnavailable: "无导览",
+      noGuide: "暂无标题",
       emptyRendered: "选择一个 Spec 文档查看内容。",
       emptyRaw: "选择一个 Spec 文档查看原文。"
     },
@@ -260,6 +268,7 @@ const TRANSLATIONS = {
     resizeAria: "Resize inspector panel",
     inspectorTabsAria: "Node inspector",
     docModeAria: "Spec document display mode",
+    docGuideAria: "Spec document guide",
     refresh: "Refresh",
     language: {
       label: "Language",
@@ -473,6 +482,11 @@ const TRANSLATIONS = {
       raw: "Source"
     },
     source: {
+      guideTitle: "Guide",
+      guideShow: "Show Guide",
+      guideHide: "Hide Guide",
+      guideUnavailable: "No Guide",
+      noGuide: "No headings",
       emptyRendered: "Select a Spec document to view its content.",
       emptyRaw: "Select a Spec document to view its source."
     },
@@ -499,6 +513,8 @@ const projectMeta = document.getElementById("project-meta");
 const sourcePath = document.getElementById("source-path");
 const sourceContent = document.getElementById("source-content");
 const sourceRendered = document.getElementById("source-rendered");
+const docGuide = document.getElementById("doc-guide");
+const docGuideToggle = document.getElementById("doc-guide-toggle");
 const resizeBar = document.getElementById("resize-bar");
 const infoTab = document.getElementById("info-tab");
 const truthTab = document.getElementById("truth-tab");
@@ -526,6 +542,7 @@ document.querySelectorAll("[data-inspector-tab]").forEach((button) => {
 document.querySelectorAll("[data-doc-mode]").forEach((button) => {
   button.addEventListener("click", () => setDocMode(button.dataset.docMode));
 });
+docGuideToggle.addEventListener("click", () => setDocGuideOpen(!docGuideOpen));
 
 resizeBar.addEventListener("pointerdown", startInspectorResize);
 
@@ -583,6 +600,9 @@ function applyStaticText() {
     sourceRendered.textContent = t("source.emptyRendered");
     sourceContent.textContent = t("source.emptyRaw");
   }
+  renderDocGuide(activeSourceHeadings);
+  bindDocGuideLinks();
+  updateDocGuideToggle();
 }
 
 async function loadSnapshot() {
@@ -2005,6 +2025,8 @@ function updateTruthTab(truthRefs, ownerID, options = {}) {
     sourcePath.textContent = "";
     sourceContent.textContent = t("source.emptyRaw");
     sourceRendered.textContent = t("source.emptyRendered");
+    activeSourceHeadings = [];
+    renderDocGuide([]);
     setInspectorTab("info");
     return;
   }
@@ -2109,25 +2131,36 @@ async function openSource(path, options = {}) {
     sourcePath.textContent = path;
     sourceContent.textContent = message;
     sourceRendered.textContent = message;
+    activeSourceHeadings = [];
+    renderDocGuide([]);
     setDocMode(activeDocMode);
     if (activate) setInspectorTab("truth");
     return;
   }
   const source = await response.json();
+  const renderedDoc = renderMarkdownDocument(source.content);
   sourcePath.textContent = source.path;
   sourceContent.textContent = source.content;
-  sourceRendered.innerHTML = renderReviewProgressHeader(source.path) + renderMarkdown(source.content);
+  sourceRendered.innerHTML = renderReviewProgressHeader(source.path) + renderedDoc.html;
+  activeSourceHeadings = renderedDoc.headings;
+  renderDocGuide(activeSourceHeadings);
   bindReviewProgressHeader();
   bindRenderedDocLinks(source.path);
+  bindDocGuideLinks();
   renderMermaidBlocks();
   setDocMode(activeDocMode);
   if (activate) setInspectorTab("truth");
 }
 
 function renderMarkdown(markdown) {
+  return renderMarkdownDocument(markdown).html;
+}
+
+function renderMarkdownDocument(markdown) {
   const parsed = splitFrontmatter(String(markdown || "").replaceAll("\r\n", "\n"));
   const lines = parsed.body.split("\n");
   const html = [];
+  const headings = [];
   let paragraph = [];
   let listType = "";
   let inCode = false;
@@ -2160,7 +2193,7 @@ function renderMarkdown(markdown) {
     html.push(renderFrontmatter(parsed.frontmatter));
   }
 
-  lines.forEach((line) => {
+  lines.forEach((line, index) => {
     if (line.startsWith("```")) {
       if (inCode) {
         const code = codeLines.join("\n");
@@ -2202,7 +2235,10 @@ function renderMarkdown(markdown) {
       flushParagraph();
       flushList();
       const level = heading[1].length;
-      html.push(`<h${level}>${renderInline(heading[2])}</h${level}>`);
+      const text = plainHeadingText(heading[2]);
+      const id = `doc-heading-${headings.length + 1}`;
+      headings.push({ id, level, text, line: parsed.bodyStartLine + index });
+      html.push(`<h${level} id="${escapeAttr(id)}">${renderInline(heading[2])}</h${level}>`);
       return;
     }
 
@@ -2245,7 +2281,75 @@ function renderMarkdown(markdown) {
     html.push(`<pre><code>${escapeHTML(codeLines.join("\n"))}</code></pre>`);
   }
   flushBlocks();
-  return html.join("");
+  return { html: html.join(""), headings };
+}
+
+function renderDocGuide(headings) {
+  const items = list(headings);
+  if (!docGuide) return;
+  if (items.length === 0) {
+    docGuide.classList.add("hidden");
+    docGuide.innerHTML = "";
+    truthPanel.classList.add("guide-closed");
+    updateDocGuideToggle();
+    return;
+  }
+  docGuide.classList.toggle("hidden", !docGuideOpen);
+  truthPanel.classList.toggle("guide-closed", !docGuideOpen);
+  docGuide.innerHTML = `
+    <div class="doc-guide-title">${escapeHTML(t("source.guideTitle"))}</div>
+    <div class="doc-guide-list">
+      ${items.map((heading) => `
+        <button class="doc-guide-item depth-${Math.min(Math.max(heading.level, 1), 4)}" type="button" data-heading-id="${escapeAttr(heading.id)}" data-heading-line="${escapeAttr(heading.line)}">
+          ${escapeHTML(heading.text || t("source.noGuide"))}
+        </button>
+      `).join("")}
+    </div>
+  `;
+  updateDocGuideToggle();
+}
+
+function setDocGuideOpen(open) {
+  docGuideOpen = Boolean(open);
+  renderDocGuide(activeSourceHeadings);
+  bindDocGuideLinks();
+}
+
+function updateDocGuideToggle() {
+  if (!docGuideToggle) return;
+  const hasGuide = list(activeSourceHeadings).length > 0;
+  docGuideToggle.disabled = !hasGuide;
+  docGuideToggle.textContent = hasGuide
+    ? t(docGuideOpen ? "source.guideHide" : "source.guideShow")
+    : t("source.guideUnavailable");
+  docGuideToggle.setAttribute("aria-expanded", String(hasGuide && docGuideOpen));
+}
+
+function bindDocGuideLinks() {
+  if (!docGuide) return;
+  docGuide.querySelectorAll("[data-heading-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (activeDocMode === "raw") {
+        scrollRawSourceToLine(Number(button.dataset.headingLine || 1));
+        return;
+      }
+      const target = document.getElementById(button.dataset.headingId);
+      if (target) target.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  });
+}
+
+function scrollRawSourceToLine(line) {
+  const style = window.getComputedStyle(sourceContent);
+  const lineHeight = Number.parseFloat(style.lineHeight) || 18;
+  sourceContent.scrollTop = Math.max(0, (Math.max(line, 1) - 1) * lineHeight - 24);
+}
+
+function plainHeadingText(text) {
+  return String(text || "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[`*_#]/g, "")
+    .trim();
 }
 
 async function renderMermaidBlocks() {
@@ -2272,15 +2376,16 @@ async function renderMermaidBlocks() {
 function splitFrontmatter(markdown) {
   const lines = markdown.split("\n");
   if (lines[0] !== "---") {
-    return { frontmatter: [], body: markdown };
+    return { frontmatter: [], body: markdown, bodyStartLine: 1 };
   }
   const end = lines.findIndex((line, index) => index > 0 && line === "---");
   if (end < 0) {
-    return { frontmatter: [], body: markdown };
+    return { frontmatter: [], body: markdown, bodyStartLine: 1 };
   }
   return {
     frontmatter: lines.slice(1, end),
-    body: lines.slice(end + 1).join("\n")
+    body: lines.slice(end + 1).join("\n"),
+    bodyStartLine: end + 2
   };
 }
 

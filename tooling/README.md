@@ -60,7 +60,7 @@ The tooling layer must not:
 1. invent new lifecycle semantics
 2. replace command closure judgment
 3. replace shared-boundary judgment
-4. replace review severity or `pass | blocked` judgment
+4. replace review severity or `pass | pass-with-optimization | blocked` judgment
 5. become a second semantic source of truth
 6. write reader-derived conclusions back into project files
 
@@ -154,6 +154,7 @@ Reader front-end rules:
 8. the selected reader language may be stored in browser-local state and must not be written into project files.
 9. the front-end refresh button requests a new snapshot immediately.
 10. the front-end also polls `/api/snapshot` on a fixed interval so open pages converge to the latest disk state without relying on filesystem events.
+11. the Markdown document panel builds an in-memory side guide from the source document's Markdown headings, lets the reader open or close that guide locally, and uses it only for scrolling inside the currently opened document.
 
 ## Review Run-State Commands
 
@@ -176,7 +177,7 @@ Rules:
 3. `run-refresh` may change `passed` slices to `stale` when inputs change or disappear
 4. tooling must not change `pending`, `blocked`, or `skipped_not_in_scope` into a passing judgment
 5. tooling may create and validate the `spec_flow_design_review` score-state skeleton
-6. tooling must not write findings, severities, question scores, score basis, hard-blocker judgments, or final `pass | blocked` conclusions
+6. tooling must not write findings, severities, non-blocking optimizations, question scores, score basis, hard-blocker judgments, or final `pass | pass-with-optimization | blocked` conclusions
 7. each review flow uses one fixed run-state file
 8. when the fixed run-state file is missing, tooling creates the file for a new full-scope review
 9. when a new full-scope review starts after a closed or invalid run-state file, tooling deletes the old fixed file before writing the new run state

@@ -22,6 +22,7 @@ const (
 	statusBlockedOnFinding = "blocked_on_finding"
 	statusReadyForFinal    = "ready_for_final"
 	statusClosedPass       = "closed_pass"
+	statusClosedPassWithOptimization = "closed_pass_with_optimization"
 	statusClosedBlocked    = "closed_blocked"
 
 	slicePending           = "pending"
@@ -446,7 +447,7 @@ func inspectFixedRunState(repoRoot string, config flowConfig, file string, now t
 		return &fixedRunStateFile{Reason: "invalid_run_state"}, nil
 	}
 	status := strings.TrimSpace(state.Fields["status"])
-	if status == statusClosedPass || status == statusClosedBlocked {
+	if status == statusClosedPass || status == statusClosedPassWithOptimization || status == statusClosedBlocked {
 		return &fixedRunStateFile{Reason: "closed_run_state"}, nil
 	}
 	diagnostics := validateState(repoRoot, config, state, now, validateOpenRun)
@@ -1324,7 +1325,7 @@ func isOpenRunStatus(status string) bool {
 }
 
 func isRunStatus(status string) bool {
-	return isOpenRunStatus(status) || status == statusClosedPass || status == statusClosedBlocked
+	return isOpenRunStatus(status) || status == statusClosedPass || status == statusClosedPassWithOptimization || status == statusClosedBlocked
 }
 
 func isSliceStatus(status string) bool {
