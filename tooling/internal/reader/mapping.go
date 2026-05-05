@@ -101,7 +101,7 @@ func loadRepositoryMapping(repoRoot string) repositoryMapping {
 			}
 		case "shared_map":
 			if id, ok := parseNumberedCodeSpan(trimmed); ok {
-				currentID = normalizedSharedID(id)
+				currentID = normalizedBoundRuleID(id)
 				shared := result.Rules[currentID]
 				shared.ID = currentID
 				result.Rules[currentID] = shared
@@ -114,7 +114,7 @@ func loadRepositoryMapping(repoRoot string) repositoryMapping {
 			}
 		case "shared_paths":
 			if id, ok := parseNumberedCodeSpan(trimmed); ok {
-				currentID = normalizedSharedID(id)
+				currentID = normalizedBoundRuleID(id)
 				shared := result.Rules[currentID]
 				shared.ID = currentID
 				result.Rules[currentID] = shared
@@ -224,10 +224,10 @@ func extractFirstCodeSpan(line string) string {
 	return strings.TrimSpace(line[start+1 : start+1+end])
 }
 
-func normalizedSharedID(id string) string {
+func normalizedBoundRuleID(id string) string {
 	id = strings.TrimSpace(id)
-	if id == "" || strings.HasPrefix(id, "shared_") {
+	if id == "" || strings.HasPrefix(id, "b_rule_") {
 		return id
 	}
-	return "shared_" + id
+	return "b_rule_" + id
 }

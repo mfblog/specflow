@@ -33,8 +33,17 @@ func TestBuildSnapshotConnectsUnitSpecAndRule(t *testing.T) {
 	}
 
 	shared := findObject(t, snapshot.Objects, "rule", "b_rule_runtime_model")
+	if countObjects(snapshot.Objects, "rule", "b_rule_runtime_model") != 1 {
+		t.Fatalf("expected one runtime rule object, got %+v", snapshot.Objects)
+	}
+	if countObjects(snapshot.Objects, "rule", "shared_runtime_model") != 0 {
+		t.Fatalf("mapping shorthand must merge into the formal rule object, got %+v", snapshot.Objects)
+	}
 	if len(shared.BoundObjects) != 1 || shared.BoundObjects[0] != "unit:assistant" {
 		t.Fatalf("unexpected bound objects: %+v", shared.BoundObjects)
+	}
+	if !sourcePathsEqual(shared.TruthPaths, []string{"docs/specs/rules/candidate/c_b_rule_runtime_model.md"}) {
+		t.Fatalf("unexpected shared truth paths: %+v", shared.TruthPaths)
 	}
 	if !hasEdge(snapshot.Edges, "unit:assistant", "file:docs/specs/units/candidate/c_unit_assistant.md", "described_by") {
 		t.Fatalf("expected unit described_by edge, got %+v", snapshot.Edges)
@@ -102,6 +111,16 @@ func findNode(t *testing.T, nodes []GraphNode, id string) GraphNode {
 	return GraphNode{}
 }
 
+func countObjects(objects []ObjectView, kind, id string) int {
+	count := 0
+	for _, object := range objects {
+		if object.Kind == kind && object.ID == id {
+			count++
+		}
+	}
+	return count
+}
+
 func hasEdge(edges []GraphEdge, from, to, kind string) bool {
 	for _, edge := range edges {
 		if edge.From == from && edge.To == to && edge.Kind == kind {
@@ -133,7 +152,7 @@ func createReaderRepo(t *testing.T) string {
 		"",
 		"### 2.3 Current Rules",
 		"",
-		"1. `runtime_model`",
+		"1. `b_rule_runtime_model`",
 		"   - runtime model rule",
 		"",
 		"### 4.5 Rule Truth Paths",
