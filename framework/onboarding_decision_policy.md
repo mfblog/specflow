@@ -44,8 +44,8 @@ This policy covers:
 1. `unit` candidates
 2. `scenario` candidates
 
-This policy does not independently govern `shared_contract`.
-Shared truth remains governed by the shared-governance branch and the internal shared flows.
+This policy does not independently govern `rule`.
+Rule truth remains governed by the rule-governance branch and the internal rule flows.
 
 ---
 
@@ -62,7 +62,7 @@ Required reads:
 3. the current-layer candidate or stable Spec when it exists
 4. the candidate evidence appendix when `evidence_appendix_ref` is not `none`
 5. directly relevant implementation or test files only when repository mapping shows that they are inside the target scope or when the user named them directly
-6. `docs/specs/system_constraints.md` when the candidate source decision depends on a global default, shared mechanism, prohibition, or exception
+6. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the candidate source decision depends on a global default, shared mechanism, prohibition, or exception
 
 Rules:
 
@@ -236,7 +236,7 @@ Direct first-stable onboarding is allowed only when all of these hold:
 2. the evidence is complete enough to cover the stable Spec's behavior, boundary, protocols, error semantics, and acceptance criteria
 3. material conflicts are closed
 4. material unknowns are closed or explicitly proven irrelevant to the stable scope
-5. shared truth and global constraints are already resolved or bound
+5. rule truth and global rules are already resolved or bound
 
 If any condition does not hold, the next legal route is candidate creation using this policy, not first-stable creation.
 

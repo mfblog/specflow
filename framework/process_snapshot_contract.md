@@ -24,13 +24,15 @@ This contract governs process files for:
    - `docs/specs/_check_result/unit/{unit}.md`
    - `docs/specs/_plans/active/{unit}.md`
    - `docs/specs/_verify_result/unit/{unit}.md`
+   - `docs/specs/_verify_result/stable/unit/{unit}.md`
 2. `scenario`
    - `docs/specs/_check_result/scenario/{scenario}.md`
    - `docs/specs/_verify_result/scenario/{scenario}.md`
+   - `docs/specs/_verify_result/stable/scenario/{scenario}.md`
 
 It also governs any internal flow that revalidates those files, including:
 
-1. `shared_sync`
+1. `rule_sync`
 2. `impact_sync`
 
 It does not define object truth.
@@ -54,12 +56,10 @@ Every gate-bearing process file covered by this contract must record:
    - `<file_prefix>@<version>`
 6. `truth_fingerprint`
    - the Section 6 fingerprint of `truth_file_ref`
-7. `system_constraints_file_ref`
-   - the currently bound system-constraints file, or `none`
-8. `system_constraints_version_ref`
-   - the currently bound system-constraints version, or `none`
-9. `system_constraints_fingerprint`
-   - the fingerprint of the currently bound system-constraints file, or `none`
+7. `rule_snapshot`
+   - the normalized rule snapshot visible to the current truth file, or `none`
+8. `acceptance_item_set`
+   - the normalized acceptance item set from the current truth file used by the gate
 
 Gate-bearing process files are:
 
@@ -70,7 +70,19 @@ Rules:
 
 1. the field names above are fixed
 2. executors must not substitute `spec_fingerprint` for gate-bearing files
-3. if a file correctly binds no system constraints, all three system-constraints fields must use literal `none`
+3. `rule_snapshot` includes all stable global rules and every formal rule listed by `rule_refs`
+4. if no rule is visible to the current truth file, `rule_snapshot` must use literal `none`
+5. `acceptance_item_set` must be an ordered list where each item records at least:
+   - `id`
+   - `verification_surface`
+   - `not_runnable_yet` as `yes` or `no`
+6. the order of `acceptance_item_set` is ascending lexical order by `id`
+7. `docs/specs/_verify_result/{object_type}/{object}.md` must additionally record an `acceptance_item_evidence_matrix` that gives one status for every item in `acceptance_item_set`
+8. `acceptance_item_evidence_matrix` must be an ordered list where each item records:
+   - `id`
+   - `status`
+9. the order of `acceptance_item_evidence_matrix` is ascending lexical order by `id`
+10. allowed evidence-matrix statuses are exactly `pass`, `fail`, `partial`, `not_checked`, and `not_runnable_yet`
 
 ### 3.2 Unit Active Plan Files
 
@@ -86,23 +98,62 @@ Every unit active plan file must record:
    - the Section 6 fingerprint of `spec_file_ref`
 4. `unit_appendix_snapshot`
    - the normalized appendix snapshot of the current candidate-layer unit truth, or `none`
-5. `system_constraints_file_ref`
-   - the currently bound system-constraints file, or `none`
-6. `system_constraints_version_ref`
-   - the currently bound system-constraints version, or `none`
-7. `system_constraints_fingerprint`
-   - the fingerprint of the currently bound system-constraints file, or `none`
-8. `shared_contract_snapshot`
-   - the normalized shared snapshot of the current candidate-layer unit truth, or `none`
+5. `rule_snapshot`
+   - the normalized rule snapshot visible to the current candidate-layer unit truth, or `none`
+6. `acceptance_item_plan_coverage`
+   - the active plan's mapping from current candidate acceptance item `id` values to implementation slices and verification targets
 
 Rules:
 
 1. `active/{unit}.md` does not carry `gate`, `decision`, `allow_next`, or `next_command`
-2. `active/{unit}.md` still records the exact candidate unit truth and exact current global-binding snapshot it was written against
-3. if an active plan correctly binds no appendix or shared files, `unit_appendix_snapshot` or `shared_contract_snapshot` must use literal `none`
-4. if an active plan correctly binds no system constraints, all three system-constraints fields must use literal `none`
+2. `active/{unit}.md` still records the exact candidate unit truth and exact rule snapshot it was written against
+3. if an active plan correctly binds no appendix files, `unit_appendix_snapshot` must use literal `none`
+4. if no rule is visible to the current candidate-layer unit truth, `rule_snapshot` must use literal `none`
+5. `acceptance_item_plan_coverage` must be an ordered list where each item records:
+   - `id`
+   - `coverage`
+6. `coverage` must name the implementation slices or verification targets that cover the item
+7. the order of `acceptance_item_plan_coverage` is ascending lexical order by `id`
+8. `acceptance_item_plan_coverage` must cover every current-gate acceptance item that the candidate claims for the current round, or the active plan is not consumable
 
-### 3.3 Unit Draft Plan Files
+### 3.3 Stable Acceptance Summary Files
+
+`docs/specs/_verify_result/stable/{object_type}/{object}.md` stores the minimal acceptance coverage summary preserved by promotion.
+
+It is not:
+
+1. a gate-bearing file
+2. a substitute for stable truth
+3. a current implementation-alignment claim after later code changes
+
+Each stable acceptance summary must record:
+
+1. `object_type`
+   - one of `unit`, `scenario`
+2. `object_ref`
+   - the bare formal object identifier
+3. `stable_truth_file_ref`
+   - the stable truth file written by promotion
+4. `stable_truth_version_ref`
+   - `<file_prefix>@<version>`
+5. `stable_truth_fingerprint`
+   - the Section 6 fingerprint of `stable_truth_file_ref`
+6. `promotion_verify_result_ref`
+   - the current-round verify result file consumed by promotion before cleanup
+7. `acceptance_item_set`
+   - the normalized acceptance item set promoted into stable
+8. `acceptance_item_coverage_summary`
+   - the final status of each promoted acceptance item
+9. `key_evidence_source_refs`
+   - the smallest useful references to commands, tests, inspections, or manual evidence that proved the promoted items
+
+Rules:
+
+1. a stable acceptance summary records what evidence closed the promoted version
+2. later implementation drift does not rewrite this file into a new pass claim
+3. later stable verification may read it as background, but must collect current evidence before making a new stable-alignment claim
+
+### 3.4 Unit Draft Plan Files
 
 `docs/specs/_plans/draft/{unit}.md` is a planning working artifact.
 
@@ -141,7 +192,7 @@ Rules:
 `unit` process files may additionally record:
 
 1. `unit_appendix_snapshot`
-2. `shared_contract_snapshot`
+2. `rule_snapshot`
 
 `unit_appendix_snapshot` has only two legal forms:
 
@@ -151,11 +202,11 @@ Rules:
    - `appendix_ref`
    - `fingerprint`
 
-`shared_contract_snapshot` has only two legal forms:
+`rule_snapshot` has only two legal forms:
 
 1. literal `none`
 2. a normalized ordered list where each item contains:
-   - `shared_contract_id`
+   - `rule_id`
    - `layer`
    - `file_ref`
    - `version_ref`
@@ -167,7 +218,7 @@ Rules:
 
 1. `repository_mapping_snapshot`
 2. `unit_snapshot`
-3. `shared_contract_snapshot`
+3. `rule_snapshot`
 
 `repository_mapping_snapshot` has only one legal form:
 
@@ -186,7 +237,7 @@ Rules:
    - `version_ref`
    - `fingerprint`
 
-`shared_contract_snapshot` uses the same shape as `unit`.
+`rule_snapshot` uses the same shape as `unit`.
 
 ## 5. Binding And Inclusion Boundary
 
@@ -197,7 +248,7 @@ Rules:
 1. `unit_appendix_snapshot` includes only appendix files explicitly referenced by the current-layer unit truth
 2. `repository_mapping_snapshot` captures only `docs/specs/repository_mapping.md`
 3. `unit_snapshot` includes only units formally bound by current `scenario` truth
-4. `shared_contract_snapshot` includes only currently bound shared files from formal `shared_contract_refs`
+4. `rule_snapshot` includes all stable global rules and every formal rule listed by `rule_refs`
 5. `bound_objects` metadata is never a formal inclusion source
 6. a `bound_objects`-only delta does not by itself invalidate downstream process files
 
@@ -217,8 +268,8 @@ This same fingerprint contract applies to:
 3. appendix file fingerprints
 4. `repository_mapping_snapshot` fingerprints
 5. `unit_snapshot` item fingerprints
-6. `shared_contract_snapshot` item fingerprints
-7. `system_constraints_fingerprint`
+6. `rule_snapshot` item fingerprints
+7. `stable_truth_fingerprint`
 
 ## 7. Text Normalization Rules
 
@@ -252,10 +303,19 @@ Ordering rules:
    - sort by `unit`
    - then by `layer`
    - then by `file_ref`
-3. `shared_contract_snapshot`
-   - sort by `shared_contract_id`
+3. `rule_snapshot`
+   - sort by `rule_id`
    - then by `layer`
    - then by `file_ref`
+4. `acceptance_item_set`
+   - sort by `id`
+   - then by `verification_surface`
+5. `acceptance_item_plan_coverage`
+   - sort by `id`
+6. `acceptance_item_evidence_matrix`
+   - sort by `id`
+7. `acceptance_item_coverage_summary`
+   - sort by `acceptance_item_id`
 
 Executors must compare the normalized ordered form exactly.
 
@@ -267,13 +327,15 @@ At minimum:
 
 1. for gate-bearing files, rebuild the common `truth_*` fields, including `truth_layer_ref`
 2. for unit plan files, rebuild `spec_file_ref`, `spec_version_ref`, and `spec_fingerprint`
-3. rebuild the currently bound `system_constraints_*` fields
+3. rebuild the currently bound `stable g_ rule_*` fields
 4. rebuild the object-specific snapshot fields allowed for that object type
-5. compare stored and rebuilt values exactly
+5. rebuild `acceptance_item_set` from the current truth file for gate-bearing files
+6. for active plan files, rebuild the current candidate acceptance item set and verify that `acceptance_item_plan_coverage` still covers it
+7. compare stored and rebuilt values exactly
 
-Shared-specific exception rule:
+Rule-specific exception rule:
 
-1. if a shared file is explicitly declared by the active caller as `bound_objects`-only for the current round, a difference caused only by that metadata delta does not invalidate the process file on that basis alone
+1. if a rule file is explicitly declared by the active caller as `bound_objects`-only for the current round, a difference caused only by that metadata delta does not invalidate the process file on that basis alone
 2. executors must not infer a `bound_objects`-only delta from fingerprint difference alone
 
 If any required field differs after applying only allowed exceptions, the process file is invalid for downstream use.

@@ -32,7 +32,7 @@ This repository has two command-target object families:
 1. `unit`
 2. `scenario`
 
-Shared notes:
+Rule notes:
 
 1. both families write state into `docs/specs/_status.md`
 2. both families may use `stable` and `candidate`
@@ -41,8 +41,8 @@ Shared notes:
 
 Non-command objects:
 
-1. `shared_contract` is not a standard command target
-2. `system_constraints` is not a standard command target
+1. `rule` is not a standard command target
+2. stable `g_` rule is not a standard command target
 3. `repository_mapping` is not a standard command target
 4. `impact_sync` is an internal governance flow, not a user-facing standard command
 5. `spec_flow_migrate` is a project-instance migration governance entry, not a standard command target
@@ -57,7 +57,7 @@ This repository uses two user-facing command shapes:
 {command}:{unit}
 ```
 
-2. `scenario` command form:
+1. `scenario` command form:
 
 ```text
 {command}:{scenario}
@@ -65,11 +65,11 @@ This repository uses two user-facing command shapes:
 
 Additional rules:
 
-1. `system_constraints` is not a legal command target
-2. `shared_contract` is not a legal standard command target
+1. stable `g_` rule is not a legal command target
+2. `rule` is not a legal standard command target
 3. `repository_mapping` is not a legal standard command target
 4. natural-language routing is the default user-facing entry for requests that do not use explicit command syntax
-5. `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, `shared_sync`, `shared_escape`, and `impact_sync` are internal governance flows, not direct user-facing standard commands
+5. `rule_new`, `rule_extract`, `rule_bind`, `rule_topology`, `rule_sync`, `rule_escape`, and `impact_sync` are internal governance flows, not direct user-facing standard commands
 6. `spec_flow_migrate` is entered by its exact name and is governed by `specflow/framework/spec_flow_migrate.md`; it must not be written as `{command}:{unit}` or `{command}:{scenario}`
 
 ## 5. Standard Commands
@@ -116,8 +116,8 @@ Rules:
 4. if the request can be safely decomposed, only the first smallest legal step may be entered in the current handling round
 5. natural-language routing may assemble an internal chain across multiple existing command families or governance flows, but that chain is not permission to skip a command gate or continue after the first step without rerouting from current truth
 6. if the request is missing target, scope, success meaning, acceptance meaning, or boundary truth, the executor must stop through the checkpoint protocol instead of guessing
-7. checkpoint questions and ordinary user-facing route reports must not require the user to choose internal object-family names, command names, lifecycle state names, or internal shared-governance flow names
-8. if the request touches cross-unit shared truth, route into the shared-governance branch defined by `natural_language_routing.md`
+7. checkpoint questions and ordinary user-facing route reports must not require the user to choose internal object-family names, command names, lifecycle state names, or internal rule-governance flow names
+8. if the request touches cross-unit rule truth, route into the rule-governance branch defined by `natural_language_routing.md`
 9. direct shared command shapes are not user-facing command forms
 10. natural-language requests to update old project-instance files to current `specFlow` framework contracts route to `specflow/framework/spec_flow_migrate.md`
 
@@ -131,18 +131,18 @@ Rules:
 2. `spec_flow_migrate` is not a `unit` or `scenario` lifecycle command
 3. `spec_flow_migrate` may not advance a `unit` or `scenario` lifecycle gate
 4. `spec_flow_migrate` may invalidate stale process state only under the migration policy and the shared process-state rules it links
-5. `spec_flow_migrate` must stop instead of choosing business meaning, object ownership, acceptance meaning, shared-truth ownership, or system-constraint meaning
+5. `spec_flow_migrate` must stop instead of choosing business meaning, object ownership, acceptance meaning, rule-truth ownership, or global-rule meaning
 
-### 5.5 Shared Governance Internal Routing
+### 5.5 Rule Governance Internal Routing
 
-Shared governance is a branch of natural-language routing.
+Rule governance is a branch of natural-language routing.
 
 Rules:
 
-1. users enter shared work by stating their shared intent in natural language
-2. natural-language routing decides whether shared governance owns the request
-3. the shared-governance branch routes directly into `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, `shared_sync`, or `shared_escape`
-4. executors must not ask users to choose among `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, `shared_sync`, or `shared_escape`
+1. users enter rule work by stating their rule intent in natural language
+2. natural-language routing decides whether rule governance owns the request
+3. the rule-governance branch routes directly into `rule_new`, `rule_extract`, `rule_bind`, `rule_topology`, `rule_sync`, or `rule_escape`
+4. executors must not ask users to choose among `rule_new`, `rule_extract`, `rule_bind`, `rule_topology`, `rule_sync`, or `rule_escape`
 
 ## 6. Responsibilities By Family
 
@@ -204,7 +204,7 @@ Commands must resolve the current main Spec file by combining:
 3. the object's `truth_surface_rule` in `docs/specs/repository_mapping.md`
 
 Changing only `Active Layer` through `unit_fork`, `unit_promote`, `scenario_fork`, or `scenario_promote` does not require a repository mapping update.
-Repository mapping changes are required only when the object map, truth-surface rule, implementation surface, shared-contract path, support surface, governed root, ignore rule, or conflict rule changes.
+Repository mapping changes are required only when the object map, truth-surface rule, implementation surface, rule path, support surface, governed root, ignore rule, or conflict rule changes.
 
 ## 7. Default Lifecycle Order
 
@@ -229,7 +229,7 @@ Repository mapping changes are required only when the object map, truth-surface 
 5. `scenario_verify`
 6. `scenario_promote`
 
-## 8. Shared Gate Rules
+## 8. Rule Gate Rules
 
 These rules apply by default to every command family:
 
@@ -238,7 +238,7 @@ These rules apply by default to every command family:
 3. a formal pass gate, formal verification pass, or lifecycle-state advance may be produced only by a new independent full-scope run of the corresponding command
 4. after a command ends with any non-pass result other than a resumable checkpoint explicitly allowed by that command file, later repair or scoped recheck is non-authoritative for lifecycle progression
 5. checkpoints are structured stops inside a command, not second lifecycles
-6. `shared_contract`, `system_constraints`, and `repository_mapping` are always upstream inputs, never the primary output of `scenario` commands
+6. `rule`, stable `g_` rule, and `repository_mapping` are always upstream inputs, never the primary output of `scenario` commands
 7. commands that rely on repository path ownership must consume `docs/specs/repository_mapping.md`
 
 ### 8.1 Binding Drift
@@ -259,17 +259,17 @@ At minimum:
 1. `unit` stable alignment falls back to `unit_stable_verify`
 2. `scenario` stable alignment falls back to `scenario_stable_verify`
 
-### 8.3 Shared And Baseline Inputs
+### 8.3 Rule And Global Rule Inputs
 
-1. if a command depends on bound `shared_contract` truth, it must read the exact currently bound shared files
-2. if a command depends on the formal global baseline, it must read `docs/specs/system_constraints.md`
+1. if a command depends on bound `rule` truth, it must read the exact currently bound rule files
+2. if a command depends on the formal global baseline, it must read `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 3. if a command depends on repository path ownership, it must read `docs/specs/repository_mapping.md`
 4. `bound_objects`-only metadata drift does not by itself invalidate downstream process files
 
 ### 8.4 Impact Reconciliation
 
 1. when one object family's truth or binding change may invalidate downstream objects, the handling round must complete deterministic downstream reconciliation before claiming closure
-2. `shared_sync` remains the shared-governance impact-discovery flow for shared changes
+2. `rule_sync` remains the rule-governance impact-discovery flow for rule changes
 3. `impact_sync` is the generic internal fallback-and-cleanup flow once the affected downstream object set is already fixed
 
 ### 8.5 Authoritative And Non-Authoritative Result Contract
@@ -317,8 +317,7 @@ Rules:
 1. command files must not restate the full text of Section 8.5 when a short inheritance sentence is enough
 2. command files must state only command-local additions when they tighten rerun entry, checkpoint handling, fallback handling, output fields, or stop conditions
 3. command files must not create a second definition for the user-facing close-out block; they may only add command-local fields or stricter wording requirements on top of Section 8.6
-4. command files must not restate `git_policy.md`; they must state only whether commit-triggering files may change and must report the git close-out result when required
-5. command files may include a short read summary before dense procedure text; that summary is navigation only and must not override the command's preconditions, procedure, stop conditions, or output contract
+4. command files may include a short read summary before dense procedure text; that summary is navigation only and must not override the command's preconditions, procedure, stop conditions, or output contract
 
 ### 8.8 Lifecycle-Advance Inheritance
 
@@ -335,6 +334,6 @@ Rules:
 This file does not:
 
 1. redefine object truth content in place of `spec_policy.md`
-2. create a separate lifecycle for `shared_contract`
-3. create a separate lifecycle for `system_constraints`
+2. create a separate lifecycle for `rule`
+3. create a separate lifecycle for stable `g_` rule
 4. replace project-local standards registration

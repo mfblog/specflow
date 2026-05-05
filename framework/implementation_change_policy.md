@@ -22,12 +22,12 @@ By default this policy applies when all of the following are true:
 
 1. the user asks to modify repo-tracked code, tests, or other implementation-side files
 2. the request is not already entered as a standard unit command
-3. the requested work may affect one or more formal units, bound Shared Contract consumers, or implementation constrained by `system_constraints`
+3. the requested work may affect one or more formal units, bound Rule consumers, or implementation constrained by stable `g_` rule
 
 This policy does not replace:
 
 1. unit command files
-2. shared-governance routing
+2. rule-governance routing
 3. `unit_stable_verify`, `unit_check`, `unit_impl`, or any other lifecycle gate
 
 Repository mode rule:
@@ -36,22 +36,102 @@ Repository mode rule:
 2. `truth_writeback_required` and `boundary_unclear` must not continue into code modification first
 3. reminder-only handling is not allowed here
 
+### 2.1 Direct Implementation Lightweight Entry
+
+This policy may be the first policy file for a natural-language request only when the request asks only to edit implementation-side files and does not explicitly ask for any of these changes:
+
+1. behavior truth
+2. acceptance truth
+3. object boundary or path ownership
+4. Rule truth or binding
+5. global rule truth
+6. scenario or end-to-end user-result truth
+7. governance rules, project standards, or migration behavior
+8. guidance before formal truth writeback
+
+When this entry applies, the executor must classify the request through this policy before reading the full natural-language routing file.
+
+Rules:
+
+1. if classification is `implementation_only`, this policy owns the first legal implementation-side action, subject to the current target's recorded `Next Command` and the post-action impact check in Section 3.4
+2. if classification is `truth_writeback_required` or `boundary_unclear`, implementation must stop and the executor must read `specflow/framework/natural_language_routing.md` using the classification result as routing evidence
+3. if the request contains one of the excluded truth, boundary, shared, system, scenario, governance, migration, or guidance fragments, this lightweight entry does not apply; route through `specflow/framework/natural_language_routing.md`
+4. this entry is a smaller read path for one natural-language work shape; it does not create a new user-facing command or weaken any formal truth writeback gate
+
 ---
 
-## 3. Required Read Surface Before Classification
+## 3. Layered Read Surface Before Classification
 
-Before classification:
+Use the smallest read surface that can prove the classification.
+Do not read the full framework rule set merely because a request touches implementation files.
+Pre-action reading is mandatory only when late discovery could allow an unsafe implementation write, wrong owner, skipped lifecycle state, shared or system drift, or false alignment claim.
 
-1. read `specflow/framework/spec_policy.md`
-2. read `specflow/framework/command_policy.md`
-3. read `specflow/framework/onboarding_decision_policy.md` when the request touches a target with no formal truth, unmapped implementation ownership, or candidate source fields that are missing or invalid
-4. if the request names an existing formal unit, read `docs/specs/_status.md` and resolve the unit's current `Active Layer` and `Next Command`
-5. read the current-layer main Spec and any explicitly referenced appendix truth needed to judge whether formal behavior truth changes
-6. read bound Shared Contract files when the relevant behavior depends on them
-7. read `docs/specs/system_constraints.md` when the request may affect shared mechanisms, global default rules, or explicit global exceptions
-8. if the request is for a brand-new unit, confirm only that the unit name is clear and non-conflicting before routing through `onboarding_decision_policy.md` before `unit_new:{unit}`
+### 3.1 Lightweight Pre-Action Prohibitions
 
-The executor must not classify from code shape alone when repository truth already exists.
+Before any implementation-side edit, the executor must already know and follow these prohibitions:
+
+1. do not classify from code shape alone when repository truth already exists
+2. do not modify implementation files when the target object, current layer, current `Next Command`, or current truth surface is unknown
+3. do not modify implementation files when current truth is not explicit enough to constrain one implementation result
+4. do not use code experimentation to discover whether the request is a behavior change
+5. do not skip the current `Next Command`
+6. do not continue into implementation when the classification is `truth_writeback_required` or `boundary_unclear`
+
+These prohibitions are the required pre-action hard rules for direct implementation requests.
+They do not require reading all owner policy files when the needed current truth is already clear from the minimum classification reads below.
+
+### 3.2 Minimum Classification Reads
+
+Before classification, read only the current truth needed to prove the target, state, boundary, and requested change.
+
+Required minimum reads:
+
+1. read the user request and any user-named paths, objects, commands, or implementation surfaces
+2. read `docs/specs/_status.md` when the request names an existing formal `unit` or `scenario`, or when the target object must be resolved before implementation permission can be judged
+3. read `docs/specs/repository_mapping.md` only when path ownership, object boundary, support-surface ownership, or target-object resolution cannot be proven from the user request and `_status.md`
+4. read the current-layer main Spec sections needed to decide whether the requested change alters formal behavior truth
+5. read explicitly referenced appendix truth only when the current-layer main Spec makes that appendix relevant to the requested change
+6. read bound Rule files only when the current-layer main Spec shows that the relevant behavior depends on those rules
+7. read directly relevant implementation or test files only to understand the requested implementation surface or verify whether the requested change is limited to an already-defined result
+
+The minimum read result must be enough to answer:
+
+1. which formal target or support surface the request touches
+2. which current layer and `Next Command` govern that target, when the target is a command-target object
+3. which current truth constrains the requested implementation result
+4. whether the request changes a formal behavior truth item from Section 5
+5. whether any shared, system, onboarding, or mapping uncertainty remains
+
+If the minimum reads cannot answer those questions, the result is `boundary_unclear` unless an on-demand owner lookup below identifies a required truth writeback route.
+
+### 3.3 On-Demand Owner Lookups
+
+Read owner policy files only when the current classification depends on the rule that file owns.
+
+On-demand reads:
+
+1. read `specflow/framework/spec_policy.md` when classification depends on formal object definitions, current-layer truth path resolution, binding contracts, acceptance criteria ownership, or process-file invalidation meaning
+2. read `specflow/framework/command_policy.md` when classification depends on command-family responsibility, standard command shape, lifecycle-advance authority, or whether the current request is already inside a standard command
+3. read `specflow/framework/onboarding_decision_policy.md` when the target has no formal truth, implementation ownership is unmapped, candidate source fields are missing or invalid, or selected candidate truth may depend on existing implementation
+4. read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may affect a reusable mechanism, global default rule, prohibition, or explicit exception
+5. read bound Rule files when the current-layer main Spec shows that the relevant behavior depends on those rules
+
+If an on-demand owner lookup is required and cannot safely resolve the uncertainty, classify the request as `boundary_unclear`.
+Do not replace the missing owner decision with an implementation-side guess.
+
+### 3.4 Required Post-Action Impact Check
+
+When classification is `implementation_only` and implementation work is allowed, the executor must still complete the post-action impact check before claiming alignment or closure.
+
+Required checks:
+
+1. confirm that the completed change did not alter any formal behavior truth item from Section 5
+2. confirm that no newly discovered boundary, rule-truth, global-rule, or onboarding uncertainty invalidates the original classification
+3. when the target unit has `Active Layer=stable`, return the unit to `unit_stable_verify` before stable alignment may be claimed again
+4. when the target unit has `Active Layer=candidate`, continue only under `unit_impl` semantics when `_status.md` already allowed `Next Command=unit_impl`
+5. if the post-action check discovers a truth, boundary, shared, system, or onboarding issue, stop and route through the required truth or boundary step before any pass, alignment, or closure claim
+
+The post-action impact check does not create permission to edit implementation files before pre-action classification is proven.
 
 ---
 
@@ -79,8 +159,8 @@ For this policy, a request touches formal behavior truth when it would create, r
 2. external protocols, field meanings, default values, validation rules, and error semantics
 3. main flow, state transitions, or branch convergence semantics
 4. acceptance criteria or testable success conditions
-5. Shared Contract body text or Shared Contract binding relations
-6. `system_constraints` default rules or explicit exceptions
+5. Rule body text or Rule binding relations
+6. stable `g_` rule default rules or explicit exceptions
 
 If a request touches any item above, it is not implementation-only.
 
@@ -109,7 +189,7 @@ Use `truth_writeback_required` when current repository truth already shows that 
 2. field set, field meaning, default value, validation rule, or error-return changes
 3. state machine or main-flow changes
 4. unit responsibility or ownership-boundary changes
-5. adding or modifying a Shared Contract
+5. adding or modifying a Rule
 6. adding or modifying a project-wide default rule
 
 ### 6.3 `boundary_unclear`
@@ -118,7 +198,6 @@ Use `boundary_unclear` when current repository truth is not sufficient to suppor
 
 1. current Spec does not say enough to decide a protocol, state transition, boundary, or acceptance condition
 2. it is unclear whether the requested code change is an implementation repair or a behavior change
-3. more than one truth writeback target is plausible, such as candidate main text, appendix truth, Shared Contract text, or `system_constraints_change_proposal`
 4. the executor would have to make a new behavior decision in code and explain it later
 5. the target scope has no current formal truth and onboarding source decision has not selected ordinary candidate creation, candidate with evidence appendix, or a stable-governed route
 6. the current candidate is missing `source_basis` or `evidence_appendix_ref`
@@ -141,9 +220,9 @@ The smallest legal next step after classification is fixed as follows:
 | brand-new unit, user directly asks to write code | `unit_new:{unit}` |
 | no formal truth exists and candidate source is not yet decided | route through `onboarding_decision_policy.md` before creating candidate truth or editing code |
 | existing `stable` unit, and the requested change would alter formal behavior truth | `unit_fork:{unit}` first, then write the new candidate truth before implementation |
-| existing `candidate` unit, and the requested change would alter current candidate truth | write back into the current candidate main file, required appendix truth, or required Shared Contract truth first, then rerun `unit_check:{unit}` |
+| existing `candidate` unit, and the requested change would alter current candidate truth | write back into the current candidate main file, required appendix truth, or required Rule truth first, then rerun `unit_check:{unit}` |
 | existing `candidate` unit is missing required candidate source fields or required evidence appendix | repair the candidate source fields or evidence appendix first, then rerun `unit_check:{unit}` |
-| request touches cross-unit shared truth | natural-language routing into the shared-governance branch defined by `natural_language_routing.md` |
+| request touches cross-unit rule truth | natural-language routing into the rule-governance branch defined by `natural_language_routing.md` |
 | `implementation_only`, target unit has `Active Layer=stable` | implementation may continue only within current stable truth; after code changes, the unit must return to `unit_stable_verify:{unit}` before stable alignment may be claimed again |
 | `implementation_only`, target unit has `Active Layer=candidate` and `_status.md` says `Next Command=unit_impl` | implementation may continue, but only under `unit_impl` semantics |
 | `implementation_only`, target unit has `Active Layer=candidate` and `_status.md` says any `Next Command` other than `unit_impl` | do not modify code; return to the currently recorded smallest legal next step first |
@@ -151,8 +230,8 @@ The smallest legal next step after classification is fixed as follows:
 Additional routing rules:
 
 1. `implementation_only` does not create permission to skip `Next Command`
-2. if the request touches both unit-local truth and cross-unit shared truth, route through natural-language shared governance rather than guessing a local-only shortcut
-3. if classification would require guessing whether the target is unit-local truth, Shared Contract truth, or global default-rule truth, the result must stay `boundary_unclear`
+2. if the request touches both unit-local truth and cross-unit rule truth, route through natural-language rule governance rather than guessing a local-only shortcut
+3. if classification would require guessing whether the target is unit-local truth, Rule truth, or global default-rule truth, the result must stay `boundary_unclear`
 
 ---
 

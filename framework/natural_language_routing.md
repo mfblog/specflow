@@ -35,9 +35,10 @@ It is a navigation rule only and does not weaken the detailed rules below.
    - the matching file under `specflow/framework/commands/`
 2. If the request is exactly `spec_flow_review` or `spec_flow_design_review`, with or without an explicit narrowing phrase, stop here and read the matching review policy.
 3. If the request is exactly `spec_flow_migrate`, with or without an explicit narrowing phrase, stop here and read `specflow/framework/spec_flow_migrate.md`.
-4. If the request asks for code, test, config, database migration, build-script, or other implementation-side edits, read:
-   - this file through Section 6
+4. If this file is the first policy file read for a request that asks for code, test, config, database migration, build-script, or other implementation-side edits, read:
+   - this file through Section 4.1
    - `specflow/framework/implementation_change_policy.md` before any implementation-side edit
+   - this file through the later sections only when Section 4.1 routes out of the direct implementation lightweight entry
 5. If the request asks for a local capability or behavior change, read:
    - this file through Section 7
    - `docs/specs/_status.md` when an existing `unit` or `scenario` is named
@@ -46,17 +47,19 @@ It is a navigation rule only and does not weaken the detailed rules below.
    - this file through Section 6.3
    - `specflow/framework/scenario_policy.md`
    - current `unit` and `scenario` truth only after current-layer resolution from `_status.md`
-7. If the request asks for cross-unit shared truth, shared binding, shared topology, or shared impact, read:
+7. If the request asks for cross-unit rule truth, rule binding, rule topology, or rule impact, read:
    - this file through Section 10
-   - the selected shared-governance flow reached by Section 10.1
+   - the selected rule-governance flow reached by Section 10.1
 8. If the request asks for project-local standards, governance entry behavior, command behavior, migration behavior, or review design, read:
    - this file through Section 7
    - the named framework or project-standard owner file
-   - `specflow/framework/git_policy.md` before git close-out when framework, Spec, or registered entry files may change
 9. If the request asks only for explanation, read only enough current truth to answer without mutating files.
 
 After the first read path identifies the likely route, continue through the detailed sections required by that route.
 If any later rule requires a wider read, follow the later rule.
+
+Registered entry files may route a pure implementation-side request directly to `specflow/framework/implementation_change_policy.md` when that policy's Section 2.1 applies.
+In that case, this file is read only when implementation classification returns `truth_writeback_required` or `boundary_unclear`, or when the request contains a truth, boundary, shared, system, scenario, governance, migration, or guidance fragment.
 
 ---
 
@@ -82,7 +85,7 @@ Rules:
 4. executors must route by repository truth and intent closure, not by keywords alone
 5. when the route is not stable, executors must stop and ask only for the smallest missing input that blocks routing
 6. executors must not require users to understand or choose specFlow object-family names before routing
-7. executor-facing object names such as `unit`, `scenario`, `shared_contract`, `system_constraints`, and `repository_mapping` may appear only in execution trace notes, not as the user's required decision language
+7. executor-facing object names such as `unit`, `scenario`, `rule`, stable `g_` rule, and `repository_mapping` may appear only in execution trace notes, not as the user's required decision language
 
 There are only four entry shapes:
 
@@ -96,7 +99,7 @@ There are only four entry shapes:
    - the request is exactly `spec_flow_migrate`, with or without an explicit narrowing phrase
    - route through `specflow/framework/spec_flow_migrate.md`
 4. natural-language request
-   - every non-exact request that describes desired work, including requests that mention implementation, review, shared truth, mapping, or system constraints
+   - every non-exact request that describes desired work, including requests that mention implementation, review, rule truth, mapping, or stable g_ rules
    - route through this file first
 
 Direct implementation is not an entry shape.
@@ -109,7 +112,7 @@ It is an intent fragment that may appear inside a natural-language request.
 Natural-language intake must start from the user's goal, not from command names.
 
 The executor must translate user wording into specFlow ownership internally.
-It must not ask the user to classify the request as a `unit`, `scenario`, `shared_contract`, `system_constraints`, or `repository_mapping` request unless the user already chose those terms and the route still needs confirmation about their intended meaning.
+It must not ask the user to classify the request as a `unit`, `scenario`, `rule`, stable `g_` rule, or `repository_mapping` request unless the user already chose those terms and the route still needs confirmation about their intended meaning.
 
 User-facing communication must use this language priority:
 
@@ -153,7 +156,7 @@ Examples of disallowed user-facing questions:
 
 ```text
 Is this a unit or a scenario?
-Should I route this to shared_bind or shared_topology?
+Should I route this to rule_bind or rule_topology?
 Which specFlow command family owns this?
 ```
 
@@ -180,8 +183,8 @@ Natural language routing may identify fragments that later route into:
 4. implementation classification through `implementation_change_policy.md`
 5. onboarding source decision through `onboarding_decision_policy.md`
 6. repository mapping handling
-7. shared-governance branching into the internal shared flows
-8. system-constraint boundary handling through the responsible unit candidate truth
+7. rule-governance branching into the internal rule flows
+8. global-rule boundary handling through the responsible unit candidate truth
 9. project-instance migration through `specflow/framework/spec_flow_migrate.md`
 10. framework skills under `specflow/framework/skills/`
 
@@ -192,7 +195,7 @@ Natural language routing does not:
 3. allow implementation before required truth writeback
 4. allow chat-only decisions to replace durable truth
 5. authorize a full multi-step chain to run automatically just because a sequence can be described
-6. make guidance output durable truth before it is written into candidate, appendix, Shared Contract, repository mapping, or system-constraint truth
+6. make guidance output durable truth before it is written into candidate, appendix, Rule, repository mapping, or global-rule truth
 7. create a persistent `feature`, `project_flow`, or other umbrella lifecycle object above `unit` and `scenario`
 8. force every user request into an end-to-end scenario when current repository truth and user wording prove a narrower legal route
 9. infer a candidate's source from user wording alone when repository truth and current implementation shape must decide whether onboarding evidence is required
@@ -209,18 +212,33 @@ Fixed read rules:
 2. if the request is an exact governance review entry, stop natural-language routing and follow the matching review policy
 3. if the request is an exact project-instance migration entry, stop natural-language routing and follow `specflow/framework/spec_flow_migrate.md`
 4. if the request is not an exact entry, identify intent fragments before choosing a command or governance flow
-5. if any fragment may modify repo-tracked code, tests, config, database migrations, build scripts, or other implementation-side files, read `implementation_change_policy.md` before any implementation-side edit
-6. if the request names existing formal `unit` or `scenario` objects, read `docs/specs/_status.md` before resolving their current-layer files
-7. if the request depends on path ownership, repository structure, support surfaces, or object boundaries, read `docs/specs/repository_mapping.md`
-8. if the request depends on cross-unit shared truth, shared binding, shared topology, or shared impact, use the Shared Governance Branch in this file and read the relevant Shared Contract files plus the selected internal shared-flow file
-9. if the request may affect global default rules, shared mechanisms promoted into the global baseline, or explicit global exceptions, read `docs/specs/system_constraints.md`
-10. if a governance-review fragment remains after natural-language parsing, read the governance file that defines that review scope before reading unrelated object state
-11. if a project-instance migration fragment remains after natural-language parsing, read `specflow/framework/spec_flow_migrate.md` before reading unrelated object state
-12. if the target scope has no current formal truth, the current candidate is missing candidate source fields, a direct implementation request touches an unmapped or unowned behavior scope, or candidate behavior may depend on existing implementation, read `specflow/framework/onboarding_decision_policy.md`
-13. if a `guidance` fragment is present, read `specflow/framework/skills/using-specflow-guidance/SKILL.md` and then only the specific guidance skill needed for the current blocker
+5. if the request only asks for implementation-side work and has no explicit truth, boundary, shared, system, scenario, governance, migration, or guidance fragment, use the Direct Implementation Lightweight Entry in Section 4.1 before full route assembly
+6. if any fragment may modify repo-tracked code, tests, config, database migrations, build scripts, or other implementation-side files, read `implementation_change_policy.md` before any implementation-side edit
+7. if the request names existing formal `unit` or `scenario` objects, read `docs/specs/_status.md` before resolving their current-layer files
+8. if the request depends on path ownership, repository structure, support surfaces, or object boundaries, read `docs/specs/repository_mapping.md`
+9. if the request depends on cross-unit rule truth, rule binding, rule topology, or rule impact, use the Rule Governance Branch in this file and read the relevant Rule files plus the selected internal rule-flow file
+10. if the request may affect global default rules, reusable mechanisms promoted into the global baseline, or explicit global exceptions, read `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
+11. if a governance-review fragment remains after natural-language parsing, read the governance file that defines that review scope before reading unrelated object state
+12. if a project-instance migration fragment remains after natural-language parsing, read `specflow/framework/spec_flow_migrate.md` before reading unrelated object state
+13. if the target scope has no current formal truth, the current candidate is missing candidate source fields, a direct implementation request touches an unmapped or unowned behavior scope, or candidate behavior may depend on existing implementation, read `specflow/framework/onboarding_decision_policy.md` only when the Direct Implementation Lightweight Entry or another routing rule cannot resolve the source decision through smaller current truth reads
+14. if a `guidance` fragment is present, read `specflow/framework/skills/using-specflow-guidance/SKILL.md` and then only the specific guidance skill needed for the current blocker
 
 The executor must not read every file by default.
 The executor must read enough current truth to prove the route, the missing blocker, or the safe first step.
+
+### 4.1 Direct Implementation Lightweight Entry
+
+`specflow/framework/implementation_change_policy.md` Section 2.1 owns the direct implementation lightweight entry.
+
+When this file is already active and the request qualifies for that entry:
+
+1. stop full route assembly before Section 5
+2. read `specflow/framework/implementation_change_policy.md`
+3. if classification is `implementation_only`, the first legal step is the implementation-side action allowed by that policy
+4. if classification is `truth_writeback_required` or `boundary_unclear`, continue this file from Section 5 using the classification result as routing evidence
+
+This section does not restate the full lightweight trigger, B/D/E rule set, or post-action impact check.
+Those rules are owned by `specflow/framework/implementation_change_policy.md`.
 
 ---
 
@@ -230,7 +248,7 @@ The executor must break a natural-language request into intent fragments before 
 
 An intent fragment is the smallest recognizable part of the request that may need its own governance owner.
 Fragments are not mutually exclusive.
-One request may contain implementation, unit truth, shared truth, and review fragments at the same time.
+One request may contain implementation, unit truth, rule truth, and review fragments at the same time.
 
 Allowed fragment families are:
 
@@ -239,10 +257,10 @@ Allowed fragment families are:
 2. `scenario_truth`
    - the request creates, changes, verifies, or promotes an end-to-end trigger-to-outcome chain
 3. `shared_truth`
-   - the request creates, extracts, binds, restructures, retires, or impact-checks cross-unit shared truth
+   - the request creates, extracts, binds, restructures, retires, or impact-checks cross-unit rule truth
 4. `repository_mapping`
    - the request depends on path ownership, object boundaries, support surfaces, or repository structure truth
-5. `system_constraints`
+5. stable `g_` rule
    - the request may change a repository-wide default rule, global mechanism, prohibition, or explicit exception
 6. `implementation`
    - the request asks to create, modify, or delete repo-tracked code, tests, config, migrations, build scripts, or other implementation-side files
@@ -279,7 +297,7 @@ Guidance fragment rules:
 1. guidance is used before formal truth writeback when the project goal, first-round scope, solution direction, or writeback-ready design is not yet clear enough to become candidate truth
 2. guidance must not create `_check_result`, `_plans/active`, `_verify_result`, or `_status.md` updates
 3. guidance conclusions remain chat context until written into the correct formal truth target
-4. once guidance produces an approved conclusion that affects behavior, boundary, acceptance, shared truth, repository mapping, or system constraints, the next legal step is formal truth writeback followed by rerouting from current truth
+4. once guidance produces an approved conclusion that affects behavior, boundary, acceptance, rule truth, repository mapping, or stable g_ rules, the next legal step is formal truth writeback followed by rerouting from current truth
 5. guidance must not intercept exact standard commands, exact governance review entries, or exact project-instance migration entries
 
 ---
@@ -293,7 +311,7 @@ Allowed work shapes are:
 
 1. `end_to_end_outcome`
    - the user wants a visible result across a full trigger-to-outcome path
-   - typical owner shape: `scenario` plus any affected `unit`, `shared_contract`, or baseline work
+   - typical owner shape: `scenario` plus any affected `unit`, `rule`, or baseline work
 2. `local_capability_change`
    - the user wants one bounded capability or behavior changed without asking to prove a full user flow
    - typical owner shape: one `unit`, or repository mapping first when ownership is unclear
@@ -302,10 +320,10 @@ Allowed work shapes are:
    - typical owner shape: `scenario` verification or stable verification
 4. `shared_rule_change`
    - the user wants one rule reused by more than one formal object
-   - typical owner shape: shared-governance branch
+   - typical owner shape: rule-governance branch
 5. `global_constraint_change`
    - the user wants a repository-wide default, prohibition, mechanism rule, or explicit exception changed
-   - typical owner shape: system-constraint handling through the responsible current candidate truth
+   - typical owner shape: global-rule handling through the responsible current candidate truth
 6. `structure_or_ownership_change`
    - the user asks where paths, boundaries, support surfaces, or object ownership belong
    - typical owner shape: `repository_mapping`
@@ -338,17 +356,17 @@ Abstraction guidance decides when the executor should respect the user's local w
 
 It is not a new lifecycle object, command, or governance flow.
 It runs after work-shape classification and before formal owner resolution.
-It translates user wording into the existing `unit`, `scenario`, `shared_contract`, `system_constraints`, and `repository_mapping` owners without asking the user to choose those internal names.
+It translates user wording into the existing `unit`, `scenario`, `rule`, stable `g_` rule, and `repository_mapping` owners without asking the user to choose those internal names.
 
 User wording is input evidence, not ownership proof.
-Words such as module, shared file, common code, flow, integration, feature, or end-to-end are clues only.
+Words such as module, rule file, common code, flow, integration, feature, or end-to-end are clues only.
 The executor must decide from the user's desired result, current repository truth, and required verification meaning.
 
 Respect a local capability route when current repository truth proves all of the following:
 
 1. the requested result is confined to one unit responsibility
 2. one unit's current truth can express the acceptance meaning without inventing a broader chain
-3. no cross-unit shared rule, global baseline rule, repository mapping change, or end-to-end user-result proof is required
+3. no cross-unit rule, global baseline rule, repository mapping change, or end-to-end user-result proof is required
 
 When these conditions hold, do not create or require a scenario merely because scenarios exist or because multiple implementation files may be edited.
 
@@ -359,17 +377,17 @@ Test for a scenario route when any of the following is true:
 3. the user asks whether an integration path, workflow, or user flow works
 4. one unit's local verification cannot prove that the promised user-visible result is complete
 
-When a scenario route is indicated, the executor must derive the likely unit and shared-contract bindings from current repository truth and the described user-visible flow.
+When a scenario route is indicated, the executor must derive the likely unit and rule bindings from current repository truth and the described user-visible flow.
 If those bindings cannot be derived safely, the executor must ask for the smallest missing ordinary-language fact about the entry point, final result, or required path, or route to repository mapping when ownership truth is missing.
 
-Test for a shared-governance route when any of the following is true:
+Test for a rule-governance route when any of the following is true:
 
 1. the requested rule is reused by two or more formal objects
 2. the user describes one rule that several capabilities must interpret the same way
-3. the request names a shared file, common module, or common mechanism whose formal effect is a reusable rule rather than a whole unit or a whole end-to-end chain
+3. the request names a rule file, common module, or common mechanism whose formal effect is a reusable rule rather than a whole unit or a whole end-to-end chain
 
-When a shared-governance route is indicated, route through the Shared Governance Branch instead of treating the request as a local unit edit.
-If the same rule could legally land in unit-local truth, Shared Contract truth, or system constraints, stop with a decision checkpoint using ordinary-language options.
+When a rule-governance route is indicated, route through the Rule Governance Branch instead of treating the request as a local unit edit.
+If the same rule could legally land in unit-local truth, Rule truth, or stable g_ rules, stop with a decision checkpoint using ordinary-language options.
 
 Clarification questions must use user-goal language.
 They must ask for the missing result, scope, entry point, or verification meaning.
@@ -390,7 +408,7 @@ Is this a unit or a scenario?
 This boundary does not:
 
 1. force every multi-file request into a scenario
-2. force every reused implementation helper into a Shared Contract
+2. force every reused implementation helper into a Rule
 3. create a `feature`, `project_flow`, or other umbrella lifecycle object
 4. allow chat-only conclusions to replace formal truth writeback
 5. override exact standard commands, exact governance review entries, or exact project-instance migration entries
@@ -404,20 +422,23 @@ Route in this order:
 1. if the request is an exact standard command, leave this file and execute command routing through `command_policy.md`
 2. if the request is an exact governance review entry, leave this file and execute the matching review policy
 3. if the request is an exact project-instance migration entry, leave this file and execute `spec_flow_migrate`
-4. otherwise treat the request as natural language and perform goal diagnosis
-5. classify the work shape before choosing the formal owner
-6. apply the Abstraction Guidance Boundary before formal owner resolution
-7. identify all intent fragments needed to route the classified work shapes
-8. apply mandatory gates for every fragment, especially `implementation_change_policy.md` for implementation fragments
-9. route project-instance migration fragments through `specflow/framework/spec_flow_migrate.md` when the user asks to update old project-instance files to current framework contracts
-10. resolve repository mapping boundary checks before claiming `unit` or `scenario` ownership
-11. resolve existing `unit` or `scenario` object state through `_status.md`
-12. apply onboarding source decision when the target has no formal truth, has candidate source drift, or may use existing implementation as candidate evidence
-13. route shared-truth fragments through the Shared Governance Branch in this file
-14. route system-constraint boundary handling through the responsible unit candidate truth
-15. route guidance fragments through the smallest applicable guidance skill when the request is not yet clear enough for formal truth writeback or a standard command
-16. assemble the internal development chain when the request spans more than one formal object or work shape
-17. handle explanation-only fragments only after confirming that no mutation, guidance, or governance route is required
+4. if the request qualifies for the Direct Implementation Lightweight Entry in Section 4.1, run that entry first
+   - if it returns `implementation_only`, the first legal step is the implementation-side action allowed by `implementation_change_policy.md`
+   - if it returns `truth_writeback_required` or `boundary_unclear`, continue this routing procedure from Step 5 using the classification result as input evidence
+5. otherwise treat the request as natural language and perform goal diagnosis
+6. classify the work shape before choosing the formal owner
+7. apply the Abstraction Guidance Boundary before formal owner resolution
+8. identify all intent fragments needed to route the classified work shapes
+9. apply mandatory gates for every fragment, especially `implementation_change_policy.md` for implementation fragments
+10. route project-instance migration fragments through `specflow/framework/spec_flow_migrate.md` when the user asks to update old project-instance files to current framework contracts
+11. resolve repository mapping boundary checks before claiming `unit` or `scenario` ownership
+12. resolve existing `unit` or `scenario` object state through `_status.md`
+13. apply onboarding source decision when the target has no formal truth, has candidate source drift, or may use existing implementation as candidate evidence
+14. route rule-truth fragments through the Rule Governance Branch in this file
+15. route global-rule boundary handling through the responsible unit candidate truth
+16. route guidance fragments through the smallest applicable guidance skill when the request is not yet clear enough for formal truth writeback or a standard command
+17. assemble the internal development chain when the request spans more than one formal object or work shape
+18. handle explanation-only fragments only after confirming that no mutation, guidance, or governance route is required
 
 This order is a decision order, not permission to skip required reads.
 If a later family is needed to decide an earlier family safely, read the later family's truth as input before choosing the route.
@@ -428,6 +449,9 @@ If a later family is needed to decide an earlier family safely, read the later f
 
 Goal diagnosis is mandatory for every non-exact natural-language request.
 
+For the Direct Implementation Lightweight Entry, the classification record required by `implementation_change_policy.md` Section 3.2 satisfies goal diagnosis for the first implementation-side action only when classification returns `implementation_only`.
+If that classification returns `truth_writeback_required` or `boundary_unclear`, complete the full goal diagnosis below before choosing the truth or boundary route.
+
 The executor must record these facts in working judgment before selecting the first route:
 
 1. `user_goal_summary`
@@ -435,7 +459,7 @@ The executor must record these facts in working judgment before selecting the fi
 2. `success_meaning`
    - what would prove to the user that the work is complete
 3. `scope_signal`
-   - whether the user described a local capability, an end-to-end flow, a shared rule, a global rule, repository structure, implementation repair, governance change, or only an explanation
+   - whether the user described a local capability, an end-to-end flow, a rule, a stable g_ rule, repository structure, implementation repair, governance change, or only an explanation
 4. `current_state_signal`
    - which current repository truth was needed to understand the state
 5. `risk_signal`
@@ -461,8 +485,8 @@ Formal owner resolution must use:
 1. `docs/specs/_status.md` for existing command-target object state
 2. `docs/specs/repository_mapping.md` for path ownership, object boundaries, support surfaces, and current formal object maps
 3. the current-layer Spec for the candidate or stable object when behavior truth may already exist
-4. bound Shared Contract files when shared rules may own or constrain the request
-5. `docs/specs/system_constraints.md` when global defaults, shared mechanisms, prohibitions, or exceptions may own or constrain the request
+4. bound Rule files when rules may own or constrain the request
+5. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when global defaults, reusable mechanisms, prohibitions, or exceptions may own or constrain the request
 6. the relevant framework or project-standard rule file when the request changes governance behavior
 
 Rules:
@@ -471,7 +495,7 @@ Rules:
 2. do not ask the user to choose between formal owner names when repository truth can resolve the owner
 3. when more than one owner remains plausible and the choice changes formal truth, stop through a `decision` checkpoint using ordinary-language options
 4. when ownership depends on missing repository-structure truth, the smallest legal next step is repository mapping writeback
-5. when a request is local in user wording but current truth proves a downstream scenario, shared rule, or global baseline is affected, include that impact in the internal chain and explain the user-visible consequence
+5. when a request is local in user wording but current truth proves a downstream scenario, rule, or global baseline is affected, include that impact in the internal chain and explain the user-visible consequence
 
 ---
 
@@ -486,8 +510,8 @@ Allowed chain components are existing specFlow routes only:
 
 1. `scenario` chain for trigger-to-outcome truth and end-to-end verification
 2. `unit` chain for unit truth, planning, implementation, verification, and promotion
-3. shared-governance branch for shared truth and shared impact reconciliation
-4. system-constraint handling through the responsible candidate truth or declared governance route
+3. rule-governance branch for rule truth and rule impact reconciliation
+4. global-rule handling through the responsible candidate truth or declared governance route
 5. repository mapping writeback for ownership and structure truth
 6. implementation classification for direct code or test changes
 
@@ -562,7 +586,7 @@ Safe order means:
 
 1. the first step is the smallest legal next step
 2. completing the first step cannot make a later step's formal owner ambiguous
-3. the sequence does not require choosing between unit-local truth, Shared Contract truth, or system constraints before the first step
+3. the sequence does not require choosing between unit-local truth, Rule truth, or stable g_ rules before the first step
 4. no implementation step comes before required truth writeback
 
 When safe decomposition exists, the executor must emit an execution-local `routing_steps_contract` and enter only the first legal step.
@@ -573,9 +597,9 @@ When several fragments are present and their order would change formal truth, th
 
 Unsafe order exists when at least one of these holds:
 
-1. the same rule could legally land in unit truth, Shared Contract truth, or system constraints
-2. extracting shared truth before unit candidate writeback would change the formal source of truth
-3. promoting a system default before shared topology is settled would change downstream responsibility
+1. the same rule could legally land in unit truth, Rule truth, or stable g_ rules
+2. extracting rule truth before unit candidate writeback would change the formal source of truth
+3. promoting a system default before rule topology is settled would change downstream responsibility
 4. implementation could encode a behavior choice that has not yet been written into truth
 
 ### 7.4 Missing Intent
@@ -662,142 +686,139 @@ Natural language routing must not use checkpoints to avoid technical investigati
 
 ---
 
-## 10. Shared Governance Branch
+## 10. Rule Governance Branch
 
-Shared work is entered through natural language routing.
+Rule work is entered through natural language routing.
 There is no user-facing shared command shape.
-Users describe the shared intent in ordinary language, and this branch decides the smallest legal internal shared flow.
+Users describe the rule intent in ordinary language, and this branch decides the smallest legal internal rule flow.
 
-This branch handles only cross-unit shared-truth governance.
+This branch handles only cross-unit rule-truth governance.
 It may route into:
 
-1. `shared_new`
-2. `shared_extract`
-3. `shared_bind`
-4. `shared_topology`
-5. `shared_sync`
-6. `shared_escape`
+1. `rule_new`
+2. `rule_extract`
+3. `rule_bind`
+4. `rule_topology`
+5. `rule_sync`
+6. `rule_escape`
 
 This branch does not:
 
 1. replace unit command chains
 2. replace `unit_check`, `unit_plan`, `unit_impl`, `unit_verify`, or `unit_promote`
-3. create an independent `system_constraints` command chain
-4. allow the executor to invent an ad hoc shared flow outside the routed internal shared flows listed here
+3. create an independent stable `g_` rule command chain
+4. allow the executor to invent an ad hoc rule flow outside the routed internal rule flows listed here
 
-Before routing a shared-governance request:
+Before routing a rule-governance request:
 
 1. read `specflow/framework/spec_policy.md`
 2. read `specflow/framework/command_policy.md`
-3. read `specflow/framework/checkpoint_protocol.md` because shared governance may stop through a structured checkpoint
-4. read `docs/specs/_status.md` when the request names existing formal units
-5. resolve each named existing unit's current layer from `_status.md` before reading its main Spec
-6. read the current relevant unit candidate or stable files after current-layer resolution
+3. read `specflow/framework/checkpoint_protocol.md` because rule governance may stop through a structured checkpoint
+4. read `docs/specs/_status.md` when the request names existing formal units or scenarios
+5. resolve each named existing unit or scenario's current layer from `_status.md` before reading its main Spec
+6. read the current relevant unit or scenario candidate or stable files after current-layer resolution
 7. read any explicitly referenced appendix truth needed to judge whether the real source truth is unit-local, shared, or still boundary-unstable
 8. if the request names units that do not yet have current-layer Spec files, do not block on that absence before routing
-9. read the relevant `shared_contract` files if the request names shared truth directly
-10. read `docs/specs/system_constraints.md` when the request may cross the boundary into global-default-rule promotion
-11. if the request may route to `shared_sync`, inspect the directly affected current-round Shared Contract files needed to judge whether any of those files changed only in `bound_objects`
+9. read the relevant `rule` files if the request names rule truth directly
+10. read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may cross the boundary into global-default-rule promotion
+11. if the request may route to `rule_sync`, inspect the directly affected current-round Rule files needed to judge whether any of those files changed only in `bound_objects`
 
 The executor must not route by keyword alone when the named files already show a different formal situation.
 
-### 10.1 Shared Flow Routing
+### 10.1 Rule Flow Routing
 
-Use `shared_new` only when the request clearly means:
+Use `rule_new` only when the request clearly means:
 
-1. the user wants to design shared truth from the start, or open the next candidate-layer round for an already-independent shared object
+1. the user wants to design rule truth from the start, or open the next candidate-layer round for an already-independent rule object
 2. that truth is intended to exist independently rather than first living in one unit appendix
-3. the main task is shaping shared truth itself rather than binding one unit to it or only checking downstream impact
+3. the main task is shaping rule truth itself rather than binding one unit to it or only checking downstream impact
 
-Use `shared_extract` only when the request clearly means:
+Use `rule_extract` only when the request clearly means:
 
 1. truth already exists inside one or more units
-2. that truth should now be extracted into one independent `shared_contract`
+2. that truth should now be extracted into one independent `rule`
 3. the main task is the boundary extraction itself
 
-Use `shared_bind` only when the request clearly means:
+Use `rule_bind` only when the request clearly means:
 
-1. a `shared_contract` already exists
+1. a `rule` already exists
 2. a unit now needs to consume it
-3. the main task is binding and unit-side explanation, not redesigning the shared truth itself
+3. the main task is binding and unit-side explanation, not redesigning the rule truth itself
 
-Use `shared_sync` only when the request clearly means:
+Use `rule_sync` only when the request clearly means:
 
-1. a `shared_contract` changed
+1. a `rule` changed
 2. the user wants to know which units or scenarios are affected
 3. the main task is state fallback, snapshot invalidation, or impact closure
 
-Use `shared_topology` only when the request clearly means:
+Use `rule_topology` only when the request clearly means:
 
-1. one or more existing `shared_contract` objects need structural topology change or terminal-state resolution
+1. one or more existing `rule` objects need structural topology change or terminal-state resolution
 2. the main task is not simple first-time authoring, extraction, one-unit binding, or impact check
-3. the round must decide which touched shared objects stay, which are replaced, and which must be deleted or explicitly kept
+3. the round must decide which touched rule objects stay, which are replaced, and which must be deleted or explicitly kept
 
-Use `shared_escape` when the request cannot be stably routed into exactly one standard shared flow.
+Use `rule_escape` when the request cannot be stably routed into exactly one standard rule flow.
 This is mandatory when at least one of these holds:
 
-1. one request simultaneously hits more than one standard shared flow and the action order matters to formal truth
-2. the request is really redrawing the boundary between unit-local truth and shared truth
-3. the request simultaneously involves shared restructuring and `system_constraints_change_proposal`
+1. one request simultaneously hits more than one standard rule flow and the action order matters to formal truth
+2. the request is really redrawing the boundary between unit-local truth and rule truth
 4. current repository truth is insufficient to stably judge which part belongs to shared and which part stays unit-local
 
-### 10.2 Shared Branch Procedure
+### 10.2 Rule Branch Procedure
 
-The shared-governance branch follows this procedure:
+The rule-governance branch follows this procedure:
 
-1. confirm the request really belongs to cross-unit shared-truth governance
+1. confirm the request really belongs to cross-unit rule-truth governance
 2. resolve relevant repository truth before routing:
-   - use `_status.md` to resolve current layer for any named existing formal unit
+   - use `_status.md` to resolve current layer for any named existing formal unit or scenario
    - read current-layer appendix truth whenever the routing decision depends on where the formal truth currently lives or whether unit-local versus shared boundary is already stable
-   - read named `shared_contract` files when shared truth is named directly
-   - read `system_constraints.md` when the request may cross the shared/system boundary
-3. test whether the request belongs to exactly one of `shared_new`, `shared_extract`, `shared_bind`, `shared_topology`, or `shared_sync`
-4. if routing to `shared_sync`, decide whether any directly affected current-round Shared Contract file is provably `bound_objects`-only:
-   - derive that judgment from current repository truth and the current-round changed shared files
+   - read named `rule` files when rule truth is named directly
+   - read `s_g_rule_repository_baseline.md` when the request may cross the shared/system boundary
+3. test whether the request belongs to exactly one of `rule_new`, `rule_extract`, `rule_bind`, `rule_topology`, or `rule_sync`
+4. if routing to `rule_sync`, decide whether any directly affected current-round Rule file is provably `bound_objects`-only:
+   - derive that judgment from current repository truth and the current-round changed rule files
    - treat a file as `bound_objects`-only only when the current round can explicitly prove that no other frontmatter field, body text, layer target, version target, or binding target changed for that file
-   - if one or more files satisfy that proof, pass execution-local `bound_objects_only_shared_file_refs=<comma-separated-file-refs>` into `shared_sync` with the exact repository paths for those files
+   - if one or more files satisfy that proof, pass execution-local `bound_objects_only_rule_file_refs=<comma-separated-file-refs>` into `rule_sync` with the exact repository paths for those files
    - if current repository truth is insufficient to prove that a directly affected file is `bound_objects`-only, do not pass that file under the metadata-only exception
-5. if exactly one standard shared flow applies, route to that flow
-6. if routing is not stable, enter `shared_escape`
-7. if the routed flow changes shared truth or unit shared bindings, do not claim closure until required reconciliation through `shared_sync` is complete
-8. if the routed work makes a touched shared file lose its last formal binding, do not claim closure until the owner of that binding or topology change has either resolved that file's terminal state or returned control to `shared_escape`
-9. if a unit-side command such as `unit_promote` stops because post-promotion Shared Contract topology is unclear, re-enter natural-language routing from current repository truth and let it reach this shared-governance branch instead of guessing a unit-local-only continuation
-10. if the request crosses into `system_constraints_change_proposal`, stop through `shared_escape` and raise a checkpoint instead of inventing a shared-side continuation
-11. if `shared_escape` emitted a `remaining_steps_contract`, do not claim shared-governance closure until every listed step has finished under that contract
+5. if exactly one standard rule flow applies, route to that flow
+6. if routing is not stable, enter `rule_escape`
+7. if the routed flow changes rule truth or unit rule bindings, do not claim closure until required reconciliation through `rule_sync` is complete
+8. if the routed work makes a touched rule file lose its last formal binding, do not claim closure until the owner of that binding or topology change has either resolved that file's terminal state or returned control to `rule_escape`
+9. if a unit-side command such as `unit_promote` stops because post-promotion Rule topology is unclear, re-enter natural-language routing from current repository truth and let it reach this rule-governance branch instead of guessing a unit-local-only continuation
+11. if `rule_escape` emitted a `remaining_steps_contract`, do not claim rule-governance closure until every listed step has finished under that contract
 
-### 10.3 Shared Branch Closure
+### 10.3 Rule Branch Closure
 
 Fixed closure rules:
 
-1. if `shared_new` or `shared_extract` writes `docs/specs/shared_contracts/**`, it must not claim closure until `shared_sync` has completed
-2. if `shared_bind` changes any unit `shared_contract_refs`, it must not claim closure until `shared_sync` has completed
-3. if `shared_topology` changes any unit `shared_contract_refs` value or any file under `docs/specs/shared_contracts/**`, it must not claim closure until `shared_sync` has completed
-4. if a routed request crosses into `system_constraints_change_proposal`, the shared flow must stop through `shared_escape` and raise a shared-governance checkpoint rather than inventing a shared-side continuation
-5. no internal shared flow may guess the unit current layer without resolving it from `_status.md` first when the named unit already exists
-6. no internal shared flow may modify unit `stable` truth directly; if a shared request needs unit truth writeback and the target unit is currently at `stable`, the flow must stop at a shared-governance checkpoint and require `unit_fork:{unit}` first
-7. if `shared_escape` emits a `remaining_steps_contract`, finishing only the first routed flow does not close shared governance
-8. if a routed internal shared flow later discovers that repository truth is insufficient to continue stably, it must stop that flow and return control to `shared_escape` instead of inventing a flow-local checkpoint
-9. if a routed internal shared flow changes bindings or topology so a touched shared file would have no formal bindings remaining, that same handling round must resolve the touched file's terminal state or return control to `shared_escape`; shared governance must not leave cleanup ownership implicit
-10. when shared governance routes a current-round impact-check request into `shared_sync`, it must pass execution-local `bound_objects_only_shared_file_refs` for every directly affected Shared Contract file whose current-round delta is provably `bound_objects`-only, and it must not invent that metadata-only proof for any other file
+1. if `rule_new` or `rule_extract` writes `docs/specs/rules/**`, it must not claim closure until `rule_sync` has completed
+2. if `rule_bind` changes any unit `rule_refs`, it must not claim closure until `rule_sync` has completed
+3. if `rule_topology` changes any unit or scenario `rule_refs` value or any file under `docs/specs/rules/**`, it must not claim closure until `rule_sync` has completed
+5. no internal rule flow may guess a unit or scenario current layer without resolving it from `_status.md` first when the named object already exists
+6. no internal rule flow may modify unit or scenario `stable` truth directly; if a rule request needs command-target truth writeback and the target object is currently at `stable`, the flow must stop at a rule-governance checkpoint and require `unit_fork:{unit}` or `scenario_fork:{scenario}` first
+7. if `rule_escape` emits a `remaining_steps_contract`, finishing only the first routed flow does not close rule governance
+8. if a routed internal rule flow later discovers that repository truth is insufficient to continue stably, it must stop that flow and return control to `rule_escape` instead of inventing a flow-local checkpoint
+9. if a routed internal rule flow changes bindings or topology so a touched rule file would have no formal bindings remaining, that same handling round must resolve the touched file's terminal state or return control to `rule_escape`; rule governance must not leave cleanup ownership implicit
+10. when rule governance routes a current-round impact-check request into `rule_sync`, it must pass execution-local `bound_objects_only_rule_file_refs` for every directly affected Rule file whose current-round delta is provably `bound_objects`-only, and it must not invent that metadata-only proof for any other file
 
-### 10.4 Shared Checkpoints
+### 10.4 Rule Checkpoints
 
-A shared-governance checkpoint must follow `specflow/framework/checkpoint_protocol.md`.
+A rule-governance checkpoint must follow `specflow/framework/checkpoint_protocol.md`.
 
 Fixed rules:
 
 1. set `entry=natural_language_routing`
 2. set `branch=shared_governance`
-3. set `routed_flow` to the internal shared flow that raised or owns the checkpoint
-4. set `command` to the same internal shared flow recorded in `routed_flow`
+3. set `routed_flow` to the internal rule flow that raised or owns the checkpoint
+4. set `command` to the same internal rule flow recorded in `routed_flow`
 5. set `unit` to the formal unit identifier only when the current stop is truly about exactly one unit
 6. otherwise set `unit=none`
-7. `required_writeback_target` may point to one or more shared-contract files, unit candidate files, or appendix files when those are the truth targets that must be updated before resume
+7. `required_writeback_target` may point to one or more rule files, unit candidate files, scenario candidate files, or appendix files when those are the truth targets that must be updated before resume
 8. `resume_next_step` must normally be rerunning natural language routing from current repository truth after the required truth writeback
-9. when the checkpoint exists because one or more target units are still at `stable`, `required_writeback_target` must point to the future unit candidate main file set rather than the current stable file set
+9. when the checkpoint exists because one or more target units or scenarios are still at `stable`, `required_writeback_target` must point to the future candidate main file set rather than the current stable file set
 10. when the current flow is blocked on an upstream command creating the legal writeback target first, use `type=prerequisite_action`
-11. when a routed internal shared flow raises a shared-governance checkpoint directly, the current shared-governance handling result is `blocked` rather than closed
-12. when Rule 11 applies, do not treat the routed internal flow as completed merely because it reached its own stop point; shared governance remains open until the checkpoint is answered and the required follow-up has been rerun from current repository truth
+11. when a routed internal rule flow raises a rule-governance checkpoint directly, the current rule-governance handling result is `blocked` rather than closed
+12. when Rule 11 applies, do not treat the routed internal flow as completed merely because it reached its own stop point; rule governance remains open until the checkpoint is answered and the required follow-up has been rerun from current repository truth
 
 ---
 
@@ -857,11 +878,11 @@ That command output must still follow the user-facing language separation requir
 Natural language routing does not:
 
 1. replace standard command files
-2. let executors skip `_status.md`, `repository_mapping.md`, Shared Contract files, or `system_constraints.md` when those files are needed
+2. let executors skip `_status.md`, `repository_mapping.md`, Rule files, or `s_g_rule_repository_baseline.md` when those files are needed
 3. turn user preference into truth without writeback
 4. treat a multi-step plan as completed because the first step was routed
 5. create a direct user-facing shared command shape
 6. create compatibility aliases for retired user-facing shared entries
 7. let guidance skills replace candidate truth, command gates, or verification evidence
-8. make users responsible for selecting internal specFlow object families or internal shared-governance flow names
+8. make users responsible for selecting internal specFlow object families or internal rule-governance flow names
 9. claim an end-to-end user goal is complete when only a local capability step has been completed and the required chain verification is still missing

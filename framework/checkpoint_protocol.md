@@ -80,11 +80,11 @@ Field meanings:
    - the active command or governance flow that raised the checkpoint
 4. `unit`
    - the formal unit identifier
-   - use literal `none` only when the active governance flow is not bound to exactly one formal unit, for example a cross-unit shared-governance checkpoint
+   - use literal `none` only when the active governance flow is not bound to exactly one formal unit, for example a cross-unit rule-governance checkpoint
 5. `question_or_action`
    - the exact input or verification the user must provide
    - it must be phrased in ordinary user-goal language unless the user already chose the relevant internal specFlow term
-   - it must not require the user to choose an internal object family, command name, or internal shared-governance flow name
+   - it must not require the user to choose an internal object family, command name, or internal rule-governance flow name
 6. `why_blocking`
    - the minimal explanation of why the command cannot close correctly yet
 7. `required_writeback_target`
@@ -102,16 +102,16 @@ Checkpoint resume must follow these rules:
 
 1. the active command does not become `pass` merely because a checkpoint was raised
 2. the active command or governance flow must re-judge its gate conditions after resume instead of assuming the checkpoint answer fixed everything
-3. if the checkpoint conclusion changes behavior truth, boundary truth, or acceptance truth, that conclusion must be written back to the current candidate, required appendix, shared-contract file, or other flow-declared truth target before resume
+3. if the checkpoint conclusion changes behavior truth, boundary truth, or acceptance truth, that conclusion must be written back to the current candidate, required appendix, rule file, or other flow-declared truth target before resume
 4. executors must not treat chat-only conclusions as durable truth
 5. `resume_next_step` must be the smallest legal step, not the most convenient step
 6. a checkpoint answer does not become durable truth until it is written to the required truth target when writeback is required
-7. after a checkpoint answer that changes behavior, boundary, acceptance, shared truth, system truth, or repository ownership, the active flow must reroute or re-judge from current repository truth instead of continuing from the pre-checkpoint assumption
+7. after a checkpoint answer that changes behavior, boundary, acceptance, rule truth, system truth, or repository ownership, the active flow must reroute or re-judge from current repository truth instead of continuing from the pre-checkpoint assumption
 
 Writeback rules:
 
-1. for `clarification`, `required_writeback_target` should normally be the current candidate main file, a required appendix file, or the active flow's declared shared-truth target
-2. for `decision`, `required_writeback_target` should normally be the current candidate main file, a required appendix file, or the active flow's declared shared-truth target when the decision affects behavior truth
+1. for `clarification`, `required_writeback_target` should normally be the current candidate main file, a required appendix file, or the active flow's declared rule-truth target
+2. for `decision`, `required_writeback_target` should normally be the current candidate main file, a required appendix file, or the active flow's declared rule-truth target when the decision affects behavior truth
 3. for `human_verify`, `required_writeback_target` may be `none` only when the checkpoint concerns final confidence rather than truth repair
 4. for `prerequisite_action`, `required_writeback_target` should name the concrete truth or process target that must exist before resume, and `resume_next_step` should point to rerunning the active flow after that prerequisite is complete
 
@@ -129,7 +129,7 @@ Executors must not use checkpoints to:
 4. create a second workflow outside the command chain
 5. keep asking open-ended preference questions that do not materially affect the active command
 6. transfer technical investigation, repository reading, or formal owner resolution to the user when the executor can resolve it from repository truth
-7. ask the user to choose between internal labels such as `unit`, `scenario`, `shared_contract`, `system_constraints`, or internal shared flow names when an ordinary-language question about goal, scope, outcome, or verification would identify the missing blocker
+7. ask the user to choose between internal labels such as `unit`, `scenario`, `rule`, stable `g_` rule, or internal rule flow names when an ordinary-language question about goal, scope, outcome, or verification would identify the missing blocker
 
 Additional type boundaries:
 

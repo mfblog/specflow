@@ -11,7 +11,7 @@ It answers four questions:
 3. how severity relates to blocking status
 4. what a report must explain when it assigns a severity
 
-This is a shared governance contract.
+This is a rule governance contract.
 Executors must not invent a different severity meaning per command.
 
 ---
@@ -162,4 +162,3 @@ This file does not:
 1. define behavior truth
 2. define verification evidence formats
 3. replace `fallback_reason_code`
-4. decide git close-out policy

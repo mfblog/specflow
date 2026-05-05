@@ -98,12 +98,12 @@ Governance tooling must not perform semantic judgment that belongs to rule docum
 At minimum, tooling must not decide:
 
 1. whether a user request should route to one governance flow or another from natural-language intent alone
-2. whether a boundary is unit-local truth, Shared Contract truth, or global default-rule truth
+2. whether a boundary is unit-local truth, Rule truth, or global default-rule truth
 3. whether candidate truth is sufficiently closed, complete, or progressable
 4. whether verification evidence is sufficient
 5. whether a finding is `pass`, `blocked`, or which severity it should have
 6. whether downgrade or checkpoint handling is required
-7. whether a shared change is only thematically similar or is truly the same shared truth object
+7. whether a rule change is only thematically similar or is truly the same rule truth object
 8. whether a tooling function itself is justified under Section 3
 
 Additional rule:
@@ -183,5 +183,5 @@ This file does not:
 
 1. require every governance action to become tooling
 2. require a separate tooling registry file
-3. let tooling replace unit Specs, shared-governance files, or review judgment
+3. let tooling replace unit Specs, rule-governance files, or review judgment
 4. treat platform binaries as the default governance review target

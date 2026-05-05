@@ -8,7 +8,7 @@ It answers five questions:
 
 1. whether the governance rule set still closes the full Spec Flow
 2. whether the tooling layer still matches the rule layer
-3. whether shared-governance and impact-reconciliation semantics still converge with the command core
+3. whether rule-governance and impact-reconciliation semantics still converge with the command core
 4. whether governance documents can make an executor operational without prior `specFlow` knowledge or avoidable reading cost
 5. whether the repository may still claim one coherent governance baseline
 
@@ -92,8 +92,8 @@ Each in-scope owner area must close from a legal entry to one legal next action,
 The review must find a real finding when an in-scope rule can cause:
 
 1. ambiguous entry selection
-2. missing truth, process-state, tooling, recovery, or git close-out ownership
-3. bypass of a required command gate, truth writeback gate, shared-governance gate, impact-reconciliation gate, recovery gate, or close-out gate
+2. missing truth, process-state, tooling, recovery, or close-out ownership
+3. bypass of a required command gate, truth writeback gate, rule-governance gate, impact-reconciliation gate, recovery gate, or close-out gate
 4. a side effect with no downstream owner
 5. a branch that never rejoins a legal command, review, repair, or stop path
 6. chat agreement, repository history, directory shape, or ordinary term meaning to substitute for durable governance truth
@@ -119,7 +119,7 @@ Any contract drift that can change execution, stop behavior, review judgment, or
 Locally correct rules must still compose into one coherent governance baseline.
 
 The review must test cross-convergence wherever one rule area depends on another rule area.
-At minimum, cross-convergence covers routing, commands, project-instance migration, truth writeback, implementation gates, onboarding source decision, shared governance, impact reconciliation, process state, entry files, project-local standards, tooling, recovery, and git close-out when those areas are in scope.
+At minimum, cross-convergence covers routing, commands, project-instance migration, truth writeback, implementation gates, onboarding source decision, rule governance, impact reconciliation, process state, entry files, project-local standards, tooling, and recovery when those areas are in scope.
 
 When onboarding source decision is in scope, the review must verify that candidate source fields, candidate main Spec text, evidence appendix handling, implementation permission, and lifecycle gates converge without allowing observed implementation behavior to become implementation truth outside the candidate main Spec.
 
@@ -131,7 +131,7 @@ It must not claim default governance-baseline `pass`.
 Governance files must be operable by a capable executor without prior `specFlow` memory.
 
 Default full-scope `spec_flow_review` must read and consume `specflow/framework/agent_operability_standard.md`.
-A narrowed review must read and consume that standard whenever the narrowed scope includes entry behavior, routing, commands, project-instance migration, checkpoints, shared governance, process state, entry files, or tooling contracts.
+A narrowed review must read and consume that standard whenever the narrowed scope includes entry behavior, routing, commands, project-instance migration, checkpoints, rule governance, process state, entry files, or tooling contracts.
 
 Agent-operability review must cover execution clarity, content economy, and formal rule voice.
 A pass claim for an in-scope governance file must not ignore an applicable agent-operability failure.
@@ -164,15 +164,15 @@ The compatibility check may judge only:
 
 The compatibility check must not judge:
 
-1. whether a unit, scenario, or shared contract describes the right business behavior
+1. whether a unit, scenario, or rule describes the right business behavior
 2. whether acceptance criteria are sufficient for the product
 3. whether a candidate or stable Spec should make different design decisions
-4. whether implementation actually satisfies a unit, scenario, or shared contract
+4. whether implementation actually satisfies a unit, scenario, or rule
 5. whether the current governance design is worth using
 6. whether an evidence appendix's observed behavior is business-correct or should be retained
 
 If the project-instance compatibility check finds old file shape, unsupported status values, missing required references, invalid binding format, missing candidate source fields, invalid evidence appendix references, missing required evidence appendix files, or unreadable process-state shape, it is a `spec_flow_review` finding because the framework cannot safely operate on the current project instance.
-If the discovered concern is only about the truth content being wrong, incomplete, or undesirable as business truth, report that it is outside this check and route it to the owning command, shared-governance flow, repository-mapping flow, or design review.
+If the discovered concern is only about the truth content being wrong, incomplete, or undesirable as business truth, report that it is outside this check and route it to the owning command, rule-governance flow, repository-mapping flow, or design review.
 
 ### 2.10 Project-Instance Migration Closure
 
@@ -252,16 +252,16 @@ Files excluded from business-truth review include:
 
 1. `docs/specs/repository_mapping.md`
 2. `docs/specs/_status.md`
-3. `docs/specs/system_constraints.md`
+3. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 4. `docs/specs/units/**`
 5. `docs/specs/scenarios/**`
-6. `docs/specs/shared_contracts/**`
+6. `docs/specs/rules/**`
 7. `docs/specs/_check_result/**`
 8. `docs/specs/_plans/**`
 9. `docs/specs/_verify_result/**`
 10. `docs/specs/_governance_review/**`
 
-Those files may be reviewed for business-truth correctness only when the user explicitly narrows `spec_flow_review` to project-instance state, or when a command, repository-mapping flow, shared-governance flow, or verification flow consumes them under its own policy.
+Those files may be reviewed for business-truth correctness only when the user explicitly narrows `spec_flow_review` to project-instance state, or when a command, repository-mapping flow, rule-governance flow, or verification flow consumes them under its own policy.
 
 Default full-scope `spec_flow_review` must still perform the project-instance compatibility check from Section 2.9.
 This check is narrow and does not turn `docs/specs/` into default business-truth review scope.
@@ -270,9 +270,9 @@ The compatibility input surface includes:
 
 1. `docs/specs/_status.md`
 2. `docs/specs/repository_mapping.md`
-3. `docs/specs/system_constraints.md`
+3. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 4. existing project process files under `docs/specs/_check_result/**`, `docs/specs/_plans/**`, and `docs/specs/_verify_result/**`
-5. existing project truth files under `docs/specs/units/**`, `docs/specs/scenarios/**`, and `docs/specs/shared_contracts/**`, only for file shape, required fields, references, and binding format
+5. existing project truth files under `docs/specs/units/**`, `docs/specs/scenarios/**`, and `docs/specs/rules/**`, only for file shape, required fields, references, and binding format
 
 `docs/specs/_governance_review/**` is not part of the compatibility input fingerprint.
 The active full-scope run-state file is governed by the run-state procedure in Section 6, because including that file in its own slice fingerprint would create self-referential stale state.
@@ -281,8 +281,8 @@ Default scope must explicitly include:
 
 1. the onboarding source decision rule set
    - at minimum `natural_language_routing.md` where it enters onboarding source decision, `onboarding_decision_policy.md`, `spec_policy.md`, `implementation_change_policy.md`, `unit_new.md`, `unit_check.md`, `unit_plan.md`, `unit_impl.md`, `unit_promote.md`, `scenario_new.md`, `scenario_check.md`, `scenario_promote.md`, and `candidate_handoff_contract.md`
-2. the shared-governance rule set
-   - at minimum `natural_language_routing.md` only where it defines the shared-governance branch, `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`
+2. the rule-governance rule set
+   - at minimum `natural_language_routing.md` only where it defines the rule-governance branch, `rule_new.md`, `rule_extract.md`, `rule_bind.md`, `rule_topology.md`, `rule_sync.md`, and `rule_escape.md`
 3. the guidance-skill rule set
    - at minimum `using-specflow-guidance/SKILL.md`, `project-framing/SKILL.md`, `scope-cutting/SKILL.md`, `solution-design/SKILL.md`, `design-quality-review/SKILL.md`, and `spec-writeback-guidance/SKILL.md`
 4. the impact-reconciliation rule set
@@ -290,9 +290,9 @@ Default scope must explicitly include:
 5. the tooling execution contract set
    - at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, the in-scope tooling source files, and the runtime reader web files
 6. the agent-operability standard
-   - at minimum `agent_operability_standard.md`, entry files, routing policy files, onboarding source decision files, command policy files, command files, shared-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
+   - at minimum `agent_operability_standard.md`, entry files, routing policy files, onboarding source decision files, command policy files, command files, rule-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
 7. the project-instance compatibility check
-   - at minimum project-instance status, repository mapping, system constraints, existing process files, and existing formal truth files under `docs/specs/`, limited by Section 2.9
+   - at minimum project-instance status, repository mapping, global rules, existing process files, and existing formal truth files under `docs/specs/`, limited by Section 2.9
 8. the project-instance migration flow
    - at minimum `spec_flow_migrate.md`, `natural_language_routing.md` where it routes project-instance migration, `command_policy.md` where it defines the non-command boundary, `checkpoint_protocol.md`, `process_snapshot_contract.md`, `recovery_policy.md`, `entry_index_registry.md`, and the template-side process and entry files that migration consumes
 
@@ -323,19 +323,19 @@ Local slices review one owner area for internal closure, side effects, contract 
    - reviews `natural_language_routing.md`, `onboarding_decision_policy.md`, `command_policy.md`, `scenario_policy.md`, `spec_flow_migrate.md`, `commands/*.md`, and `skills/*/SKILL.md`
    - verifies exact command routing, exact project-instance migration routing, natural-language routing, onboarding source routing, unit command progression, scenario command progression, and guidance entry behavior
 4. `truth_and_implementation_gates`
-   - reviews `spec_policy.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `onboarding_decision_policy.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, `recovery_policy.md`, and `git_policy.md`
-   - verifies truth ownership, candidate source fields, evidence appendix ownership, implementation diversion, handoff, fallback, recovery, and close-out rules
+   - reviews `spec_policy.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `onboarding_decision_policy.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, and `recovery_policy.md`
+   - verifies truth ownership, candidate source fields, evidence appendix ownership, implementation diversion, handoff, fallback, and recovery rules
 5. `shared_governance`
-   - reviews `natural_language_routing.md` only where it defines the shared-governance branch
-   - reviews `shared_new.md`, `shared_extract.md`, `shared_bind.md`, `shared_topology.md`, `shared_sync.md`, and `shared_escape.md`
+   - reviews `natural_language_routing.md` only where it defines the rule-governance branch
+   - reviews `rule_new.md`, `rule_extract.md`, `rule_bind.md`, `rule_topology.md`, `rule_sync.md`, and `rule_escape.md`
 6. `process_and_impact_state`
    - reviews `impact_sync_policy.md`, `process_snapshot_contract.md`, `recovery_policy.md`, template `_status.md`, template `_check_result`, template `_plans`, template `_verify_result`, and template `_governance_review`
    - verifies process-state contracts, snapshot invalidation, impact handling, and governance-review run-state boundaries
 7. `project_instance_contract_compatibility`
    - reviews the current project-instance files under `docs/specs/` only for format and contract compatibility with current framework rules
    - reviews `spec_flow_migrate.md` as the migration owner for old project-instance shape discovered by this slice
-   - verifies status shape, repository mapping shape, system constraints shape, process-file shape, formal object file shape, candidate source metadata shape, evidence appendix reference shape, evidence appendix file shape, reference format, status values, command names, shared binding format, migration writeback boundary, migration state invalidation, migration checkpoint handling, and migration output closure
-   - must not judge unit, scenario, shared-contract, or evidence-appendix business truth correctness
+   - verifies status shape, repository mapping shape, global rules shape, process-file shape, formal object file shape, candidate source metadata shape, evidence appendix reference shape, evidence appendix file shape, reference format, status values, command names, rule binding format, migration writeback boundary, migration state invalidation, migration checkpoint handling, and migration output closure
+   - must not judge unit, scenario, rule, or evidence-appendix business truth correctness
 8. `entry_and_project_extension`
    - reviews `entry_index_registry.md`, `project_standards_policy.md`, `project_standard_create.md`, registered entry files, template entry files, template project-standard registry, project registry, and active project-local standards in scope
 9. `tooling_execution`
@@ -354,9 +354,9 @@ Cross-convergence slices review whether locally correct rules still compose into
 2. `command_to_process_state_convergence`
    - verifies command pass, fallback, cleanup, snapshot, and process-file consumption rules converge
 3. `truth_to_implementation_convergence`
-   - verifies truth writeback, onboarding source decision, repository mapping, implementation gates, evidence appendix non-truth handling, handoff, recovery, and git close-out converge
+   - verifies truth writeback, onboarding source decision, repository mapping, implementation gates, evidence appendix non-truth handling, handoff, and recovery converge
 4. `shared_to_impact_convergence`
-   - verifies shared-governance changes correctly converge with impact reconciliation and downstream process-state invalidation
+   - verifies rule-governance changes correctly converge with impact reconciliation and downstream process-state invalidation
 5. `entry_extension_to_review_convergence`
    - verifies entry files and project-local standards cannot bypass the framework baseline, narrow default scope silently, or change review meaning without owner rules
 6. `tooling_to_rule_convergence`
@@ -633,7 +633,7 @@ The output must report at least:
 4. the baseline slice table and slice statuses
 5. the dynamic slice table and slice statuses, or explicit `none`
 6. the stale slice result
-7. the shared-governance coverage result
+7. the rule-governance coverage result
 8. the guidance-skill coverage result
 9. the impact-reconciliation coverage result
 10. the tooling coverage result, including reader runtime coverage
@@ -728,7 +728,7 @@ Additional rules:
 
 This flow does not:
 
-1. replace the shared-governance branch
+1. replace the rule-governance branch
 2. replace `impact_sync`
 3. review business truth by default
 4. treat recently touched governance files as the whole scope unless the user explicitly narrows it that way

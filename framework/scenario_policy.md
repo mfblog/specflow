@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This file defines what a formal `scenario` object is in this repository and how it differs from `unit`, `shared_contract`, and `repository_mapping`.
+This file defines what a formal `scenario` object is in this repository and how it differs from `unit`, `rule`, and `repository_mapping`.
 
 It answers five questions:
 
@@ -18,10 +18,10 @@ It answers five questions:
 
 Its practical value is cross-unit closure.
 Unit verification proves that one unit satisfies its own truth.
-Scenario verification proves that the required units, shared contracts, and baseline constraints work together from a declared trigger to the promised user-visible result.
+Scenario verification proves that the required units, rules, and baseline constraints work together from a declared trigger to the promised user-visible result.
 
 It is the normal formal anchor for a user-visible end-to-end outcome, but it is not the mandatory starting point for every user request.
-Natural-language routing decides whether the user's goal requires a scenario, a local unit route, shared governance, system-constraint handling, repository mapping, implementation classification, or explanation only.
+Natural-language routing decides whether the user's goal requires a scenario, a local unit route, rule governance, global-rule handling, repository mapping, implementation classification, or explanation only.
 
 A `scenario` is required when at least one of these is true:
 
@@ -31,13 +31,13 @@ A `scenario` is required when at least one of these is true:
 
 A `scenario` must not be created merely because several files, directories, units, or implementation tasks are mentioned.
 When current repository truth proves that a local unit result is sufficient, the route must stay local.
-When the request is only about a rule reused by more than one formal object, the route must test shared governance instead of creating a scenario by default.
+When the request is only about a rule reused by more than one formal object, the route must test rule governance instead of creating a scenario by default.
 
 It answers:
 
 1. where the chain starts
 2. which units it traverses
-3. which shared contracts are reused along that chain
+3. which rules are reused along that chain
 4. what the success result is
 5. where failure is absorbed, surfaced, or rolled back
 6. how that chain is verified end to end
@@ -45,7 +45,7 @@ It answers:
 It does not answer:
 
 1. unit-local state-machine detail
-2. shared-contract field-level body text
+2. rule field-level body text
 3. repository-wide mapping rules
 4. implementation ownership for code edits
 5. unit implementation planning or unit-local verification
@@ -69,8 +69,7 @@ Each `scenario` must record at minimum:
 
 1. `repository_mapping_ref`
 2. `unit_refs`
-3. `shared_contract_refs`
-4. `system_constraints_ref`
+3. `rule_refs`
 
 Binding rules:
 
@@ -78,7 +77,7 @@ Binding rules:
 2. units do not record `scenario_refs` as a required formal binding field
 3. `scenario stable` must bind only stable-layer dependencies
 4. `scenario candidate` may bind candidate-layer dependencies, but the bound layer must be explicit
-5. `scenario` is downstream of `repository_mapping`, `unit`, `shared_contract`, and `system_constraints`
+5. `scenario` is downstream of `repository_mapping`, `unit`, `rule`, and stable `g_` rule
 
 User-facing routing rule:
 
@@ -112,7 +111,7 @@ Therefore:
 It means:
 
 1. current scenario truth has been read
-2. current required unit and shared bindings have been revalidated
+2. current required unit and rule bindings have been revalidated
 3. the claimed chain is actually wired from trigger to outcome
 4. the verification report names any `affected_units`
 
@@ -130,8 +129,7 @@ Additional rules:
 1. current scenario truth changes
 2. `repository_mapping_ref` no longer matches the current repository mapping
 3. any bound unit set or required unit identity changes
-4. any bound `shared_contract` truth, layer, version, or snapshot changes
-5. `system_constraints_ref` no longer matches the current formal global baseline
+4. any bound `rule` truth, layer, version, or snapshot changes
 
 Fallback rules:
 
@@ -143,6 +141,6 @@ Fallback rules:
 This file does not:
 
 1. create a second implementation chain outside `unit`
-2. redefine `shared_contract`
+2. redefine `rule`
 3. redefine `repository_mapping`
-4. create an independent lifecycle for `system_constraints`
+4. create an independent lifecycle for stable `g_` rule

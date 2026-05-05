@@ -15,7 +15,7 @@ The output is a discussion-stage scope decision. It becomes durable only after c
 
 1. Separate the full vision from the first candidate round.
 2. Identify independent capabilities that should not be forced into one unit or scenario change.
-3. Identify whether the first useful proof is a local capability result, a trigger-to-outcome flow, a shared rule, a global rule, or a structure/ownership decision.
+3. Identify whether the first useful proof is a local capability result, a trigger-to-outcome flow, a rule, a stable g_ rule, or a structure/ownership decision.
 4. Recommend the smallest version that can prove the user-facing goal.
 5. State what is explicitly out of scope for this round.
 6. If multiple formal owners are plausible, stop and route through repository mapping or the relevant specFlow boundary rule instead of guessing.
@@ -35,5 +35,5 @@ The output is a discussion-stage scope decision. It becomes durable only after c
 ## Boundaries
 
 1. Do not hide future work inside the current round.
-2. Do not use scope cutting to avoid required Shared Contract or system constraint routing.
+2. Do not use scope cutting to avoid required Rule or global rule routing.
 3. Do not let an oversized scope enter `unit_check` as if it were already closed.

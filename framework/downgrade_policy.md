@@ -9,7 +9,7 @@ It answers five questions:
 1. what "downgrade" means in Spec Flow
 2. which evidence states may still be downgraded
 3. which evidence states must stop progression immediately
-4. how `unit_verify` and `unit_stable_verify` consume the same downgrade rules
+4. how verify and stable-verify commands consume the same downgrade rules
 5. which standardized `fallback_reason_code` values are allowed when downgrade does not hold
 
 This is a centralized governance policy. It does not replace command-local procedure text.
@@ -24,6 +24,8 @@ By default it governs:
 
 1. `unit_verify`
 2. `unit_stable_verify`
+3. `scenario_verify`
+4. `scenario_stable_verify`
 
 It does not govern:
 
@@ -61,6 +63,8 @@ These status meanings are fixed:
    - checked evidence confirms misalignment with current truth
 5. `evidence_incomplete`
    - the current round cannot safely judge whether the missing or weakly checked area is low-risk
+6. `not_runnable_yet`
+   - the Spec explicitly records that the acceptance item cannot be run in the current repository state, and the verification run confirms that same missing runnable surface still exists
 
 ### 3.3 Narrower Safe Conclusion
 
@@ -68,6 +72,8 @@ A narrower safe conclusion means:
 
 1. for `unit_verify`, promotion may proceed only when the remaining uncertainty does not weaken the candidate's acceptance basis for this round
 2. for `unit_stable_verify`, "still aligned with stable" may be claimed only when the remaining uncertainty does not weaken confidence in the stable contract's externally observable behavior
+3. for `scenario_verify`, promotion may proceed only when the remaining uncertainty does not weaken the trigger-to-outcome claim being promoted
+4. for `scenario_stable_verify`, "still aligned with stable" may be claimed only when the remaining uncertainty does not weaken confidence in the stable scenario chain
 
 ---
 
@@ -77,7 +83,7 @@ Downgrade is allowed only when all of the following hold:
 
 1. there is no `fail`
 2. the checked evidence does not indicate implementation deviation
-3. every `partial` or `not_checked` item has an explicit risk note
+3. every `partial`, `not_checked`, or `not_runnable_yet` item has an explicit risk note
 4. the risk note explains why the unchecked area is bounded and why it does not affect the command's current release decision
 5. the remaining uncertainty does not hide a likely change in externally observable behavior, protocol meaning, or acceptance meaning
 
@@ -85,8 +91,9 @@ Additional rules:
 
 1. `partial` may be downgraded only when the missing portion is smaller than the evidence already collected and the checked evidence still constrains the same behavior path tightly.
 2. `not_checked` may be downgraded only when the unchecked item is non-core for the current gate and its risk is explicitly bounded by other checked evidence, stable implementation symmetry, or a clearly stated environmental limitation.
-3. downgrade is never allowed merely because the executor "believes it is probably fine."
-4. downgrade is never allowed when the missing evidence concerns the only proof for a key acceptance point.
+3. `not_runnable_yet` may be downgraded only when the item was explicitly marked non-runnable in current truth, the command is not using that item as a current pass claim, and the remaining claim can still be safely narrower without pretending the item passed.
+4. downgrade is never allowed merely because the executor "believes it is probably fine."
+5. downgrade is never allowed when the missing evidence concerns the only proof for a current-gate acceptance item.
 
 ---
 
@@ -95,10 +102,11 @@ Additional rules:
 Downgrade is forbidden when any of the following hold:
 
 1. any `fail` exists
-2. any unchecked or partially checked item covers a key acceptance point with no other direct evidence
+2. any unchecked or partially checked item covers a current-gate acceptance item with no other direct evidence
 3. the missing evidence could hide a protocol break, state-machine break, persistence break, or externally visible behavior break
 4. the current round cannot explain why the remaining uncertainty is low-risk
-5. the missing evidence was caused by truth drift, binding drift, shared-contract drift, or baseline drift
+5. the missing evidence was caused by truth drift, binding drift, rule drift, or baseline drift
+6. `not_runnable_yet` is being used to claim completion of the same behavior that is explicitly not runnable
 
 When downgrade is forbidden:
 
@@ -115,14 +123,14 @@ When downgrade is forbidden:
 `unit_verify` may allow promotion under downgrade only when:
 
 1. all rules from Section 4 hold
-2. the candidate's key acceptance basis remains covered
+2. the candidate's current acceptance basis remains covered
 3. the remaining uncertainty does not weaken promotion confidence for the current candidate version
 
 If downgrade does not hold:
 
 1. use `implementation_deviation` when checked evidence shows the code does not satisfy the candidate
 2. use `evidence_incomplete` when the code may still be correct but the remaining uncertainty is not bounded tightly enough
-3. use `truth_drift`, `binding_drift`, `baseline_drift`, or `shared_contract_drift` when the upstream truth relation changed
+3. use `truth_drift`, `binding_drift`, `baseline_drift`, or `rule_drift` when the upstream truth relation changed
 
 ### 6.2 `unit_stable_verify`
 
@@ -137,7 +145,35 @@ If downgrade does not hold:
 1. use `implementation_deviation` when checked evidence shows drift from `stable`
 2. use `evidence_incomplete` when alignment cannot be claimed safely because the remaining uncertainty is still too large
 3. use `truth_drift` when the current stable main file or an explicitly referenced stable appendix changed enough that stable alignment must be re-judged first
-4. use `shared_contract_drift` when a bound stable Shared Contract changed enough that stable alignment can no longer be claimed safely
+4. use `rule_drift` when a bound stable Rule changed enough that stable alignment can no longer be claimed safely
+
+### 6.3 `scenario_verify`
+
+`scenario_verify` may allow promotion under downgrade only when:
+
+1. all rules from Section 4 hold
+2. the scenario's current trigger-to-outcome acceptance basis remains covered
+3. the remaining uncertainty does not weaken promotion confidence for the current scenario version
+
+If downgrade does not hold:
+
+1. use `evidence_incomplete` when the scenario may still be correct but the remaining uncertainty is not bounded tightly enough
+2. use `truth_drift`, `binding_drift`, `baseline_drift`, or `rule_drift` when the upstream truth relation changed
+3. use the affected-unit blocking path when the remaining gap belongs to unit-local truth, planning, implementation, verification, binding, or baseline work
+
+### 6.4 `scenario_stable_verify`
+
+`scenario_stable_verify` may still conclude "aligned with stable" under downgrade only when:
+
+1. all rules from Section 4 hold
+2. the remaining uncertainty does not weaken confidence in the current stable scenario contract
+3. no unchecked area could hide trigger-to-outcome drift against `stable`
+
+If downgrade does not hold:
+
+1. use `evidence_incomplete` when stable alignment cannot be claimed safely because the remaining uncertainty is still too large
+2. use `truth_drift` when the current stable scenario truth changed enough that stable alignment must be re-judged first
+3. use `rule_drift` or `baseline_drift` when bound upstream truth changed enough that stable alignment can no longer be claimed safely
 
 ---
 
@@ -146,7 +182,7 @@ If downgrade does not hold:
 When a governed command applies this policy, its output should include:
 
 1. whether downgrade was considered
-2. the list of `partial` or `not_checked` items
+2. the list of `partial`, `not_checked`, or `not_runnable_yet` items
 3. the risk note for each downgraded item
 4. whether downgrade was accepted or rejected
 5. the resulting next-step conclusion
@@ -160,7 +196,9 @@ This policy works together with:
 
 1. `specflow/framework/commands/unit_verify.md`
 2. `specflow/framework/commands/unit_stable_verify.md`
-3. `specflow/framework/command_policy.md`
+3. `specflow/framework/commands/scenario_verify.md`
+4. `specflow/framework/commands/scenario_stable_verify.md`
+5. `specflow/framework/command_policy.md`
 
 Priority rules:
 

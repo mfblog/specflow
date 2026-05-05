@@ -13,6 +13,7 @@ By default it handles:
 3. dynamically confirming which legacy dependencies have already stopped being required
 4. writing progress back into `_plans/active/{unit}.md`
 5. consuming the `unit_plan -> unit_impl` handoff only when gate and plan bindings both still hold
+6. preserving the active plan's acceptance item coverage while writing implementation progress
 
 ### 2.1 Lifecycle-State Advance Inheritance
 
@@ -26,16 +27,16 @@ This file states only `unit_impl`-local entry, output, and stop rules.
 3. a current valid `docs/specs/_check_result/unit/{unit}.md` exists
 4. a current valid `docs/specs/_plans/active/{unit}.md` exists
 5. the candidate still aligns with the current formal global baseline state
-6. read required candidate appendix files and bound Shared Contract files
-7. read the git policy before implementation work
+6. read required candidate appendix files and bound Rule files
 
 ## 4. Procedure
 
-1. read the candidate Spec and all required appendix or Shared Contract files
-2. read `system_constraints.md` if it exists
+1. read the candidate Spec and all required appendix or Rule files
+2. read `s_g_rule_repository_baseline.md` if it exists
 3. read the current `_check_result/unit/{unit}.md`
 4. read the current `_plans/active/{unit}.md`
 5. validate all required bindings of the pass gate and plan file according to the candidate handoff contract
+   - this includes validating that the active plan still covers the current candidate acceptance item `id` set
 6. when a required appendix is an evidence appendix, treat it only as reviewed evidence covered by the pass gate; it must not supply implementation requirements, acceptance criteria, or behavior rules
 7. if any binding is invalid, stop immediately:
    - delete `_check_result/unit/{unit}.md`
@@ -43,7 +44,6 @@ This file states only `unit_impl`-local entry, output, and stop rules.
    - delete `_plans/active/{unit}.md`
    - delete `_verify_result/unit/{unit}.md` if it exists
    - fall back `_status.md` to `unit_check`
-8. if `system_constraints_ref` no longer matches the current formal global baseline state, stop immediately:
    - delete `_check_result/unit/{unit}.md`
    - delete `_plans/draft/{unit}.md`
    - delete `_plans/active/{unit}.md`
@@ -68,6 +68,7 @@ This file states only `unit_impl`-local entry, output, and stop rules.
 18. ensure the active plan write-back records at minimum:
    - `Takeover Progress`
    - `Retirement Progress`
+   - `Acceptance Item Progress` for any acceptance item affected by advanced slices
    - `Newly Confirmed Legacy`
    - `Residual Legacy Dependencies`
    - for each advanced slice: `execution_surface`, `cutover_result`, `retirement_result`, and `verification_note`
@@ -75,7 +76,6 @@ This file states only `unit_impl`-local entry, output, and stop rules.
    - if implementation is ready for verification -> `Next Command=unit_verify`
    - if implementation is still blocked -> keep `Next Command=unit_impl`
    - if candidate truth or formal global baseline drift means closure must restart -> `Next Command=unit_check`
-20. perform git close-out if required
 
 ## 5. Stop Conditions
 
@@ -97,10 +97,8 @@ This file states only `unit_impl`-local entry, output, and stop rules.
 9. cleanup result when implementation fell back to `unit_check`
 10. `fallback_reason_code` when implementation fell back to `unit_check`
 11. fallback reason when implementation fell back to `unit_check`
-12. git close-out result
-13. `_status.md` update result
-14. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
-   - report `round conclusion`, `current state`, `next step`, `why this next step`, and `next-stage entry gap`
+12. `_status.md` update result
+13. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
    - `current state` must explicitly confirm the written `Active Layer` and `Next Command`
    - if `Next Command=unit_impl`, `why this next step` must explicitly state that implementation progressed but candidate closure has not yet reached the `unit_verify` entry condition
    - `next-stage entry gap` must name the unfinished implementation, verification, closure, or retirement surfaces that still block `unit_verify`
@@ -115,11 +113,11 @@ Allowed `fallback_reason_code` values:
 2. `truth_drift`
 3. `binding_drift`
 4. `baseline_drift`
-5. `shared_contract_drift`
+5. `rule_drift`
 6. `truth_incomplete`
 
 ## 7. Non-Goals
 
 1. rewriting candidate truth
 2. replacing verification with implementation
-3. advancing an independent `system_constraints` state machine
+3. advancing an independent stable `g_` rule state machine

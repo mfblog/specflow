@@ -25,14 +25,15 @@ Candidate-side fallback, blocking, and resume explanations must use these standa
 3. `truth_drift`
 4. `binding_drift`
 5. `baseline_drift`
-6. `shared_contract_drift`
+6. `rule_drift`
 7. `shared_truth_conflict`
 8. `governance_drift`
 9. `implementation_deviation`
 10. `evidence_incomplete`
 11. `implementation_unknown`
 12. `direction_unresolved`
-13. `promotion_recovery`
+13. `stable_dependency_not_ready`
+14. `promotion_recovery`
 
 Meaning rules:
 
@@ -46,8 +47,8 @@ Meaning rules:
    - a process file still exists but its required bindings no longer match the current truth
 5. `baseline_drift`
    - the formal global baseline relation no longer matches the current round
-6. `shared_contract_drift`
-   - a bound `shared_contract` truth, layer, version, body, or binding changed enough to invalidate the handoff
+6. `rule_drift`
+   - a bound `rule` truth, layer, version, body, or binding changed enough to invalidate the handoff
 7. `shared_truth_conflict`
    - the current required reading range already confirms that the same formal behavior truth is defined twice and shared closure must happen before downstream work may continue
 8. `governance_drift`
@@ -60,8 +61,10 @@ Meaning rules:
    - candidate truth still stands, but bounded implementation-critical unknowns, external conditions, or missing implementation facts still prevent a stable plan from being written
 12. `direction_unresolved`
    - candidate truth still stands, but more than one materially different implementation direction remains viable and a user decision is required before a stable plan may be written
-13. `promotion_recovery`
-   - `unit_promote` had already started mutating repository state and had to restore the unit back to candidate semantics before the chain could continue
+13. `stable_dependency_not_ready`
+   - `scenario_promote` cannot write stable scenario truth because one or more current `unit_refs` or `rule_refs` entries are candidate-layer, missing, or not safely resolvable as stable-layer dependencies
+14. `promotion_recovery`
+   - a promote command had already started mutating repository state and had to restore the target object back to candidate semantics before the chain could continue
 
 Executors may add natural-language explanation, but the standardized code must appear first when a fallback or blocking reason is reported.
 
@@ -82,14 +85,16 @@ Before consumption, `unit_plan` must re-validate:
 3. `next_command=unit_plan`
 4. `truth_layer_ref`, `truth_file_ref`, `truth_version_ref`, and `truth_fingerprint` against the current candidate truth
 5. current `unit_appendix_snapshot`
-6. current `system_constraints` binding fields
-7. current `shared_contract_snapshot`
+6. current stable `g_` rule binding fields
+7. current `rule_snapshot`
+8. the accepted acceptance-item set recorded by `unit_check` against the current candidate `Testability / Acceptance Criteria` section
 
 ### 3.3 Allowed Entry Condition
 
 `unit_plan` may continue only when the pass gate still covers the current candidate round exactly.
 When `unit_appendix_snapshot` includes a candidate evidence appendix, the snapshot means only that the same evidence appendix was reviewed by the gate.
 It does not allow `unit_plan` to derive implementation requirements from that appendix.
+The accepted acceptance-item set is the only acceptance set `unit_plan` may map into implementation slices and verification targets.
 
 ### 3.4 Smallest Fallback
 
@@ -104,7 +109,7 @@ Use only:
 3. `truth_drift`
 4. `binding_drift`
 5. `baseline_drift`
-6. `shared_contract_drift`
+6. `rule_drift`
 7. `implementation_unknown`
 8. `direction_unresolved`
 
@@ -127,14 +132,16 @@ Before consumption, `unit_impl` must re-validate:
 2. current plan file path and existence
 3. plan-bound `spec_file_ref`, `spec_version_ref`, and `spec_fingerprint`
 4. plan-bound `unit_appendix_snapshot`
-5. plan-bound `system_constraints` fields
-6. plan-bound `shared_contract_snapshot`
+5. plan-bound stable `g_` rule fields
+6. plan-bound `rule_snapshot`
+7. plan coverage of the current candidate acceptance-item `id` set
 
 ### 4.3 Allowed Entry Condition
 
 `unit_impl` may continue only when both the pass gate and the plan still cover the same current candidate round.
 When a candidate evidence appendix is present in the pass gate or plan appendix snapshot, `unit_impl` must treat it as reviewed evidence only.
-Implementation requirements come from the candidate main Spec, the active plan, bound Shared Contract files, and the current global baseline.
+Implementation requirements come from the candidate main Spec, the active plan, bound Rule files, and the current global baseline.
+If a current-gate acceptance item is not covered by the active plan, the handoff is invalid because implementation would no longer be working from the complete accepted target.
 
 ### 4.4 Smallest Fallback
 
@@ -148,7 +155,7 @@ Use only:
 2. `truth_drift`
 3. `binding_drift`
 4. `baseline_drift`
-5. `shared_contract_drift`
+5. `rule_drift`
 
 ---
 
@@ -168,10 +175,12 @@ Before consumption, `unit_verify` must re-validate:
 1. all required gate bindings
 2. all required plan bindings
 3. that the implementation state still matches the coverage scope claimed by the current round's plan progress
+4. that the active plan's verification targets still cover the current candidate acceptance-item `id` set
 
 ### 5.3 Allowed Entry Condition
 
 `unit_verify` may continue only when verification still targets the same candidate truth round that implementation used.
+The evidence matrix must be organized by the candidate acceptance item `id` set that the active plan covered.
 
 ### 5.4 Smallest Fallback
 
@@ -186,7 +195,7 @@ Use only:
 2. `truth_drift`
 3. `binding_drift`
 4. `baseline_drift`
-5. `shared_contract_drift`
+5. `rule_drift`
 6. `implementation_deviation`
 7. `evidence_incomplete`
 8. `truth_incomplete`
@@ -209,12 +218,15 @@ Before consumption, `unit_promote` must re-validate:
 4. `truth_layer_ref`, `truth_file_ref`, `truth_version_ref`, and `truth_fingerprint` against the current candidate truth
 5. current `unit_appendix_snapshot`
 6. current implementation still covered by `verification_scope_ref`
-7. current `system_constraints` binding fields
-8. current `shared_contract_snapshot`
+7. current stable `g_` rule binding fields
+8. current `rule_snapshot`
+9. current acceptance-item `id` set and every current-gate item's verification status in `_verify_result/unit/{unit}.md`
 
 ### 6.3 Allowed Entry Condition
 
 `unit_promote` may continue only when the verify result still covers current candidate truth, current implementation, and current baseline state together.
+It must also confirm that `_verify_result/unit/{unit}.md` covers the current candidate acceptance-item set exactly.
+If candidate acceptance items changed after verification, promotion must not continue on the older evidence matrix.
 
 ### 6.4 Smallest Fallback
 
@@ -229,7 +241,7 @@ Use only:
 1. `truth_drift`
 2. `binding_drift`
 3. `baseline_drift`
-4. `shared_contract_drift`
+4. `rule_drift`
 5. `implementation_deviation`
 6. `evidence_incomplete`
 
@@ -251,12 +263,14 @@ Before consumption, `scenario_verify` must re-validate:
 4. `truth_layer_ref`, `truth_file_ref`, `truth_version_ref`, and `truth_fingerprint` against the current candidate scenario truth
 5. current `repository_mapping_snapshot`
 6. current `unit_snapshot`
-7. current `system_constraints` binding fields
-8. current `shared_contract_snapshot`
+7. current stable `g_` rule binding fields
+8. current `rule_snapshot`
+9. the accepted scenario acceptance-item set against the current scenario `Testability / Acceptance Criteria` section
 
 ### 7.3 Allowed Entry Condition
 
 `scenario_verify` may continue only when the pass gate still covers the current scenario candidate round exactly.
+The verify run must use the accepted scenario acceptance-item set as its evidence matrix spine.
 
 ### 7.4 Smallest Fallback
 
@@ -271,7 +285,7 @@ Use only:
 2. `truth_drift`
 3. `binding_drift`
 4. `baseline_drift`
-5. `shared_contract_drift`
+5. `rule_drift`
 
 ---
 
@@ -292,18 +306,26 @@ Before consumption, `scenario_promote` must re-validate:
 5. current `repository_mapping_snapshot`
 6. current `unit_snapshot`
 7. current `verification_scope_ref`
-8. current `system_constraints` binding fields
-9. current `shared_contract_snapshot`
+8. current stable `g_` rule binding fields
+9. current `rule_snapshot`
+10. current scenario acceptance-item `id` set and every current-gate item's verification status in `_verify_result/scenario/{scenario}.md`
+11. stable dependency readiness for the current candidate scenario:
+   - every current `unit_refs` entry resolves to existing stable-layer unit truth
+   - every current `rule_refs` entry resolves to existing stable-layer Rule truth, unless the formal value is `none`
+   - candidate-layer, missing, or unresolved dependency refs are not consumable by `scenario_promote`
 
 ### 8.3 Allowed Entry Condition
 
-`scenario_promote` may continue only when the verify result still covers current candidate scenario truth, current repository mapping, current bound units, current bound Shared Contract files, current verification scope, and current formal global baseline state together.
+`scenario_promote` may continue only when the verify result still covers current candidate scenario truth, current repository mapping, current bound units, current bound Rule files, current verification scope, and current formal global baseline state together.
+It must also confirm that `_verify_result/scenario/{scenario}.md` covers the current scenario acceptance-item set exactly.
+It must also confirm stable dependency readiness before any stable scenario truth writeback.
 
 ### 8.4 Smallest Fallback
 
 If verification evidence is outdated or incomplete but the check gate still covers current truth, the smallest fallback is `scenario_verify`.
 If candidate scenario truth or upstream bindings drifted, the smallest fallback is `scenario_check`.
 If current `repository_mapping_snapshot` no longer matches `docs/specs/repository_mapping.md`, the smallest fallback is `scenario_check` with `binding_drift`.
+If stable dependency readiness fails because a dependency is candidate-layer, missing, or not safely resolvable, `scenario_promote` must stop before stable writeback, keep candidate semantics, report the affected dependency and its current legal next step from `_status.md` when present, and require dependency landing or scenario binding writeback followed by fresh `scenario_check` and `scenario_verify` before promotion is retried.
 
 ### 8.5 Allowed Reason Codes
 
@@ -312,8 +334,9 @@ Use only:
 1. `truth_drift`
 2. `binding_drift`
 3. `baseline_drift`
-4. `shared_contract_drift`
+4. `rule_drift`
 5. `evidence_incomplete`
+6. `stable_dependency_not_ready`
 
 ---
 

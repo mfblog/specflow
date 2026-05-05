@@ -38,9 +38,8 @@ That default scope includes:
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
    - `scenario_policy.md`
-   - `git_policy.md`
    - `checkpoint_protocol.md`
-   - `natural_language_routing.md` only where it defines the shared-governance branch
+   - `natural_language_routing.md` only where it defines the rule-governance branch
 2. lifecycle and gate-shape rules
    - `specflow/framework/commands/*.md`
    - `candidate_handoff_contract.md`
@@ -74,12 +73,12 @@ The default scope excludes:
 3. `specflow/tooling/bin/**`
 4. `specflow/tooling/cmd/**`
 5. `specflow/tooling/internal/**`
-6. `shared_new.md`
-7. `shared_extract.md`
-8. `shared_bind.md`
-9. `shared_topology.md`
-10. `shared_sync.md`
-11. `shared_escape.md`
+6. `rule_new.md`
+7. `rule_extract.md`
+8. `rule_bind.md`
+9. `rule_topology.md`
+10. `rule_sync.md`
+11. `rule_escape.md`
 
 If a conclusion, finding, or `pass` claim directly depends on one excluded file, the executor must explicitly widen scope first.
 Do not claim that an excluded file supports the current design conclusion when that file was never made in-scope.
@@ -99,7 +98,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
    - `scenario_policy.md`
-   - `natural_language_routing.md` only where it defines the shared-governance branch
+   - `natural_language_routing.md` only where it defines the rule-governance branch
    - `AGENTS.md`
    - `GEMINI.md`
    - `CLAUDE.md`
@@ -118,7 +117,6 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `specflow/templates/docs/specs/_plans/draft/README.md`
    - `specflow/templates/docs/specs/_plans/active/README.md`
    - `specflow/templates/docs/specs/_verify_result/README.md`
-   - `git_policy.md`
    - `checkpoint_protocol.md`
 3. `human_operability_and_extension`
    - `entry_index_registry.md`
@@ -284,7 +282,7 @@ Before execution:
 3. map in-scope files into the fixed review blocks
 4. name the required cross-block convergence checks before final conclusions
 5. if project-local governance standards are registered, resolve the active in-scope entries from `docs/project_standards/_registry.md`
-6. if the default scope is used, explicitly confirm that the review stayed inside the design main chain and did not silently rely on excluded tooling or internal shared-flow files
+6. if the default scope is used, explicitly confirm that the review stayed inside the design main chain and did not silently rely on excluded tooling or internal rule-flow files
 7. for default full-scope review, create or reuse the run-state file from Section 5.1 before reviewing the first baseline slice
 
 If any in-scope file cannot be assigned to a review block, do not issue `pass`.
@@ -299,17 +297,19 @@ If any in-scope file cannot be assigned to a review block, do not issue `pass`.
    - human operability
    - gate usefulness
    - extension-surface cost
-5. when a design risk concerns avoidable rule weight, classify the affected rule text with the rule-weight classes from Section 7.1 before scoring Questions 6, 7, or 8
-6. complete the required cross-block convergence checks
-7. add required dynamic risk slices when newly discovered design risks cannot be tracked by an existing baseline slice
-8. judge the hard-blocker set from Section 7.4 before any scoring-based `pass` claim
-9. score all eight fixed design questions from Section 7.1
-10. compute the fixed group averages from Section 7.2
-11. compute the `weighted_score` from Section 7.3
-12. separate blocking findings from non-blocking optimizations
+5. when a design risk concerns heavy gate structure, mandatory read chains, or required pre-action routing, judge whether the rule-consumption timing from Section 7.1 matches the work risk before scoring Questions 6, 7, or 8
+6. run the `routine_work_path_check` from Section 7.1 when its trigger condition is met
+7. when a design risk concerns avoidable rule weight, classify the affected rule text with the rule-weight classes from Section 7.1 before scoring Questions 6, 7, or 8
+8. complete the required cross-block convergence checks
+9. add required dynamic risk slices when newly discovered design risks cannot be tracked by an existing baseline slice
+10. judge the hard-blocker set from Section 7.4 before any scoring-based `pass` claim
+11. score all eight fixed design questions from Section 7.1
+12. compute the fixed group averages from Section 7.2
+13. compute the `weighted_score` from Section 7.3
+14. separate blocking findings from non-blocking optimizations
    - every real finding must use the fixed finding contract from Section 8.1
    - every non-blocking optimization must use the optimization contract from Section 8.2
-13. issue the final result only after baseline slices, dynamic risk slices, hard-blocker review, question scoring, group checks, weighted-score calculation, findings review, optimization review, and cross-block convergence are all complete
+15. issue the final result only after baseline slices, dynamic risk slices, hard-blocker review, routine-work path check when triggered, question scoring, group checks, weighted-score calculation, findings review, optimization review, and cross-block convergence are all complete
 
 ## 7. Scoring Model
 
@@ -348,10 +348,65 @@ Allowed score values are fixed:
 Rule-weight classification is part of design judgment for Questions 6, 7, and 8.
 It does not create another review flow, another score group, or another output formula.
 
+Rule-consumption timing is part of the same design judgment for Questions 6, 7, and 8.
+It does not create another review flow, another score group, another lifecycle gate, or another output formula.
+
+When a review identifies a heavy gate, mandatory read chain, or required pre-action routing path, classify the timing that preserves the required control as exactly one of these classes:
+
+1. `action_before_hard_rule`
+   - the rule must be consumed before action because violating it could change durable truth, object ownership, lifecycle advancement, implementation permission, rule truth, system truth, end-to-end verification claims, or another state that cannot be reliably detected and repaired after the action
+2. `on_demand_rule_lookup`
+   - the rule should be consumed when the executor reaches the uncertainty it governs because it guides judgment but does not itself authorize writes, forbid writes, advance state, or define closure
+3. `post_action_check`
+   - the rule may be checked after action when violation is mechanically detectable, automatically detectable, or detectable by a fixed evidence-review procedure before closure and can be repaired without letting drift become accepted truth
+
+Rules:
+
+1. `action_before_hard_rule` is required when late detection would let an unsafe write, false pass, wrong owner, skipped verification, or durable-truth drift become accepted.
+2. `on_demand_rule_lookup` is preferred when the rule is only needed after a concrete uncertainty appears.
+3. `post_action_check` is preferred when the same control can be enforced by a deterministic or reviewable check before closure.
+4. a review must not classify a rule as `post_action_check` when the violation cannot be detected and repaired before closure.
+5. a review must treat forced pre-action consumption as suspect when the rule can move to `on_demand_rule_lookup` or `post_action_check` without losing the control listed in Rule 1.
+
+`routine_work_path_check` is mandatory when any of Questions 6, 7, or 8 is expected to score below `4` because of reading cost, rule weight, routine-work cost, full-chain path cost, mandatory read chains, heavy gate structure, or pre-action reading burden.
+
+When triggered, `routine_work_path_check` must review these representative paths before any `pass` or `pass-with-optimization` conclusion:
+
+1. routine implementation-only work
+   - pure tests, logging, observability, mechanical refactor, or wording-only implementation support that does not change formal behavior truth
+2. implementation repair under existing truth
+   - a repair where current Spec truth already defines the intended behavior and the requested change should not invent new behavior
+3. behavior, boundary, or acceptance change
+   - a request that may change durable behavior truth, object ownership, lifecycle permission, acceptance criteria, rule truth, system truth, or end-to-end verification claims
+
+For each reviewed path, the review must state:
+
+1. the current pre-action read chain
+2. the `B. Lightweight Pre-Action Prohibitions`
+   - the three to five rules that must be known before action because violating them would create a risk that cannot be reliably detected and repaired after action
+3. the `D. Minimum Allowed Action`
+   - the smallest action the current request explicitly authorizes, with no scope expansion, new behavior, boundary change, acceptance change, or incidental repair beyond that request
+4. the `E. Automatic Impact Check`
+   - the automatic checks, deterministic checks, or fixed evidence-review procedures that can carry rule enforcement after action, including path ownership, state permission, rule truth impact, global rule impact, fallback-to-design need, and reroute to check, plan, or verify
+   - a free-form reviewer assertion does not count as `E. Automatic Impact Check` unless it is backed by a named deterministic check or fixed evidence-review procedure
+5. the timing decision for every rule currently consumed before action:
+   - `action_before_hard_rule`
+   - `on_demand_rule_lookup`
+   - `post_action_check`
+6. the concrete control that would be lost if a rule currently kept before action were moved later
+
+Completion rules:
+
+1. if `routine_work_path_check` is triggered but not performed, the review is incomplete and must not issue `pass`, `pass-with-optimization`, or `blocked`
+2. if the check finds a smaller safe path and the final conclusion reports `optimization result: none`, the review is incomplete
+3. if the check finds routine work forced through full pre-action rule consumption and no smaller B/D/E path exists in the design, the review must report a hard blocker
+4. if the check cannot prove whether a rule is truly pre-action or safely later-consumable, classify that path as `possible_optimization_evidence_missing`; a `pass` conclusion must explain why the missing evidence does not hide an unsafe heavy path
+5. if the check proves that every pre-action rule is `action_before_hard_rule` for the reviewed paths, the review may still pass when the fixed pass gate also passes
+
 When a review identifies avoidable rule weight, classify the affected rule text as exactly one of these classes:
 
 1. `hard_rule`
-   - the rule is required because removing it could change durable truth, object ownership, lifecycle advancement, implementation permission, shared truth, system truth, or end-to-end verification claims
+   - the rule is required because removing it could change durable truth, object ownership, lifecycle advancement, implementation permission, rule truth, system truth, or end-to-end verification claims
 2. `judgment_guidance`
    - the rule helps an executor choose a route or evaluate risk, but it does not itself authorize writes, forbid writes, advance state, or define a stop condition
 3. `example_or_wording`
@@ -359,7 +414,7 @@ When a review identifies avoidable rule weight, classify the affected rule text 
 4. `duplicate_or_restatement`
    - the text repeats another owner file without adding a local allowed action, forbidden action, stop condition, output requirement, dependency order, or scoring consequence
 5. `overweight_rule`
-   - the rule forces a heavier path than the work risk requires, or applies a specialized structure to routine work where no durable-truth, ownership, shared, system, or end-to-end verification risk needs that structure
+   - the rule forces a heavier path than the work risk requires, forces pre-action consumption when `on_demand_rule_lookup` or `post_action_check` would preserve the same control, or applies a specialized structure to routine work where no durable-truth, ownership, shared, system, or end-to-end verification risk needs that structure
 
 Rules:
 
@@ -399,18 +454,21 @@ Question-specific scoring rules:
    - whether the official documents, rather than author memory, carry the needed orientation
    - whether the in-scope rules force a normal user or executor to learn avoidable internal mechanism detail before they can understand current position, next action, and reason
    - whether `judgment_guidance`, `example_or_wording`, and `duplicate_or_restatement` content is kept small enough that it does not hide the governing hard rules
+   - whether pre-action reading is limited to `action_before_hard_rule` material and does not hide the current next action behind rules that could safely be consumed on demand or checked after action
 7. Question 7 must judge:
    - whether small changes have a smaller legal path than large changes
    - whether routine work avoids full-chain over-processing
    - whether the mechanism's operational steps scale with actual work size
-   - whether `hard_rule` requirements are limited to cases where durable truth, ownership, lifecycle, implementation permission, shared truth, system truth, or end-to-end verification risk actually requires them
+   - whether `hard_rule` requirements are limited to cases where durable truth, ownership, lifecycle, implementation permission, rule truth, system truth, or end-to-end verification risk actually requires them
    - whether a specialized structure is optional or conditional when the current work does not need that structure for safe closure
+   - whether routine work avoids mandatory full-chain pre-reading when an `on_demand_rule_lookup` or `post_action_check` path would preserve the same safety
 8. Question 8 must judge:
    - whether the control gained is visible and repeatable
    - whether the documentation, learning, and execution cost stay proportionate to that gain
    - whether the mechanism still looks worth maintaining over time
    - whether each heavy gate or required read produces a distinct control gain that is not already produced by a smaller rule or owner file
-   - whether the recommended repair for excess rule weight is the smallest correct one: keep as `hard_rule`, downgrade to `judgment_guidance`, keep only as `example_or_wording`, merge or link as `duplicate_or_restatement`, or remove or narrow an `overweight_rule`
+   - whether each required pre-action read produces a distinct control gain that cannot be preserved by `on_demand_rule_lookup` or `post_action_check`
+   - whether the recommended repair for excess rule weight is the smallest correct one: keep as `action_before_hard_rule`, downgrade to `on_demand_rule_lookup`, convert to `post_action_check`, keep only as `example_or_wording`, merge or link as `duplicate_or_restatement`, or remove or narrow an `overweight_rule`
 
 When Question 6, 7, or 8 scores below `4`, the review must classify each cited weakness as one of:
 
@@ -466,7 +524,9 @@ Any one of them forces the final conclusion to `blocked`, regardless of the weig
 3. any key gate has Question `4 = 0`
 4. the mechanism clearly rewards surface compliance over real risk reduction
 5. a normal user cannot rely on the official documents alone to know current position, next step, and why that step is next
-6. the mechanism forces simple changes through a full heavy path when the work does not change durable truth, object ownership, lifecycle advancement, implementation permission, shared truth, system truth, or end-to-end verification obligations, and the design provides no smaller legal path
+6. the mechanism forces simple changes through a full heavy path when the work does not change durable truth, object ownership, lifecycle advancement, implementation permission, rule truth, system truth, or end-to-end verification obligations, and the design provides no smaller legal path
+7. the mechanism forces simple changes through full pre-action rule consumption when a smaller `action_before_hard_rule`, `on_demand_rule_lookup`, or `post_action_check` path would preserve the same control, and the design provides no smaller legal path
+8. a triggered `routine_work_path_check` proves that routine implementation-only work cannot be handled with lightweight pre-action prohibitions plus automatic impact checks, and the design provides no smaller legal path
 
 ### 7.5 Pass Gate
 
@@ -475,6 +535,7 @@ If no hard blocker exists, passing still requires all of the following:
 1. no individual question score is below `2`
 2. every fixed group average is at least `2.5`
 3. `weighted_score` is at least `75`
+4. when `routine_work_path_check` is triggered, the check is complete and its result is reflected in the hard-blocker result, findings result, optimization result, and Question 6, 7, and 8 score bases
 
 When these pass-gate conditions hold:
 
@@ -498,28 +559,31 @@ The output must report at least:
 9. the score-state table when run state is used
 10. the stale slice result when run state is used
 11. the hard-blocker result
-12. all eight question scores, each with:
+12. the `routine_work_path_check` result:
+   - report `not_triggered` when the trigger condition did not apply
+   - otherwise report each reviewed path, current pre-action read chain, B/D/E judgment, timing decisions, lost-control analysis, and whether the check found a hard blocker, non-blocking optimization, or missing evidence
+13. all eight question scores, each with:
    - `score`
    - `score_basis`
    - `evidence`
-13. the fixed group averages
-14. the `weighted_score`
-15. the cross-block convergence results
-16. the findings result:
+14. the fixed group averages
+15. the `weighted_score`
+16. the cross-block convergence results
+17. the findings result:
    - explicit `none` when no real finding exists
    - otherwise every finding must satisfy Section 8.1
-17. the optimization result:
+18. the optimization result:
    - explicit `none` when no non-blocking optimization exists
    - otherwise every optimization must satisfy Section 8.2
-18. when the final conclusion is `pass-with-optimization`, `why pass still holds`
-19. when Question 6, 7, or 8 scores below `4` and no non-blocking optimization is reported for that question, the acceptable residual weakness explanation
-20. the final conclusion:
+19. when the final conclusion is `pass-with-optimization`, `why pass still holds`
+20. when Question 6, 7, or 8 scores below `4` and no non-blocking optimization is reported for that question, the acceptable residual weakness explanation
+21. the final conclusion:
    - `pass`
    - `pass-with-optimization`
    - `blocked`
 
-If the output does not explicitly report Items 11 through 17, the review is not complete.
-If the final conclusion is `pass-with-optimization` and the output omits Item 18, the review is not complete.
+If the output does not explicitly report Items 11 through 18, the review is not complete.
+If the final conclusion is `pass-with-optimization` and the output omits Item 19, the review is not complete.
 
 ### 8.1 Finding Contract
 
@@ -550,8 +614,9 @@ Additional rules:
 2. `severity` explains design harm; it does not replace the fixed score model
 3. `score` explains current design quality; it does not replace explicit blocking judgment
 4. `recommended fix` must be specific enough that later repair work can execute it without a second clarification round
-5. when a finding concerns avoidable rule weight, `recommended fix` must state the smallest correct rule-weight repair: keep as `hard_rule`, downgrade to `judgment_guidance`, keep only as `example_or_wording`, merge or link as `duplicate_or_restatement`, or remove or narrow an `overweight_rule`
-6. when no real finding exists, the output must say so explicitly instead of omitting the finding section
+5. when a finding concerns avoidable rule weight or incorrect rule-consumption timing, `recommended fix` must state the smallest correct repair: keep as `action_before_hard_rule`, downgrade to `on_demand_rule_lookup`, convert to `post_action_check`, keep only as `example_or_wording`, merge or link as `duplicate_or_restatement`, or remove or narrow an `overweight_rule`
+6. when a finding comes from `routine_work_path_check`, `recommended fix` must state whether the minimal repair is a lighter B rule set, a narrower D action boundary, an E automatic impact check, or a hard pre-action stop that the current design failed to isolate
+7. when no real finding exists, the output must say so explicitly instead of omitting the finding section
 
 ### 8.2 Optimization Contract
 
@@ -577,16 +642,17 @@ The minimum required fields are:
 Rules:
 
 1. `why non-blocking` must state why the issue does not trigger a hard blocker, score below `2`, group average failure, or weighted-score failure
-2. `recommended optimization` must cut only the unnecessary rule weight; it must not weaken a `hard_rule`
-3. if the final conclusion is `pass-with-optimization`, at least one optimization item is required
-4. if no non-blocking optimization exists, the output must say `optimization result: none`
+2. `recommended optimization` must cut only the unnecessary rule weight or move it to the smallest safe consumption timing; it must not weaken a rule that prevents durable truth drift, ownership drift, implementation permission drift, shared or system drift, skipped verification, or false closure
+3. when an optimization comes from `routine_work_path_check`, `recommended optimization` must name the affected path and specify whether the safe lighter shape is a smaller B rule set, `on_demand_rule_lookup`, `post_action_check`, or an added E automatic impact check
+4. if the final conclusion is `pass-with-optimization`, at least one optimization item is required
+5. if no non-blocking optimization exists, the output must say `optimization result: none`
 
 ## 9. Non-Goals
 
 This flow does not:
 
 1. replace `spec_flow_review`
-2. replace the shared-governance branch
+2. replace the rule-governance branch
 3. review business truth by default
 4. review tooling source or binaries by default
 5. create a new command chain

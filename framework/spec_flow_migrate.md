@@ -30,7 +30,7 @@ The default target surface is:
 2. template-governed process contract files under `docs/specs/_check_result/**`, `docs/specs/_plans/**`, and `docs/specs/_verify_result/**`
 3. `docs/specs/_status.md`
 4. `docs/specs/repository_mapping.md`
-5. `docs/specs/system_constraints.md`
+5. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 6. registered entry index managed blocks in `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md`
 
 Migration may read framework rules, templates, and tooling contracts as inputs.
@@ -55,7 +55,7 @@ Before any migration writeback, read:
 9. `specflow/framework/tooling_execution_policy.md` before using any governance tooling
 10. `docs/specs/repository_mapping.md`
 11. `docs/specs/_status.md`
-12. `docs/specs/system_constraints.md` when it exists
+12. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when it exists
 13. the template-side process and state contracts under `specflow/templates/docs/specs/**` that correspond to the project files being migrated
 14. the template entry files under `specflow/templates/` when registered entry managed blocks are in scope
 
@@ -71,7 +71,7 @@ The scan must classify every discovered issue into exactly one of these classes:
 
 1. `mechanical_update`
    - the current framework rules or templates define one exact target shape
-   - the update does not choose business behavior, object ownership, acceptance meaning, shared-truth ownership, or system-constraint meaning
+   - the update does not choose business behavior, object ownership, acceptance meaning, rule-truth ownership, or global-rule meaning
 2. `process_invalidation`
    - a process file or status row can no longer prove the gate, plan, verification, or active-layer state it previously claimed
    - the affected object and fallback target are mechanically determined by current `_status.md`, `process_snapshot_contract.md`, and `recovery_policy.md`
@@ -102,10 +102,10 @@ Allowed mechanical updates include:
 
 Forbidden writeback:
 
-1. do not change unit, scenario, shared-contract, repository-mapping, or system-constraint business meaning
+1. do not change unit, scenario, rule, repository-mapping, or global-rule business meaning
 2. do not add fallback logic, compatibility aliases, legacy command names, or dual-format reader rules
 3. do not preserve a stale `_check_result`, active plan, `_verify_result`, or status claim by editing its snapshot fields to match new files
-4. do not invent `version`, `shared_version`, `source_basis`, `evidence_appendix_ref`, `Next Command`, or binding values when the current project truth does not determine them
+4. do not invent `version`, `rule_version`, `source_basis`, `evidence_appendix_ref`, `Next Command`, or binding values when the current project truth does not determine them
 5. do not infer object ownership from directory shape when `docs/specs/repository_mapping.md` is missing or unclear
 6. do not change implementation-side files
 7. do not create or modify `specflow/tooling` source or a `specflowctl migrate` command as part of this flow
@@ -202,7 +202,7 @@ This flow does not:
 1. review business truth correctness
 2. review whether the current governance design is worthwhile
 3. replace `spec_flow_review` or `spec_flow_design_review`
-4. create a new `unit`, `scenario`, or `shared_contract`
+4. create a new `unit`, `scenario`, or `rule`
 5. execute implementation work
 6. add old-format compatibility behavior
 7. introduce new tooling commands

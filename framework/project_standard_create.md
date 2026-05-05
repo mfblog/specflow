@@ -49,7 +49,6 @@ Before execution:
 7. identify the target standard type, consumed command, and application scope
 8. identify the target `surface`
 9. confirm that the requested standard does not conflict with the framework baseline
-10. if the task will create or modify governance files, read the git policy first
 
 ---
 
@@ -71,7 +70,6 @@ Before execution:
 8. write the standard as direct rules, not as patch notes
 9. update `docs/project_standards/_registry.md`
 10. if the created standard is intended to tighten an existing command gate, ensure the relevant command documentation already allows consumption of project-local standards; if not, update that governance rule in the same task
-11. perform git close-out if required
 
 ---
 
@@ -87,7 +85,6 @@ The output must include:
 6. the chosen `applies_to`
 7. whether `docs/project_standards/_registry.md` had to be created or repaired in this round
 8. the registry update result
-9. the git close-out result
 
 ---
 

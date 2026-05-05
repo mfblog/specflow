@@ -110,7 +110,7 @@ At minimum:
 2. the target object's candidate truth file
 3. the target object's stable truth file if it already existed
 4. the target object's current-round process files
-5. any appendix, shared, or system-constraint file that the round may mutate, promote, absorb, or delete
+5. any appendix, shared, or global-rule file that the round may mutate, promote, absorb, or delete
 
 Object-specific minimums:
 
@@ -145,7 +145,7 @@ Examples:
 1. the command was interrupted after writing a new stable file
 2. downstream reconciliation became blocked after partial promotion writeback
 3. cleanup started but did not finish
-4. post-promotion `shared_sync` or `impact_sync` showed that the repository cannot yet claim a stable closed state
+4. post-promotion `rule_sync` or `impact_sync` showed that the repository cannot yet claim a stable closed state
 
 ### 6.3 Recovery Procedure
 
@@ -193,7 +193,6 @@ This policy works together with:
 1. `specflow/framework/command_policy.md`
 2. `specflow/framework/impact_sync_policy.md`
 3. the active promote command file
-4. `specflow/framework/git_policy.md`
 
 Priority rules:
 

@@ -27,7 +27,7 @@ This file does not define the template-source review scope of `spec_flow_review`
 
 Additional rules:
 
-1. This registry defines the project-side registered entry files used for managed-block sync and commit-time consistency checks.
+1. This registry defines the project-side registered entry files used for managed-block sync and manual consistency checks.
 2. If a new project-side entry index file is added later, update this file first so sync and commit-time checks can include it.
 3. Files with the same responsibility but not yet registered are not part of the project-side registered set.
 4. `spec_flow_review` may read this file to verify project-side ownership and sync semantics, but its default template-source scope is defined in `specflow/framework/spec_flow_review.md`.
@@ -70,19 +70,16 @@ This design has only two goals:
 
 ---
 
-## Hook Trigger
+## Manual Sync Trigger
 
-The default time to sync entry files is before `git commit`.
+Entry-file managed blocks must be synchronized before a task claims that registered entry edits are complete.
 
 Rules:
 
-1. The tracked `pre-commit` hook lives at `.githooks/pre-commit`.
-2. That hook calls the matching `specflow/tooling/bin/specflowctl-<os>-<arch>` binary before `git commit`, and runs `entry sync --stage`.
-3. If the binary command succeeds, the synced managed blocks are re-added to the index and the commit continues.
-4. If the binary command finds a case where multiple registered entry files were modified and their managed blocks still differ, so no source can be chosen automatically, it must block the commit and require an explicit source choice.
-   - use `specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>` to provide that choice
-5. If the repository-level hook path is not enabled yet, run:
-   - `git config core.hooksPath .githooks`
+1. If a round edits one registered entry managed block, run `specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>` before closure.
+2. If a round edits multiple registered entry managed blocks and those blocks already match, no sync command is required.
+3. If a round edits multiple registered entry managed blocks and those blocks still differ, explicitly choose one registered entry file as the source and run `specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>`.
+4. Git staging remains a manual action outside specFlow governance.
 
 ---
 
@@ -93,3 +90,4 @@ This file does not:
 1. define standard commands themselves
 2. define the findings contract in place of `spec_flow_review.md`
 3. automatically treat every draft file with a similar responsibility as a formal entry file
+4. install or require a git hook

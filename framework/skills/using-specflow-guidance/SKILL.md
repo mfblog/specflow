@@ -22,7 +22,7 @@ Use guidance when the request is about any of these before the formal candidate 
 5. turning an approved discussion result into candidate truth
 
 Before selecting a guidance skill, diagnose the user's goal in ordinary language.
-Do not ask the user to classify the request as `unit`, `scenario`, `shared_contract`, `system_constraints`, or `repository_mapping`.
+Do not ask the user to classify the request as `unit`, `scenario`, `rule`, stable `g_` rule, or `repository_mapping`.
 Use repository truth and natural-language routing to translate the user's goal into the internal specFlow owner.
 
 Do not use guidance when the user gives an exact standard command such as `unit_check:skill` or `unit_plan:agent`. Exact commands route through `command_policy.md`.
@@ -41,7 +41,7 @@ Do not use guidance when the user gives an exact standard command such as `unit_
 2. Do not treat chat-only agreement as durable truth.
 3. Do not write `_plans/active`, `_verify_result`, or `_check_result` from guidance.
 4. Do not advance `_status.md` from guidance.
-5. Once a conclusion affects behavior, boundary, acceptance, shared truth, or system truth, route it into formal specFlow truth writeback before implementation.
+5. Once a conclusion affects behavior, boundary, acceptance, rule truth, or global rule truth, route it into formal specFlow truth writeback before implementation.
 6. Do not turn guidance into a command-alias conversation where the user must choose internal command or object-family names.
 7. Ask only ordinary-language questions about goal, scope, outcome, success meaning, or required human judgment.
 

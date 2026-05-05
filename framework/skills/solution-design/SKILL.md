@@ -19,7 +19,7 @@ The design is still discussion-stage material. Only the approved direction writt
    - core idea
    - benefit
    - cost
-   - likely unit, scenario, shared contract, or system constraint impact
+   - likely unit, scenario, rule, or global rule impact
    - verification implication
 4. Explain likely formal-object impact as an executor-facing consequence, not as terminology the user must already understand.
 5. Recommend one approach with the shortest path that satisfies the confirmed goal.
@@ -40,6 +40,6 @@ The design is still discussion-stage material. Only the approved direction writt
 ## Boundaries
 
 1. Do not preserve multiple unresolved options in candidate truth as if they were all current behavior.
-2. Do not choose a Shared Contract, system constraint, or repository mapping owner by directory shape alone.
+2. Do not choose a Rule, global rule, or repository mapping owner by directory shape alone.
 3. Do not begin implementation from a selected option until formal truth writeback and the required command gates have passed.
 4. Do not ask the user to choose internal command names or object-family names when the design choice can be framed as a user-facing behavior, scope, or verification decision.

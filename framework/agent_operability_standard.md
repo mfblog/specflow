@@ -19,7 +19,7 @@ This standard applies to governance documents that define or route behavior, inc
 1. entry managed blocks
 2. routing policies
 3. command policies and command files
-4. shared-governance flows
+4. rule-governance flows
 5. review policies
 6. process-state contracts
 7. tooling execution contracts in the current review scope
@@ -51,8 +51,8 @@ Terms must not be left to ordinary interpretation when relevant:
 5. `candidate`
 6. `_status.md`
 7. `repository_mapping`
-8. `shared_contract`
-9. shared-governance branch
+8. `rule`
+9. rule-governance branch
 10. `checkpoint`
 11. `implementation_change_policy`
 
@@ -75,7 +75,7 @@ The document must state, or link to the rule that states:
 3. whether lifecycle state may advance
 4. whether process files may be written
 5. whether implementation files may be modified
-6. whether `git_policy.md` controls the commit decision
+6. whether registered entry sync or deterministic tooling controls any mechanical writeback
 
 ### 4.4 Stop Boundary
 
@@ -197,7 +197,7 @@ Rules:
 
 1. default `spec_flow_review` must report an agent-operability result
 2. the result must cover both execution clarity and content economy
-3. a narrowed review that includes routing, command, checkpoint, shared governance, process-state, or entry behavior must apply this standard to the in-scope files
+3. a narrowed review that includes routing, command, checkpoint, rule governance, process-state, or entry behavior must apply this standard to the in-scope files
 4. a pass claim for in-scope governance documents must not ignore agent-operability failures
 
 `spec_flow_design_review` may use this standard as evidence for human operability, but this file does not change that review's scoring model by itself.
