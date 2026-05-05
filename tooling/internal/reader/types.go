@@ -12,14 +12,14 @@ type Snapshot struct {
 }
 
 type ProjectInfo struct {
-	RepoRoot       string `json:"repo_root"`
-	StatusFile     string `json:"status_file"`
-	MappingFile    string `json:"mapping_file"`
-	SystemFile     string `json:"system_file"`
-	UnitCount      int    `json:"unit_count"`
-	ScenarioCount  int    `json:"scenario_count"`
-	SharedCount    int    `json:"shared_count"`
-	TruthFileCount int    `json:"truth_file_count"`
+	RepoRoot         string `json:"repo_root"`
+	StatusFile       string `json:"status_file"`
+	MappingFile      string `json:"mapping_file"`
+	RuleBaselineFile string `json:"rule_baseline_file"`
+	UnitCount        int    `json:"unit_count"`
+	ScenarioCount    int    `json:"scenario_count"`
+	RuleCount        int    `json:"rule_count"`
+	TruthFileCount   int    `json:"truth_file_count"`
 }
 
 type ObjectView struct {
@@ -37,7 +37,7 @@ type ObjectView struct {
 	Notes               string      `json:"notes,omitempty"`
 	TruthPaths          []SourceRef `json:"truth_paths"`
 	ImplementationPaths []SourceRef `json:"implementation_paths"`
-	SharedRefs          []string    `json:"shared_refs"`
+	RuleRefs            []string    `json:"rule_refs"`
 	BoundObjects        []string    `json:"bound_objects"`
 	Sources             []SourceRef `json:"sources"`
 }

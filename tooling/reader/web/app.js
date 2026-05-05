@@ -47,9 +47,9 @@ const TRANSLATIONS = {
         label: "场景",
         tooltip: "场景是一条从触发到结果的完整使用链路，用来说明多个责任块怎样一起完成一个结果。"
       },
-      shared: {
-        label: "共享规则",
-        tooltip: "共享规则是多个单元或场景共同复用的一段规则，避免同一规则在不同地方重复写。"
+      rule: {
+        label: "规则",
+        tooltip: "规则是多个单元或场景共同复用的一段规则，避免同一规则在不同地方重复写。"
       },
       truth: {
         label: "Spec 文档",
@@ -60,14 +60,14 @@ const TRANSLATIONS = {
         tooltip: "实现路径是代码、配置或工具文件所在的位置，表示规则落到哪些工程文件里。"
       },
       system: {
-        label: "系统约束",
-        tooltip: "系统约束是全仓库通用的技术底线，例如默认选择、禁止事项和全局例外。"
+        label: "全局规则",
+        tooltip: "全局规则是全仓库通用的技术底线，例如默认选择、禁止事项和全局例外。"
       }
     },
     views: {
       review: {
         title: "Spec 审核",
-        summary: "按本轮需要确认的 candidate 主文和非 evidence 附录组织审核入口。evidence、stable、项目结构和全局约束只作为参考。",
+        summary: "按本轮需要确认的 candidate 主文和非 evidence 附录组织审核入口。evidence、stable、项目结构和全局规则只作为参考。",
         nav: "待审核 Spec"
       },
       project: {
@@ -77,7 +77,7 @@ const TRANSLATIONS = {
       },
       specflow: {
         title: "SpecFlow",
-        summary: "从治理层级看规则：全局约束、项目映射、状态索引、共享规则、单元和 Spec 文档如何分层。",
+        summary: "从治理层级看规则：全局规则、项目映射、状态索引、规则、单元和 Spec 文档如何分层。",
         nav: "对象"
       },
       status: {
@@ -89,7 +89,7 @@ const TRANSLATIONS = {
     counts: {
       unit: "{count} 单元",
       scenario: "{count} 场景",
-      shared: "{count} 共享规则",
+      rule: "{count} 规则",
       truth: "{count} Spec 文档",
       paths: "{count} 个路径或文件",
       objects: "{count} 个对象"
@@ -97,10 +97,10 @@ const TRANSLATIONS = {
     specflowSections: {
       unit: "单元",
       scenario: "场景",
-      shared: "共享规则",
+      rule: "规则",
       truth: "Spec 文档",
       implementation: "实现路径",
-      system: "系统约束",
+      system: "全局规则",
       support: "支撑文件"
     },
     fallback: {
@@ -109,7 +109,7 @@ const TRANSLATIONS = {
       none: "无",
       responsibilityUnknown: "职责未声明",
       undeclared: "未声明",
-      sharedRule: "共享规则",
+      rule: "规则",
       noObject: "暂无对象",
       cytoscapeMissing: "Cytoscape 未加载。"
     },
@@ -137,7 +137,7 @@ const TRANSLATIONS = {
       empty: "暂无待审核 candidate Spec。",
       emptyNav: "暂无待审核 Spec。",
       emptyDetailTitle: "暂无待审核 Spec",
-      emptyDetail: "当前没有需要默认审核的 candidate 主文或非 evidence 附录。stable、evidence、项目结构和全局约束不会作为本轮默认审核对象。",
+      emptyDetail: "当前没有需要默认审核的 candidate 主文或非 evidence 附录。stable、evidence、项目结构和全局规则不会作为本轮默认审核对象。",
       openSource: "打开 Spec 原文",
       fileType: "审核对象",
       object: "对应项目对象",
@@ -153,34 +153,34 @@ const TRANSLATIONS = {
       copyFailed: "复制失败",
       relation: {
         implementation: "实现路径",
-        shared: "共享规则",
+        rule: "规则",
         bound: "绑定对象",
         appendix: "附录文件",
         evidence: "证据参考",
         stable: "稳定基线参考",
         mapping: "项目结构参考",
-        system: "全局约束参考"
+        system: "全局规则参考"
       },
       types: {
         capability: "待确认单元设计",
         scenario: "待确认端到端设计",
-        shared: "待确认共享规则",
+        rule: "待确认规则",
         structure: "项目结构文件",
-        system: "全局约束文件"
+        system: "全局规则文件"
       },
       targets: {
         capability: "整份文件是否正确表达该能力的当前设计或规则。",
         scenario: "整份文件是否正确表达从入口到最终结果的端到端链路。",
-        shared: "整份文件是否正确表达这条共享规则及其复用边界。",
+        rule: "整份文件是否正确表达这条规则及其复用边界。",
         structure: "整份文件是否正确表达当前项目结构、对象边界和路径归属。",
-        system: "整份文件是否正确表达全仓库约束、默认选择和例外。"
+        system: "整份文件是否正确表达全仓库规则、默认选择和例外。"
       },
       focus: {
-        capability: "责任边界、输入输出、错误处理、验收条件、共享规则引用",
+        capability: "责任边界、输入输出、错误处理、验收条件、规则引用",
         scenario: "入口、经过的能力、最终结果、失败处理、验证方式",
-        shared: "复用对象、规则正文、绑定关系、是否仍是局部共享规则",
-        structure: "能力列表、场景列表、共享规则列表、路径归属、支撑文件边界",
-        system: "技术基线、默认选择、共享机制、禁止项、例外"
+        rule: "复用对象、规则正文、绑定关系、是否仍是局部规则",
+        structure: "能力列表、场景列表、规则列表、路径归属、支撑文件边界",
+        system: "技术基线、默认选择、复用机制、禁止项、例外"
       }
     },
     lifecycle: {
@@ -230,7 +230,7 @@ const TRANSLATIONS = {
       groups: {
         truth: "Spec 文档",
         implementation: "实现路径",
-        shared: "共享规则",
+        rule: "规则",
         bound: "绑定对象",
         connected: "关联节点"
       }
@@ -253,7 +253,7 @@ const TRANSLATIONS = {
       project_path: "路径",
       repository_mapping: "项目结构文件",
       status_index: "状态索引",
-      system_constraints: "系统约束",
+      rule: "全局规则",
       truth_file: "Spec 文档"
     },
     frontmatter: {
@@ -289,9 +289,9 @@ const TRANSLATIONS = {
         label: "Scenario",
         tooltip: "A scenario is a complete trigger-to-result usage chain that shows how multiple responsibilities produce one outcome."
       },
-      shared: {
-        label: "Shared rule",
-        tooltip: "A shared rule is reused by multiple units or scenarios so the same rule is not duplicated in different places."
+      rule: {
+        label: "Rule",
+        tooltip: "A rule is reused by multiple units or scenarios so the same rule is not duplicated in different places."
       },
       truth: {
         label: "Spec document",
@@ -302,14 +302,14 @@ const TRANSLATIONS = {
         tooltip: "An implementation path is where code, configuration, or tooling files live."
       },
       system: {
-        label: "System constraints",
-        tooltip: "System constraints are repository-wide technical baselines, such as defaults, prohibitions, and global exceptions."
+        label: "Global rules",
+        tooltip: "Global rules are repository-wide technical baselines, such as defaults, prohibitions, and global exceptions."
       }
     },
     views: {
       review: {
         title: "Spec Review",
-        summary: "Organizes review by candidate main Spec files and non-evidence appendices that need confirmation. Evidence, stable, project structure, and global constraints files remain references.",
+        summary: "Organizes review by candidate main Spec files and non-evidence appendices that need confirmation. Evidence, stable, project structure, and global rules files remain references.",
         nav: "Specs to review"
       },
       project: {
@@ -319,7 +319,7 @@ const TRANSLATIONS = {
       },
       specflow: {
         title: "SpecFlow",
-        summary: "Shows governance layers: how global constraints, repository mapping, status index, shared rules, units, and Spec documents are organized.",
+        summary: "Shows governance layers: how global rules, repository mapping, status index, rules, units, and Spec documents are organized.",
         nav: "Objects"
       },
       status: {
@@ -331,7 +331,7 @@ const TRANSLATIONS = {
     counts: {
       unit: "{count} units",
       scenario: "{count} scenarios",
-      shared: "{count} shared rules",
+      rule: "{count} rules",
       truth: "{count} Spec documents",
       paths: "{count} paths or files",
       objects: "{count} objects"
@@ -339,10 +339,10 @@ const TRANSLATIONS = {
     specflowSections: {
       unit: "Units",
       scenario: "Scenarios",
-      shared: "Shared rules",
+      rule: "Rules",
       truth: "Spec documents",
       implementation: "Implementation paths",
-      system: "System constraints",
+      system: "Global rules",
       support: "Support files"
     },
     fallback: {
@@ -351,7 +351,7 @@ const TRANSLATIONS = {
       none: "None",
       responsibilityUnknown: "Responsibility not declared",
       undeclared: "Not declared",
-      sharedRule: "Shared rule",
+      rule: "Rule",
       noObject: "No object",
       cytoscapeMissing: "Cytoscape is not loaded."
     },
@@ -379,7 +379,7 @@ const TRANSLATIONS = {
       empty: "No candidate Specs to review.",
       emptyNav: "No Specs to review.",
       emptyDetailTitle: "No Specs to review",
-      emptyDetail: "There are no candidate main files or non-evidence appendices that need default review. Stable, evidence, project structure, and global constraints files are not default review targets for this round.",
+      emptyDetail: "There are no candidate main files or non-evidence appendices that need default review. Stable, evidence, project structure, and global rules files are not default review targets for this round.",
       openSource: "Open Spec source",
       fileType: "Review object",
       object: "Project object",
@@ -395,34 +395,34 @@ const TRANSLATIONS = {
       copyFailed: "Copy failed",
       relation: {
         implementation: "Implementation paths",
-        shared: "Shared rules",
+        rule: "Rules",
         bound: "Bound objects",
         appendix: "Appendix files",
         evidence: "Evidence references",
         stable: "Stable baseline references",
         mapping: "Project structure reference",
-        system: "Global constraints reference"
+        system: "Global rules reference"
       },
       types: {
         capability: "Unit design to confirm",
         scenario: "End-to-end design to confirm",
-        shared: "Shared rules to confirm",
+        rule: "Rules to confirm",
         structure: "Project structure file",
-        system: "Global constraints file"
+        system: "Global rules file"
       },
       targets: {
         capability: "Whether the whole file correctly expresses this capability's current design or rules.",
         scenario: "Whether the whole file correctly expresses the end-to-end chain from entry to final outcome.",
-        shared: "Whether the whole file correctly expresses this shared rule and its reuse boundary.",
+        rule: "Whether the whole file correctly expresses this rule and its reuse boundary.",
         structure: "Whether the whole file correctly expresses current project structure, object boundaries, and path ownership.",
         system: "Whether the whole file correctly expresses repository-wide constraints, defaults, and exceptions."
       },
       focus: {
-        capability: "Responsibility boundary, inputs and outputs, error handling, acceptance conditions, shared rule references",
+        capability: "Responsibility boundary, inputs and outputs, error handling, acceptance conditions, rule references",
         scenario: "Entry, participating capabilities, final outcome, failure handling, verification method",
-        shared: "Reusing objects, rule body, binding relationships, whether it remains a local shared rule",
-        structure: "Capability list, scenario list, shared rule list, path ownership, support-file boundary",
-        system: "Technical baseline, defaults, shared mechanisms, prohibitions, exceptions"
+        rule: "Reusing objects, rule body, binding relationships, whether it remains a local rule",
+        structure: "Capability list, scenario list, rule list, path ownership, support-file boundary",
+        system: "Technical baseline, defaults, reusable mechanisms, prohibitions, exceptions"
       }
     },
     lifecycle: {
@@ -472,7 +472,7 @@ const TRANSLATIONS = {
       groups: {
         truth: "Spec documents",
         implementation: "Implementation paths",
-        shared: "Shared rules",
+        rule: "Rules",
         bound: "Bound objects",
         connected: "Connected nodes"
       }
@@ -495,7 +495,7 @@ const TRANSLATIONS = {
       project_path: "Path",
       repository_mapping: "Repository mapping file",
       status_index: "Status index",
-      system_constraints: "System constraints",
+      rule: "Global rules",
       truth_file: "Spec document"
     },
     frontmatter: {
@@ -664,7 +664,7 @@ function renderViewSummary() {
     <div class="view-counts">
       <span>${escapeHTML(t("counts.unit", { count: snapshot.project.unit_count || 0 }))}</span>
       <span>${escapeHTML(t("counts.scenario", { count: snapshot.project.scenario_count || 0 }))}</span>
-      <span>${escapeHTML(t("counts.shared", { count: snapshot.project.shared_count || 0 }))}</span>
+      <span>${escapeHTML(t("counts.rule", { count: snapshot.project.rule_count || 0 }))}</span>
       <span>${escapeHTML(t("counts.truth", { count: snapshot.project.truth_file_count || 0 }))}</span>
     </div>
   `;
@@ -740,16 +740,16 @@ function renderSpecflowNav() {
   const objects = list(snapshot.objects);
   const units = objects.filter((item) => item.kind === "unit").sort(byLabel);
   const scenarios = objects.filter((item) => item.kind === "scenario").sort(byLabel);
-  const shared = objects.filter((item) => item.kind === "shared_contract").sort(byLabel);
+  const rules = objects.filter((item) => item.kind === "rule").sort(byLabel);
   const truthNodes = graph.nodes.filter((node) => node.group === "truth").sort(byLabel);
   const implementationNodes = graph.nodes.filter((node) => node.group === "implementation").sort(byLabel);
-  const systemNodes = graph.nodes.filter((node) => node.group === "system").sort(byLabel);
+  const systemNodes = graph.nodes.filter((node) => node.group === "__unused_rule_group__").sort(byLabel);
   const supportNodes = graph.nodes.filter((node) => node.group === "support").sort(byLabel);
 
   const sections = [
     { key: "unit", type: "objects", items: units },
     { key: "scenario", type: "objects", items: scenarios },
-    { key: "shared", type: "objects", items: shared },
+    { key: "rule", type: "objects", items: rules },
     { key: "truth", type: "nodes", items: truthNodes },
     { key: "implementation", type: "nodes", items: implementationNodes },
     { key: "system", type: "nodes", items: systemNodes },
@@ -873,7 +873,7 @@ function objectsForView() {
     return objects.filter((item) => item.kind === "unit" || item.kind === "scenario");
   }
   if (currentView === "specflow") {
-    return objects.filter((item) => item.kind === "shared_contract").concat(objects.filter((item) => item.kind === "unit"));
+    return objects.filter((item) => item.kind === "rule").concat(objects.filter((item) => item.kind === "unit"));
   }
   if (currentView === "status") {
     return objects.filter((item) => item.kind === "unit" || item.kind === "scenario");
@@ -888,7 +888,7 @@ function navSubtitle(object) {
   if (currentView === "specflow") {
     return object.responsibility || t("fallback.responsibilityUnknown");
   }
-  if (object.kind === "shared_contract") return object.responsibility || t("fallback.sharedRule");
+  if (object.kind === "rule") return object.responsibility || t("fallback.rule");
   return `${object.human_state || object.kind} · ${t("fallback.nextStep", { value: object.next_label || t("fallback.none") })}`;
 }
 
@@ -1092,7 +1092,7 @@ function graphForProjectView() {
       id: objectID,
       kind: object.kind,
       label: object.label,
-      group: object.kind === "shared_contract" ? "shared" : object.kind,
+      group: object.kind === "rule" ? "rule" : object.kind,
       source: firstSourceRef(object.sources)
     });
     list(object.implementation_paths).forEach((ref) => {
@@ -1153,10 +1153,10 @@ function graphForSpecflowView() {
     if (!edges.some((item) => item.id === edge.id)) edges.push(edge);
   };
 
-  addNode({ id: "system:constraints", kind: "system_constraints", label: t("kind.system_constraints"), group: "system", source: { path: snapshot.project.system_file } });
+  addNode({ id: "rule:baseline", kind: "rule", label: t("kind.rule"), group: "rule", source: { path: snapshot.project.rule_baseline_file } });
   addNode({ id: "support:repository_mapping", kind: "repository_mapping", label: t("kind.repository_mapping"), group: "support", source: { path: snapshot.project.mapping_file } });
   addNode({ id: "support:status", kind: "status_index", label: t("kind.status_index"), group: "support", source: { path: snapshot.project.status_file } });
-  addEdge({ id: "system:constraints->support:repository_mapping", from: "system:constraints", to: "support:repository_mapping", kind: "constrains", label: "constrains", source: { path: snapshot.project.system_file } });
+  addEdge({ id: "rule:baseline->support:repository_mapping", from: "rule:baseline", to: "support:repository_mapping", kind: "constrains", label: "constrains", source: { path: snapshot.project.rule_baseline_file } });
 
   list(snapshot.objects).forEach((object) => {
     const objectID = objectNodeID(object);
@@ -1164,7 +1164,7 @@ function graphForSpecflowView() {
       id: objectID,
       kind: object.kind,
       label: object.label,
-      group: object.kind === "shared_contract" ? "shared" : object.kind,
+      group: object.kind === "rule" ? "rule" : object.kind,
       source: firstSourceRef(object.sources)
     });
     addEdge({ id: `support:repository_mapping->${objectID}`, from: "support:repository_mapping", to: objectID, kind: "declares", label: "declares", source: { path: snapshot.project.mapping_file } });
@@ -1176,13 +1176,13 @@ function graphForSpecflowView() {
       addNode({ id: fileNode, kind: "truth_file", label: truth.path.split("/").pop(), group: "truth", source: truth });
       addEdge({ id: `${objectID}->${fileNode}`, from: objectID, to: fileNode, kind: "described_by", label: "described by", source: truth });
     });
-    list(object.shared_refs).forEach((sharedID) => {
-      const sharedNode = `shared:${sharedID}`;
-      addNode({ id: sharedNode, kind: "shared_contract", label: sharedID, group: "shared" });
-      addEdge({ id: `${objectID}->${sharedNode}`, from: objectID, to: sharedNode, kind: "uses_shared", label: "uses shared", source: firstSourceRef(object.sources) });
+    list(object.rule_refs).forEach((ruleID) => {
+      const ruleNode = `rule:${ruleID}`;
+      addNode({ id: ruleNode, kind: "rule", label: ruleID, group: "rule" });
+      addEdge({ id: `${objectID}->${ruleNode}`, from: objectID, to: ruleNode, kind: "uses_rule", label: "uses rule", source: firstSourceRef(object.sources) });
     });
     list(object.bound_objects).forEach((bound) => {
-      if (object.kind !== "shared_contract") return;
+      if (object.kind !== "rule") return;
       addEdge({ id: `${objectID}->${bound}`, from: objectID, to: bound, kind: "bound_to", label: "bound to", source: firstSourceRef(object.sources) });
     });
   });
@@ -1240,19 +1240,19 @@ function projectPositions(nodes, edges) {
 function specflowPositions(nodes, edges) {
   const positions = {};
   const groups = {
-    system: nodes.filter((node) => node.group === "system" || node.group === "support"),
-    shared: nodes.filter((node) => node.group === "shared"),
+    system: nodes.filter((node) => node.group === "support"),
+    rule: nodes.filter((node) => node.group === "rule"),
     domain: nodes.filter((node) => node.group === "unit" || node.group === "scenario"),
     truth: nodes.filter((node) => node.group === "truth")
   };
-  const x = { system: 120, shared: 390, domain: 650, truth: 940 };
+  const x = { system: 120, rule: 390, domain: 650, truth: 940 };
   const top = 90;
 
   groups.system.sort(byLabel).forEach((node, index) => {
     positions[node.id] = { x: x.system, y: top + index * 110 };
   });
-  groups.shared.sort(byLabel).forEach((node, index) => {
-    positions[node.id] = { x: x.shared, y: top + index * 118 };
+  groups.rule.sort(byLabel).forEach((node, index) => {
+    positions[node.id] = { x: x.rule, y: top + index * 118 };
   });
   groups.domain.sort(byLabel).forEach((node, index) => {
     positions[node.id] = { x: x.domain, y: top + index * 118 };
@@ -1265,13 +1265,13 @@ function specflowPositions(nodes, edges) {
 function relationshipPositions(nodes, edges) {
   const positions = {};
   const groups = {
-    shared: nodes.filter((node) => node.group === "shared"),
+    rule: nodes.filter((node) => node.group === "rule"),
     domain: nodes.filter((node) => node.group === "unit" || node.group === "scenario"),
     truth: nodes.filter((node) => node.group === "truth"),
     implementation: nodes.filter((node) => node.group === "implementation"),
-    system: nodes.filter((node) => node.group === "system")
+    system: nodes.filter((node) => node.group === "support")
   };
-  const x = { shared: 120, system: 120, domain: 430, truth: 760, implementation: 1100 };
+  const x = { rule: 120, system: 120, domain: 430, truth: 760, implementation: 1100 };
   const rowGap = 135;
   const top = 90;
 
@@ -1282,15 +1282,15 @@ function relationshipPositions(nodes, edges) {
     positions[node.id] = { x: x.system, y: top + index * rowGap };
   });
 
-  groups.shared.sort(byLabel).forEach((node, index) => {
+  groups.rule.sort(byLabel).forEach((node, index) => {
     const boundTargets = edges
       .filter((edge) => edge.from === node.id && positions[edge.to])
       .map((edge) => positions[edge.to].y);
     const y = boundTargets.length > 0 ? average(boundTargets) : top + index * rowGap;
-    positions[node.id] = { x: x.shared, y };
+    positions[node.id] = { x: x.rule, y };
   });
 
-  distributeColumn(groups.shared.concat(groups.system), positions, x.shared, top, 112);
+  distributeColumn(groups.rule.concat(groups.system), positions, x.rule, top, 112);
   positionChildGroup(groups.truth, edges, positions, x.truth, top, 72);
   positionChildGroup(groups.implementation, edges, positions, x.implementation, top, 82);
 
@@ -1351,7 +1351,7 @@ function colorForGroup(ele) {
   const group = ele.data("group");
   if (group === "unit") return "#2563eb";
   if (group === "scenario") return "#db2777";
-  if (group === "shared") return "#0f766e";
+  if (group === "rule") return "#0f766e";
   if (group === "truth") return "#7c3aed";
   if (group === "implementation") return "#b45309";
   if (group === "root") return "#0f172a";
@@ -1362,13 +1362,13 @@ function colorForGroup(ele) {
 function objectFromNode(id) {
   if (!id.includes(":")) return null;
   const [kind, objectID] = id.split(":", 2);
-  const objectKind = kind === "shared" ? "shared_contract" : kind;
+  const objectKind = kind === "rule" ? "rule" : kind;
   return list(snapshot.objects).find((item) => item.kind === objectKind && item.id === objectID);
 }
 
 function objectNodeID(object) {
   if (!object) return null;
-  return `${object.kind === "shared_contract" ? "shared" : object.kind}:${object.id}`;
+  return `${object.kind === "rule" ? "rule" : object.kind}:${object.id}`;
 }
 
 function nodeExistsForGraph(nodeID, graph) {
@@ -1384,7 +1384,7 @@ function firstNodeIDForView(nodes) {
     return (rootNode || nodes[0] || {}).id || null;
   }
   if (currentView === "specflow") {
-    const supportNode = nodes.find((node) => node.id === "system:constraints");
+    const supportNode = nodes.find((node) => node.id === "rule:baseline");
     return (supportNode || nodes[0] || {}).id || null;
   }
   if (currentView === "status") {
@@ -1618,12 +1618,12 @@ function reviewTypeForObject(object) {
   if (!object) return "";
   if (object.kind === "unit") return "capability";
   if (object.kind === "scenario") return "scenario";
-  if (object.kind === "shared_contract") return "shared";
+  if (object.kind === "rule") return "rule";
   return "";
 }
 
 function reviewTypeOrder() {
-  return ["capability", "shared", "scenario"];
+  return ["capability", "rule", "scenario"];
 }
 
 function compareReviewItems(left, right) {
@@ -1640,7 +1640,7 @@ function isPrimaryReviewSource(source, object) {
   const name = fileName(path);
   if (object.kind === "unit") return /^c_unit_[^/]+\.md$/.test(name);
   if (object.kind === "scenario") return /^c_scenario_[^/]+\.md$/.test(name);
-  if (object.kind === "shared_contract") return /^c_shared_[^/]+\.md$/.test(name);
+  if (object.kind === "rule") return /^c_b_rule_[^/]+\.md$/.test(name);
   return false;
 }
 
@@ -1759,8 +1759,8 @@ function reviewRelationGroups(item) {
   const groups = [];
   const implementation = list(object.implementation_paths).map((ref) => ref.path).filter(Boolean);
   if (implementation.length > 0) groups.push({ label: t("review.relation.implementation"), items: implementation, linkable: false });
-  const shared = list(object.shared_refs).filter(Boolean);
-  if (shared.length > 0) groups.push({ label: t("review.relation.shared"), items: shared, linkable: false });
+  const rules = list(object.rule_refs).filter(Boolean);
+  if (rules.length > 0) groups.push({ label: t("review.relation.rule"), items: rules, linkable: false });
   const bound = list(object.bound_objects).filter(Boolean);
   if (bound.length > 0) groups.push({ label: t("review.relation.bound"), items: bound, linkable: false });
   const appendix = uniqueSources(object.truth_paths)
@@ -1778,8 +1778,8 @@ function reviewRelationGroups(item) {
   if (snapshot.project.mapping_file) {
     groups.push({ label: t("review.relation.mapping"), items: [snapshot.project.mapping_file], linkable: true });
   }
-  if (snapshot.project.system_file) {
-    groups.push({ label: t("review.relation.system"), items: [snapshot.project.system_file], linkable: true });
+  if (snapshot.project.rule_baseline_file) {
+    groups.push({ label: t("review.relation.system"), items: [snapshot.project.rule_baseline_file], linkable: true });
   }
   return groups;
 }
@@ -1854,8 +1854,8 @@ function compactLabel(node) {
       .replace(/^docs\/specs\/units\/candidate\/appendix\//, "appendix/")
       .replace(/^docs\/specs\/units\/candidate\//, "units/candidate/")
       .replace(/^docs\/specs\/units\/stable\//, "units/stable/")
-      .replace(/^docs\/specs\/shared_contracts\/candidate\//, "shared/candidate/")
-      .replace(/^docs\/specs\/shared_contracts\/stable\//, "shared/stable/")
+      .replace(/^docs\/specs\/rules\/candidate\//, "rule/candidate/")
+      .replace(/^docs\/specs\/rules\/stable\//, "rule/stable/")
       .replace("/**", "\n/**");
   }
   if (node.kind === "truth_file") {
@@ -1871,8 +1871,8 @@ function compactTruthFileLabel(label) {
   const base = String(label || "").replace(/\.md$/, "");
   const unitMatch = base.match(/^([cs])_unit_(.+)$/);
   if (unitMatch) return `${unitMatch[2].replace(/_/g, " ")} (${truthLayerName(unitMatch[1])})`;
-  const sharedMatch = base.match(/^([cs])_shared_(.+)$/);
-  if (sharedMatch) return `shared ${sharedMatch[2].replace(/_/g, " ")} (${truthLayerName(sharedMatch[1])})`;
+  const sharedMatch = base.match(/^([cs])_[gb]_rule_(.+)$/);
+  if (sharedMatch) return `rule ${sharedMatch[2].replace(/_/g, " ")} (${truthLayerName(sharedMatch[1])})`;
   return base.replace(/_/g, " ");
 }
 
@@ -1883,7 +1883,7 @@ function truthLayerName(prefix) {
 function edgeLabel(kind) {
   if (kind === "described_by") return "Spec";
   if (kind === "owns_path") return "Path";
-  if (kind === "uses_shared") return "Uses";
+  if (kind === "uses_rule") return "Uses";
   if (kind === "bound_to") return "Bound";
   if (kind === "contains") return "Contains";
   if (kind === "maps_to") return "Owner";
@@ -1897,14 +1897,14 @@ function nodeSize(ele) {
   const group = ele.data("group");
   if (group === "root") return 48;
   if (group === "unit" || group === "scenario") return 42;
-  if (group === "shared") return 40;
+  if (group === "rule") return 40;
   if (group === "truth") return 34;
   return 36;
 }
 
 function edgeWidth(ele) {
   const kind = ele.data("kind");
-  if (kind === "uses_shared" || kind === "bound_to" || kind === "maps_to") return 2;
+  if (kind === "uses_rule" || kind === "bound_to" || kind === "maps_to") return 2;
   return 1.5;
 }
 
@@ -1935,7 +1935,7 @@ function renderDetail(object) {
     </dl>
     ${renderChipGroup(t("inspector.groups.truth"), object.truth_paths, true)}
     ${renderChipGroup(t("inspector.groups.implementation"), object.implementation_paths, false)}
-    ${renderTextChips(t("inspector.groups.shared"), object.shared_refs)}
+    ${renderTextChips(t("inspector.groups.rule"), object.rule_refs)}
     ${renderTextChips(t("inspector.groups.bound"), object.bound_objects)}
   `;
   bindInspectorLinks();
@@ -2529,11 +2529,11 @@ function normalizeSpecPath(path) {
   const direct = findKnownSpecPath(normalized);
   if (direct) return direct;
 
-  const sharedMatch = /(?:^|\/)shared\/(candidate|stable)\/([^/]+\.md)$/.exec(normalized);
-  if (sharedMatch) {
-    const sharedPath = `docs/specs/shared_contracts/${sharedMatch[1]}/${sharedMatch[2]}`;
-    const knownSharedPath = findKnownSpecPath(sharedPath);
-    if (knownSharedPath) return knownSharedPath;
+  const ruleMatch = /(?:^|\/)rule\/(candidate|stable)\/([^/]+\.md)$/.exec(normalized);
+  if (ruleMatch) {
+    const rulePath = `docs/specs/rules/${ruleMatch[1]}/${ruleMatch[2]}`;
+    const knownRulePath = findKnownSpecPath(rulePath);
+    if (knownRulePath) return knownRulePath;
   }
 
   return findKnownSpecPathByBasename(basename) || normalized;

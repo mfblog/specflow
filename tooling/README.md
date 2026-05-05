@@ -60,13 +60,13 @@ The tooling layer must not:
 1. invent new lifecycle semantics
 2. replace command closure judgment
 3. replace shared-boundary judgment
-4. replace review severity or `pass | pass-with-optimization | blocked` judgment
+4. replace review severity or final conclusion judgment owned by the active review policy
 5. become a second semantic source of truth
 6. write reader-derived conclusions back into project files
 
 `impact_sync` is a governance concept first.
 The current CLI exposes only the deterministic pieces already justified by rules.
-For shared-change reconciliation, the current mechanical entry remains `shared sync-impact`, but that entry must first compute `shared_sync` scope and exceptions and only then hand the fixed downstream object set to internal `impact_sync`.
+For shared-change reconciliation, the current mechanical entry remains `rule sync-impact`, but that entry must first compute `rule_sync` scope and exceptions and only then hand the fixed downstream object set to internal `impact_sync`.
 
 `specflow-reader` is a read-only local view over current truth files.
 It may parse `docs/specs/**`, build an in-memory graph, serve local HTML from `specflow/tooling/reader/web`, and refresh that view when truth files change.
@@ -89,7 +89,7 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
 7. `registry validate`
    - validate `docs/project_standards/_registry.md`
 8. `repository-mapping validate`
-   - validate `docs/specs/repository_mapping.md` path rules against `_status.md` and declared shared contract files
+   - validate `docs/specs/repository_mapping.md` path rules against `_status.md` and declared rule files
 9. `review collect-default-scope --flow <review_flow>`
    - collect the deterministic default scope for the explicit review flow
 10. `review run-init --flow <review_flow>`
@@ -112,13 +112,13 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - write one deterministic `unit` row in `_status.md`
 19. `status set-object`
    - write one unified object row in `_status.md`
-20. `shared sync-impact`
-   - compute shared-specific scope, resolve shared-only exceptions into generic impact input, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
-   - when stable landing self-exemption is needed, the caller must pass both `--stable-landing-unit` and exact `--stable-landing-shared-refs`
-   - when a current-round Shared Contract file delta is proven to be limited to `bound_objects` metadata, the caller must pass its exact file path through `--bound-objects-only-shared-file-refs`
-   - the caller may narrow the derived unit subset with `--units`, but at least one shared trigger input must still be provided through `--shared-refs` or `--shared-ids`
-21. `shared reconcile-bound-objects`
-   - rewrite Shared Contract `bound_objects` metadata from current formal bindings
+20. `rule sync-impact`
+   - compute rule-specific scope, resolve rule-only exceptions into generic impact input, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
+   - when stable landing self-exemption is needed, the caller must pass both `--stable-landing-unit` and exact `--stable-landing-rule-refs`
+   - when a current-round Rule file delta is proven to be limited to `bound_objects` metadata, the caller must pass its exact file path through `--bound-objects-only-rule-file-refs`
+   - the caller may narrow the derived unit subset with `--units`, but at least one rule trigger input must still be provided through `--rule-refs` or `--rule-ids`
+21. `rule reconcile-bound-objects`
+   - rewrite Rule `bound_objects` metadata from current formal bindings
 
 ## Reader Command Surface
 
@@ -177,7 +177,9 @@ Rules:
 3. `run-refresh` may change `passed` slices to `stale` when inputs change or disappear
 4. tooling must not change `pending`, `blocked`, or `skipped_not_in_scope` into a passing judgment
 5. tooling may create and validate the `spec_flow_design_review` score-state skeleton
-6. tooling must not write findings, severities, non-blocking optimizations, question scores, score basis, hard-blocker judgments, or final `pass | pass-with-optimization | blocked` conclusions
+6. tooling must not write findings, severities, non-blocking optimizations, question scores, score basis, hard-blocker judgments, or final conclusions owned by the active review policy
+   - `spec_flow_review` final conclusions are `pass | blocked`
+   - `spec_flow_design_review` final conclusions are `pass | pass-with-optimization | blocked`
 7. each review flow uses one fixed run-state file
 8. when the fixed run-state file is missing, tooling creates the file for a new full-scope review
 9. when a new full-scope review starts after a closed or invalid run-state file, tooling deletes the old fixed file before writing the new run state
@@ -265,9 +267,9 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --unit ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --unit ai --from-command unit_promote --reason evidence_incomplete
 ./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type scenario --object task_execution --stable yes --candidate no --active-layer stable --next-command scenario_fork
-./specflow/tooling/bin/specflowctl-linux-amd64 shared sync-impact --shared-refs c_shared_app_config_topology@0.2.0 --units ai
-./specflow/tooling/bin/specflowctl-linux-amd64 shared sync-impact --shared-refs s_shared_app_config_topology@0.2.0 --bound-objects-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_app_config_topology.md
-./specflow/tooling/bin/specflowctl-linux-amd64 shared reconcile-bound-objects --shared-ids shared_app_config_topology
+./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_app_config_topology@0.2.0 --units ai
+./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs s_b_rule_app_config_topology@0.2.0 --bound-objects-only-rule-file-refs docs/specs/rules/stable/s_b_rule_app_config_topology.md
+./specflow/tooling/bin/specflowctl-linux-amd64 rule reconcile-bound-objects --rule-ids b_rule_app_config_topology
 ```
 
 ## Freshness Rule

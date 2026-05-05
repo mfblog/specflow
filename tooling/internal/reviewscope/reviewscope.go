@@ -16,7 +16,7 @@ type SpecFlowScope struct {
 	FrameworkGuidelineFiles           []string
 	CommandFiles                      []string
 	GuidanceSkillFiles                []string
-	SharedGovernanceFiles             []string
+	RuleGovernanceFiles               []string
 	TemplateGovernanceFiles           []string
 	TemplateEntryFiles                []string
 	ProjectEntryFiles                 []string
@@ -60,14 +60,14 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/skills/design-quality-review/SKILL.md",
 		"specflow/framework/skills/spec-writeback-guidance/SKILL.md",
 	}
-	sharedFiles := []string{
+	ruleFiles := []string{
 		"specflow/framework/natural_language_routing.md",
-		"specflow/framework/shared_new.md",
-		"specflow/framework/shared_extract.md",
-		"specflow/framework/shared_bind.md",
-		"specflow/framework/shared_topology.md",
-		"specflow/framework/shared_sync.md",
-		"specflow/framework/shared_escape.md",
+		"specflow/framework/rule_new.md",
+		"specflow/framework/rule_extract.md",
+		"specflow/framework/rule_bind.md",
+		"specflow/framework/rule_topology.md",
+		"specflow/framework/rule_sync.md",
+		"specflow/framework/rule_escape.md",
 	}
 	templateProcessStateFiles := []string{
 		"specflow/templates/docs/specs/_status.md",
@@ -105,7 +105,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/process_snapshot_contract.md",
 		"specflow/framework/recovery_policy.md",
 	}
-	agentOperabilityFiles := collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, guidanceSkillFiles, sharedFiles, processStateContractFiles, toolingContractFiles)
+	agentOperabilityFiles := collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, guidanceSkillFiles, ruleFiles, processStateContractFiles, toolingContractFiles)
 	projectInstanceCompatibilityFiles, err := collectProjectInstanceCompatibilityFiles(repoRoot)
 	if err != nil {
 		return scope, err
@@ -141,7 +141,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		return scope, fmt.Errorf("default tooling runtime files are incomplete")
 	}
 
-	required := append([]string{}, sharedFiles...)
+	required := append([]string{}, ruleFiles...)
 	required = append(required, minimumGuidanceSkillFiles...)
 	required = append(required, templateGovernanceFiles...)
 	required = append(required, templateEntryFiles...)
@@ -171,7 +171,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	scope.FrameworkGuidelineFiles = frameworkFiles
 	scope.CommandFiles = commandFiles
 	scope.GuidanceSkillFiles = sortAndDedupe(guidanceSkillFiles)
-	scope.SharedGovernanceFiles = sharedFiles
+	scope.RuleGovernanceFiles = ruleFiles
 	scope.TemplateGovernanceFiles = templateGovernanceFiles
 	scope.TemplateEntryFiles = templateEntryFiles
 	scope.ProjectEntryFiles = projectEntryFiles
@@ -211,7 +211,6 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/implementation_change_policy.md",
 		"specflow/framework/repository_mapping_policy.md",
 		"specflow/framework/scenario_policy.md",
-		"specflow/framework/git_policy.md",
 		"specflow/framework/checkpoint_protocol.md",
 	}
 	lifecycleContractFiles := []string{
@@ -219,7 +218,6 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/downgrade_policy.md",
 		"specflow/framework/process_snapshot_contract.md",
 		"specflow/framework/recovery_policy.md",
-		"specflow/framework/git_policy.md",
 		"specflow/framework/checkpoint_protocol.md",
 	}
 	templateProcessStateFiles := []string{
@@ -311,7 +309,7 @@ func collectProjectInstanceCompatibilityFiles(repoRoot string) ([]string, error)
 	required := []string{
 		"docs/specs/_status.md",
 		"docs/specs/repository_mapping.md",
-		"docs/specs/system_constraints.md",
+		"docs/specs/rules/stable/s_g_rule_repository_baseline.md",
 	}
 	if err := ensureRelativeFiles(repoRoot, required); err != nil {
 		return nil, err

@@ -16,7 +16,7 @@ func TestValidateAcceptsRuleBasedUnitTruthPaths(t *testing.T) {
 	writeMapping(t, repoRoot, "unit_default", nil)
 	writeFile(t, repoRoot, "docs/specs/units/candidate/c_unit_candidate_demo.md", "# Candidate\n")
 	writeFile(t, repoRoot, "docs/specs/units/stable/s_unit_stable_demo.md", "# Stable\n")
-	writeFile(t, repoRoot, "docs/specs/shared_contracts/stable/s_shared_demo.md", "# Shared\n")
+	writeFile(t, repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md", "# Shared\n")
 
 	result, err := Validate(repoRoot)
 	if err != nil {
@@ -34,7 +34,7 @@ func TestValidateRejectsLegacyConcreteTruthSurface(t *testing.T) {
 	})
 	writeMapping(t, repoRoot, "legacy", nil)
 	writeFile(t, repoRoot, "docs/specs/units/candidate/c_unit_demo.md", "# Demo\n")
-	writeFile(t, repoRoot, "docs/specs/shared_contracts/stable/s_shared_demo.md", "# Shared\n")
+	writeFile(t, repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md", "# Shared\n")
 
 	result, err := Validate(repoRoot)
 	if err != nil {
@@ -54,7 +54,7 @@ func TestValidateRejectsMissingStableTruthFile(t *testing.T) {
 		{objectType: "unit", object: "demo", stable: "yes", candidate: "no", activeLayer: "stable", nextCommand: "unit_fork"},
 	})
 	writeMapping(t, repoRoot, "unit_default", nil)
-	writeFile(t, repoRoot, "docs/specs/shared_contracts/stable/s_shared_demo.md", "# Shared\n")
+	writeFile(t, repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md", "# Shared\n")
 
 	result, err := Validate(repoRoot)
 	if err != nil {
@@ -68,12 +68,12 @@ func TestValidateRejectsMissingStableTruthFile(t *testing.T) {
 	}
 }
 
-func TestValidateRejectsMissingSharedContractPath(t *testing.T) {
+func TestValidateRejectsMissingRulePath(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeTestRepo(t, repoRoot, []statusRow{
 		{objectType: "unit", object: "demo", stable: "no", candidate: "yes", activeLayer: "candidate", nextCommand: "unit_check"},
 	})
-	writeMapping(t, repoRoot, "unit_default", []string{"docs/specs/shared_contracts/stable/s_shared_missing.md"})
+	writeMapping(t, repoRoot, "unit_default", []string{"docs/specs/rules/stable/s_b_rule_missing.md"})
 	writeFile(t, repoRoot, "docs/specs/units/candidate/c_unit_demo.md", "# Demo\n")
 
 	result, err := Validate(repoRoot)
@@ -81,9 +81,9 @@ func TestValidateRejectsMissingSharedContractPath(t *testing.T) {
 		t.Fatalf("Validate returned error: %v", err)
 	}
 	if result.Valid() {
-		t.Fatal("expected missing shared contract diagnostics")
+		t.Fatal("expected missing rule diagnostics")
 	}
-	if !containsDiagnostic(result.Diagnostics, "shared contract path does not exist") {
+	if !containsDiagnostic(result.Diagnostics, "rule path does not exist") {
 		t.Fatalf("expected missing shared diagnostic, got %v", result.Diagnostics)
 	}
 }
@@ -116,7 +116,7 @@ func writeTestRepo(t *testing.T, repoRoot string, rows []statusRow) {
 func writeMapping(t *testing.T, repoRoot, mode string, sharedPaths []string) {
 	t.Helper()
 	if sharedPaths == nil {
-		sharedPaths = []string{"docs/specs/shared_contracts/stable/s_shared_demo.md"}
+		sharedPaths = []string{"docs/specs/rules/stable/s_b_rule_demo.md"}
 	}
 	unitBlock := []string{
 		"1. `demo`",
@@ -141,12 +141,12 @@ func writeMapping(t *testing.T, repoRoot, mode string, sharedPaths []string) {
 		"3. `stable_demo`",
 		"   - stable demo unit",
 		"",
-		"### 2.3 Current Shared Contracts",
+		"### 2.3 Current Rules",
 		"",
 		"1. `demo`",
 		"   - demo shared",
 		"",
-		"### 4.5 Shared Contract Truth Paths",
+		"### 4.5 Rule Truth Paths",
 		"",
 		"1. `demo`",
 	}

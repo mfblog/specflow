@@ -27,12 +27,12 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
 	}
 	for _, name := range []string{
-		"shared_new.md",
-		"shared_extract.md",
-		"shared_bind.md",
-		"shared_topology.md",
-		"shared_sync.md",
-		"shared_escape.md",
+		"rule_new.md",
+		"rule_extract.md",
+		"rule_bind.md",
+		"rule_topology.md",
+		"rule_sync.md",
+		"rule_escape.md",
 	} {
 		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
 	}
@@ -61,7 +61,7 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), "# System Constraints\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# Global Rules\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
 		"# Registry\n\n"+
 		"## Active Standards\n\n"+
@@ -100,8 +100,8 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/skills/using-specflow-guidance/SKILL.md") {
 		t.Fatalf("expected guidance skill files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
-	if containsString(scope.SharedGovernanceFiles, "specflow/framework/onboarding_decision_policy.md") {
-		t.Fatalf("expected onboarding decision policy outside shared-governance scope, got %+v", scope.SharedGovernanceFiles)
+	if containsString(scope.RuleGovernanceFiles, "specflow/framework/onboarding_decision_policy.md") {
+		t.Fatalf("expected onboarding decision policy outside rule-governance scope, got %+v", scope.RuleGovernanceFiles)
 	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding decision policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
@@ -109,8 +109,8 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/spec_flow_migrate.md") {
 		t.Fatalf("expected migration policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/shared_sync.md") {
-		t.Fatalf("expected shared-governance files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/rule_sync.md") {
+		t.Fatalf("expected rule-governance files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/process_snapshot_contract.md") {
 		t.Fatalf("expected process-state contract files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
@@ -136,8 +136,8 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if !containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/repository_mapping.md") {
 		t.Fatalf("expected project repository mapping in compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
 	}
-	if !containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/system_constraints.md") {
-		t.Fatalf("expected project system constraints in compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
+	if !containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/rules/stable/s_g_rule_repository_baseline.md") {
+		t.Fatalf("expected project global rules in compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
 	}
 	if !containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/units/candidate/c_unit_demo.md") {
 		t.Fatalf("expected project truth file shape input in compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
@@ -195,12 +195,12 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
 	}
 	for _, name := range []string{
-		"shared_new.md",
-		"shared_extract.md",
-		"shared_bind.md",
-		"shared_topology.md",
-		"shared_sync.md",
-		"shared_escape.md",
+		"rule_new.md",
+		"rule_extract.md",
+		"rule_bind.md",
+		"rule_topology.md",
+		"rule_sync.md",
+		"rule_escape.md",
 	} {
 		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
 	}
@@ -227,7 +227,7 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 	mustWrite(t, filepath.Join(repoRoot, "CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), "# System Constraints\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# Global Rules\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
 		"# Registry\n\n"+
 		"## Active Standards\n\n"+
@@ -268,7 +268,6 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 		"specflow/framework/implementation_change_policy.md",
 		"specflow/framework/repository_mapping_policy.md",
 		"specflow/framework/scenario_policy.md",
-		"specflow/framework/git_policy.md",
 		"specflow/framework/checkpoint_protocol.md",
 		"specflow/framework/candidate_handoff_contract.md",
 		"specflow/framework/downgrade_policy.md",

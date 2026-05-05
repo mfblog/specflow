@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestBuildSnapshotConnectsUnitSpecAndSharedContract(t *testing.T) {
+func TestBuildSnapshotConnectsUnitSpecAndRule(t *testing.T) {
 	repoRoot := createReaderRepo(t)
 
 	snapshot := BuildSnapshot(repoRoot)
@@ -28,18 +28,18 @@ func TestBuildSnapshotConnectsUnitSpecAndSharedContract(t *testing.T) {
 	if !sourcePathsEqual(unit.TruthPaths, expectedTruthPaths) {
 		t.Fatalf("unexpected truth paths: %+v", unit.TruthPaths)
 	}
-	if len(unit.SharedRefs) != 1 || unit.SharedRefs[0] != "shared_runtime_model" {
-		t.Fatalf("unexpected shared refs: %+v", unit.SharedRefs)
+	if len(unit.RuleRefs) != 1 || unit.RuleRefs[0] != "b_rule_runtime_model" {
+		t.Fatalf("unexpected rule refs: %+v", unit.RuleRefs)
 	}
 
-	shared := findObject(t, snapshot.Objects, "shared_contract", "shared_runtime_model")
+	shared := findObject(t, snapshot.Objects, "rule", "b_rule_runtime_model")
 	if len(shared.BoundObjects) != 1 || shared.BoundObjects[0] != "unit:assistant" {
 		t.Fatalf("unexpected bound objects: %+v", shared.BoundObjects)
 	}
 	if !hasEdge(snapshot.Edges, "unit:assistant", "file:docs/specs/units/candidate/c_unit_assistant.md", "described_by") {
 		t.Fatalf("expected unit described_by edge, got %+v", snapshot.Edges)
 	}
-	if !hasEdge(snapshot.Edges, "unit:assistant", "shared:shared_runtime_model", "uses_shared") {
+	if !hasEdge(snapshot.Edges, "unit:assistant", "shared:b_rule_runtime_model", "uses_shared") {
 		t.Fatalf("expected unit uses_shared edge, got %+v", snapshot.Edges)
 	}
 	truthNode := findNode(t, snapshot.Nodes, "file:docs/specs/units/candidate/c_unit_assistant.md")
@@ -131,15 +131,15 @@ func createReaderRepo(t *testing.T) string {
 		"1. `assistant`",
 		"   - assistant prompt responsibility",
 		"",
-		"### 2.3 Current Shared Contracts",
+		"### 2.3 Current Rules",
 		"",
 		"1. `runtime_model`",
 		"   - runtime model rule",
 		"",
-		"### 4.5 Shared Contract Truth Paths",
+		"### 4.5 Rule Truth Paths",
 		"",
 		"1. `runtime_model`",
-		"   - `docs/specs/shared_contracts/candidate/c_shared_runtime_model.md`",
+		"   - `docs/specs/rules/candidate/c_b_rule_runtime_model.md`",
 		"",
 		"### 4.6 Unit Truth Rules And Implementation Paths",
 		"",
@@ -148,7 +148,7 @@ func createReaderRepo(t *testing.T) string {
 		"   - `implementation_surface`",
 		"     - `CLI/internal/assistant/**`",
 	}, "\n")+"\n")
-	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), "# System Constraints\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# Global Rules\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_assistant.md"), strings.Join([]string{
 		"---",
 		"id: assistant",
@@ -159,7 +159,8 @@ func createReaderRepo(t *testing.T) string {
 		"",
 		"# Assistant",
 		"",
-		"1. `shared_contract_refs`: `c_shared_runtime_model@0.1.0`",
+		"1. `rule_refs`:",
+		"   - `c_b_rule_runtime_model@0.1.0`",
 		"2. Prompt details live in [`c_unit_assistant_prompt.md`](./appendix/c_unit_assistant_prompt.md).",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md"), strings.Join([]string{
@@ -172,11 +173,12 @@ func createReaderRepo(t *testing.T) string {
 		"",
 		"Prompt notes.",
 	}, "\n")+"\n")
-	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate/c_shared_runtime_model.md"), strings.Join([]string{
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/rules/candidate/c_b_rule_runtime_model.md"), strings.Join([]string{
 		"---",
-		"shared_contract_id: shared_runtime_model",
+		"rule_id: b_rule_runtime_model",
+		"rule_scope: bound",
 		"layer: candidate",
-		"shared_version: 0.1.0",
+		"rule_version: 0.1.0",
 		"bound_objects:",
 		"  - unit:assistant",
 		"---",

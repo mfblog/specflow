@@ -270,6 +270,20 @@ func TestValidateAcceptsClosedDesignPassWithOptimizationRunStateShape(t *testing
 	}
 }
 
+func TestValidateRejectsSpecFlowReviewPassWithOptimizationRunStateShape(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	state.Fields["status"] = statusClosedPassWithOptimization
+	state.Fields["active_slice"] = "none"
+	state.Fields["resume_next_step"] = "none"
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+
+	validation := ValidateFile(repoRoot, FlowSpecFlowReview, file, now)
+	if validation.Valid || !containsDiagnostic(validation.Diagnostics, "invalid run status") {
+		t.Fatalf("expected spec_flow_review to reject pass-with-optimization status, got %+v", validation.Diagnostics)
+	}
+}
+
 func TestRefreshRejectsClosedRunState(t *testing.T) {
 	repoRoot, file, now := createInitializedRun(t)
 	state := mustParse(t, file)
@@ -483,6 +497,21 @@ func TestInitDeletesClosedPassWithOptimizationRunAndCreatesNewRun(t *testing.T) 
 	}
 }
 
+func TestInitTreatsSpecFlowReviewPassWithOptimizationRunAsInvalid(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	state.Fields["status"] = statusClosedPassWithOptimization
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+
+	result, err := Init(repoRoot, FlowSpecFlowReview, now.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if !result.Created || len(result.DeletedFiles) != 1 || result.DeletedFiles[0].Reason != "invalid_run_state" {
+		t.Fatalf("expected pass-with-optimization spec_flow_review file to be treated as invalid, got %+v", result)
+	}
+}
+
 func TestRefreshMarksChangedPassedSliceStale(t *testing.T) {
 	repoRoot, file, now := createInitializedRun(t)
 	state := mustParse(t, file)
@@ -500,6 +529,28 @@ func TestRefreshMarksChangedPassedSliceStale(t *testing.T) {
 	refreshed := mustParse(t, file)
 	if got := findSlice(t, refreshed, "review_entry_policy").Status; got != sliceStale {
 		t.Fatalf("expected stale status, got %s", got)
+	}
+}
+
+func TestRefreshKeepsPassedSliceFreshWhenInputSetUnchanged(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	setSliceStatus(t, &state, "review_entry_policy", slicePassed)
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+
+	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if containsString(result.ChangedSlices, "review_entry_policy") {
+		t.Fatalf("unchanged input set must not be reported changed, got %+v", result.ChangedSlices)
+	}
+	if containsString(result.StaleSlices, "review_entry_policy") {
+		t.Fatalf("unchanged input set must not stale passed slice, got %+v", result.StaleSlices)
+	}
+	refreshed := mustParse(t, file)
+	if got := findSlice(t, refreshed, "review_entry_policy").Status; got != slicePassed {
+		t.Fatalf("expected passed status to remain fresh, got %s", got)
 	}
 }
 
@@ -627,8 +678,8 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 	if !containsString(slice.InputFiles, "docs/specs/repository_mapping.md") {
 		t.Fatalf("expected repository mapping input, got %+v", slice.InputFiles)
 	}
-	if !containsString(slice.InputFiles, "docs/specs/system_constraints.md") {
-		t.Fatalf("expected system constraints input, got %+v", slice.InputFiles)
+	if !containsString(slice.InputFiles, "docs/specs/rules/stable/s_g_rule_repository_baseline.md") {
+		t.Fatalf("expected global rules input, got %+v", slice.InputFiles)
 	}
 	if !containsString(slice.InputFiles, "docs/specs/units/candidate/c_unit_demo.md") {
 		t.Fatalf("expected current project truth file input, got %+v", slice.InputFiles)
@@ -798,18 +849,17 @@ func createReviewRunRepo(t *testing.T) string {
 		"candidate_handoff_contract.md",
 		"downgrade_policy.md",
 		"recovery_policy.md",
-		"git_policy.md",
 		"impact_sync_policy.md",
 		"process_snapshot_contract.md",
 		"entry_index_registry.md",
 		"project_standards_policy.md",
 		"project_standard_create.md",
-		"shared_new.md",
-		"shared_extract.md",
-		"shared_bind.md",
-		"shared_topology.md",
-		"shared_sync.md",
-		"shared_escape.md",
+		"rule_new.md",
+		"rule_extract.md",
+		"rule_bind.md",
+		"rule_topology.md",
+		"rule_sync.md",
+		"rule_escape.md",
 	}
 	for _, name := range frameworkFiles {
 		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
@@ -862,7 +912,7 @@ func createReviewRunRepo(t *testing.T) string {
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n"+
 		"|---|---|---|---|---|---|---|\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), "# System Constraints\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# Global Rules\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo Candidate\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_governance_review/spec_flow_review.md"), "# ignored run state\n")
 	return repoRoot

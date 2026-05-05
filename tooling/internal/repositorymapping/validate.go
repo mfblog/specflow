@@ -73,7 +73,7 @@ func Validate(repoRoot string) (Result, error) {
 
 	for _, sharedPath := range mapping.SharedPaths {
 		if !exists(repoRoot, sharedPath.Path) {
-			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("shared contract path does not exist: %s", sharedPath.Path))
+			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("rule path does not exist: %s", sharedPath.Path))
 		}
 	}
 
@@ -152,7 +152,7 @@ func loadMapping(repoRoot string) (mappingData, error) {
 			}
 		case "shared_paths":
 			if strings.HasPrefix(trimmed, "- `") {
-				if path := firstCodeSpan(trimmed); strings.HasPrefix(path, "docs/specs/shared_contracts/") {
+				if path := firstCodeSpan(trimmed); strings.HasPrefix(path, "docs/specs/rules/") {
 					result.SharedPaths = append(result.SharedPaths, mappingPath{Path: path, Line: lineNo})
 				}
 			}

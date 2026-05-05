@@ -1,4 +1,4 @@
-package sharedsync
+package rulesync
 
 import (
 	"fmt"
@@ -8,37 +8,37 @@ import (
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/impactsync"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/sharedbinding"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulebinding"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
 type Options struct {
-	Modules                        []string
-	SharedRefs                     []string
-	SharedIDs                      []string
-	StableLandingModule            string
-	StableLandingSharedRefs        []string
-	BoundObjectsOnlySharedFileRefs []string
+	Modules                      []string
+	RuleRefs                     []string
+	RuleIDs                      []string
+	StableLandingModule          string
+	StableLandingRuleRefs        []string
+	BoundObjectsOnlyRuleFileRefs []string
 }
 
 type Result struct {
-	ScopedModules                  []string
-	ScopedFlows                    []string
-	ScopedSharedRefs               []string
-	ScopedSharedIDs                []string
-	StableLandingModule            string
-	StableLandingSharedRefs        []string
-	BoundObjectsOnlySharedFileRefs []string
-	ModuleResults                  []ModuleResult
-	FlowResults                    []ObjectResult
-	BoundObjectDrifts              []BoundObjectDrift
+	ScopedModules                []string
+	ScopedFlows                  []string
+	ScopedRuleRefs               []string
+	ScopedRuleIDs                []string
+	StableLandingModule          string
+	StableLandingRuleRefs        []string
+	BoundObjectsOnlyRuleFileRefs []string
+	ModuleResults                []ModuleResult
+	FlowResults                  []ObjectResult
+	BoundObjectDrifts            []BoundObjectDrift
 }
 
 type ModuleResult = impactsync.ModuleResult
 type ObjectResult = impactsync.ObjectResult
 
 type BoundObjectDrift struct {
-	SharedContractID      string
+	RuleID                string
 	FileRef               string
 	VersionRef            string
 	DeclaredObjects       []string
@@ -48,12 +48,12 @@ type BoundObjectDrift struct {
 
 type moduleBinding struct {
 	Status        statusfile.ModuleStatus
-	SharedRefs    []string
+	RuleRefs      []string
 	BindingIssues []string
 }
 
 type sharedFile struct {
-	SharedContractID   string
+	RuleID             string
 	Layer              string
 	FileRef            string
 	VersionRef         string
@@ -62,31 +62,31 @@ type sharedFile struct {
 }
 
 type ReconcileBoundModulesOptions struct {
-	Modules    []string
-	SharedRefs []string
-	SharedIDs  []string
+	Modules  []string
+	RuleRefs []string
+	RuleIDs  []string
 }
 
 type ReconcileBoundModulesResult struct {
-	ScopedModules    []string
-	ScopedSharedRefs []string
-	ScopedSharedIDs  []string
-	TouchedFiles     []string
-	UpdatedFiles     []string
-	UnchangedFiles   []string
+	ScopedModules  []string
+	ScopedRuleRefs []string
+	ScopedRuleIDs  []string
+	TouchedFiles   []string
+	UpdatedFiles   []string
+	UnchangedFiles []string
 }
 
 func SyncImpact(repoRoot string, options Options) (Result, error) {
 	normalized := Options{
-		Modules:                        normalizeStrings(options.Modules),
-		SharedRefs:                     normalizeStrings(options.SharedRefs),
-		SharedIDs:                      normalizeStrings(options.SharedIDs),
-		StableLandingModule:            strings.TrimSpace(options.StableLandingModule),
-		StableLandingSharedRefs:        normalizeStrings(options.StableLandingSharedRefs),
-		BoundObjectsOnlySharedFileRefs: normalizeStrings(options.BoundObjectsOnlySharedFileRefs),
+		Modules:                      normalizeStrings(options.Modules),
+		RuleRefs:                     normalizeStrings(options.RuleRefs),
+		RuleIDs:                      normalizeStrings(options.RuleIDs),
+		StableLandingModule:          strings.TrimSpace(options.StableLandingModule),
+		StableLandingRuleRefs:        normalizeStrings(options.StableLandingRuleRefs),
+		BoundObjectsOnlyRuleFileRefs: normalizeStrings(options.BoundObjectsOnlyRuleFileRefs),
 	}
-	if len(normalized.SharedRefs) == 0 && len(normalized.SharedIDs) == 0 {
-		return Result{}, fmt.Errorf("at least one of shared refs or shared ids is required")
+	if len(normalized.RuleRefs) == 0 && len(normalized.RuleIDs) == 0 {
+		return Result{}, fmt.Errorf("at least one of rule refs or rule ids is required")
 	}
 
 	sharedFilesByRef, err := loadSharedFiles(repoRoot)
@@ -96,7 +96,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	sharedFilesByID := buildSharedFilesByID(sharedFilesByRef)
 	sharedFilesByFileRef := buildSharedFilesByFileRef(sharedFilesByRef)
 
-	moduleBindings, actualModulesByRef, _, unresolvedSharedRefs, err := loadModuleBindings(repoRoot)
+	moduleBindings, actualModulesByRef, _, unresolvedRuleRefs, err := loadModuleBindings(repoRoot)
 	if err != nil {
 		return Result{}, err
 	}
@@ -104,28 +104,28 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	allUnresolvedRefs := normalizeStrings(append(unresolvedSharedRefs, unresolvedFlowRefs...))
-	referencedSharedRefs := allReferencedSharedRefs(moduleBindings, flowBindings)
-	for _, sharedID := range normalized.SharedIDs {
+	allUnresolvedRefs := normalizeStrings(append(unresolvedRuleRefs, unresolvedFlowRefs...))
+	referencedRuleRefs := allReferencedRuleRefs(moduleBindings, flowBindings)
+	for _, sharedID := range normalized.RuleIDs {
 		if len(allUnresolvedRefs) > 0 {
 			return Result{}, fmt.Errorf(
-				"cannot determine affected downstream objects safely for shared id %q because unresolved shared refs remain in downstream bindings: %s",
+				"cannot determine affected downstream objects safely for rule id %q because unresolved rule refs remain in downstream bindings: %s",
 				sharedID,
 				strings.Join(allUnresolvedRefs, ", "),
 			)
 		}
 		if _, ok := sharedFilesByID[sharedID]; !ok {
-			return Result{}, fmt.Errorf("shared id %q is not present under docs/specs/shared_contracts/", sharedID)
+			return Result{}, fmt.Errorf("rule id %q is not present under docs/specs/rules/", sharedID)
 		}
 	}
-	for _, ref := range normalized.SharedRefs {
+	for _, ref := range normalized.RuleRefs {
 		if _, ok := sharedFilesByRef[ref]; ok {
 			continue
 		}
-		if referencedSharedRefs[ref] {
+		if referencedRuleRefs[ref] {
 			continue
 		}
-		return Result{}, fmt.Errorf("shared ref %q is not present under docs/specs/shared_contracts/ and is not referenced by current downstream bindings", ref)
+		return Result{}, fmt.Errorf("rule ref %q is not present under docs/specs/rules/ and is not referenced by current downstream bindings", ref)
 	}
 	for _, module := range normalized.Modules {
 		if _, ok := moduleBindings[module]; !ok {
@@ -137,34 +137,34 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		if !ok {
 			return Result{}, fmt.Errorf("stable landing unit %q is not registered in docs/specs/_status.md", normalized.StableLandingModule)
 		}
-		if len(normalized.StableLandingSharedRefs) == 0 {
-			return Result{}, fmt.Errorf("stable landing shared refs are required when stable landing unit %q is set", normalized.StableLandingModule)
+		if len(normalized.StableLandingRuleRefs) == 0 {
+			return Result{}, fmt.Errorf("stable landing rule refs are required when stable landing unit %q is set", normalized.StableLandingModule)
 		}
 		if binding.Status.ActiveLayer != "stable" {
 			return Result{}, fmt.Errorf("stable landing unit %q must currently be at active layer stable", normalized.StableLandingModule)
 		}
-		landingSelectedRefs, err := selectedSharedRefsForObject(binding.SharedRefs, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByRef, sharedFilesByID)
+		landingSelectedRefs, err := selectedRuleRefsForObject(binding.RuleRefs, normalized.RuleRefs, normalized.RuleIDs, sharedFilesByRef, sharedFilesByID)
 		if err != nil {
 			return Result{}, err
 		}
 		landingSelectedRefSet := makeStringSet(landingSelectedRefs)
-		for _, ref := range normalized.StableLandingSharedRefs {
+		for _, ref := range normalized.StableLandingRuleRefs {
 			if _, ok := sharedFilesByRef[ref]; !ok {
-				return Result{}, fmt.Errorf("stable landing shared ref %q is not present under docs/specs/shared_contracts/", ref)
+				return Result{}, fmt.Errorf("stable landing rule ref %q is not present under docs/specs/rules/", ref)
 			}
 			if !landingSelectedRefSet[ref] {
-				return Result{}, fmt.Errorf("stable landing shared ref %q is not selected for stable landing unit %q in this shared sync scope", ref, normalized.StableLandingModule)
+				return Result{}, fmt.Errorf("stable landing rule ref %q is not selected for stable landing unit %q in this shared sync scope", ref, normalized.StableLandingModule)
 			}
 		}
-	} else if len(normalized.StableLandingSharedRefs) > 0 {
-		return Result{}, fmt.Errorf("stable landing shared refs require stable landing unit")
+	} else if len(normalized.StableLandingRuleRefs) > 0 {
+		return Result{}, fmt.Errorf("stable landing rule refs require stable landing unit")
 	}
 
 	boundObjectsOnlyFileRefs := map[string]bool{}
-	for _, fileRef := range normalized.BoundObjectsOnlySharedFileRefs {
+	for _, fileRef := range normalized.BoundObjectsOnlyRuleFileRefs {
 		shared, ok := sharedFilesByFileRef[fileRef]
 		if !ok {
-			return Result{}, fmt.Errorf("bound_objects-only shared file ref %q is not present under docs/specs/shared_contracts/", fileRef)
+			return Result{}, fmt.Errorf("bound_objects-only rule file ref %q is not present under docs/specs/rules/", fileRef)
 		}
 		boundObjectsOnlyFileRefs[shared.FileRef] = true
 	}
@@ -178,11 +178,11 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		return Result{}, err
 	}
 
-	removedBindingModules, err := candidateModulesWithRemovedSelectedBinding(repoRoot, moduleBindings, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByRef, sharedFilesByID)
+	removedBindingModules, err := candidateModulesWithRemovedSelectedBinding(repoRoot, moduleBindings, normalized.RuleRefs, normalized.RuleIDs, sharedFilesByRef, sharedFilesByID)
 	if err != nil {
 		return Result{}, err
 	}
-	removedBindingFlows, err := candidateObjectsWithRemovedSelectedBinding(repoRoot, flowBindings, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByRef, sharedFilesByID)
+	removedBindingFlows, err := candidateObjectsWithRemovedSelectedBinding(repoRoot, flowBindings, normalized.RuleRefs, normalized.RuleIDs, sharedFilesByRef, sharedFilesByID)
 	if err != nil {
 		return Result{}, err
 	}
@@ -190,7 +190,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	scopeFlows, err := buildScopeObjects(flowBindings, sharedFilesByRef, sharedFilesByID, normalized.SharedRefs, normalized.SharedIDs, removedBindingFlows)
+	scopeFlows, err := buildScopeObjects(flowBindings, sharedFilesByRef, sharedFilesByID, normalized.RuleRefs, normalized.RuleIDs, removedBindingFlows)
 	if err != nil {
 		return Result{}, err
 	}
@@ -199,7 +199,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	flowImpactScope, err := scopedObjectsForImpact("scenario", scopeFlows, flowBindings, normalized.SharedRefs, normalized.SharedIDs, sharedFilesByRef, sharedFilesByID, boundObjectsOnlyFileRefs, removedBindingFlows)
+	flowImpactScope, err := scopedObjectsForImpact("scenario", scopeFlows, flowBindings, normalized.RuleRefs, normalized.RuleIDs, sharedFilesByRef, sharedFilesByID, boundObjectsOnlyFileRefs, removedBindingFlows)
 	if err != nil {
 		return Result{}, err
 	}
@@ -213,27 +213,27 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	}
 
 	return Result{
-		ScopedModules:                  scopeModules,
-		ScopedFlows:                    scopeFlows,
-		ScopedSharedRefs:               normalized.SharedRefs,
-		ScopedSharedIDs:                normalized.SharedIDs,
-		StableLandingModule:            normalized.StableLandingModule,
-		StableLandingSharedRefs:        normalized.StableLandingSharedRefs,
-		BoundObjectsOnlySharedFileRefs: normalized.BoundObjectsOnlySharedFileRefs,
-		ModuleResults:                  impactResult.ModuleResults,
-		FlowResults:                    impactResult.FlowResults,
-		BoundObjectDrifts:              drifts,
+		ScopedModules:                scopeModules,
+		ScopedFlows:                  scopeFlows,
+		ScopedRuleRefs:               normalized.RuleRefs,
+		ScopedRuleIDs:                normalized.RuleIDs,
+		StableLandingModule:          normalized.StableLandingModule,
+		StableLandingRuleRefs:        normalized.StableLandingRuleRefs,
+		BoundObjectsOnlyRuleFileRefs: normalized.BoundObjectsOnlyRuleFileRefs,
+		ModuleResults:                impactResult.ModuleResults,
+		FlowResults:                  impactResult.FlowResults,
+		BoundObjectDrifts:            drifts,
 	}, nil
 }
 
 func ReconcileBoundModules(repoRoot string, options ReconcileBoundModulesOptions) (ReconcileBoundModulesResult, error) {
 	normalized := ReconcileBoundModulesOptions{
-		Modules:    normalizeStrings(options.Modules),
-		SharedRefs: normalizeStrings(options.SharedRefs),
-		SharedIDs:  normalizeStrings(options.SharedIDs),
+		Modules:  normalizeStrings(options.Modules),
+		RuleRefs: normalizeStrings(options.RuleRefs),
+		RuleIDs:  normalizeStrings(options.RuleIDs),
 	}
-	if len(normalized.Modules) == 0 && len(normalized.SharedRefs) == 0 && len(normalized.SharedIDs) == 0 {
-		return ReconcileBoundModulesResult{}, fmt.Errorf("at least one of modules, shared refs, or shared ids is required")
+	if len(normalized.Modules) == 0 && len(normalized.RuleRefs) == 0 && len(normalized.RuleIDs) == 0 {
+		return ReconcileBoundModulesResult{}, fmt.Errorf("at least one of modules, rule refs, or rule ids is required")
 	}
 
 	sharedFilesByRef, err := loadSharedFiles(repoRoot)
@@ -254,23 +254,23 @@ func ReconcileBoundModules(repoRoot string, options ReconcileBoundModulesOptions
 			return ReconcileBoundModulesResult{}, fmt.Errorf("module %q is not registered in docs/specs/_status.md", module)
 		}
 	}
-	for _, ref := range normalized.SharedRefs {
+	for _, ref := range normalized.RuleRefs {
 		if _, ok := sharedFilesByRef[ref]; !ok {
-			return ReconcileBoundModulesResult{}, fmt.Errorf("shared ref %q is not present under docs/specs/shared_contracts/", ref)
+			return ReconcileBoundModulesResult{}, fmt.Errorf("rule ref %q is not present under docs/specs/rules/", ref)
 		}
 	}
-	for _, sharedID := range normalized.SharedIDs {
+	for _, sharedID := range normalized.RuleIDs {
 		if _, ok := sharedFilesByID[sharedID]; !ok {
-			return ReconcileBoundModulesResult{}, fmt.Errorf("shared id %q is not present under docs/specs/shared_contracts/", sharedID)
+			return ReconcileBoundModulesResult{}, fmt.Errorf("rule id %q is not present under docs/specs/rules/", sharedID)
 		}
 	}
 
 	touchedFiles := buildScopeSharedFiles(moduleBindings, sharedFilesByRef, sharedFilesByID, normalized)
 	result := ReconcileBoundModulesResult{
-		ScopedModules:    normalized.Modules,
-		ScopedSharedRefs: normalized.SharedRefs,
-		ScopedSharedIDs:  normalized.SharedIDs,
-		TouchedFiles:     touchedFiles,
+		ScopedModules:  normalized.Modules,
+		ScopedRuleRefs: normalized.RuleRefs,
+		ScopedRuleIDs:  normalized.RuleIDs,
+		TouchedFiles:   touchedFiles,
 	}
 	actualBoundObjectsByRef, err := collectActualBoundObjectsByRef(repoRoot, actualModulesByRef, flowBindings)
 	if err != nil {
@@ -310,7 +310,7 @@ func collectBoundObjectDrifts(sharedFilesByRef map[string]sharedFile, actualBoun
 			continue
 		}
 		drifts = append(drifts, BoundObjectDrift{
-			SharedContractID:      shared.SharedContractID,
+			RuleID:                shared.RuleID,
 			FileRef:               shared.FileRef,
 			VersionRef:            shared.VersionRef,
 			DeclaredObjects:       declared,
@@ -333,8 +333,8 @@ func collectActualBoundObjectsByRef(repoRoot string, actualUnitsByRef map[string
 		appendTypedRefs(versionRef, "unit", units)
 	}
 	for object, binding := range flowBindings {
-		for _, ref := range binding.SharedRefs {
-			resolved, err := sharedbinding.ResolveRef(repoRoot, binding.Status.ActiveLayer, ref)
+		for _, ref := range binding.RuleRefs {
+			resolved, err := rulebinding.ResolveRef(repoRoot, binding.Status.ActiveLayer, ref)
 			if err != nil {
 				continue
 			}
@@ -353,8 +353,8 @@ func loadSharedFiles(repoRoot string) (map[string]sharedFile, error) {
 		layer string
 		dir   string
 	}{
-		{layer: "candidate", dir: "docs/specs/shared_contracts/candidate"},
-		{layer: "stable", dir: "docs/specs/shared_contracts/stable"},
+		{layer: "candidate", dir: "docs/specs/rules/candidate"},
+		{layer: "stable", dir: "docs/specs/rules/stable"},
 	} {
 		pattern := filepath.Join(repoRoot, filepath.FromSlash(root.dir), "*.md")
 		matches, err := filepath.Glob(pattern)
@@ -375,7 +375,7 @@ func loadSharedFiles(repoRoot string) (map[string]sharedFile, error) {
 			if err != nil {
 				return nil, err
 			}
-			if err := sharedbinding.ValidatePromotionOwnerUnit(repoRoot, shared.FileRef, shared.Layer, shared.SharedContractID, shared.PromotionOwnerUnit); err != nil {
+			if err := rulebinding.ValidatePromotionOwnerUnit(repoRoot, shared.FileRef, shared.Layer, shared.PromotionOwnerUnit); err != nil {
 				return nil, err
 			}
 			if shared.Layer != root.layer {
@@ -393,7 +393,7 @@ func loadSharedFiles(repoRoot string) (map[string]sharedFile, error) {
 func buildSharedFilesByID(sharedFilesByRef map[string]sharedFile) map[string][]sharedFile {
 	result := map[string][]sharedFile{}
 	for _, shared := range sharedFilesByRef {
-		result[shared.SharedContractID] = append(result[shared.SharedContractID], shared)
+		result[shared.RuleID] = append(result[shared.RuleID], shared)
 	}
 	for sharedID := range result {
 		sort.Slice(result[sharedID], func(i, j int) bool {
@@ -422,28 +422,28 @@ func loadModuleBindings(repoRoot string) (map[string]moduleBinding, map[string][
 	actualByID := map[string][]string{}
 	unresolvedRefs := []string{}
 	for _, status := range statuses {
-		refs, err := readModuleSharedRefs(repoRoot, status)
+		refs, err := readModuleRuleRefs(repoRoot, status)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
 		bindingIssues := []string{}
 		bindings[status.Module] = moduleBinding{
-			Status:     status,
-			SharedRefs: refs,
+			Status:   status,
+			RuleRefs: refs,
 		}
 		for _, ref := range refs {
-			resolved, err := sharedbinding.ResolveRef(repoRoot, status.ActiveLayer, ref)
+			resolved, err := rulebinding.ResolveRef(repoRoot, status.ActiveLayer, ref)
 			if err != nil {
 				bindingIssues = append(bindingIssues, err.Error())
 				unresolvedRefs = append(unresolvedRefs, ref)
 				continue
 			}
 			actualByRef[resolved.VersionRef] = append(actualByRef[resolved.VersionRef], status.Module)
-			actualByID[resolved.SharedContractID] = append(actualByID[resolved.SharedContractID], status.Module)
+			actualByID[resolved.RuleID] = append(actualByID[resolved.RuleID], status.Module)
 		}
 		bindings[status.Module] = moduleBinding{
 			Status:        status,
-			SharedRefs:    refs,
+			RuleRefs:      refs,
 			BindingIssues: normalizeStrings(bindingIssues),
 		}
 	}
@@ -459,7 +459,7 @@ func loadModuleBindings(repoRoot string) (map[string]moduleBinding, map[string][
 func buildScopeModules(moduleBindings map[string]moduleBinding, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile, options Options, removedBindingScope map[string]bool) ([]string, error) {
 	affected := map[string]bool{}
 	for module, binding := range moduleBindings {
-		selectedRefs, err := selectedSharedRefsForObject(binding.SharedRefs, options.SharedRefs, options.SharedIDs, sharedFilesByRef, sharedFilesByID)
+		selectedRefs, err := selectedRuleRefsForObject(binding.RuleRefs, options.RuleRefs, options.RuleIDs, sharedFilesByRef, sharedFilesByID)
 		if err != nil {
 			return nil, err
 		}
@@ -484,16 +484,16 @@ func buildScopeModules(moduleBindings map[string]moduleBinding, sharedFilesByRef
 
 func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]moduleBinding, options Options, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile, boundModulesOnlyFileRefs map[string]bool, removedBindingScope map[string]bool) ([]impactsync.ScopedModule, error) {
 	result := make([]impactsync.ScopedModule, 0, len(scopeModules))
-	stableLandingSharedRefSet := makeStringSet(options.StableLandingSharedRefs)
+	stableLandingSharedRefSet := makeStringSet(options.StableLandingRuleRefs)
 	for _, module := range scopeModules {
 		binding := moduleBindings[module]
-		selectedSharedRefs, err := selectedSharedRefsForObject(binding.SharedRefs, options.SharedRefs, options.SharedIDs, sharedFilesByRef, sharedFilesByID)
+		selectedRuleRefs, err := selectedRuleRefsForObject(binding.RuleRefs, options.RuleRefs, options.RuleIDs, sharedFilesByRef, sharedFilesByID)
 		if err != nil {
 			return nil, err
 		}
-		invalidatingSharedRefs := filterInvalidatingSharedRefs(selectedSharedRefs, sharedFilesByRef, boundModulesOnlyFileRefs)
+		invalidatingRuleRefs := filterInvalidatingRuleRefs(selectedRuleRefs, sharedFilesByRef, boundModulesOnlyFileRefs)
 		if binding.Status.ActiveLayer == "stable" && options.StableLandingModule == module {
-			invalidatingSharedRefs = subtractStringSet(invalidatingSharedRefs, stableLandingSharedRefSet)
+			invalidatingRuleRefs = subtractStringSet(invalidatingRuleRefs, stableLandingSharedRefSet)
 		}
 		result = append(result, impactsync.ScopedModule{
 			Binding: impactsync.ModuleBinding{
@@ -502,9 +502,9 @@ func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]mod
 				NextCommand:   binding.Status.NextCommand,
 				BindingIssues: append([]string{}, binding.BindingIssues...),
 			},
-			InvalidatingSharedRefs:                invalidatingSharedRefs,
+			InvalidatingRuleRefs:                  invalidatingRuleRefs,
 			ExplicitFallbackScope:                 removedBindingScope[module],
-			AllowedSharedSnapshotMismatchFileRefs: allowedSharedSnapshotMismatchFileRefs(selectedSharedRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
+			AllowedSharedSnapshotMismatchFileRefs: allowedSharedSnapshotMismatchFileRefs(selectedRuleRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
 		})
 	}
 	return result, nil
@@ -514,7 +514,7 @@ func scopedObjectsForImpact(objectType string, scopeObjects []string, bindings m
 	result := make([]impactsync.ScopedObject, 0, len(scopeObjects))
 	for _, object := range scopeObjects {
 		binding := bindings[object]
-		selectedSharedRefs, err := selectedSharedRefsForObject(binding.SharedRefs, scopedRefs, scopedIDs, sharedFilesByRef, sharedFilesByID)
+		selectedRuleRefs, err := selectedRuleRefsForObject(binding.RuleRefs, scopedRefs, scopedIDs, sharedFilesByRef, sharedFilesByID)
 		if err != nil {
 			return nil, err
 		}
@@ -526,8 +526,8 @@ func scopedObjectsForImpact(objectType string, scopeObjects []string, bindings m
 				NextCommand:   binding.Status.NextCommand,
 				BindingIssues: append([]string{}, binding.BindingIssues...),
 			},
-			ExplicitFallbackScope:  removedBindingScope[object],
-			InvalidatingSharedRefs: filterInvalidatingSharedRefs(selectedSharedRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
+			ExplicitFallbackScope: removedBindingScope[object],
+			InvalidatingRuleRefs:  filterInvalidatingRuleRefs(selectedRuleRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
 		})
 	}
 	return result, nil
@@ -539,7 +539,7 @@ func candidateModulesWithRemovedSelectedBinding(repoRoot string, moduleBindings 
 		if binding.Status.ActiveLayer != "candidate" {
 			continue
 		}
-		selectedRefs, err := selectedSharedRefsForObject(binding.SharedRefs, scopedRefs, scopedIDs, sharedFilesByRef, sharedFilesByID)
+		selectedRefs, err := selectedRuleRefsForObject(binding.RuleRefs, scopedRefs, scopedIDs, sharedFilesByRef, sharedFilesByID)
 		if err != nil {
 			return nil, err
 		}
@@ -566,15 +566,15 @@ func candidateModulesWithRemovedSelectedBinding(repoRoot string, moduleBindings 
 	return result, nil
 }
 
-func allReferencedSharedRefs(moduleBindings map[string]moduleBinding, flowBindings map[string]objectBinding) map[string]bool {
+func allReferencedRuleRefs(moduleBindings map[string]moduleBinding, flowBindings map[string]objectBinding) map[string]bool {
 	result := map[string]bool{}
 	for _, binding := range moduleBindings {
-		for _, ref := range binding.SharedRefs {
+		for _, ref := range binding.RuleRefs {
 			result[ref] = true
 		}
 	}
 	for _, binding := range flowBindings {
-		for _, ref := range binding.SharedRefs {
+		for _, ref := range binding.RuleRefs {
 			result[ref] = true
 		}
 	}
@@ -593,18 +593,18 @@ func sortedKeys(scope map[string]bool) []string {
 func buildScopeSharedFiles(moduleBindings map[string]moduleBinding, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile, options ReconcileBoundModulesOptions) []string {
 	scope := map[string]bool{}
 	for _, module := range options.Modules {
-		for _, ref := range moduleBindings[module].SharedRefs {
+		for _, ref := range moduleBindings[module].RuleRefs {
 			if shared, ok := sharedFilesByRef[ref]; ok {
 				scope[shared.FileRef] = true
 			}
 		}
 	}
-	for _, ref := range options.SharedRefs {
+	for _, ref := range options.RuleRefs {
 		if shared, ok := sharedFilesByRef[ref]; ok {
 			scope[shared.FileRef] = true
 		}
 	}
-	for _, sharedID := range options.SharedIDs {
+	for _, sharedID := range options.RuleIDs {
 		for _, shared := range sharedFilesByID[sharedID] {
 			scope[shared.FileRef] = true
 		}
@@ -617,7 +617,7 @@ func buildScopeSharedFiles(moduleBindings map[string]moduleBinding, sharedFilesB
 	return result
 }
 
-func selectedSharedRefsForObject(objectRefs, scopedRefs, scopedIDs []string, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile) ([]string, error) {
+func selectedRuleRefsForObject(objectRefs, scopedRefs, scopedIDs []string, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile) ([]string, error) {
 	refSet := map[string]bool{}
 	for _, ref := range scopedRefs {
 		refSet[ref] = true
@@ -634,9 +634,9 @@ func selectedSharedRefsForObject(objectRefs, scopedRefs, scopedIDs []string, sha
 			continue
 		}
 		shared, ok := sharedFilesByRef[ref]
-		if ok && idSet[shared.SharedContractID] {
-			if len(sharedFilesByID[shared.SharedContractID]) > 1 {
-				return nil, fmt.Errorf("cannot determine affected downstream objects safely for shared id %q because multiple current shared layers exist", shared.SharedContractID)
+		if ok && idSet[shared.RuleID] {
+			if len(sharedFilesByID[shared.RuleID]) > 1 {
+				return nil, fmt.Errorf("cannot determine affected downstream objects safely for rule id %q because multiple current shared layers exist", shared.RuleID)
 			}
 			result = append(result, ref)
 		}
@@ -644,7 +644,7 @@ func selectedSharedRefsForObject(objectRefs, scopedRefs, scopedIDs []string, sha
 	return normalizeStrings(result), nil
 }
 
-func filterInvalidatingSharedRefs(selectedRefs []string, sharedFilesByRef map[string]sharedFile, boundObjectsOnlyFileRefs map[string]bool) []string {
+func filterInvalidatingRuleRefs(selectedRefs []string, sharedFilesByRef map[string]sharedFile, boundObjectsOnlyFileRefs map[string]bool) []string {
 	result := make([]string, 0, len(selectedRefs))
 	for _, ref := range selectedRefs {
 		shared, ok := sharedFilesByRef[ref]
@@ -740,18 +740,18 @@ func parseSharedFile(relPath, content string) (sharedFile, error) {
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 		switch key {
-		case "shared_contract_id":
-			shared.SharedContractID = value
+		case "rule_id":
+			shared.RuleID = value
 		case "layer":
 			shared.Layer = value
-		case "shared_version":
+		case "rule_version":
 			shared.VersionRef = fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(relPath), ".md"), value)
 		case "promotion_owner_unit":
 			shared.PromotionOwnerUnit = value
 		}
 	}
-	if shared.SharedContractID == "" || shared.Layer == "" || shared.VersionRef == "" {
-		return sharedFile{}, fmt.Errorf("%s: missing shared_contract_id, layer, or shared_version", relPath)
+	if shared.RuleID == "" || shared.Layer == "" || shared.VersionRef == "" {
+		return sharedFile{}, fmt.Errorf("%s: missing rule_id, layer, or rule_version", relPath)
 	}
 	shared.BoundObjects = normalizeStrings(shared.BoundObjects)
 	return shared, nil
@@ -847,8 +847,8 @@ func typedBoundObjectRef(objectType, object string) string {
 	return fmt.Sprintf("%s:%s", strings.TrimSpace(objectType), strings.TrimSpace(object))
 }
 
-func readModuleSharedRefs(repoRoot string, status statusfile.ModuleStatus) ([]string, error) {
-	return readObjectSharedRefs(repoRoot, statusfile.ObjectStatus{
+func readModuleRuleRefs(repoRoot string, status statusfile.ModuleStatus) ([]string, error) {
+	return readObjectRuleRefs(repoRoot, statusfile.ObjectStatus{
 		ObjectType:  "unit",
 		Object:      status.Module,
 		ActiveLayer: status.ActiveLayer,
@@ -886,11 +886,11 @@ func parseFrontmatter(content string) (map[string]string, string, error) {
 	return values, strings.Join(lines[endIdx+1:], "\n"), nil
 }
 
-func parseSharedContractRefs(body string) ([]string, bool, error) {
+func parseRuleRefs(body string) ([]string, bool, error) {
 	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 	for idx, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		right, matched, err := parseNamedFieldLine(trimmed, "shared_contract_refs")
+		right, matched, err := parseNamedFieldLine(trimmed, "rule_refs")
 		if err != nil {
 			return nil, false, err
 		}
@@ -901,7 +901,7 @@ func parseSharedContractRefs(body string) ([]string, bool, error) {
 			return nil, true, nil
 		}
 		if right != "" {
-			return nil, false, fmt.Errorf("shared_contract_refs must use literal none or a markdown list")
+			return nil, false, fmt.Errorf("rule_refs must use literal none or a markdown list")
 		}
 		refs := []string{}
 		seen := map[string]bool{}
@@ -914,23 +914,23 @@ func parseSharedContractRefs(body string) ([]string, bool, error) {
 				break
 			}
 			if !strings.HasPrefix(nextTrimmed, "- ") {
-				return nil, false, fmt.Errorf("shared_contract_refs must be a markdown list of shared refs")
+				return nil, false, fmt.Errorf("rule_refs must be a markdown list of rule refs")
 			}
 			ref := strings.TrimSpace(strings.TrimPrefix(nextTrimmed, "- "))
 			ref = strings.Trim(ref, "`")
 			if ref == "" {
-				return nil, false, fmt.Errorf("shared_contract_refs contains an empty item")
+				return nil, false, fmt.Errorf("rule_refs contains an empty item")
 			}
 			if seen[ref] {
-				return nil, false, fmt.Errorf("shared_contract_refs contains duplicate item %q", ref)
+				return nil, false, fmt.Errorf("rule_refs contains duplicate item %q", ref)
 			}
 			seen[ref] = true
 			refs = append(refs, ref)
 		}
 		if len(refs) == 0 {
-			return nil, false, fmt.Errorf("shared_contract_refs must not be an empty list")
+			return nil, false, fmt.Errorf("rule_refs must not be an empty list")
 		}
-		if err := validateOrderedSharedContractRefs(refs); err != nil {
+		if err := validateOrderedRuleRefs(refs); err != nil {
 			return nil, false, err
 		}
 		return refs, true, nil
@@ -938,7 +938,7 @@ func parseSharedContractRefs(body string) ([]string, bool, error) {
 	return nil, false, nil
 }
 
-func validateOrderedSharedContractRefs(refs []string) error {
+func validateOrderedRuleRefs(refs []string) error {
 	if len(refs) < 2 {
 		return nil
 	}
@@ -946,7 +946,7 @@ func validateOrderedSharedContractRefs(refs []string) error {
 	sort.Strings(expected)
 	for idx := range refs {
 		if refs[idx] != expected[idx] {
-			return fmt.Errorf("shared_contract_refs must be sorted by exact shared ref string in ascending lexical order")
+			return fmt.Errorf("rule_refs must be sorted by exact rule ref string in ascending lexical order")
 		}
 	}
 	return nil

@@ -12,7 +12,6 @@ const (
 	CandidateFlowDir         = FlowsRootDir + "/candidate"
 	StableFlowDir            = FlowsRootDir + "/stable"
 	RepositoryMappingFileRef = "docs/specs/repository_mapping.md"
-	SystemConstraintsFileRef = "docs/specs/system_constraints.md"
 )
 
 func MainSpecFileRef(layer, unit string) (string, error) {

@@ -31,7 +31,6 @@ type Inspection struct {
 type SyncResult struct {
 	Source       string
 	UpdatedFiles []string
-	Staged       bool
 }
 
 func Inspect(repoRoot string) (Inspection, error) {
@@ -73,7 +72,7 @@ func Inspect(repoRoot string) (Inspection, error) {
 	return inspection, nil
 }
 
-func Sync(repoRoot, source string, stage bool) (SyncResult, error) {
+func Sync(repoRoot, source string) (SyncResult, error) {
 	inspection, err := Inspect(repoRoot)
 	if err != nil {
 		return SyncResult{}, err
@@ -127,15 +126,6 @@ func Sync(repoRoot, source string, stage bool) (SyncResult, error) {
 			return result, fmt.Errorf("write %s: %w", relPath, err)
 		}
 		result.UpdatedFiles = append(result.UpdatedFiles, relPath)
-	}
-
-	if stage {
-		args := append([]string{"-C", repoRoot, "add", "--"}, inspection.RegisteredFiles...)
-		cmd := exec.Command("git", args...)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return result, fmt.Errorf("git add registered entry files: %v: %s", err, strings.TrimSpace(string(output)))
-		}
-		result.Staged = true
 	}
 
 	return result, nil

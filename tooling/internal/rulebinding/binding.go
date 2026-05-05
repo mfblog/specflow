@@ -1,4 +1,4 @@
-package sharedbinding
+package rulebinding
 
 import (
 	"fmt"
@@ -10,12 +10,13 @@ import (
 )
 
 type ResolvedRef struct {
-	VersionRef       string
-	FileRef          string
-	Layer            string
-	SharedContractID string
-	SharedVersion    string
-	Content          string
+	VersionRef  string
+	FileRef     string
+	Layer       string
+	RuleID      string
+	RuleScope   string
+	RuleVersion string
+	Content     string
 }
 
 func ResolveRef(repoRoot, moduleLayer, ref string) (ResolvedRef, error) {
@@ -30,13 +31,13 @@ func ResolveRef(repoRoot, moduleLayer, ref string) (ResolvedRef, error) {
 		return ResolvedRef{}, err
 	}
 	if moduleLayer == "stable" && layer != "stable" {
-		return ResolvedRef{}, fmt.Errorf("stable-layer unit binding must use an s_ shared ref, got %q", versionRef)
+		return ResolvedRef{}, fmt.Errorf("stable-layer object binding must use an s_ rule ref, got %q", versionRef)
 	}
 
-	fileRef := sharedFileRef(prefix, layer)
+	fileRef := ruleFileRef(prefix, layer)
 	contentBytes, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)))
 	if err != nil {
-		return ResolvedRef{}, fmt.Errorf("read shared contract %s: %w", fileRef, err)
+		return ResolvedRef{}, fmt.Errorf("read rule %s: %w", fileRef, err)
 	}
 	content := string(contentBytes)
 
@@ -45,42 +46,47 @@ func ResolveRef(repoRoot, moduleLayer, ref string) (ResolvedRef, error) {
 		return ResolvedRef{}, fmt.Errorf("%s: %w", fileRef, err)
 	}
 
-	sharedID := strings.TrimSpace(frontmatter["shared_contract_id"])
+	ruleID := strings.TrimSpace(frontmatter["rule_id"])
+	ruleScope := strings.TrimSpace(frontmatter["rule_scope"])
 	actualLayer := strings.TrimSpace(frontmatter["layer"])
-	actualVersion := strings.TrimSpace(frontmatter["shared_version"])
-	if sharedID == "" || actualLayer == "" || actualVersion == "" {
-		return ResolvedRef{}, fmt.Errorf("%s: missing shared_contract_id/layer/shared_version", fileRef)
+	actualVersion := strings.TrimSpace(frontmatter["rule_version"])
+	if ruleID == "" || ruleScope == "" || actualLayer == "" || actualVersion == "" {
+		return ResolvedRef{}, fmt.Errorf("%s: missing rule_id/rule_scope/layer/rule_version", fileRef)
+	}
+	if ruleScope != "global" && ruleScope != "bound" {
+		return ResolvedRef{}, fmt.Errorf("%s: rule_scope must be global or bound", fileRef)
 	}
 	if actualLayer != layer {
 		return ResolvedRef{}, fmt.Errorf("%s: frontmatter.layer=%s does not match bound layer %s", fileRef, actualLayer, layer)
 	}
 	if actualVersion != expectedVersion {
-		return ResolvedRef{}, fmt.Errorf("%s: bound version %q does not match frontmatter shared_version %q", fileRef, expectedVersion, actualVersion)
+		return ResolvedRef{}, fmt.Errorf("%s: bound version %q does not match frontmatter rule_version %q", fileRef, expectedVersion, actualVersion)
 	}
-	if err := ValidatePromotionOwnerUnit(repoRoot, fileRef, actualLayer, sharedID, strings.TrimSpace(frontmatter["promotion_owner_unit"])); err != nil {
+	if err := ValidatePromotionOwnerUnit(repoRoot, fileRef, actualLayer, strings.TrimSpace(frontmatter["promotion_owner_unit"])); err != nil {
 		return ResolvedRef{}, err
 	}
 
 	return ResolvedRef{
-		VersionRef:       versionRef,
-		FileRef:          fileRef,
-		Layer:            actualLayer,
-		SharedContractID: sharedID,
-		SharedVersion:    actualVersion,
-		Content:          content,
+		VersionRef:  versionRef,
+		FileRef:     fileRef,
+		Layer:       actualLayer,
+		RuleID:      ruleID,
+		RuleScope:   ruleScope,
+		RuleVersion: actualVersion,
+		Content:     content,
 	}, nil
 }
 
-func ValidatePromotionOwnerUnit(repoRoot, fileRef, layer, sharedContractID, promotionOwnerUnit string) error {
+func ValidatePromotionOwnerUnit(repoRoot, fileRef, layer, promotionOwnerUnit string) error {
 	owner := strings.TrimSpace(promotionOwnerUnit)
 	if layer != "candidate" {
 		if owner != "" {
-			return fmt.Errorf("%s: promotion_owner_unit is allowed only on candidate-layer shared files with a stable sibling", fileRef)
+			return fmt.Errorf("%s: promotion_owner_unit is allowed only on candidate-layer rule files with a stable sibling", fileRef)
 		}
 		return nil
 	}
 
-	stableSiblingRef := fmt.Sprintf("docs/specs/shared_contracts/stable/s_%s.md", strings.TrimSpace(sharedContractID))
+	stableSiblingRef := "docs/specs/rules/stable/s_" + strings.TrimPrefix(filepath.Base(fileRef), "c_")
 	_, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(stableSiblingRef)))
 	hasStableSibling := err == nil
 	if err != nil && !os.IsNotExist(err) {
@@ -93,7 +99,7 @@ func ValidatePromotionOwnerUnit(repoRoot, fileRef, layer, sharedContractID, prom
 		return nil
 	}
 	if owner == "" {
-		return fmt.Errorf("%s: missing promotion_owner_unit for candidate-layer shared file with stable sibling %s", fileRef, stableSiblingRef)
+		return fmt.Errorf("%s: missing promotion_owner_unit for candidate-layer rule file with stable sibling %s", fileRef, stableSiblingRef)
 	}
 	if _, err := statusfile.LookupModuleStatus(repoRoot, owner); err != nil {
 		return fmt.Errorf("%s: promotion_owner_unit %q is not a registered formal unit", fileRef, owner)
@@ -104,12 +110,12 @@ func ValidatePromotionOwnerUnit(repoRoot, fileRef, layer, sharedContractID, prom
 func splitVersionRef(ref string) (string, string, error) {
 	parts := strings.SplitN(ref, "@", 2)
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid shared contract ref %q", ref)
+		return "", "", fmt.Errorf("invalid rule ref %q", ref)
 	}
 	prefix := strings.TrimSpace(parts[0])
 	version := strings.TrimSpace(parts[1])
 	if prefix == "" || version == "" {
-		return "", "", fmt.Errorf("invalid shared contract ref %q", ref)
+		return "", "", fmt.Errorf("invalid rule ref %q", ref)
 	}
 	return prefix, version, nil
 }
@@ -121,12 +127,12 @@ func layerFromPrefix(prefix string) (string, error) {
 	case strings.HasPrefix(prefix, "s_"):
 		return "stable", nil
 	default:
-		return "", fmt.Errorf("invalid shared contract ref prefix %q", prefix)
+		return "", fmt.Errorf("invalid rule ref prefix %q", prefix)
 	}
 }
 
-func sharedFileRef(prefix, layer string) string {
-	return fmt.Sprintf("docs/specs/shared_contracts/%s/%s.md", layer, prefix)
+func ruleFileRef(prefix, layer string) string {
+	return fmt.Sprintf("docs/specs/rules/%s/%s.md", layer, prefix)
 }
 
 func parseFrontmatter(content string) (map[string]string, error) {

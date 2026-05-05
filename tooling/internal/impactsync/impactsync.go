@@ -20,7 +20,7 @@ type ModuleBinding struct {
 
 type ScopedModule struct {
 	Binding                               ModuleBinding
-	InvalidatingSharedRefs                []string
+	InvalidatingRuleRefs                  []string
 	ExplicitFallbackScope                 bool
 	AllowedSharedSnapshotMismatchFileRefs []string
 }
@@ -34,9 +34,9 @@ type ObjectBinding struct {
 }
 
 type ScopedObject struct {
-	Binding                ObjectBinding
-	InvalidatingSharedRefs []string
-	ExplicitFallbackScope  bool
+	Binding               ObjectBinding
+	InvalidatingRuleRefs  []string
+	ExplicitFallbackScope bool
 }
 
 type Input struct {
@@ -118,15 +118,15 @@ func reconcileModule(repoRoot string, scoped ScopedModule) (ModuleResult, error)
 
 	switch binding.ActiveLayer {
 	case "candidate":
-		return reconcileCandidate(repoRoot, binding, result, scoped.InvalidatingSharedRefs, scoped.ExplicitFallbackScope, bindingIssue, scoped.AllowedSharedSnapshotMismatchFileRefs)
+		return reconcileCandidate(repoRoot, binding, result, scoped.InvalidatingRuleRefs, scoped.ExplicitFallbackScope, bindingIssue, scoped.AllowedSharedSnapshotMismatchFileRefs)
 	case "stable":
-		return reconcileStable(repoRoot, binding, result, scoped.InvalidatingSharedRefs, scoped.ExplicitFallbackScope, bindingIssue)
+		return reconcileStable(repoRoot, binding, result, scoped.InvalidatingRuleRefs, scoped.ExplicitFallbackScope, bindingIssue)
 	default:
 		return ModuleResult{}, fmt.Errorf("unsupported active layer %q for module %s", binding.ActiveLayer, binding.Module)
 	}
 }
 
-func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleResult, invalidatingSharedRefs []string, explicitFallbackScope, bindingIssue bool, allowedSharedSnapshotMismatchFileRefs []string) (ModuleResult, error) {
+func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleResult, invalidatingRuleRefs []string, explicitFallbackScope, bindingIssue bool, allowedSharedSnapshotMismatchFileRefs []string) (ModuleResult, error) {
 	fallbackReason := ""
 	if bindingIssue {
 		fallbackReason = "binding_drift"
@@ -183,12 +183,12 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 			continue
 		}
 
-		equivalent, err := sharedSnapshotsEquivalentAllowingFileRefs(processSnapshot.SharedContractSnapshot, expectedSnapshot.SharedContractSnapshot, allowedSharedSnapshotMismatchFileRefSet)
+		equivalent, err := sharedSnapshotsEquivalentAllowingFileRefs(processSnapshot.RuleSnapshot, expectedSnapshot.RuleSnapshot, allowedSharedSnapshotMismatchFileRefSet)
 		if err != nil {
 			return ModuleResult{}, err
 		}
 		if equivalent {
-			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s snapshot differs only on caller-allowed shared file mismatch", processKind))
+			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s snapshot differs only on caller-allowed rule file mismatch", processKind))
 			continue
 		}
 		sharedMismatch = true
@@ -200,9 +200,9 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 	case nonSharedMismatch:
 		fallbackReason = "truth_drift"
 	case sharedMismatch:
-		fallbackReason = "shared_contract_drift"
-	case !processFound && len(invalidatingSharedRefs) > 0:
-		fallbackReason = "shared_contract_drift"
+		fallbackReason = "rule_drift"
+	case !processFound && len(invalidatingRuleRefs) > 0:
+		fallbackReason = "rule_drift"
 	case !processFound && explicitFallbackScope && binding.NextCommand != "unit_check":
 		fallbackReason = "binding_drift"
 	}
@@ -213,14 +213,14 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 	return applyCandidateFallback(repoRoot, result, fallbackReason)
 }
 
-func reconcileStable(repoRoot string, binding ModuleBinding, result ModuleResult, invalidatingSharedRefs []string, explicitFallbackScope, bindingIssue bool) (ModuleResult, error) {
+func reconcileStable(repoRoot string, binding ModuleBinding, result ModuleResult, invalidatingRuleRefs []string, explicitFallbackScope, bindingIssue bool) (ModuleResult, error) {
 	fallbackReason := ""
 	switch {
 	case bindingIssue:
 		fallbackReason = "binding_drift"
-	case len(invalidatingSharedRefs) > 0:
-		fallbackReason = "shared_contract_drift"
-	case explicitFallbackScope && len(invalidatingSharedRefs) == 0:
+	case len(invalidatingRuleRefs) > 0:
+		fallbackReason = "rule_drift"
+	case explicitFallbackScope && len(invalidatingRuleRefs) == 0:
 		fallbackReason = "binding_drift"
 	}
 
@@ -288,8 +288,8 @@ func reconcileObject(repoRoot string, scoped ScopedObject) (ObjectResult, error)
 	switch {
 	case len(binding.BindingIssues) > 0:
 		fallbackReason = "binding_drift"
-	case len(scoped.InvalidatingSharedRefs) > 0:
-		fallbackReason = "shared_contract_drift"
+	case len(scoped.InvalidatingRuleRefs) > 0:
+		fallbackReason = "rule_drift"
 	case scoped.ExplicitFallbackScope:
 		fallbackReason = "binding_drift"
 	default:
@@ -376,21 +376,21 @@ func objectProcessPaths(objectType, object string, processKinds []string) []stri
 
 func hasNonSharedMismatch(mismatches []string) bool {
 	for _, mismatch := range mismatches {
-		if !strings.HasPrefix(mismatch, "shared_contract_snapshot mismatch") {
+		if !strings.HasPrefix(mismatch, "rule_snapshot mismatch") {
 			return true
 		}
 	}
 	return false
 }
 
-func sharedSnapshotsEquivalentAllowingFileRefs(actual, expected []snapshot.SharedContractEntry, allowedFileRefs map[string]bool) (bool, error) {
+func sharedSnapshotsEquivalentAllowingFileRefs(actual, expected []snapshot.RuleEntry, allowedFileRefs map[string]bool) (bool, error) {
 	actual = normalizeSharedEntries(actual)
 	expected = normalizeSharedEntries(expected)
 	if len(actual) != len(expected) {
 		return false, nil
 	}
 	for idx := range actual {
-		if actual[idx].SharedContractID != expected[idx].SharedContractID ||
+		if actual[idx].RuleID != expected[idx].RuleID ||
 			actual[idx].Layer != expected[idx].Layer ||
 			actual[idx].FileRef != expected[idx].FileRef ||
 			actual[idx].VersionRef != expected[idx].VersionRef {
@@ -421,11 +421,11 @@ func normalizeStrings(values []string) []string {
 	return result
 }
 
-func normalizeSharedEntries(values []snapshot.SharedContractEntry) []snapshot.SharedContractEntry {
-	result := append([]snapshot.SharedContractEntry(nil), values...)
+func normalizeSharedEntries(values []snapshot.RuleEntry) []snapshot.RuleEntry {
+	result := append([]snapshot.RuleEntry(nil), values...)
 	sort.Slice(result, func(i, j int) bool {
-		if result[i].SharedContractID != result[j].SharedContractID {
-			return result[i].SharedContractID < result[j].SharedContractID
+		if result[i].RuleID != result[j].RuleID {
+			return result[i].RuleID < result[j].RuleID
 		}
 		if result[i].Layer != result[j].Layer {
 			return result[i].Layer < result[j].Layer

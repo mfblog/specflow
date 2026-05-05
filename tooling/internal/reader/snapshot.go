@@ -20,7 +20,7 @@ type markdownDoc struct {
 	Text        string
 }
 
-var sharedRefPattern = regexp.MustCompile("`?([cs]_shared_[A-Za-z0-9_]+@[0-9]+\\.[0-9]+\\.[0-9]+)`?")
+var sharedRefPattern = regexp.MustCompile("`?([cs]_[gb]_rule_[A-Za-z0-9_]+@[0-9]+\\.[0-9]+\\.[0-9]+)`?")
 var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+\.md(?:#[^)]+)?)\)`)
 
 func BuildSnapshot(repoRoot string) Snapshot {
@@ -35,10 +35,10 @@ func BuildSnapshot(repoRoot string) Snapshot {
 	snapshot := Snapshot{
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
 		Project: ProjectInfo{
-			RepoRoot:    repoRoot,
-			StatusFile:  "docs/specs/_status.md",
-			MappingFile: "docs/specs/repository_mapping.md",
-			SystemFile:  "docs/specs/system_constraints.md",
+			RepoRoot:         repoRoot,
+			StatusFile:       "docs/specs/_status.md",
+			MappingFile:      "docs/specs/repository_mapping.md",
+			RuleBaselineFile: "docs/specs/rules/stable/s_g_rule_repository_baseline.md",
 		},
 		Diagnostics: append(mapping.Diagnostics, docDiagnostics...),
 	}
@@ -65,13 +65,13 @@ func BuildSnapshot(repoRoot string) Snapshot {
 	}
 	addSource(SourceRef{Path: "docs/specs/_status.md", Label: "Status"})
 	addSource(SourceRef{Path: "docs/specs/repository_mapping.md", Label: "Repository Mapping"})
-	addSource(SourceRef{Path: "docs/specs/system_constraints.md", Label: "System Constraints"})
+	addSource(SourceRef{Path: "docs/specs/rules/stable/s_g_rule_repository_baseline.md", Label: "Global Rules"})
 
 	for _, doc := range docs {
 		addSource(SourceRef{Path: doc.RelPath, Label: doc.Title})
 	}
 
-	builder.addNode(GraphNode{ID: "system:constraints", Kind: "system_constraints", Label: "System Constraints", Group: "system", Source: ptr(SourceRef{Path: "docs/specs/system_constraints.md"})})
+	builder.addNode(GraphNode{ID: "rule:baseline", Kind: "rule", Label: "Global Rules", Group: "rule", Source: ptr(SourceRef{Path: "docs/specs/rules/stable/s_g_rule_repository_baseline.md"})})
 
 	for _, status := range statuses {
 		if status.ObjectType == "unit" {
@@ -95,19 +95,19 @@ func BuildSnapshot(repoRoot string) Snapshot {
 			builder.addNode(GraphNode{ID: pathNode, Kind: "implementation_path", Label: impl.Path, Group: "implementation", Source: ptr(impl)})
 			builder.addEdge(GraphEdge{ID: nodeID + "->" + pathNode, From: nodeID, To: pathNode, Kind: "owns_path", Label: "owns path", Source: ptr(impl)})
 		}
-		for _, sharedID := range object.SharedRefs {
+		for _, sharedID := range object.RuleRefs {
 			sharedNode := "shared:" + sharedID
-			builder.addNode(GraphNode{ID: sharedNode, Kind: "shared_contract", Label: sharedID, Group: "shared"})
+			builder.addNode(GraphNode{ID: sharedNode, Kind: "rule", Label: sharedID, Group: "shared"})
 			builder.addEdge(GraphEdge{ID: nodeID + "->" + sharedNode, From: nodeID, To: sharedNode, Kind: "uses_shared", Label: "uses shared", Source: firstSource(object.Sources)})
 		}
 	}
 
 	sharedObjects := buildSharedObjects(mapping, docs)
-	snapshot.Project.SharedCount = len(sharedObjects)
+	snapshot.Project.RuleCount = len(sharedObjects)
 	for _, object := range sharedObjects {
 		snapshot.Objects = append(snapshot.Objects, object)
 		sharedNode := "shared:" + object.ID
-		builder.addNode(GraphNode{ID: sharedNode, Kind: "shared_contract", Label: object.ID, Group: "shared", Source: firstSource(object.Sources)})
+		builder.addNode(GraphNode{ID: sharedNode, Kind: "rule", Label: object.ID, Group: "shared", Source: firstSource(object.Sources)})
 		for _, truth := range object.TruthPaths {
 			addSource(truth)
 			fileNode := "file:" + truth.Path
@@ -164,10 +164,10 @@ func buildObjectFromStatus(status statusfile.ObjectStatus, mapping repositoryMap
 		if object.Version == "" {
 			object.Version = doc.Frontmatter.Scalars["version"]
 		}
-		object.SharedRefs = appendUnique(object.SharedRefs, extractSharedIDs(doc.Text)...)
+		object.RuleRefs = appendUnique(object.RuleRefs, extractRuleIDs(doc.Text)...)
 		object.TruthPaths = appendSourceUnique(object.TruthPaths, appendixRefsForDoc(doc, docs)...)
 	}
-	sort.Strings(object.SharedRefs)
+	sort.Strings(object.RuleRefs)
 	return object
 }
 
@@ -224,10 +224,10 @@ func isAppendixPath(path string) bool {
 
 func buildSharedObjects(mapping repositoryMapping, docs []markdownDoc) []ObjectView {
 	objects := map[string]ObjectView{}
-	for id, shared := range mapping.SharedContracts {
+	for id, shared := range mapping.Rules {
 		objects[id] = ObjectView{
 			ID:             id,
-			Kind:           "shared_contract",
+			Kind:           "rule",
 			Label:          id,
 			Responsibility: shared.Responsibility,
 			TruthPaths:     shared.TruthPaths,
@@ -235,17 +235,17 @@ func buildSharedObjects(mapping repositoryMapping, docs []markdownDoc) []ObjectV
 		}
 	}
 	for _, doc := range docs {
-		id := doc.Frontmatter.Scalars["shared_contract_id"]
+		id := doc.Frontmatter.Scalars["rule_id"]
 		if id == "" {
 			continue
 		}
 		object := objects[id]
 		object.ID = id
-		object.Kind = "shared_contract"
+		object.Kind = "rule"
 		object.Label = id
 		object.Layer = doc.Frontmatter.Scalars["layer"]
 		object.HumanState = humanLayer(object.Layer)
-		object.Version = doc.Frontmatter.Scalars["shared_version"]
+		object.Version = doc.Frontmatter.Scalars["rule_version"]
 		object.BoundObjects = appendUnique(object.BoundObjects, doc.Frontmatter.BoundObjects...)
 		object.TruthPaths = appendSourceUnique(object.TruthPaths, SourceRef{Path: doc.RelPath, Label: doc.Title})
 		object.Sources = appendSourceUnique(object.Sources, SourceRef{Path: doc.RelPath, Label: doc.Title})
@@ -317,16 +317,16 @@ func compactTruthFileLabel(filename string) string {
 		return strings.ReplaceAll(strings.TrimPrefix(base, "c_unit_"), "_", " ") + " (candidate)"
 	case strings.HasPrefix(base, "s_unit_"):
 		return strings.ReplaceAll(strings.TrimPrefix(base, "s_unit_"), "_", " ") + " (stable)"
-	case strings.HasPrefix(base, "c_shared_"):
-		return "shared " + strings.ReplaceAll(strings.TrimPrefix(base, "c_shared_"), "_", " ") + " (candidate)"
-	case strings.HasPrefix(base, "s_shared_"):
-		return "shared " + strings.ReplaceAll(strings.TrimPrefix(base, "s_shared_"), "_", " ") + " (stable)"
+	case strings.HasPrefix(base, "c_b_rule_"):
+		return "shared " + strings.ReplaceAll(strings.TrimPrefix(base, "c_b_rule_"), "_", " ") + " (candidate)"
+	case strings.HasPrefix(base, "s_b_rule_"):
+		return "shared " + strings.ReplaceAll(strings.TrimPrefix(base, "s_b_rule_"), "_", " ") + " (stable)"
 	default:
 		return strings.ReplaceAll(base, "_", " ")
 	}
 }
 
-func extractSharedIDs(text string) []string {
+func extractRuleIDs(text string) []string {
 	matches := sharedRefPattern.FindAllStringSubmatch(text, -1)
 	ids := []string{}
 	for _, match := range matches {
@@ -483,8 +483,8 @@ func normalizeSnapshotSlices(snapshot *Snapshot) {
 		if object.ImplementationPaths == nil {
 			object.ImplementationPaths = []SourceRef{}
 		}
-		if object.SharedRefs == nil {
-			object.SharedRefs = []string{}
+		if object.RuleRefs == nil {
+			object.RuleRefs = []string{}
 		}
 		if object.BoundObjects == nil {
 			object.BoundObjects = []string{}

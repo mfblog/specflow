@@ -8,9 +8,9 @@ import (
 )
 
 type repositoryMapping struct {
-	Units           map[string]mappingUnit
-	SharedContracts map[string]mappingShared
-	Diagnostics     []Diagnostic
+	Units       map[string]mappingUnit
+	Rules       map[string]mappingShared
+	Diagnostics []Diagnostic
 }
 
 type mappingUnit struct {
@@ -33,8 +33,8 @@ func loadRepositoryMapping(repoRoot string) repositoryMapping {
 	path := filepath.Join(repoRoot, filepath.FromSlash(relPath))
 	data, err := os.ReadFile(path)
 	result := repositoryMapping{
-		Units:           map[string]mappingUnit{},
-		SharedContracts: map[string]mappingShared{},
+		Units: map[string]mappingUnit{},
+		Rules: map[string]mappingShared{},
 	}
 	if err != nil {
 		result.Diagnostics = append(result.Diagnostics, Diagnostic{
@@ -102,29 +102,29 @@ func loadRepositoryMapping(repoRoot string) repositoryMapping {
 		case "shared_map":
 			if id, ok := parseNumberedCodeSpan(trimmed); ok {
 				currentID = normalizedSharedID(id)
-				shared := result.SharedContracts[currentID]
+				shared := result.Rules[currentID]
 				shared.ID = currentID
-				result.SharedContracts[currentID] = shared
+				result.Rules[currentID] = shared
 				continue
 			}
 			if currentID != "" && strings.HasPrefix(trimmed, "- ") {
-				shared := result.SharedContracts[currentID]
+				shared := result.Rules[currentID]
 				shared.Responsibility = strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
-				result.SharedContracts[currentID] = shared
+				result.Rules[currentID] = shared
 			}
 		case "shared_paths":
 			if id, ok := parseNumberedCodeSpan(trimmed); ok {
 				currentID = normalizedSharedID(id)
-				shared := result.SharedContracts[currentID]
+				shared := result.Rules[currentID]
 				shared.ID = currentID
-				result.SharedContracts[currentID] = shared
+				result.Rules[currentID] = shared
 				continue
 			}
 			if currentID != "" && strings.HasPrefix(trimmed, "- `") {
 				if pathRef, ok := parseListCodePath(trimmed, relPath, idx+1); ok {
-					shared := result.SharedContracts[currentID]
+					shared := result.Rules[currentID]
 					shared.TruthPaths = append(shared.TruthPaths, pathRef)
-					result.SharedContracts[currentID] = shared
+					result.Rules[currentID] = shared
 				}
 			}
 		case "unit_paths":

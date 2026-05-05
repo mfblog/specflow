@@ -167,7 +167,7 @@ func TestApplyUsesResolvedSharedInvalidationForStableObjects(t *testing.T) {
 				ActiveLayer: "stable",
 				NextCommand: "unit_fork",
 			},
-			InvalidatingSharedRefs: []string{"s_shared_demo@1.0.0"},
+			InvalidatingRuleRefs: []string{"s_b_rule_demo@1.0.0"},
 		}},
 		Flows: []ScopedObject{{
 			Binding: ObjectBinding{
@@ -176,17 +176,17 @@ func TestApplyUsesResolvedSharedInvalidationForStableObjects(t *testing.T) {
 				ActiveLayer: "stable",
 				NextCommand: "scenario_fork",
 			},
-			InvalidatingSharedRefs: []string{"s_shared_demo@1.0.0"},
+			InvalidatingRuleRefs: []string{"s_b_rule_demo@1.0.0"},
 		}},
 	})
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	if len(result.ModuleResults) != 1 || result.ModuleResults[0].FallbackReasonCode != "shared_contract_drift" {
+	if len(result.ModuleResults) != 1 || result.ModuleResults[0].FallbackReasonCode != "rule_drift" {
 		t.Fatalf("unexpected module result: %+v", result.ModuleResults)
 	}
-	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "shared_contract_drift" {
+	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "rule_drift" {
 		t.Fatalf("unexpected flow result: %+v", result.FlowResults)
 	}
 }
@@ -266,9 +266,10 @@ func TestApplyKeepsCandidateModuleWhenCallerAllowsSharedSnapshotMismatch(t *test
 
 	mustWriteImpactFile(t, filepath.Join(repoRoot, allowedFileRef), strings.Join([]string{
 		"---",
-		"shared_contract_id: shared_demo",
+		"rule_id: shared_demo",
+		"rule_scope: bound",
 		"layer: candidate",
-		"shared_version: 0.1.0",
+		"rule_version: 0.1.0",
 		"bound_objects:",
 		"  - unit:demo",
 		"---",
@@ -286,7 +287,7 @@ func TestApplyKeepsCandidateModuleWhenCallerAllowsSharedSnapshotMismatch(t *test
 				ActiveLayer: "candidate",
 				NextCommand: "unit_plan",
 			},
-			AllowedSharedSnapshotMismatchFileRefs: []string{"docs/specs/shared_contracts/candidate/c_shared_demo.md"},
+			AllowedSharedSnapshotMismatchFileRefs: []string{"docs/specs/rules/candidate/c_b_rule_demo.md"},
 		}},
 	})
 	if err != nil {
@@ -355,7 +356,7 @@ func setupImpactRepo(t *testing.T, repoRoot, statusContent string) {
 func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 	t.Helper()
 	mustMkdirImpactAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
-	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate"))
+	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/rules/candidate"))
 	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
 	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/_plans/active"))
 	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/_plans/draft"))
@@ -382,20 +383,20 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"# Demo",
 		"",
-		"## Global Constraint Alignment",
+		"## Rule Alignment",
 		"",
-		"1. system_constraints_ref: none",
-		"2. shared_contract_refs:",
-		"   - c_shared_demo@0.1.0",
+		"2. rule_refs:",
+		"   - c_b_rule_demo@0.1.0",
 		"",
 	}, "\n"))
 
-	sharedPath := filepath.Join(repoRoot, "docs/specs/shared_contracts/candidate/c_shared_demo.md")
+	sharedPath := filepath.Join(repoRoot, "docs/specs/rules/candidate/c_b_rule_demo.md")
 	mustWriteImpactFile(t, sharedPath, strings.Join([]string{
 		"---",
-		"shared_contract_id: shared_demo",
+		"rule_id: shared_demo",
+		"rule_scope: bound",
 		"layer: candidate",
-		"shared_version: 0.1.0",
+		"rule_version: 0.1.0",
 		"bound_objects:",
 		"  - unit:demo",
 		"---",
@@ -411,7 +412,7 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md"), renderImpactCheckProcessSnapshot(snap))
-	return "docs/specs/shared_contracts/candidate/c_shared_demo.md"
+	return "docs/specs/rules/candidate/c_b_rule_demo.md"
 }
 
 func mustMkdirImpactAll(t *testing.T, path string) {
@@ -423,11 +424,44 @@ func mustMkdirImpactAll(t *testing.T, path string) {
 
 func mustWriteImpactFile(t *testing.T, path, content string) {
 	t.Helper()
+	content = withCandidateAcceptanceFixture(path, content)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
 	}
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func withCandidateAcceptanceFixture(path, content string) string {
+	normalizedPath := filepath.ToSlash(path)
+	if !strings.Contains(normalizedPath, "docs/specs/units/candidate/c_unit_") {
+		return content
+	}
+	if strings.Contains(content, "acceptance_item_set:") {
+		return content
+	}
+	object := strings.TrimSuffix(filepath.Base(path), ".md")
+	object = strings.TrimPrefix(object, "c_unit_")
+	lines := append([]string{
+		strings.TrimRight(content, "\n"),
+		"",
+	}, acceptanceSectionFixtureLines(object)...)
+	return strings.Join(lines, "\n") + "\n"
+}
+
+func acceptanceSectionFixtureLines(object string) []string {
+	return []string{
+		"## Testability / Acceptance Criteria",
+		"",
+		"acceptance_item_set:",
+		"  - id: " + object + ".acceptance",
+		"    target: " + object + " behavior is accepted.",
+		"    verification_surface: internal_flow",
+		"    implementation_surface: AgentCore/internal/" + object,
+		"    verification_method: Go test for " + object + " behavior.",
+		"    pass_condition: " + object + " behavior passes the declared checks.",
+		"    not_runnable_yet: no",
 	}
 }
 
@@ -448,30 +482,45 @@ func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
 		"truth_file_ref: " + snap.SpecFileRef,
 		"truth_version_ref: " + snap.SpecVersionRef,
 		"truth_fingerprint: " + snap.SpecFingerprint,
-		"system_constraints_file_ref: " + snap.SystemConstraintsFileRef,
-		"system_constraints_version_ref: " + snap.SystemConstraintsVersionRef,
-		"system_constraints_fingerprint: " + snap.SystemConstraintsFingerprint,
-		"unit_appendix_snapshot: none",
-		"shared_contract_snapshot:",
 	}
-	for _, entry := range snap.SharedContractSnapshot {
+	lines = append(lines, renderImpactAcceptanceItemSet(snap.AcceptanceItemSet)...)
+	lines = append(lines,
+		"unit_appendix_snapshot: none",
+		"rule_snapshot:",
+	)
+	for _, entry := range snap.RuleSnapshot {
 		lines = append(lines,
-			"  - shared_contract_id: "+entry.SharedContractID,
+			"  - rule_id: "+entry.RuleID,
 			"    layer: "+entry.Layer,
 			"    file_ref: "+entry.FileRef,
 			"    version_ref: "+entry.VersionRef,
 			"    fingerprint: "+entry.Fingerprint,
 		)
 	}
-	if len(snap.SharedContractSnapshot) == 0 {
-		lines[len(lines)-1] = "shared_contract_snapshot: none"
+	if len(snap.RuleSnapshot) == 0 {
+		lines[len(lines)-1] = "rule_snapshot: none"
 	}
 	lines = append(lines, "```", "")
 	return strings.Join(lines, "\n")
 }
 
+func renderImpactAcceptanceItemSet(entries []snapshot.AcceptanceItemEntry) []string {
+	if len(entries) == 0 {
+		return []string{"acceptance_item_set: none"}
+	}
+	lines := []string{"acceptance_item_set:"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - id: "+entry.ID,
+			"    verification_surface: "+entry.VerificationSurface,
+			"    not_runnable_yet: "+entry.NotRunnableYet,
+		)
+	}
+	return lines
+}
+
 func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
-	return strings.Join([]string{
+	lines := []string{
 		"# plan",
 		"",
 		"```yaml",
@@ -479,16 +528,31 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 		"spec_version_ref: " + snap.SpecVersionRef,
 		"spec_fingerprint: " + snap.SpecFingerprint,
 		"unit_appendix_snapshot: none",
-		"system_constraints_file_ref: " + snap.SystemConstraintsFileRef,
-		"system_constraints_version_ref: " + snap.SystemConstraintsVersionRef,
-		"system_constraints_fingerprint: " + snap.SystemConstraintsFingerprint,
-		"shared_contract_snapshot:",
-		"  - shared_contract_id: " + snap.SharedContractSnapshot[0].SharedContractID,
-		"    layer: " + snap.SharedContractSnapshot[0].Layer,
-		"    file_ref: " + snap.SharedContractSnapshot[0].FileRef,
-		"    version_ref: " + snap.SharedContractSnapshot[0].VersionRef,
-		"    fingerprint: " + snap.SharedContractSnapshot[0].Fingerprint,
+		"rule_snapshot:",
+		"  - rule_id: " + snap.RuleSnapshot[0].RuleID,
+		"    layer: " + snap.RuleSnapshot[0].Layer,
+		"    file_ref: " + snap.RuleSnapshot[0].FileRef,
+		"    version_ref: " + snap.RuleSnapshot[0].VersionRef,
+		"    fingerprint: " + snap.RuleSnapshot[0].Fingerprint,
+	}
+	lines = append(lines, renderImpactAcceptancePlanCoverage(snap.AcceptanceItemSet)...)
+	lines = append(lines,
 		"```",
 		"",
-	}, "\n")
+	)
+	return strings.Join(lines, "\n")
+}
+
+func renderImpactAcceptancePlanCoverage(entries []snapshot.AcceptanceItemEntry) []string {
+	if len(entries) == 0 {
+		return []string{"acceptance_item_plan_coverage: none"}
+	}
+	lines := []string{"acceptance_item_plan_coverage:"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - id: "+entry.ID,
+			"    coverage: covered",
+		)
+	}
+	return lines
 }

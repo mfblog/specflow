@@ -22,9 +22,9 @@ func TestInspectOnlyReadsRegisteredEntrySection(t *testing.T) {
 - ` + "`GEMINI.md`" + `
 - ` + "`CLAUDE.md`" + `
 
-## Hook Trigger
+## Manual Sync Trigger
 
-- ` + "`git config core.hooksPath .githooks`" + `
+- ` + "`specflow/tooling/bin/specflowctl-linux-amd64 entry sync --source AGENTS.md`" + `
 `
 	if err := os.WriteFile(filepath.Join(registryDir, "entry_index_registry.md"), []byte(registry), 0o644); err != nil {
 		t.Fatalf("write registry: %v", err)

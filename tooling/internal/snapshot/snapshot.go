@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/sharedbinding"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulebinding"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
@@ -20,12 +20,12 @@ type AppendixEntry struct {
 	Fingerprint string
 }
 
-type SharedContractEntry struct {
-	SharedContractID string
-	Layer            string
-	FileRef          string
-	VersionRef       string
-	Fingerprint      string
+type RuleEntry struct {
+	RuleID      string
+	Layer       string
+	FileRef     string
+	VersionRef  string
+	Fingerprint string
 }
 
 type ObjectSnapshotEntry struct {
@@ -36,17 +36,42 @@ type ObjectSnapshotEntry struct {
 	Fingerprint string
 }
 
+type RepositoryMappingEntry struct {
+	FileRef     string
+	VersionRef  string
+	Fingerprint string
+}
+
+type AcceptanceItemEntry struct {
+	ID                    string
+	Target                string
+	VerificationSurface   string
+	ImplementationSurface string
+	VerificationMethod    string
+	PassCondition         string
+	NotRunnableYet        string
+	NotRunnableYetReason  string
+}
+
+type AcceptancePlanCoverageEntry struct {
+	ID       string
+	Coverage string
+}
+
+type AcceptanceEvidenceEntry struct {
+	ID     string
+	Status string
+}
+
 type Snapshot struct {
-	Module                       string
-	TruthLayerRef                string
-	SpecFileRef                  string
-	SpecVersionRef               string
-	SpecFingerprint              string
-	ModuleAppendixSnapshot       []AppendixEntry
-	SystemConstraintsFileRef     string
-	SystemConstraintsVersionRef  string
-	SystemConstraintsFingerprint string
-	SharedContractSnapshot       []SharedContractEntry
+	Module                 string
+	TruthLayerRef          string
+	SpecFileRef            string
+	SpecVersionRef         string
+	SpecFingerprint        string
+	ModuleAppendixSnapshot []AppendixEntry
+	RuleSnapshot           []RuleEntry
+	AcceptanceItemSet      []AcceptanceItemEntry
 }
 
 type ValidationResult struct {
@@ -63,9 +88,13 @@ type ProcessSnapshotData struct {
 	PresentFields          map[string]bool
 	Scalars                map[string]string
 	ModuleAppendixSnapshot []AppendixEntry
+	RepositoryMapping      RepositoryMappingEntry
 	ModuleSnapshot         []ObjectSnapshotEntry
 	FlowSnapshot           []ObjectSnapshotEntry
-	SharedContractSnapshot []SharedContractEntry
+	RuleSnapshot           []RuleEntry
+	AcceptanceItemSet      []AcceptanceItemEntry
+	AcceptancePlanCoverage []AcceptancePlanCoverageEntry
+	AcceptanceEvidence     []AcceptanceEvidenceEntry
 }
 
 var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
@@ -84,21 +113,17 @@ var requiredProcessSnapshotFields = map[string][]string{
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
+		"acceptance_item_set",
 		"unit_appendix_snapshot",
-		"system_constraints_file_ref",
-		"system_constraints_version_ref",
-		"system_constraints_fingerprint",
-		"shared_contract_snapshot",
+		"rule_snapshot",
 	},
 	"plan": {
 		"spec_file_ref",
 		"spec_version_ref",
 		"spec_fingerprint",
 		"unit_appendix_snapshot",
-		"system_constraints_file_ref",
-		"system_constraints_version_ref",
-		"system_constraints_fingerprint",
-		"shared_contract_snapshot",
+		"rule_snapshot",
+		"acceptance_item_plan_coverage",
 	},
 	"verify": {
 		"object_type",
@@ -113,13 +138,30 @@ var requiredProcessSnapshotFields = map[string][]string{
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
+		"acceptance_item_set",
 		"unit_appendix_snapshot",
 		"verification_scope_ref",
-		"system_constraints_file_ref",
-		"system_constraints_version_ref",
-		"system_constraints_fingerprint",
-		"shared_contract_snapshot",
+		"rule_snapshot",
+		"acceptance_item_evidence_matrix",
 	},
+}
+
+var allowedAcceptanceEvidenceStatuses = map[string]bool{
+	"pass":             true,
+	"fail":             true,
+	"partial":          true,
+	"not_checked":      true,
+	"not_runnable_yet": true,
+}
+
+var allowedVerificationSurfaces = map[string]bool{
+	"public_api":     true,
+	"internal_flow":  true,
+	"error_handling": true,
+	"eventing":       true,
+	"storage":        true,
+	"integration":    true,
+	"manual_effect":  true,
 }
 
 func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
@@ -160,19 +202,17 @@ func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
 	}
 	result.ModuleAppendixSnapshot = appendixEntries
 
-	systemFileRef, systemVersionRef, systemFingerprint, err := buildSystemConstraintsSnapshot(repoRoot, body)
+	sharedEntries, err := buildRuleSnapshot(repoRoot, moduleStatus.ActiveLayer, body)
 	if err != nil {
 		return Snapshot{}, err
 	}
-	result.SystemConstraintsFileRef = systemFileRef
-	result.SystemConstraintsVersionRef = systemVersionRef
-	result.SystemConstraintsFingerprint = systemFingerprint
+	result.RuleSnapshot = sharedEntries
 
-	sharedEntries, err := buildSharedContractSnapshot(repoRoot, moduleStatus.ActiveLayer, body)
+	acceptanceItems, err := buildAcceptanceItemSet(mainSpecRef, body)
 	if err != nil {
 		return Snapshot{}, err
 	}
-	result.SharedContractSnapshot = sharedEntries
+	result.AcceptanceItemSet = acceptanceItems
 	return result, nil
 }
 
@@ -233,17 +273,15 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 				result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
 			}
 		}
-		if _, ok := actual.scalars["shared_contract_snapshot"]; ok || actual.sharedPresent {
+		if _, ok := actual.scalars["rule_snapshot"]; ok || actual.sharedPresent {
 			actualShared := normalizeSharedList(actual.sharedEntries)
-			expectedShared := normalizeSharedList(expected.SharedContractSnapshot)
+			expectedShared := normalizeSharedList(expected.RuleSnapshot)
 			if actualShared != expectedShared {
 				result.Valid = false
-				result.Mismatches = append(result.Mismatches, fmt.Sprintf("shared_contract_snapshot mismatch: actual=%s expected=%s", actualShared, expectedShared))
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("rule_snapshot mismatch: actual=%s expected=%s", actualShared, expectedShared))
 			}
 		}
-		compareScalar(&result, "system_constraints_file_ref", actual.scalars["system_constraints_file_ref"], expected.SystemConstraintsFileRef)
-		compareScalar(&result, "system_constraints_version_ref", actual.scalars["system_constraints_version_ref"], expected.SystemConstraintsVersionRef)
-		compareScalar(&result, "system_constraints_fingerprint", actual.scalars["system_constraints_fingerprint"], expected.SystemConstraintsFingerprint)
+		validateAcceptancePlanCoverage(&result, actual, expected.AcceptanceItemSet)
 		return result, nil
 	}
 
@@ -261,9 +299,10 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 	compareScalar(&result, "truth_file_ref", actual.scalars["truth_file_ref"], expected.SpecFileRef)
 	compareScalar(&result, "truth_version_ref", actual.scalars["truth_version_ref"], expected.SpecVersionRef)
 	compareScalar(&result, "truth_fingerprint", actual.scalars["truth_fingerprint"], expected.SpecFingerprint)
-	compareScalar(&result, "system_constraints_file_ref", actual.scalars["system_constraints_file_ref"], expected.SystemConstraintsFileRef)
-	compareScalar(&result, "system_constraints_version_ref", actual.scalars["system_constraints_version_ref"], expected.SystemConstraintsVersionRef)
-	compareScalar(&result, "system_constraints_fingerprint", actual.scalars["system_constraints_fingerprint"], expected.SystemConstraintsFingerprint)
+	compareAcceptanceItemSet(&result, actual, expected.AcceptanceItemSet)
+	if processKind == "verify" {
+		validateAcceptanceEvidenceMatrix(&result, actual, expected.AcceptanceItemSet)
+	}
 
 	if _, ok := actual.scalars["unit_appendix_snapshot"]; ok || actual.appendixPresent {
 		actualAppendix := normalizeAppendixList(actual.appendixEntries)
@@ -273,12 +312,12 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 			result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
 		}
 	}
-	if _, ok := actual.scalars["shared_contract_snapshot"]; ok || actual.sharedPresent {
+	if _, ok := actual.scalars["rule_snapshot"]; ok || actual.sharedPresent {
 		actualShared := normalizeSharedList(actual.sharedEntries)
-		expectedShared := normalizeSharedList(expected.SharedContractSnapshot)
+		expectedShared := normalizeSharedList(expected.RuleSnapshot)
 		if actualShared != expectedShared {
 			result.Valid = false
-			result.Mismatches = append(result.Mismatches, fmt.Sprintf("shared_contract_snapshot mismatch: actual=%s expected=%s", actualShared, expectedShared))
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("rule_snapshot mismatch: actual=%s expected=%s", actualShared, expectedShared))
 		}
 	}
 
@@ -326,7 +365,11 @@ func LoadProcessSnapshot(repoRoot, objectType, object, processKind string) (Proc
 		ModuleAppendixSnapshot: append([]AppendixEntry(nil), parsed.appendixEntries...),
 		ModuleSnapshot:         append([]ObjectSnapshotEntry(nil), parsed.moduleEntries...),
 		FlowSnapshot:           append([]ObjectSnapshotEntry(nil), parsed.flowEntries...),
-		SharedContractSnapshot: append([]SharedContractEntry(nil), parsed.sharedEntries...),
+		RuleSnapshot:           append([]RuleEntry(nil), parsed.sharedEntries...),
+		RepositoryMapping:      parsed.repositoryMapping,
+		AcceptanceItemSet:      append([]AcceptanceItemEntry(nil), parsed.acceptanceItemEntries...),
+		AcceptancePlanCoverage: append([]AcceptancePlanCoverageEntry(nil), parsed.acceptancePlanEntries...),
+		AcceptanceEvidence:     append([]AcceptanceEvidenceEntry(nil), parsed.acceptanceEvidenceEntries...),
 	}, nil
 }
 
@@ -338,15 +381,84 @@ func Render(snapshot Snapshot) string {
 		fmt.Sprintf("truth_file_ref: %s", snapshot.SpecFileRef),
 		fmt.Sprintf("truth_version_ref: %s", snapshot.SpecVersionRef),
 		fmt.Sprintf("truth_fingerprint: %s", snapshot.SpecFingerprint),
-		fmt.Sprintf("system_constraints_file_ref: %s", snapshot.SystemConstraintsFileRef),
-		fmt.Sprintf("system_constraints_version_ref: %s", snapshot.SystemConstraintsVersionRef),
-		fmt.Sprintf("system_constraints_fingerprint: %s", snapshot.SystemConstraintsFingerprint),
-		"unit_appendix_snapshot:",
+		"acceptance_item_set:",
 	}
+	lines = append(lines, renderAcceptanceItemLines(snapshot.AcceptanceItemSet)...)
+	lines = append(lines,
+		"unit_appendix_snapshot:",
+	)
 	lines = append(lines, renderAppendixLines(snapshot.ModuleAppendixSnapshot)...)
-	lines = append(lines, "shared_contract_snapshot:")
-	lines = append(lines, renderSharedLines(snapshot.SharedContractSnapshot)...)
+	lines = append(lines, "rule_snapshot:")
+	lines = append(lines, renderSharedLines(snapshot.RuleSnapshot)...)
 	return strings.Join(lines, "\n")
+}
+
+func buildAcceptanceItemSet(mainSpecRef, body string) ([]AcceptanceItemEntry, error) {
+	parsed, err := parseProcessSnapshot(body)
+	if err != nil {
+		return nil, err
+	}
+	if !parsed.presentFields["acceptance_item_set"] {
+		if isStableMainSpecRef(mainSpecRef) {
+			return nil, nil
+		}
+		if hasAcceptanceSection(body) {
+			return nil, fmt.Errorf("%s: acceptance section must define acceptance_item_set", mainSpecRef)
+		}
+		return nil, fmt.Errorf("%s: main Spec must define Testability / Acceptance Criteria with acceptance_item_set", mainSpecRef)
+	}
+	entries, err := acceptanceMainItemEntriesFromParsed(parsed)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", mainSpecRef, err)
+	}
+	if len(entries) == 0 {
+		return nil, fmt.Errorf("%s: acceptance_item_set must contain at least one item", mainSpecRef)
+	}
+	return entries, nil
+}
+
+func BuildAcceptanceItemSetFromBody(mainSpecRef, body string) ([]AcceptanceItemEntry, error) {
+	return buildAcceptanceItemSet(mainSpecRef, body)
+}
+
+func BuildRepositoryMappingSnapshot(repoRoot string) (RepositoryMappingEntry, error) {
+	fileRef := specpaths.RepositoryMappingFileRef
+	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)))
+	if err != nil {
+		return RepositoryMappingEntry{}, fmt.Errorf("read %s: %w", fileRef, err)
+	}
+	frontmatter, _, err := parseFrontmatter(string(content))
+	if err != nil {
+		return RepositoryMappingEntry{}, fmt.Errorf("%s: %w", fileRef, err)
+	}
+	version := strings.TrimSpace(frontmatter["version"])
+	if version == "" {
+		return RepositoryMappingEntry{}, fmt.Errorf("%s: missing frontmatter.version", fileRef)
+	}
+	return RepositoryMappingEntry{
+		FileRef:     fileRef,
+		VersionRef:  fmt.Sprintf("repository_mapping@%s", version),
+		Fingerprint: hashNormalizedText(string(content)),
+	}, nil
+}
+
+func hasAcceptanceSection(body string) bool {
+	for _, line := range strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		lower := strings.ToLower(trimmed)
+		if strings.Contains(lower, "acceptance criteria") || strings.Contains(trimmed, "验收标准") {
+			return true
+		}
+	}
+	return false
+}
+
+func isStableMainSpecRef(mainSpecRef string) bool {
+	return strings.HasPrefix(mainSpecRef, "docs/specs/units/stable/") ||
+		strings.HasPrefix(mainSpecRef, "docs/specs/scenarios/stable/")
 }
 
 func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry, error) {
@@ -427,67 +539,85 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 	return entries, nil
 }
 
-func buildSystemConstraintsSnapshot(repoRoot, body string) (string, string, string, error) {
-	ref, _, err := parseSystemConstraintsRef(body)
+func buildRuleSnapshot(repoRoot, moduleLayer, body string) ([]RuleEntry, error) {
+	refs, hasField, err := parseRuleRefs(body)
 	if err != nil {
-		return "", "", "", err
+		return nil, err
 	}
-	if ref == "" || ref == "none" {
-		return "none", "none", "none", nil
-	}
-	if !strings.HasPrefix(ref, "system_constraints@") {
-		return "", "", "", fmt.Errorf("unsupported system_constraints_ref %q", ref)
-	}
-
-	systemFileRef := specpaths.SystemConstraintsFileRef
-	systemContent, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(systemFileRef)))
-	if err != nil {
-		return "", "", "", fmt.Errorf("read %s: %w", systemFileRef, err)
-	}
-	systemFrontmatter, _, err := parseFrontmatter(string(systemContent))
-	if err != nil {
-		return "", "", "", fmt.Errorf("%s: %w", systemFileRef, err)
-	}
-	systemVersion := strings.TrimSpace(systemFrontmatter["version"])
-	if systemVersion == "" {
-		return "", "", "", fmt.Errorf("%s: missing frontmatter.version", systemFileRef)
-	}
-	return systemFileRef, fmt.Sprintf("system_constraints@%s", systemVersion), hashNormalizedText(string(systemContent)), nil
-}
-
-func buildSharedContractSnapshot(repoRoot, moduleLayer, body string) ([]SharedContractEntry, error) {
-	refs, hasField, err := parseSharedContractRefs(body)
+	entries, err := buildStableGlobalRuleEntries(repoRoot)
 	if err != nil {
 		return nil, err
 	}
 	if hasField && len(refs) == 0 {
-		return []SharedContractEntry{}, nil
+		return sortRuleEntries(entries), nil
 	}
-	entries := make([]SharedContractEntry, 0, len(refs))
 	for _, ref := range refs {
-		resolved, err := sharedbinding.ResolveRef(repoRoot, moduleLayer, ref)
+		resolved, err := rulebinding.ResolveRef(repoRoot, moduleLayer, ref)
 		if err != nil {
 			return nil, err
 		}
-		entries = append(entries, SharedContractEntry{
-			SharedContractID: resolved.SharedContractID,
-			Layer:            resolved.Layer,
-			FileRef:          resolved.FileRef,
-			VersionRef:       resolved.VersionRef,
-			Fingerprint:      hashNormalizedText(resolved.Content),
+		entries = append(entries, RuleEntry{
+			RuleID:      resolved.RuleID,
+			Layer:       resolved.Layer,
+			FileRef:     resolved.FileRef,
+			VersionRef:  resolved.VersionRef,
+			Fingerprint: hashNormalizedText(resolved.Content),
 		})
 	}
+	return sortRuleEntries(entries), nil
+}
 
-	sort.Slice(entries, func(i, j int) bool {
-		if entries[i].SharedContractID != entries[j].SharedContractID {
-			return entries[i].SharedContractID < entries[j].SharedContractID
+func buildStableGlobalRuleEntries(repoRoot string) ([]RuleEntry, error) {
+	matches, err := filepath.Glob(filepath.Join(repoRoot, filepath.FromSlash("docs/specs/rules/stable/s_g_rule_*.md")))
+	if err != nil {
+		return nil, err
+	}
+	entries := []RuleEntry{}
+	for _, absPath := range matches {
+		rel, err := filepath.Rel(repoRoot, absPath)
+		if err != nil {
+			return nil, err
 		}
-		if entries[i].Layer != entries[j].Layer {
-			return entries[i].Layer < entries[j].Layer
+		fileRef := filepath.ToSlash(rel)
+		content, err := os.ReadFile(absPath)
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", fileRef, err)
 		}
-		return entries[i].FileRef < entries[j].FileRef
-	})
+		frontmatter, _, err := parseFrontmatter(string(content))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", fileRef, err)
+		}
+		ruleID := strings.TrimSpace(frontmatter["rule_id"])
+		ruleScope := strings.TrimSpace(frontmatter["rule_scope"])
+		layer := strings.TrimSpace(frontmatter["layer"])
+		version := strings.TrimSpace(frontmatter["rule_version"])
+		if ruleID == "" || ruleScope != "global" || layer != "stable" || version == "" {
+			return nil, fmt.Errorf("%s: stable global rule must record rule_id, rule_scope=global, layer=stable, and rule_version", fileRef)
+		}
+		prefix := strings.TrimSuffix(filepath.Base(fileRef), ".md")
+		entries = append(entries, RuleEntry{
+			RuleID:      ruleID,
+			Layer:       layer,
+			FileRef:     fileRef,
+			VersionRef:  fmt.Sprintf("%s@%s", prefix, version),
+			Fingerprint: hashNormalizedText(string(content)),
+		})
+	}
 	return entries, nil
+}
+
+func sortRuleEntries(entries []RuleEntry) []RuleEntry {
+	items := append([]RuleEntry(nil), entries...)
+	sort.Slice(entries, func(i, j int) bool {
+		if items[i].RuleID != items[j].RuleID {
+			return items[i].RuleID < items[j].RuleID
+		}
+		if items[i].Layer != items[j].Layer {
+			return items[i].Layer < items[j].Layer
+		}
+		return items[i].FileRef < items[j].FileRef
+	})
+	return items
 }
 
 func parseFrontmatter(content string) (map[string]string, string, error) {
@@ -530,11 +660,11 @@ func hashNormalizedText(content string) string {
 	return fmt.Sprintf("%x", sum)
 }
 
-func parseSharedContractRefs(body string) ([]string, bool, error) {
+func parseRuleRefs(body string) ([]string, bool, error) {
 	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 	for idx, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		right, matched, err := parseNamedFieldLine(trimmed, "shared_contract_refs")
+		right, matched, err := parseNamedFieldLine(trimmed, "rule_refs")
 		if err != nil {
 			return nil, false, err
 		}
@@ -545,7 +675,7 @@ func parseSharedContractRefs(body string) ([]string, bool, error) {
 			return nil, true, nil
 		}
 		if right != "" {
-			return nil, false, fmt.Errorf("shared_contract_refs must use literal none or a markdown list")
+			return nil, false, fmt.Errorf("rule_refs must use literal none or a markdown list")
 		}
 		refs := []string{}
 		seen := map[string]bool{}
@@ -558,23 +688,23 @@ func parseSharedContractRefs(body string) ([]string, bool, error) {
 				break
 			}
 			if !strings.HasPrefix(nextTrimmed, "- ") {
-				return nil, false, fmt.Errorf("shared_contract_refs must be a markdown list of shared refs")
+				return nil, false, fmt.Errorf("rule_refs must be a markdown list of rule refs")
 			}
 			ref := strings.TrimSpace(strings.TrimPrefix(nextTrimmed, "- "))
 			ref = strings.Trim(ref, "`")
 			if ref == "" {
-				return nil, false, fmt.Errorf("shared_contract_refs contains an empty item")
+				return nil, false, fmt.Errorf("rule_refs contains an empty item")
 			}
 			if seen[ref] {
-				return nil, false, fmt.Errorf("shared_contract_refs contains duplicate item %q", ref)
+				return nil, false, fmt.Errorf("rule_refs contains duplicate item %q", ref)
 			}
 			seen[ref] = true
 			refs = append(refs, ref)
 		}
 		if len(refs) == 0 {
-			return nil, false, fmt.Errorf("shared_contract_refs must not be an empty list")
+			return nil, false, fmt.Errorf("rule_refs must not be an empty list")
 		}
-		if err := validateOrderedSharedContractRefs(refs); err != nil {
+		if err := validateOrderedRuleRefs(refs); err != nil {
 			return nil, false, err
 		}
 		return refs, true, nil
@@ -582,7 +712,7 @@ func parseSharedContractRefs(body string) ([]string, bool, error) {
 	return nil, false, nil
 }
 
-func validateOrderedSharedContractRefs(refs []string) error {
+func validateOrderedRuleRefs(refs []string) error {
 	if len(refs) < 2 {
 		return nil
 	}
@@ -590,30 +720,10 @@ func validateOrderedSharedContractRefs(refs []string) error {
 	sort.Strings(expected)
 	for idx := range refs {
 		if refs[idx] != expected[idx] {
-			return fmt.Errorf("shared_contract_refs must be sorted by exact shared ref string in ascending lexical order")
+			return fmt.Errorf("rule_refs must be sorted by exact rule ref string in ascending lexical order")
 		}
 	}
 	return nil
-}
-
-func parseSystemConstraintsRef(body string) (string, bool, error) {
-	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		right, matched, err := parseNamedFieldLine(trimmed, "system_constraints_ref")
-		if err != nil {
-			return "", false, err
-		}
-		if !matched {
-			continue
-		}
-		value := strings.Trim(right, "`")
-		if value == "" {
-			return "", false, fmt.Errorf("system_constraints_ref is empty")
-		}
-		return value, true, nil
-	}
-	return "", false, nil
 }
 
 func parseNamedFieldLine(trimmed, fieldName string) (string, bool, error) {
@@ -666,16 +776,24 @@ func mainSpecModule(mainSpecRef string) (string, error) {
 }
 
 type processSnapshot struct {
-	presentFields   map[string]bool
-	scalars         map[string]string
-	appendixEntries []AppendixEntry
-	appendixPresent bool
-	moduleEntries   []ObjectSnapshotEntry
-	modulePresent   bool
-	flowEntries     []ObjectSnapshotEntry
-	flowPresent     bool
-	sharedEntries   []SharedContractEntry
-	sharedPresent   bool
+	presentFields             map[string]bool
+	scalars                   map[string]string
+	appendixEntries           []AppendixEntry
+	appendixPresent           bool
+	repositoryMapping         RepositoryMappingEntry
+	repositoryMappingPresent  bool
+	moduleEntries             []ObjectSnapshotEntry
+	modulePresent             bool
+	flowEntries               []ObjectSnapshotEntry
+	flowPresent               bool
+	sharedEntries             []RuleEntry
+	sharedPresent             bool
+	acceptanceItemEntries     []AcceptanceItemEntry
+	acceptanceItemPresent     bool
+	acceptancePlanEntries     []AcceptancePlanCoverageEntry
+	acceptancePlanPresent     bool
+	acceptanceEvidenceEntries []AcceptanceEvidenceEntry
+	acceptanceEvidencePresent bool
 }
 
 func parseProcessSnapshot(content string) (processSnapshot, error) {
@@ -709,14 +827,26 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 				case "unit_appendix_snapshot":
 					result.appendixPresent = true
 					currentList = key
+				case "repository_mapping_snapshot":
+					result.repositoryMappingPresent = true
+					currentList = key
 				case "unit_snapshot":
 					result.modulePresent = true
 					currentList = key
 				case "scenario_snapshot":
 					result.flowPresent = true
 					currentList = key
-				case "shared_contract_snapshot":
+				case "rule_snapshot":
 					result.sharedPresent = true
+					currentList = key
+				case "acceptance_item_set":
+					result.acceptanceItemPresent = true
+					currentList = key
+				case "acceptance_item_plan_coverage":
+					result.acceptancePlanPresent = true
+					currentList = key
+				case "acceptance_item_evidence_matrix":
+					result.acceptanceEvidencePresent = true
 					currentList = key
 				}
 				continue
@@ -725,54 +855,57 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 			continue
 		}
 
-		if indent == 2 {
+		if indent >= 2 {
 			key, value, ok := parseSnapshotFieldLine(trimmed)
 			if !ok {
 				continue
 			}
+			listItemStart := strings.HasPrefix(trimmed, "- ")
 			switch currentList {
 			case "unit_appendix_snapshot":
-				if currentIndex < 0 || key == "file_ref" {
+				if currentIndex < 0 || (listItemStart && key == "file_ref") {
 					result.appendixEntries = append(result.appendixEntries, AppendixEntry{})
 					currentIndex = len(result.appendixEntries) - 1
 				}
 				assignAppendixField(&result.appendixEntries[currentIndex], key, value)
+			case "repository_mapping_snapshot":
+				assignRepositoryMappingField(&result.repositoryMapping, key, value)
 			case "unit_snapshot":
-				if currentIndex < 0 || key == "unit" {
+				if currentIndex < 0 || (listItemStart && key == "unit") {
 					result.moduleEntries = append(result.moduleEntries, ObjectSnapshotEntry{})
 					currentIndex = len(result.moduleEntries) - 1
 				}
 				assignObjectSnapshotField(&result.moduleEntries[currentIndex], key, value)
 			case "scenario_snapshot":
-				if currentIndex < 0 || key == "scenario" {
+				if currentIndex < 0 || (listItemStart && key == "scenario") {
 					result.flowEntries = append(result.flowEntries, ObjectSnapshotEntry{})
 					currentIndex = len(result.flowEntries) - 1
 				}
 				assignObjectSnapshotField(&result.flowEntries[currentIndex], key, value)
-			case "shared_contract_snapshot":
-				if currentIndex < 0 || key == "shared_contract_id" {
-					result.sharedEntries = append(result.sharedEntries, SharedContractEntry{})
+			case "rule_snapshot":
+				if currentIndex < 0 || (listItemStart && key == "rule_id") {
+					result.sharedEntries = append(result.sharedEntries, RuleEntry{})
 					currentIndex = len(result.sharedEntries) - 1
 				}
 				assignSharedField(&result.sharedEntries[currentIndex], key, value)
-			}
-			continue
-		}
-
-		if indent >= 4 && currentIndex >= 0 {
-			key, value, ok := parseSnapshotFieldLine(trimmed)
-			if !ok {
-				continue
-			}
-			switch currentList {
-			case "unit_appendix_snapshot":
-				assignAppendixField(&result.appendixEntries[currentIndex], key, value)
-			case "unit_snapshot":
-				assignObjectSnapshotField(&result.moduleEntries[currentIndex], key, value)
-			case "scenario_snapshot":
-				assignObjectSnapshotField(&result.flowEntries[currentIndex], key, value)
-			case "shared_contract_snapshot":
-				assignSharedField(&result.sharedEntries[currentIndex], key, value)
+			case "acceptance_item_set":
+				if currentIndex < 0 || (listItemStart && key == "id") {
+					result.acceptanceItemEntries = append(result.acceptanceItemEntries, AcceptanceItemEntry{})
+					currentIndex = len(result.acceptanceItemEntries) - 1
+				}
+				assignAcceptanceItemField(&result.acceptanceItemEntries[currentIndex], key, value)
+			case "acceptance_item_plan_coverage":
+				if currentIndex < 0 || (listItemStart && key == "id") {
+					result.acceptancePlanEntries = append(result.acceptancePlanEntries, AcceptancePlanCoverageEntry{})
+					currentIndex = len(result.acceptancePlanEntries) - 1
+				}
+				assignAcceptancePlanCoverageField(&result.acceptancePlanEntries[currentIndex], key, value)
+			case "acceptance_item_evidence_matrix":
+				if currentIndex < 0 || (listItemStart && key == "id") {
+					result.acceptanceEvidenceEntries = append(result.acceptanceEvidenceEntries, AcceptanceEvidenceEntry{})
+					currentIndex = len(result.acceptanceEvidenceEntries) - 1
+				}
+				assignAcceptanceEvidenceField(&result.acceptanceEvidenceEntries[currentIndex], key, value)
 			}
 		}
 	}
@@ -780,6 +913,10 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 	if raw, ok := result.scalars["unit_appendix_snapshot"]; ok && raw == "none" {
 		result.appendixPresent = true
 		result.appendixEntries = nil
+	}
+	if raw, ok := result.scalars["repository_mapping_snapshot"]; ok && raw == "none" {
+		result.repositoryMappingPresent = true
+		result.repositoryMapping = RepositoryMappingEntry{}
 	}
 	if raw, ok := result.scalars["unit_snapshot"]; ok && raw == "none" {
 		result.modulePresent = true
@@ -789,9 +926,21 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 		result.flowPresent = true
 		result.flowEntries = nil
 	}
-	if raw, ok := result.scalars["shared_contract_snapshot"]; ok && raw == "none" {
+	if raw, ok := result.scalars["rule_snapshot"]; ok && raw == "none" {
 		result.sharedPresent = true
 		result.sharedEntries = nil
+	}
+	if raw, ok := result.scalars["acceptance_item_set"]; ok && raw == "none" {
+		result.acceptanceItemPresent = true
+		result.acceptanceItemEntries = nil
+	}
+	if raw, ok := result.scalars["acceptance_item_plan_coverage"]; ok && raw == "none" {
+		result.acceptancePlanPresent = true
+		result.acceptancePlanEntries = nil
+	}
+	if raw, ok := result.scalars["acceptance_item_evidence_matrix"]; ok && raw == "none" {
+		result.acceptanceEvidencePresent = true
+		result.acceptanceEvidenceEntries = nil
 	}
 	return result, nil
 }
@@ -840,12 +989,23 @@ func assignAppendixField(entry *AppendixEntry, key, value string) {
 	}
 }
 
-func assignSharedField(entry *SharedContractEntry, key, value string) {
+func assignSharedField(entry *RuleEntry, key, value string) {
 	switch key {
-	case "shared_contract_id":
-		entry.SharedContractID = value
+	case "rule_id":
+		entry.RuleID = value
 	case "layer":
 		entry.Layer = value
+	case "file_ref":
+		entry.FileRef = value
+	case "version_ref":
+		entry.VersionRef = value
+	case "fingerprint":
+		entry.Fingerprint = value
+	}
+}
+
+func assignRepositoryMappingField(entry *RepositoryMappingEntry, key, value string) {
+	switch key {
 	case "file_ref":
 		entry.FileRef = value
 	case "version_ref":
@@ -870,6 +1030,45 @@ func assignObjectSnapshotField(entry *ObjectSnapshotEntry, key, value string) {
 	}
 }
 
+func assignAcceptanceItemField(entry *AcceptanceItemEntry, key, value string) {
+	switch key {
+	case "id":
+		entry.ID = value
+	case "target":
+		entry.Target = value
+	case "verification_surface":
+		entry.VerificationSurface = value
+	case "implementation_surface":
+		entry.ImplementationSurface = value
+	case "verification_method":
+		entry.VerificationMethod = value
+	case "pass_condition":
+		entry.PassCondition = value
+	case "not_runnable_yet":
+		entry.NotRunnableYet = value
+	case "not_runnable_yet_reason":
+		entry.NotRunnableYetReason = value
+	}
+}
+
+func assignAcceptancePlanCoverageField(entry *AcceptancePlanCoverageEntry, key, value string) {
+	switch key {
+	case "id":
+		entry.ID = value
+	case "coverage":
+		entry.Coverage = value
+	}
+}
+
+func assignAcceptanceEvidenceField(entry *AcceptanceEvidenceEntry, key, value string) {
+	switch key {
+	case "id":
+		entry.ID = value
+	case "status":
+		entry.Status = value
+	}
+}
+
 func compareScalar(result *ValidationResult, field, actual, expected string) {
 	if actual == "" {
 		return
@@ -878,6 +1077,229 @@ func compareScalar(result *ValidationResult, field, actual, expected string) {
 		result.Valid = false
 		result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s mismatch: actual=%s expected=%s", field, actual, expected))
 	}
+}
+
+func compareAcceptanceItemSet(result *ValidationResult, actual processSnapshot, expected []AcceptanceItemEntry) {
+	actualEntries, err := acceptanceItemEntriesFromParsed(actual)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "acceptance_item_set invalid: "+err.Error())
+		return
+	}
+	actualValue := normalizeAcceptanceItemList(actualEntries)
+	expectedValue := normalizeAcceptanceItemList(expected)
+	if actualValue != expectedValue {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_set mismatch: actual=%s expected=%s", actualValue, expectedValue))
+	}
+}
+
+func validateAcceptancePlanCoverage(result *ValidationResult, actual processSnapshot, expected []AcceptanceItemEntry) {
+	actualEntries, err := acceptancePlanCoverageEntriesFromParsed(actual)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "acceptance_item_plan_coverage invalid: "+err.Error())
+		return
+	}
+	expectedIDs := acceptanceItemIDSet(expected)
+	actualIDs := map[string]bool{}
+	for _, entry := range actualEntries {
+		if actualIDs[entry.ID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_plan_coverage duplicate id: %s", entry.ID))
+			continue
+		}
+		actualIDs[entry.ID] = true
+		if !expectedIDs[entry.ID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_plan_coverage unknown id: %s", entry.ID))
+		}
+	}
+	for _, item := range normalizeAcceptanceItemEntries(expected) {
+		if !actualIDs[item.ID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_plan_coverage missing id: %s", item.ID))
+		}
+	}
+}
+
+func validateAcceptanceEvidenceMatrix(result *ValidationResult, actual processSnapshot, expected []AcceptanceItemEntry) {
+	actualEntries, err := acceptanceEvidenceEntriesFromParsed(actual)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "acceptance_item_evidence_matrix invalid: "+err.Error())
+		return
+	}
+	expectedByID := acceptanceItemsByID(expected)
+	actualIDs := map[string]bool{}
+	for _, entry := range actualEntries {
+		if actualIDs[entry.ID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix duplicate id: %s", entry.ID))
+			continue
+		}
+		actualIDs[entry.ID] = true
+		expectedItem, ok := expectedByID[entry.ID]
+		if !ok {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix unknown id: %s", entry.ID))
+			continue
+		}
+		if !allowedAcceptanceEvidenceStatuses[entry.Status] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix invalid status for %s: %s", entry.ID, entry.Status))
+			continue
+		}
+		if expectedItem.NotRunnableYet == "yes" && entry.Status != "not_runnable_yet" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix status for %s must be not_runnable_yet", entry.ID))
+		}
+		if expectedItem.NotRunnableYet == "no" && entry.Status == "not_runnable_yet" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix status for %s cannot be not_runnable_yet", entry.ID))
+		}
+	}
+	for _, item := range normalizeAcceptanceItemEntries(expected) {
+		if !actualIDs[item.ID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix missing id: %s", item.ID))
+		}
+	}
+}
+
+func acceptanceItemEntriesFromParsed(parsed processSnapshot) ([]AcceptanceItemEntry, error) {
+	if raw, ok := parsed.scalars["acceptance_item_set"]; ok && raw != "none" {
+		return nil, fmt.Errorf("must be literal none or a list")
+	}
+	items := append([]AcceptanceItemEntry(nil), parsed.acceptanceItemEntries...)
+	if len(items) == 0 {
+		return nil, nil
+	}
+	if err := validateAcceptanceItemEntries(items); err != nil {
+		return nil, err
+	}
+	return snapshotAcceptanceItemEntries(items), nil
+}
+
+func acceptanceMainItemEntriesFromParsed(parsed processSnapshot) ([]AcceptanceItemEntry, error) {
+	if raw, ok := parsed.scalars["acceptance_item_set"]; ok && raw != "none" {
+		return nil, fmt.Errorf("must be literal none or a list")
+	}
+	items := append([]AcceptanceItemEntry(nil), parsed.acceptanceItemEntries...)
+	if len(items) == 0 {
+		return nil, nil
+	}
+	if err := validateAcceptanceItemEntries(items); err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		if strings.TrimSpace(item.Target) == "" ||
+			strings.TrimSpace(item.ImplementationSurface) == "" ||
+			strings.TrimSpace(item.VerificationMethod) == "" ||
+			strings.TrimSpace(item.PassCondition) == "" {
+			return nil, fmt.Errorf("acceptance item %s must include target, implementation_surface, verification_method, and pass_condition", item.ID)
+		}
+		if item.NotRunnableYet == "yes" && strings.TrimSpace(item.NotRunnableYetReason) == "" {
+			return nil, fmt.Errorf("not_runnable_yet acceptance item %s must include not_runnable_yet_reason", item.ID)
+		}
+	}
+	return normalizeAcceptanceItemEntries(items), nil
+}
+
+func acceptancePlanCoverageEntriesFromParsed(parsed processSnapshot) ([]AcceptancePlanCoverageEntry, error) {
+	if raw, ok := parsed.scalars["acceptance_item_plan_coverage"]; ok && raw != "none" {
+		return nil, fmt.Errorf("must be literal none or a list")
+	}
+	items := append([]AcceptancePlanCoverageEntry(nil), parsed.acceptancePlanEntries...)
+	for _, item := range items {
+		if strings.TrimSpace(item.ID) == "" || strings.TrimSpace(item.Coverage) == "" {
+			return nil, fmt.Errorf("each item must include id and coverage")
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].ID < items[j].ID
+	})
+	return items, nil
+}
+
+func acceptanceEvidenceEntriesFromParsed(parsed processSnapshot) ([]AcceptanceEvidenceEntry, error) {
+	if raw, ok := parsed.scalars["acceptance_item_evidence_matrix"]; ok && raw != "none" {
+		return nil, fmt.Errorf("must be literal none or a list")
+	}
+	items := append([]AcceptanceEvidenceEntry(nil), parsed.acceptanceEvidenceEntries...)
+	for _, item := range items {
+		if strings.TrimSpace(item.ID) == "" || strings.TrimSpace(item.Status) == "" {
+			return nil, fmt.Errorf("each item must include id and status")
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].ID < items[j].ID
+	})
+	return items, nil
+}
+
+func acceptanceItemIDSet(entries []AcceptanceItemEntry) map[string]bool {
+	result := map[string]bool{}
+	for _, item := range entries {
+		result[item.ID] = true
+	}
+	return result
+}
+
+func acceptanceItemsByID(entries []AcceptanceItemEntry) map[string]AcceptanceItemEntry {
+	result := map[string]AcceptanceItemEntry{}
+	for _, item := range entries {
+		result[item.ID] = item
+	}
+	return result
+}
+
+func normalizeAcceptanceItemEntries(entries []AcceptanceItemEntry) []AcceptanceItemEntry {
+	if len(entries) == 0 {
+		return nil
+	}
+	items := append([]AcceptanceItemEntry(nil), entries...)
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].ID != items[j].ID {
+			return items[i].ID < items[j].ID
+		}
+		return items[i].VerificationSurface < items[j].VerificationSurface
+	})
+	return items
+}
+
+func snapshotAcceptanceItemEntries(entries []AcceptanceItemEntry) []AcceptanceItemEntry {
+	items := normalizeAcceptanceItemEntries(entries)
+	for idx := range items {
+		items[idx] = AcceptanceItemEntry{
+			ID:                  items[idx].ID,
+			VerificationSurface: items[idx].VerificationSurface,
+			NotRunnableYet:      items[idx].NotRunnableYet,
+		}
+	}
+	return items
+}
+
+func validateAcceptanceItemEntries(entries []AcceptanceItemEntry) error {
+	seen := map[string]bool{}
+	for _, item := range entries {
+		if strings.TrimSpace(item.ID) == "" ||
+			strings.TrimSpace(item.VerificationSurface) == "" ||
+			strings.TrimSpace(item.NotRunnableYet) == "" {
+			return fmt.Errorf("each item must include id, verification_surface, and not_runnable_yet")
+		}
+		if item.NotRunnableYet != "yes" && item.NotRunnableYet != "no" {
+			return fmt.Errorf("not_runnable_yet for %s must be yes or no", item.ID)
+		}
+		if !allowedVerificationSurfaces[item.VerificationSurface] {
+			return fmt.Errorf("verification_surface for %s must be one of public_api, internal_flow, error_handling, eventing, storage, integration, manual_effect", item.ID)
+		}
+		if seen[item.ID] {
+			return fmt.Errorf("duplicate id %s", item.ID)
+		}
+		seen[item.ID] = true
+	}
+	return nil
 }
 
 func normalizeAppendixList(entries []AppendixEntry) string {
@@ -899,15 +1321,27 @@ func normalizeAppendixList(entries []AppendixEntry) string {
 	return strings.Join(parts, ";")
 }
 
-func normalizeSharedList(entries []SharedContractEntry) string {
+func normalizeAcceptanceItemList(entries []AcceptanceItemEntry) string {
 	if len(entries) == 0 {
 		return "none"
 	}
-	items := make([]SharedContractEntry, len(entries))
+	items := normalizeAcceptanceItemEntries(entries)
+	parts := make([]string, 0, len(items))
+	for _, item := range items {
+		parts = append(parts, fmt.Sprintf("%s|%s|%s", item.ID, item.VerificationSurface, item.NotRunnableYet))
+	}
+	return strings.Join(parts, ";")
+}
+
+func normalizeSharedList(entries []RuleEntry) string {
+	if len(entries) == 0 {
+		return "none"
+	}
+	items := make([]RuleEntry, len(entries))
 	copy(items, entries)
 	sort.Slice(items, func(i, j int) bool {
-		if items[i].SharedContractID != items[j].SharedContractID {
-			return items[i].SharedContractID < items[j].SharedContractID
+		if items[i].RuleID != items[j].RuleID {
+			return items[i].RuleID < items[j].RuleID
 		}
 		if items[i].Layer != items[j].Layer {
 			return items[i].Layer < items[j].Layer
@@ -916,7 +1350,7 @@ func normalizeSharedList(entries []SharedContractEntry) string {
 	})
 	parts := make([]string, 0, len(items))
 	for _, item := range items {
-		parts = append(parts, fmt.Sprintf("%s|%s|%s|%s|%s", item.SharedContractID, item.Layer, item.FileRef, item.VersionRef, item.Fingerprint))
+		parts = append(parts, fmt.Sprintf("%s|%s|%s|%s|%s", item.RuleID, item.Layer, item.FileRef, item.VersionRef, item.Fingerprint))
 	}
 	return strings.Join(parts, ";")
 }
@@ -944,18 +1378,33 @@ func renderAppendixLines(entries []AppendixEntry) []string {
 	return lines
 }
 
-func renderSharedLines(entries []SharedContractEntry) []string {
+func renderSharedLines(entries []RuleEntry) []string {
 	if len(entries) == 0 {
 		return []string{"  none"}
 	}
 	lines := []string{}
 	for _, entry := range entries {
 		lines = append(lines,
-			fmt.Sprintf("  - shared_contract_id: %s", entry.SharedContractID),
+			fmt.Sprintf("  - rule_id: %s", entry.RuleID),
 			fmt.Sprintf("    layer: %s", entry.Layer),
 			fmt.Sprintf("    file_ref: %s", entry.FileRef),
 			fmt.Sprintf("    version_ref: %s", entry.VersionRef),
 			fmt.Sprintf("    fingerprint: %s", entry.Fingerprint),
+		)
+	}
+	return lines
+}
+
+func renderAcceptanceItemLines(entries []AcceptanceItemEntry) []string {
+	if len(entries) == 0 {
+		return []string{"  none"}
+	}
+	lines := []string{}
+	for _, entry := range normalizeAcceptanceItemEntries(entries) {
+		lines = append(lines,
+			fmt.Sprintf("  - id: %s", entry.ID),
+			fmt.Sprintf("    verification_surface: %s", entry.VerificationSurface),
+			fmt.Sprintf("    not_runnable_yet: %s", entry.NotRunnableYet),
 		)
 	}
 	return lines

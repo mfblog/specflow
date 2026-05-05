@@ -166,18 +166,17 @@ func createCLITestRepo(t *testing.T) string {
 		"candidate_handoff_contract.md",
 		"downgrade_policy.md",
 		"recovery_policy.md",
-		"git_policy.md",
 		"impact_sync_policy.md",
 		"process_snapshot_contract.md",
 		"entry_index_registry.md",
 		"project_standards_policy.md",
 		"project_standard_create.md",
-		"shared_new.md",
-		"shared_extract.md",
-		"shared_bind.md",
-		"shared_topology.md",
-		"shared_sync.md",
-		"shared_escape.md",
+		"rule_new.md",
+		"rule_extract.md",
+		"rule_bind.md",
+		"rule_topology.md",
+		"rule_sync.md",
+		"rule_escape.md",
 	}
 	for _, name := range frameworkFiles {
 		writeCLITestFile(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
@@ -230,7 +229,7 @@ func createCLITestRepo(t *testing.T) string {
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n"+
 		"|---|---|---|---|---|---|---|\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/system_constraints.md"), "# System Constraints\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# Global Rules\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo Candidate\n")
 	return repoRoot
 }

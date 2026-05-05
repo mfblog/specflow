@@ -18,7 +18,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/repositorymapping"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewrun"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewscope"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/sharedsync"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulesync"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
@@ -67,8 +67,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runReview(args[1:], stdout, stderr)
 	case "process":
 		return runProcess(args[1:], stdout, stderr)
-	case "shared":
-		return runShared(args[1:], stdout, stderr)
+	case "rule":
+		return runRule(args[1:], stdout, stderr)
 	case "snapshot":
 		return runSnapshot(args[1:], stdout, stderr)
 	case "status":
@@ -200,12 +200,11 @@ func runEntry(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		source := fs.String("source", "", "registered source entry file")
-		stage := fs.Bool("stage", false, "stage synced registered entry files")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 
-		result, err := entrysync.Sync(mustAbs(*repoRoot), *source, *stage)
+		result, err := entrysync.Sync(mustAbs(*repoRoot), *source)
 		if err != nil {
 			return err
 		}
@@ -222,9 +221,6 @@ func runEntry(args []string, stdout, stderr io.Writer) error {
 		fmt.Fprintf(stdout, "Synced managed entry blocks from %s\n", result.Source)
 		for _, path := range result.UpdatedFiles {
 			fmt.Fprintf(stdout, "- %s\n", path)
-		}
-		if result.Staged {
-			fmt.Fprintln(stdout, "Registered entry files were staged.")
 		}
 		return nil
 	case "-h", "--help", "help":
@@ -321,6 +317,18 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 	}
 
 	switch args[0] {
+	case "scope":
+		fs := flag.NewFlagSet("review scope", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		flow := fs.String("flow", reviewrun.FlowSpecFlowReview, "review flow")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if err := requireReviewFlow(*flow, stderr); err != nil {
+			return err
+		}
+		return writeReviewScope(stdout, mustAbs(*repoRoot), *flow)
 	case "collect-default-scope":
 		fs := flag.NewFlagSet("review collect-default-scope", flag.ContinueOnError)
 		fs.SetOutput(stderr)
@@ -333,43 +341,7 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 
-		var scope reviewscope.SpecFlowScope
-		var err error
-		switch *flow {
-		case reviewrun.FlowSpecFlowReview:
-			scope, err = reviewscope.CollectDefaultSpecFlowScope(mustAbs(*repoRoot))
-		case reviewrun.FlowSpecFlowDesignReview:
-			scope, err = reviewscope.CollectDefaultSpecFlowDesignScope(mustAbs(*repoRoot))
-		default:
-			return fmt.Errorf("unsupported review flow %q", *flow)
-		}
-		if err != nil {
-			return err
-		}
-
-		fmt.Fprintf(stdout, "Review flow: %s\n", *flow)
-		fmt.Fprintf(stdout, "Review scenario: %s\n", scope.Scenario)
-		writeList(stdout, "Framework guideline files", scope.FrameworkGuidelineFiles)
-		writeList(stdout, "Command files", scope.CommandFiles)
-		writeList(stdout, "Guidance skill files", scope.GuidanceSkillFiles)
-		writeList(stdout, "Shared-governance minimum files", scope.SharedGovernanceFiles)
-		writeList(stdout, "Template governance files", scope.TemplateGovernanceFiles)
-		writeList(stdout, "Template entry files", scope.TemplateEntryFiles)
-		writeList(stdout, "Project entry files", scope.ProjectEntryFiles)
-		writeList(stdout, "Agent operability files", scope.AgentOperabilityFiles)
-		writeList(stdout, "Project-instance compatibility files", scope.ProjectInstanceCompatibilityFiles)
-		writeList(stdout, "Project registry files", scope.ProjectRegistryFiles)
-		writeList(stdout, "Project registry diagnostics", scope.RegistryDiagnostics)
-		writeList(stdout, "Tooling contract files", scope.ToolingContractFiles)
-		writeList(stdout, "Tooling source files", scope.ToolingSourceFiles)
-		if len(scope.ToolingScriptFiles) > 0 {
-			writeList(stdout, "Tooling script files", scope.ToolingScriptFiles)
-		}
-		if len(scope.ToolingRuntimeFiles) > 0 {
-			writeList(stdout, "Tooling runtime files", scope.ToolingRuntimeFiles)
-		}
-		writeList(stdout, "Active project-local governance-input files", scope.ActiveProjectStandardFiles)
-		return nil
+		return writeReviewScope(stdout, mustAbs(*repoRoot), *flow)
 	case "run-init":
 		fs := flag.NewFlagSet("review run-init", flag.ContinueOnError)
 		fs.SetOutput(stderr)
@@ -548,34 +520,34 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 	}
 }
 
-func runShared(args []string, stdout, stderr io.Writer) error {
+func runRule(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		writeSharedUsage(stderr)
-		return errors.New("missing shared subcommand")
+		writeRuleUsage(stderr)
+		return errors.New("missing rule subcommand")
 	}
 
 	switch args[0] {
 	case "sync-impact":
-		fs := flag.NewFlagSet("shared sync-impact", flag.ContinueOnError)
+		fs := flag.NewFlagSet("rule sync-impact", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		modules := fs.String("units", "", "comma-separated formal units")
-		sharedRefs := fs.String("shared-refs", "", "comma-separated shared version refs")
-		sharedIDs := fs.String("shared-ids", "", "comma-separated shared contract ids")
+		ruleRefs := fs.String("rule-refs", "", "comma-separated rule version refs")
+		ruleIDs := fs.String("rule-ids", "", "comma-separated rule ids")
 		stableLandingUnit := fs.String("stable-landing-unit", "", "formal unit whose same-round stable landing should not invalidate itself")
-		stableLandingSharedRefs := fs.String("stable-landing-shared-refs", "", "comma-separated exact shared refs written by the same-round stable landing")
-		boundObjectsOnlySharedFileRefs := fs.String("bound-objects-only-shared-file-refs", "", "comma-separated shared file refs proven to be bound_objects-only deltas")
+		stableLandingRuleRefs := fs.String("stable-landing-rule-refs", "", "comma-separated exact rule refs written by the same-round stable landing")
+		boundObjectsOnlyRuleFileRefs := fs.String("bound-objects-only-rule-file-refs", "", "comma-separated rule file refs proven to be bound_objects-only deltas")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 
-		result, err := sharedsync.SyncImpact(mustAbs(*repoRoot), sharedsync.Options{
-			Modules:                        parseCSV(*modules),
-			SharedRefs:                     parseCSV(*sharedRefs),
-			SharedIDs:                      parseCSV(*sharedIDs),
-			StableLandingModule:            strings.TrimSpace(*stableLandingUnit),
-			StableLandingSharedRefs:        parseCSV(*stableLandingSharedRefs),
-			BoundObjectsOnlySharedFileRefs: parseCSV(*boundObjectsOnlySharedFileRefs),
+		result, err := rulesync.SyncImpact(mustAbs(*repoRoot), rulesync.Options{
+			Modules:                      parseCSV(*modules),
+			RuleRefs:                     parseCSV(*ruleRefs),
+			RuleIDs:                      parseCSV(*ruleIDs),
+			StableLandingModule:          strings.TrimSpace(*stableLandingUnit),
+			StableLandingRuleRefs:        parseCSV(*stableLandingRuleRefs),
+			BoundObjectsOnlyRuleFileRefs: parseCSV(*boundObjectsOnlyRuleFileRefs),
 		})
 		if err != nil {
 			return err
@@ -583,11 +555,11 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 
 		writeList(stdout, "Scoped units", result.ScopedModules)
 		writeList(stdout, "Scoped scenarios", result.ScopedFlows)
-		writeList(stdout, "Scoped shared refs", result.ScopedSharedRefs)
-		writeList(stdout, "Scoped shared ids", result.ScopedSharedIDs)
+		writeList(stdout, "Scoped rule refs", result.ScopedRuleRefs)
+		writeList(stdout, "Scoped rule ids", result.ScopedRuleIDs)
 		fmt.Fprintf(stdout, "Stable landing unit: %s\n", noneIfEmpty(result.StableLandingModule))
-		writeList(stdout, "Stable landing shared refs", result.StableLandingSharedRefs)
-		writeList(stdout, "Bound-objects-only shared file refs", result.BoundObjectsOnlySharedFileRefs)
+		writeList(stdout, "Stable landing rule refs", result.StableLandingRuleRefs)
+		writeList(stdout, "Bound-objects-only rule file refs", result.BoundObjectsOnlyRuleFileRefs)
 		fmt.Fprintf(stdout, "Unit results (%d):\n", len(result.ModuleResults))
 		if len(result.ModuleResults) == 0 {
 			fmt.Fprintln(stdout, "- none")
@@ -609,7 +581,7 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 			fmt.Fprintln(stdout, "- none")
 		} else {
 			for _, drift := range result.BoundObjectDrifts {
-				fmt.Fprintf(stdout, "- %s | file=%s | version=%s | bound_objects_only_delta=%t\n", drift.SharedContractID, drift.FileRef, drift.VersionRef, drift.BoundObjectsOnlyDelta)
+				fmt.Fprintf(stdout, "- %s | file=%s | version=%s | bound_objects_only_delta=%t\n", drift.RuleID, drift.FileRef, drift.VersionRef, drift.BoundObjectsOnlyDelta)
 				fmt.Fprintf(stdout, "  declared=%s\n", strings.Join(defaultListValue(drift.DeclaredObjects), ", "))
 				fmt.Fprintf(stdout, "  actual=%s\n", strings.Join(defaultListValue(drift.ActualObjects), ", "))
 			}
@@ -632,38 +604,38 @@ func runShared(args []string, stdout, stderr io.Writer) error {
 		}
 		return nil
 	case "reconcile-bound-objects":
-		fs := flag.NewFlagSet("shared reconcile-bound-objects", flag.ContinueOnError)
+		fs := flag.NewFlagSet("rule reconcile-bound-objects", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		modules := fs.String("units", "", "comma-separated formal units")
-		sharedRefs := fs.String("shared-refs", "", "comma-separated shared version refs")
-		sharedIDs := fs.String("shared-ids", "", "comma-separated shared contract ids")
+		ruleRefs := fs.String("rule-refs", "", "comma-separated rule version refs")
+		ruleIDs := fs.String("rule-ids", "", "comma-separated rule ids")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 
-		result, err := sharedsync.ReconcileBoundModules(mustAbs(*repoRoot), sharedsync.ReconcileBoundModulesOptions{
-			Modules:    parseCSV(*modules),
-			SharedRefs: parseCSV(*sharedRefs),
-			SharedIDs:  parseCSV(*sharedIDs),
+		result, err := rulesync.ReconcileBoundModules(mustAbs(*repoRoot), rulesync.ReconcileBoundModulesOptions{
+			Modules:  parseCSV(*modules),
+			RuleRefs: parseCSV(*ruleRefs),
+			RuleIDs:  parseCSV(*ruleIDs),
 		})
 		if err != nil {
 			return err
 		}
 
 		writeList(stdout, "Scoped units", result.ScopedModules)
-		writeList(stdout, "Scoped shared refs", result.ScopedSharedRefs)
-		writeList(stdout, "Scoped shared ids", result.ScopedSharedIDs)
-		writeList(stdout, "Touched shared files", result.TouchedFiles)
-		writeList(stdout, "Updated shared files", result.UpdatedFiles)
-		writeList(stdout, "Unchanged shared files", result.UnchangedFiles)
+		writeList(stdout, "Scoped rule refs", result.ScopedRuleRefs)
+		writeList(stdout, "Scoped rule ids", result.ScopedRuleIDs)
+		writeList(stdout, "Touched rule files", result.TouchedFiles)
+		writeList(stdout, "Updated rule files", result.UpdatedFiles)
+		writeList(stdout, "Unchanged rule files", result.UnchangedFiles)
 		return nil
 	case "-h", "--help", "help":
-		writeSharedUsage(stdout)
+		writeRuleUsage(stdout)
 		return nil
 	default:
-		writeSharedUsage(stderr)
-		return fmt.Errorf("unknown shared subcommand %q", args[0])
+		writeRuleUsage(stderr)
+		return fmt.Errorf("unknown rule subcommand %q", args[0])
 	}
 }
 
@@ -854,7 +826,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  repository-mapping Validate docs/specs/repository_mapping.md")
 	fmt.Fprintln(w, "  review   Collect governance review scope or maintain run-state files")
 	fmt.Fprintln(w, "  process  Execute deterministic fallback cleanup")
-	fmt.Fprintln(w, "  shared   Execute deterministic shared-impact reconciliation helpers")
+	fmt.Fprintln(w, "  rule     Execute deterministic rule-impact reconciliation helpers")
 	fmt.Fprintln(w, "  snapshot Rebuild or compare process snapshot fields")
 	fmt.Fprintln(w, "  status   Apply deterministic _status.md row writeback")
 }
@@ -862,7 +834,7 @@ func writeRootUsage(w io.Writer) {
 func writeEntryUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl entry check [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl entry sync [--repo-root PATH] [--source FILE] [--stage]")
+	fmt.Fprintln(w, "  specflowctl entry sync [--repo-root PATH] [--source FILE]")
 }
 
 func writeRegistryUsage(w io.Writer) {
@@ -877,11 +849,52 @@ func writeRepositoryMappingUsage(w io.Writer) {
 
 func writeReviewUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl review scope [--flow spec_flow_review|spec_flow_design_review] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl review collect-default-scope --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl review run-init --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl review run-validate --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl review run-refresh --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl review run-touch --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
+}
+
+func writeReviewScope(stdout io.Writer, repoRoot, flow string) error {
+	var scope reviewscope.SpecFlowScope
+	var err error
+	switch flow {
+	case reviewrun.FlowSpecFlowReview:
+		scope, err = reviewscope.CollectDefaultSpecFlowScope(repoRoot)
+	case reviewrun.FlowSpecFlowDesignReview:
+		scope, err = reviewscope.CollectDefaultSpecFlowDesignScope(repoRoot)
+	default:
+		return fmt.Errorf("unsupported review flow %q", flow)
+	}
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(stdout, "Review flow: %s\n", flow)
+	fmt.Fprintf(stdout, "Review scenario: %s\n", scope.Scenario)
+	writeList(stdout, "Framework guideline files", scope.FrameworkGuidelineFiles)
+	writeList(stdout, "Command files", scope.CommandFiles)
+	writeList(stdout, "Guidance skill files", scope.GuidanceSkillFiles)
+	writeList(stdout, "Rule-governance minimum files", scope.RuleGovernanceFiles)
+	writeList(stdout, "Template governance files", scope.TemplateGovernanceFiles)
+	writeList(stdout, "Template entry files", scope.TemplateEntryFiles)
+	writeList(stdout, "Project entry files", scope.ProjectEntryFiles)
+	writeList(stdout, "Agent operability files", scope.AgentOperabilityFiles)
+	writeList(stdout, "Project-instance compatibility files", scope.ProjectInstanceCompatibilityFiles)
+	writeList(stdout, "Project registry files", scope.ProjectRegistryFiles)
+	writeList(stdout, "Project registry diagnostics", scope.RegistryDiagnostics)
+	writeList(stdout, "Tooling contract files", scope.ToolingContractFiles)
+	writeList(stdout, "Tooling source files", scope.ToolingSourceFiles)
+	if len(scope.ToolingScriptFiles) > 0 {
+		writeList(stdout, "Tooling script files", scope.ToolingScriptFiles)
+	}
+	if len(scope.ToolingRuntimeFiles) > 0 {
+		writeList(stdout, "Tooling runtime files", scope.ToolingRuntimeFiles)
+	}
+	writeList(stdout, "Active project-local governance-input files", scope.ActiveProjectStandardFiles)
+	return nil
 }
 
 func requireReviewFlow(flow string, stderr io.Writer) error {
@@ -905,10 +918,10 @@ func writeProcessUsage(w io.Writer) {
 	fmt.Fprintln(w, "  specflowctl process cleanup-success --unit UNIT --mode unit_fork|unit_promote [--repo-root PATH]")
 }
 
-func writeSharedUsage(w io.Writer) {
+func writeRuleUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl shared sync-impact (--shared-refs c_shared_x@0.1.0 | --shared-ids shared_x) [--units unit_a,unit_b] [--stable-landing-unit unit_a --stable-landing-shared-refs s_shared_x@1.0.0] [--bound-objects-only-shared-file-refs docs/specs/shared_contracts/stable/s_shared_x.md] [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl shared reconcile-bound-objects [--units unit_a,unit_b] [--shared-refs c_shared_x@0.1.0] [--shared-ids shared_x] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl rule sync-impact (--rule-refs c_b_rule_x@0.1.0 | --rule-ids b_rule_x) [--units unit_a,unit_b] [--stable-landing-unit unit_a --stable-landing-rule-refs s_b_rule_x@1.0.0] [--bound-objects-only-rule-file-refs docs/specs/rules/stable/s_b_rule_x.md] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl rule reconcile-bound-objects [--units unit_a,unit_b] [--rule-refs c_b_rule_x@0.1.0] [--rule-ids b_rule_x] [--repo-root PATH]")
 }
 
 func writeSnapshotUsage(w io.Writer) {

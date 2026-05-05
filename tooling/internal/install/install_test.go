@@ -112,10 +112,8 @@ func TestInitAppendsManagedBlockToExistingEntryFile(t *testing.T) {
 func setupDoctorRepo(t *testing.T, repoRoot string) string {
 	t.Helper()
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), strings.Join([]string{
-		"templates/.githooks/pre-commit\t.githooks/pre-commit\tframework",
 		"templates/docs/project_standards/_registry.md\tdocs/project_standards/_registry.md\tproject",
 	}, "\n")+"\n")
-	mustWriteFile(t, filepath.Join(repoRoot, ".githooks/pre-commit"), "#!/usr/bin/env bash\nspecflow/tooling/bin/specflowctl-linux-amd64 entry sync --stage\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), "# registry\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module github.com/Bingordinary/SpecFlow/specflow/tooling\n\ngo 1.22.2\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")

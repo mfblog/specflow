@@ -3,7 +3,6 @@ package install
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -149,10 +148,8 @@ func Doctor(repoRoot string) (DoctorResult, error) {
 	if err := checkManagedEntryConsistency(repoRoot, &result); err != nil {
 		return result, err
 	}
-	checkHookPath(repoRoot, &result)
 	checkBinary(repoRoot, &result)
 	checkReaderWeb(repoRoot, &result)
-	checkHook(repoRoot, &result)
 	return result, nil
 }
 
@@ -284,17 +281,6 @@ func checkManagedEntryConsistency(repoRoot string, result *DoctorResult) error {
 	return nil
 }
 
-func checkHookPath(repoRoot string, result *DoctorResult) {
-	cmd := exec.Command("git", "-C", repoRoot, "config", "--get", "core.hooksPath")
-	output, err := cmd.Output()
-	if err != nil {
-		return
-	}
-	if strings.TrimSpace(string(output)) != ".githooks" {
-		result.Warnings = append(result.Warnings, "WARN git core.hooksPath is not .githooks")
-	}
-}
-
 func checkBinary(repoRoot string, result *DoctorResult) {
 	checkOneBinary(repoRoot, filepath.ToSlash(filepath.Join("specflow/tooling/bin", buildrelease.CurrentBinaryName())), result)
 	checkOneBinary(repoRoot, filepath.ToSlash(filepath.Join("specflow/tooling/bin", buildrelease.CurrentReaderBinaryName())), result)
@@ -353,18 +339,6 @@ func checkReaderWeb(repoRoot string, result *DoctorResult) {
 		if info.IsDir() {
 			result.Failures = append(result.Failures, fmt.Sprintf("INVALID %s is a directory", relPath))
 		}
-	}
-}
-
-func checkHook(repoRoot string, result *DoctorResult) {
-	hookPath := filepath.Join(repoRoot, ".githooks/pre-commit")
-	content, err := os.ReadFile(hookPath)
-	if err != nil {
-		return
-	}
-	text := string(content)
-	if !strings.Contains(text, "specflow/tooling/bin/specflowctl-") || !strings.Contains(text, "entry sync --stage") {
-		result.Failures = append(result.Failures, "INVALID .githooks/pre-commit does not call specflow binary entry sync")
 	}
 }
 

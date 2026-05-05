@@ -70,6 +70,8 @@ type flowConfig struct {
 	Title               string
 	InitialActiveSlice  string
 	InitialResumeStep   string
+	RunStatuses         []string
+	ClosedStatuses      []string
 	UsesScoreState      bool
 	RecommendRestartAge time.Duration
 	CollectScope        func(string) (reviewscope.SpecFlowScope, error)
@@ -191,6 +193,8 @@ func configForFlow(flow string) (flowConfig, error) {
 			Title:               "Spec Flow Review Run State",
 			InitialActiveSlice:  "scope_inventory",
 			InitialResumeStep:   "review slice scope_inventory",
+			RunStatuses:         []string{statusInProgress, statusBlockedOnFinding, statusReadyForFinal, statusClosedPass, statusClosedBlocked},
+			ClosedStatuses:      []string{statusClosedPass, statusClosedBlocked},
 			RecommendRestartAge: 24 * time.Hour,
 			CollectScope:        reviewscope.CollectDefaultSpecFlowScope,
 			BaselineDefinitions: specFlowReviewBaselineDefinitions,
@@ -204,6 +208,8 @@ func configForFlow(flow string) (flowConfig, error) {
 			Title:               "Spec Flow Design Review Run State",
 			InitialActiveSlice:  "design_foundation",
 			InitialResumeStep:   "review slice design_foundation",
+			RunStatuses:         []string{statusInProgress, statusBlockedOnFinding, statusReadyForFinal, statusClosedPass, statusClosedPassWithOptimization, statusClosedBlocked},
+			ClosedStatuses:      []string{statusClosedPass, statusClosedPassWithOptimization, statusClosedBlocked},
 			UsesScoreState:      true,
 			CollectScope:        reviewscope.CollectDefaultSpecFlowDesignScope,
 			BaselineDefinitions: specFlowDesignReviewBaselineDefinitions,
@@ -337,7 +343,7 @@ func Refresh(repoRoot, flow, file string, now time.Time) (RefreshResult, error) 
 		if !ok {
 			continue
 		}
-		currentInputFiles := definition.InputFiles(scope)
+		currentInputFiles := union(definition.InputFiles(scope))
 		if !sameStringSlice(state.Baseline[i].InputFiles, currentInputFiles) {
 			inputFilesChanged[state.Baseline[i].SliceID] = true
 		}
@@ -447,7 +453,7 @@ func inspectFixedRunState(repoRoot string, config flowConfig, file string, now t
 		return &fixedRunStateFile{Reason: "invalid_run_state"}, nil
 	}
 	status := strings.TrimSpace(state.Fields["status"])
-	if status == statusClosedPass || status == statusClosedPassWithOptimization || status == statusClosedBlocked {
+	if isClosedRunStatus(config, status) {
 		return &fixedRunStateFile{Reason: "closed_run_state"}, nil
 	}
 	diagnostics := validateState(repoRoot, config, state, now, validateOpenRun)
@@ -489,7 +495,7 @@ func validateState(repoRoot string, config flowConfig, state runState, now time.
 		diagnostics = append(diagnostics, "scope_label must be "+config.ScopeLabel)
 	}
 	status := strings.TrimSpace(state.Fields["status"])
-	if !isRunStatus(status) {
+	if !isRunStatus(config, status) {
 		diagnostics = append(diagnostics, "invalid run status: "+state.Fields["status"])
 	} else if mode == validateOpenRun && !isOpenRunStatus(status) {
 		diagnostics = append(diagnostics, "closed run-state files cannot be reused")
@@ -713,7 +719,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Does the default governance baseline scope include every required governance input family.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.GuidanceSkillFiles, scope.SharedGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingScriptFiles, scope.ToolingRuntimeFiles, scope.ActiveProjectStandardFiles)
+				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.GuidanceSkillFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingScriptFiles, scope.ToolingRuntimeFiles, scope.ActiveProjectStandardFiles)
 			},
 		},
 		{
@@ -750,16 +756,15 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 					"specflow/framework/candidate_handoff_contract.md",
 					"specflow/framework/downgrade_policy.md",
 					"specflow/framework/recovery_policy.md",
-					"specflow/framework/git_policy.md",
 				}
 			},
 		},
 		{
 			ID:             "shared_governance",
 			SliceType:      "local",
-			ReviewQuestion: "Do shared-governance flows preserve shared truth ownership and downstream impact.",
+			ReviewQuestion: "Do rule-governance flows preserve rule truth ownership and downstream impact.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return scope.SharedGovernanceFiles
+				return scope.RuleGovernanceFiles
 			},
 		},
 		{
@@ -787,7 +792,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 					"specflow/framework/scenario_policy.md",
 					"specflow/framework/spec_flow_migrate.md",
 					"specflow/framework/spec_policy.md",
-				}, scope.SharedGovernanceFiles, scope.TemplateGovernanceFiles, scope.ProjectInstanceCompatibilityFiles)
+				}, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.ProjectInstanceCompatibilityFiles)
 			},
 		},
 		{
@@ -842,7 +847,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 		{
 			ID:             "shared_to_impact_convergence",
 			SliceType:      "cross_convergence",
-			ReviewQuestion: "Do shared-governance rules and impact-state rules converge for downstream invalidation.",
+			ReviewQuestion: "Do rule-governance rules and impact-state rules converge for downstream invalidation.",
 			DependsOn:      []string{"shared_governance", "process_and_impact_state"},
 			InputFiles:     reviewDependencyFiles("shared_governance", "process_and_impact_state"),
 		},
@@ -973,7 +978,7 @@ func designDependencyFiles(dependencyIDs ...string) func(reviewscope.SpecFlowSco
 func buildBaselineSlices(repoRoot string, scope reviewscope.SpecFlowScope, definitions []sliceDefinition) ([]sliceEntry, error) {
 	result := []sliceEntry{}
 	for _, definition := range definitions {
-		inputFiles := definition.InputFiles(scope)
+		inputFiles := union(definition.InputFiles(scope))
 		fingerprint, missing, err := computeFingerprint(repoRoot, inputFiles)
 		if err != nil {
 			return nil, err
@@ -1324,8 +1329,22 @@ func isOpenRunStatus(status string) bool {
 	}
 }
 
-func isRunStatus(status string) bool {
-	return isOpenRunStatus(status) || status == statusClosedPass || status == statusClosedPassWithOptimization || status == statusClosedBlocked
+func isRunStatus(config flowConfig, status string) bool {
+	for _, allowed := range config.RunStatuses {
+		if status == allowed {
+			return true
+		}
+	}
+	return false
+}
+
+func isClosedRunStatus(config flowConfig, status string) bool {
+	for _, closed := range config.ClosedStatuses {
+		if status == closed {
+			return true
+		}
+	}
+	return false
 }
 
 func isSliceStatus(status string) bool {
