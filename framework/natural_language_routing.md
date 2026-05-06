@@ -757,6 +757,9 @@ Use `rule_topology` only when the request clearly means:
 2. the main task is not simple first-time authoring, extraction, one-unit binding, or impact check
 3. the round must decide which touched rule objects stay, which are replaced, and which must be deleted or explicitly kept
 
+Do not route to `rule_topology` only because a unit promotion will land its owned candidate Rule as stable and retarget other candidate units from that exact candidate Rule ref to the same-`rule_id`, same-`rule_version` stable Rule ref in the same round.
+That shape is owned by the promoting unit's `unit_promote` command when the retarget changes only the Rule layer target and the affected units are already at `candidate`.
+
 Use `rule_escape` when the request cannot be stably routed into exactly one standard rule flow.
 This is mandatory when at least one of these holds:
 
@@ -785,6 +788,7 @@ The rule-governance branch follows this procedure:
 7. if the routed flow changes rule truth or unit rule bindings, do not claim closure until required reconciliation through `rule_sync` is complete
 8. if the routed work makes a touched rule file lose its last formal binding, do not claim closure until the owner of that binding or topology change has either resolved that file's terminal state or returned control to `rule_escape`
 9. if a unit-side command such as `unit_promote` stops because post-promotion Rule topology is unclear, re-enter natural-language routing from current repository truth and let it reach this rule-governance branch instead of guessing a unit-local-only continuation
+10. if a unit-side command such as `unit_promote` can prove that the only required shared action is same-round stable landing retargeting for candidate units, keep the work in that command instead of rerouting to rule governance
 11. if `rule_escape` emitted a `remaining_steps_contract`, do not claim rule-governance closure until every listed step has finished under that contract
 
 ### 10.3 Rule Branch Closure

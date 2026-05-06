@@ -35,6 +35,7 @@ It may:
 5. interpret rule-specific execution-local exceptions such as:
    - `current_stable_landing_unit`
    - `stable_landing_rule_refs`
+   - `retargeted_units`
    - `bound_objects_only_rule_file_refs`
 6. convert those exceptions into exception-resolved downstream impact input
 7. pass the final affected object set to `impact_sync`
@@ -71,10 +72,17 @@ Execution-local caller inputs may include:
 2. `stable_landing_rule_refs`
    - use only when the caller can name the exact rule refs written by that same landing round
    - this input is required whenever `current_stable_landing_unit` is present
-3. `bound_objects_only_rule_file_refs`
+3. `retargeted_units`
+   - use only when the same stable landing round retargeted other candidate units from the old candidate Rule ref to the exact stable Rule refs listed in `stable_landing_rule_refs`
+   - the caller must select the old candidate Rule ref and the new stable Rule ref through exact `rule_refs`; `retargeted_units` must not rely on `rule_ids`
+   - each selected old candidate Rule ref must share the same `rule_id` and `rule_version` as the corresponding selected stable Rule ref
+   - every listed unit must currently be at `candidate`
+   - every listed unit must currently bind at least one exact ref from `stable_landing_rule_refs`
+   - every listed unit is included in explicit fallback scope so its current-round process files are not reused after the binding retarget
+4. `bound_objects_only_rule_file_refs`
    - use only when the caller has already proven that the current-round delta for those exact Rule files is limited to `bound_objects` metadata
 
-`rule_sync` must not invent either input when the caller did not provide it.
+`rule_sync` must not invent these inputs when the caller did not provide them.
 
 ## 4. Procedure
 
@@ -128,8 +136,12 @@ Execution-local caller inputs may include:
 2. current stable landing exception
    - if `current_stable_landing_unit` is present, apply the exception only to the exact rule refs explicitly listed in `stable_landing_rule_refs`
    - if any other selected shared ref still invalidates that same unit, do not suppress that invalidation
+3. same-round retargeted unit fallback
+   - if `retargeted_units` is present, validate each listed unit against `stable_landing_rule_refs`
+   - include each validated retargeted unit in explicit candidate fallback scope
+   - do not apply the current stable landing exception to any retargeted unit
 
-`rule_sync` must not infer either exception from fingerprint difference alone.
+`rule_sync` must not infer these exceptions from fingerprint difference alone.
 
 ### 4.5 Hand Off To `impact_sync`
 
@@ -147,7 +159,7 @@ After the affected downstream object set and exception set are fixed:
 
 `rule_sync` remains responsible for the scope and exception judgment.
 `impact_sync` remains responsible for the generic fallback execution.
-`impact_sync` must not receive raw `current_stable_landing_unit`, raw `stable_landing_rule_refs`, or raw `bound_objects_only_rule_file_refs`.
+`impact_sync` must not receive raw `current_stable_landing_unit`, raw `stable_landing_rule_refs`, raw `retargeted_units`, or raw `bound_objects_only_rule_file_refs`.
 
 ## 5. Output Contract
 
@@ -160,8 +172,9 @@ The output must report at least:
 3. whether `docs/specs/repository_mapping.md` was current for the shared scope before impact handoff, or whether missing mapping truth caused return to `rule_escape`
 4. any `bound_objects` metadata drift
 5. which execution-local shared exceptions were applied
-6. whether control was passed to `impact_sync`
-7. whether control was returned to `rule_escape`
+6. which same-round retargeted units were validated and passed to impact fallback
+7. whether control was passed to `impact_sync`
+8. whether control was returned to `rule_escape`
 
 ## 6. Stop Conditions
 

@@ -14,6 +14,7 @@ By default it handles:
 4. updating `s_g_rule_repository_baseline.md` when a closed unit-carried global proposal is ready
 5. consuming the `unit_verify -> unit_promote` handoff only when verification still covers the current round
 6. preserving the promoted round's minimal stable acceptance coverage summary before deleting current-round process files
+7. retargeting other candidate-layer units from the promoted candidate Rule ref to the same-round stable Rule ref when the retarget is only a same-`rule_id`, same-`rule_version`, candidate-to-stable layer landing
 
 ### 2.1 Command Read Summary
 
@@ -43,6 +44,7 @@ This file states only `unit_promote`-local entry, output, and stop rules.
 8. if the round may create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `specflow/framework/rule_sync.md` before promotion
 9. if the unit candidate currently binds any candidate-layer Rule file, or if the round may change the layer, version, or terminal state of any touched Rule file, read `docs/specs/_status.md` and every affected unit or scenario current-layer main file needed to derive the real repository-wide binding set from `rule_refs` before file mutation starts
 10. if repository truth is insufficient to derive that real binding set safely, do not start file mutation; reroute through natural-language rule governance from current repository truth instead of guessing promotion-local topology
+11. if same-round stable landing retargeting may be required, read every candidate-layer unit main file that currently binds the landing candidate Rule ref and include those files and their current-round process files in the recovery baseline before mutation starts
 
 ## 4. Procedure
 
@@ -104,8 +106,17 @@ This file states only `unit_promote`-local entry, output, and stop rules.
    - do not absorb a Rule into unit `stable` merely because promotion happened
    - do not treat promotion itself as a reason to delete a still-needed Rule
    - if the round changed a shared item that has both stable-layer and candidate-layer files, resolve which units are expected to remain bound to each layer after promotion from the repository-wide binding view before continuing
+   - when another current-layer unit is at `candidate` and currently binds the promoted candidate-layer Rule ref, this command may retarget that unit to the just-written stable-layer Rule ref in the same round only when all of these are true:
+     - the candidate and stable Rule refs have the same `rule_id`
+     - the candidate and stable Rule refs have the same `rule_version`
+     - the target unit is already at `candidate`
+     - the target unit's required body-level reference wording can be updated without changing behavior truth, acceptance meaning, or Rule body truth
+   - same-round stable landing retargeting must not modify stable-layer unit truth; if a stable unit must be retargeted, stop before file mutation and require `unit_fork` first
+   - record every same-round retargeted unit explicitly for the later `rule_sync` call; these retargeted units must fall back to `unit_check` because their current process files still describe the pre-retarget binding
+   - do not delete the old candidate-layer Rule file before post-promotion `rule_sync` has run; `rule_sync` must be able to see both the old candidate ref and the new stable ref when it reconciles same-round landing impact
    - if this round's topology change or linked stable `g_` rule absorption would leave a touched Rule file with no formal bound units, this promotion round owns resolving that file's terminal state instead of leaving orphaned rule truth for later cleanup
    - if such a touched file now has no formal bound units and cleanup is legal under `spec_policy.md`, delete it in this round when it has been replaced by the promoted target or when its remaining conclusion has been fully absorbed into `s_g_rule_repository_baseline.md`
+   - when same-round stable landing retargeting needs the old candidate-layer Rule file as a `rule_sync` trigger, decide that file's terminal state in this step but defer its physical deletion or next-round draft rewrite until after post-promotion `rule_sync` has completed successfully
    - if such a touched file now has no formal bound units and the round intentionally keeps it as independently authored rule truth, write that same file with:
      - `unbound_retention: intentional`
      - `unbound_retention_reason: <why this unbound state is intentional now>`
@@ -134,6 +145,7 @@ This file states only `unit_promote`-local entry, output, and stop rules.
 17. if the round touched any Rule file, before `rule_sync`, update `bound_objects` for every remaining touched Rule file only after Step 11 has written the promoted unit stable truth and Step 15 has updated `_status.md`, so each surviving stable-layer or candidate-layer file matches the real post-promotion binding set implied by unit and scenario `rule_refs`
    - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule reconcile-bound-objects --units {unit}` and additional `--rule-refs` / `--rule-ids` filters when the active flow has already identified them
    - if a remaining touched Rule file now has one or more formal bound units after this promotion round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
+   - when same-round stable landing retargeting changed other candidate unit files, include every retargeted unit's old candidate Rule ref and new stable Rule ref in this metadata reconciliation scope
 18. only after that update may physical deletion happen:
    - `docs/specs/units/candidate/c_unit_{unit}.md`
    - current-round candidate appendix files
@@ -147,12 +159,17 @@ This file states only `unit_promote`-local entry, output, and stop rules.
    - this post-promotion `rule_sync` closes external affected-object fallout and Rule-state reconciliation; it must not overturn the promoted unit's own successful stable landing merely because the same promotion round also wrote the stable Rule file or stable binding that the promoted unit now legally uses
    - pass execution-local `current_stable_landing_unit={unit}` into that `rule_sync` run
    - pass execution-local `stable_landing_rule_refs=<exact-shared-ref-list-written-by-this-landing>` into that same `rule_sync` run; `current_stable_landing_unit` alone is not sufficient
+   - when same-round stable landing retargeting changed other candidate units, pass execution-local `retargeted_units=<exact-unit-list>` into that same `rule_sync` run
    - if any surviving touched rule file changed only in `bound_objects` during this round, also pass execution-local `bound_objects_only_rule_file_refs` with the exact file refs for those files
-   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule sync-impact --rule-refs <rule-ref> --units {unit} --stable-landing-unit {unit} --stable-landing-rule-refs <exact-stable-landing-rule-ref-list>` or the corresponding `--rule-ids` form, and at least one rule trigger input must already be known before this deterministic execution starts
+   - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule sync-impact --rule-refs <old-candidate-rule-ref>,<new-stable-rule-ref> --stable-landing-unit {unit} --stable-landing-rule-refs <exact-stable-landing-rule-ref-list> --retargeted-units <exact-retargeted-unit-list>` or the corresponding narrowed form when no retargeted unit exists; at least one rule trigger input must already be known before this deterministic execution starts
    - if that post-promotion `rule_sync` returns control because repository truth is still insufficient to continue safely, do not claim promotion success:
      - immediately run incomplete promotion recovery according to `recovery_policy.md`
      - after recovery, require rerouting through natural-language rule governance from the restored candidate-layer repository truth
      - do not leave the repository in partially promoted semantics while waiting for rule-governance clarification
+21. after a successful post-promotion `rule_sync`, complete any deferred terminal-state action for the old candidate-layer Rule file used as a same-round stable landing trigger:
+   - delete it when it has no remaining formal bound units and has been replaced by the stable landing Rule file
+   - rewrite it as an explicit next-round draft only when current repository truth requires a remaining candidate-layer draft with a next `promotion_owner_unit`
+   - if neither deletion nor next-round draft rewrite is safe from current truth, run incomplete promotion recovery instead of claiming success
 
 ## 5. Stop Conditions
 
@@ -168,6 +185,7 @@ This file states only `unit_promote`-local entry, output, and stop rules.
 6. if the command entered incomplete-promotion recovery state, candidate semantics were restored and the unit can restart from `unit_check`
 7. if post-promotion `rule_sync` could not continue safely, incomplete promotion recovery is complete and the next required action is rerunning natural-language routing from restored candidate truth so it can re-enter rule governance before any later candidate-chain restart
 8. if a candidate-layer Rule sibling remains after promotion, its next-round draft state is already explicit for the current repository truth
+9. if same-round stable landing retargeting occurred, every retargeted candidate unit has fallen back to `unit_check` and its unsafe current-round process files have been deleted
 
 ## 6. Output Contract
 
@@ -193,8 +211,9 @@ This file states only `unit_promote`-local entry, output, and stop rules.
 20. when post-promotion `rule_sync` was executed, the passed `current_stable_landing_unit` value
 21. when post-promotion `rule_sync` was executed, the passed `stable_landing_rule_refs` value
 22. when post-promotion `rule_sync` was executed, the passed `bound_objects_only_rule_file_refs` value when present
-23. when promotion stopped because post-promotion Rule topology, retained candidate next-round draft shape, `promotion_owner_unit`, unbound-file terminal state, or post-promotion `rule_sync` uncertainty was unclear, the required next step through natural-language rule governance
-24. follow-up state explanation
+23. when same-round stable landing retargeting occurred, the exact retargeted units, the old candidate Rule refs, the new stable Rule refs, and each retargeted unit's fallback result
+24. when promotion stopped because post-promotion Rule topology, retained candidate next-round draft shape, `promotion_owner_unit`, same-round retarget shape, unbound-file terminal state, or post-promotion `rule_sync` uncertainty was unclear, the required next step through natural-language rule governance
+25. follow-up state explanation
    - when promotion succeeds, the follow-up state must explicitly confirm:
      - `Stable=yes`
      - `Candidate=no`
@@ -206,7 +225,7 @@ This file states only `unit_promote`-local entry, output, and stop rules.
      - `Active Layer=candidate`
      - `Next Command=unit_check`
      - `resume through natural-language rule governance` before any later promotion retry
-25. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
+26. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
    - when promotion recovery or rule-governance reroute occurred, also report `resume signal`
    - `current state` must match the post-promotion or post-recovery state actually restored in `_status.md`
 

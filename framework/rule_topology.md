@@ -39,7 +39,8 @@ It does not:
 2. replace `rule_new` when the main task is first-time shared authoring with no existing rule topology change
 3. replace `rule_extract` when the main task is only extracting unit-local truth into one rule object
 4. create or update a stable-layer Rule file directly just to carry new topology semantics or a new `rule_version`
-5. create an independent Rule lifecycle outside rule governance
+5. replace `unit_promote` when a promotion lands an owned candidate Rule as stable and retargets candidate units to the same-`rule_id`, same-`rule_version` stable Rule ref in the same round
+6. create an independent Rule lifecycle outside rule governance
 
 ---
 
@@ -164,3 +165,4 @@ Allowed checkpoint types:
 4. modify unit or scenario `stable` truth directly
 5. create or update a stable-layer Rule file directly to introduce new topology semantics or a newly chosen `rule_version`
 6. absorb Rule conclusions into stable `g_` rule automatically
+7. own same-round stable landing retargeting that is already fully constrained by `unit_promote`

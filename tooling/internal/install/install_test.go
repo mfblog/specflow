@@ -134,10 +134,10 @@ func setupDoctorRepo(t *testing.T, repoRoot string) string {
 
 func writeFingerprintProbeBinary(t *testing.T, repoRoot, fingerprint string) {
 	t.Helper()
-	script := "#!/usr/bin/env bash\nif [[ \"$1\" == \"" + toolingfreshness.HiddenBuildFingerprintCommand + "\" ]]; then\n  printf '%s\\n' \"" + fingerprint + "\"\n  exit 0\nfi\nexit 0\n"
 	if runtime.GOOS == "windows" {
-		t.Fatalf("windows test environment is not supported for this script-based probe")
+		t.Skip("script-based executable probe is not supported on windows")
 	}
+	script := "#!/usr/bin/env bash\nif [[ \"$1\" == \"" + toolingfreshness.HiddenBuildFingerprintCommand + "\" ]]; then\n  printf '%s\\n' \"" + fingerprint + "\"\n  exit 0\nfi\nexit 0\n"
 	mustWriteExecutableFile(t, filepath.Join(repoRoot, "specflow/tooling/bin", buildrelease.CurrentBinaryName()), script)
 	mustWriteExecutableFile(t, filepath.Join(repoRoot, "specflow/tooling/bin", buildrelease.CurrentReaderBinaryName()), script)
 }

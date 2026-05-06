@@ -497,6 +497,140 @@ Body changed.
 	}
 }
 
+func TestSyncImpactInvalidatesRetargetedCandidateUnit(t *testing.T) {
+	repoRoot := t.TempDir()
+	oldRef, stableRef := setupStableLandingRetargetRepo(t, repoRoot, true, false)
+
+	result, err := SyncImpact(repoRoot, Options{
+		RuleRefs:              []string{oldRef, stableRef},
+		StableLandingModule:   "demo",
+		StableLandingRuleRefs: []string{stableRef},
+		RetargetedUnits:       []string{"agent"},
+	})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.RetargetedUnits) != 1 || result.RetargetedUnits[0] != "agent" {
+		t.Fatalf("expected retargeted unit output, got %+v", result.RetargetedUnits)
+	}
+	if len(result.ModuleResults) != 2 {
+		t.Fatalf("expected owner and retargeted unit results, got %+v", result.ModuleResults)
+	}
+	resultsByUnit := map[string]ModuleResult{}
+	for _, item := range result.ModuleResults {
+		resultsByUnit[item.Module] = item
+	}
+	if owner := resultsByUnit["demo"]; owner.Outcome != "unchanged" || owner.NextCommand != "unit_fork" {
+		t.Fatalf("expected stable landing owner to stay unchanged, got %+v", owner)
+	}
+	agent := resultsByUnit["agent"]
+	if agent.Outcome != "invalidated" || agent.NextCommand != "unit_check" {
+		t.Fatalf("expected retargeted agent fallback to unit_check, got %+v", agent)
+	}
+	if agent.FallbackReasonCode == "" {
+		t.Fatalf("expected fallback reason for retargeted agent, got %+v", agent)
+	}
+	checkPath := filepath.Join(repoRoot, "docs/specs/_check_result/unit/agent.md")
+	if _, err := os.Stat(checkPath); !os.IsNotExist(err) {
+		t.Fatalf("expected retargeted agent check file to be deleted, stat err=%v", err)
+	}
+	statusData, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/_status.md"))
+	if err != nil {
+		t.Fatalf("read status: %v", err)
+	}
+	if !strings.Contains(string(statusData), "| `unit` | `agent` | `no` | `yes` | `candidate` | `unit_check` | current round |") {
+		t.Fatalf("expected agent status fallback to unit_check:\n%s", string(statusData))
+	}
+}
+
+func TestSyncImpactRejectsRetargetedStableUnit(t *testing.T) {
+	repoRoot := t.TempDir()
+	oldRef, stableRef := setupStableLandingRetargetRepo(t, repoRoot, true, true)
+
+	_, err := SyncImpact(repoRoot, Options{
+		RuleRefs:              []string{oldRef, stableRef},
+		StableLandingModule:   "demo",
+		StableLandingRuleRefs: []string{stableRef},
+		RetargetedUnits:       []string{"agent"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "retargeted unit \"agent\" must currently be at active layer candidate") {
+		t.Fatalf("expected retargeted stable unit error, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsRetargetedUnitWithoutStableLandingBinding(t *testing.T) {
+	repoRoot := t.TempDir()
+	oldRef, stableRef := setupStableLandingRetargetRepo(t, repoRoot, false, false)
+
+	_, err := SyncImpact(repoRoot, Options{
+		RuleRefs:              []string{oldRef, stableRef},
+		StableLandingModule:   "demo",
+		StableLandingRuleRefs: []string{stableRef},
+		RetargetedUnits:       []string{"agent"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "must currently bind at least one stable landing rule ref") {
+		t.Fatalf("expected retargeted unit binding error, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsRetargetedUnitWithoutCandidateLandingSourceRef(t *testing.T) {
+	repoRoot := t.TempDir()
+	_, stableRef := setupStableLandingRetargetRepo(t, repoRoot, true, false)
+
+	_, err := SyncImpact(repoRoot, Options{
+		RuleRefs:              []string{stableRef},
+		StableLandingModule:   "demo",
+		StableLandingRuleRefs: []string{stableRef},
+		RetargetedUnits:       []string{"agent"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "requires a candidate-layer rule ref with the same rule_id and rule_version in --rule-refs") {
+		t.Fatalf("expected retargeted unit candidate source ref error, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsRetargetedUnitWithMismatchedCandidateLandingSourceRef(t *testing.T) {
+	repoRoot := t.TempDir()
+	_, stableRef := setupStableLandingRetargetRepo(t, repoRoot, true, false)
+	writeSharedFileAtPath(t, repoRoot, "docs/specs/rules/candidate/c_b_rule_demo.md", `---
+rule_id: different_demo
+rule_scope: bound
+layer: candidate
+rule_version: 1.0.0
+promotion_owner_unit: demo
+bound_objects: none
+---
+
+# Shared
+
+Body is not the same formal rule object.
+`)
+
+	_, err := SyncImpact(repoRoot, Options{
+		RuleRefs:              []string{"c_b_rule_demo@1.0.0", stableRef},
+		StableLandingModule:   "demo",
+		StableLandingRuleRefs: []string{stableRef},
+		RetargetedUnits:       []string{"agent"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "requires a candidate-layer rule ref with the same rule_id and rule_version in --rule-refs") {
+		t.Fatalf("expected retargeted unit candidate source mismatch error, got %v", err)
+	}
+}
+
+func TestSyncImpactRejectsUnknownRetargetedUnit(t *testing.T) {
+	repoRoot := t.TempDir()
+	oldRef, stableRef := setupStableLandingRetargetRepo(t, repoRoot, true, false)
+
+	_, err := SyncImpact(repoRoot, Options{
+		RuleRefs:              []string{oldRef, stableRef},
+		StableLandingModule:   "demo",
+		StableLandingRuleRefs: []string{stableRef},
+		RetargetedUnits:       []string{"missing"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "retargeted unit \"missing\" is not registered") {
+		t.Fatalf("expected unknown retargeted unit error, got %v", err)
+	}
+}
+
 func TestSyncImpactStableLandingModuleStillReroutesOnUnrelatedSharedDrift(t *testing.T) {
 	repoRoot := t.TempDir()
 	sharedRef := setupStableSharedRepo(t, repoRoot)
@@ -1862,6 +1996,122 @@ Body stays the same.
 
 	initGitRepo(t, repoRoot)
 	return "s_b_rule_demo@1.0.0"
+}
+
+func setupStableLandingRetargetRepo(t *testing.T, repoRoot string, retargetAgentToStable, agentStable bool) (string, string) {
+	t.Helper()
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/candidate"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/stable"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+
+	agentLayer := "candidate"
+	agentStableCol := "no"
+	agentCandidateCol := "yes"
+	agentNext := "unit_plan"
+	if agentStable {
+		agentLayer = "stable"
+		agentStableCol = "yes"
+		agentCandidateCol = "no"
+		agentNext = "unit_fork"
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | stable round |",
+		"| `unit` | `agent` | `" + agentStableCol + "` | `" + agentCandidateCol + "` | `" + agentLayer + "` | `" + agentNext + "` | current round |",
+	}, "\n")+"\n")
+
+	writeUnitSpecWithRuleRefs(t, repoRoot, "stable", "demo", []string{"s_b_rule_demo@1.0.0"})
+	if agentStable {
+		initialRefs := []string{"c_b_rule_demo@1.0.0"}
+		if retargetAgentToStable {
+			initialRefs = []string{"s_b_rule_demo@1.0.0"}
+		}
+		writeUnitSpecWithRuleRefs(t, repoRoot, "stable", "agent", initialRefs)
+	} else {
+		writeUnitSpecWithRuleRefs(t, repoRoot, "candidate", "agent", []string{"c_b_rule_demo@1.0.0"})
+	}
+
+	writeSharedFileAtPath(t, repoRoot, "docs/specs/rules/candidate/c_b_rule_demo.md", `---
+rule_id: shared_demo
+rule_scope: bound
+layer: candidate
+rule_version: 1.0.0
+promotion_owner_unit: demo
+bound_objects:
+  - unit:agent
+---
+
+# Shared
+
+Body promoted unchanged.
+`)
+	writeSharedFileAtPath(t, repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md", `---
+rule_id: shared_demo
+rule_scope: bound
+layer: stable
+rule_version: 1.0.0
+bound_objects:
+  - unit:demo
+  - unit:agent
+---
+
+# Shared
+
+Body promoted unchanged.
+`)
+
+	if !agentStable {
+		snap, err := snapshot.RebuildCurrent(repoRoot, "agent")
+		if err != nil {
+			t.Fatalf("RebuildCurrent: %v", err)
+		}
+		writeNamedProcessFile(t, repoRoot, "check", "agent", renderModuleProcessSnapshotForTest(t, repoRoot, "check", "agent", snap.ModuleAppendixSnapshot, snap.RuleSnapshot))
+	}
+
+	if retargetAgentToStable && !agentStable {
+		writeUnitSpecWithRuleRefs(t, repoRoot, agentLayer, "agent", []string{"s_b_rule_demo@1.0.0"})
+	}
+
+	initGitRepo(t, repoRoot)
+	return "c_b_rule_demo@1.0.0", "s_b_rule_demo@1.0.0"
+}
+
+func writeUnitSpecWithRuleRefs(t *testing.T, repoRoot, layer, unit string, ruleRefs []string) {
+	t.Helper()
+	mainSpecRef, err := specpaths.MainSpecFileRef(layer, unit)
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	lines := []string{
+		"---",
+		"id: " + unit,
+		"layer: " + layer,
+		"version: 0.1.0",
+		"---",
+		"",
+		"# " + unit,
+		"",
+		"## Rule Alignment",
+		"",
+		"2. rule_refs:",
+	}
+	if len(ruleRefs) == 0 {
+		lines[len(lines)-1] = "2. rule_refs: none"
+	} else {
+		for _, ref := range ruleRefs {
+			lines = append(lines, "   - "+ref)
+		}
+	}
+	lines = append(lines, "")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join(lines, "\n"))
 }
 
 func writeSharedFileAtPath(t *testing.T, repoRoot, relPath, content string) {

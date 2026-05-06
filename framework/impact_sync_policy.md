@@ -50,8 +50,9 @@ Before `impact_sync` runs, the caller must already know:
    - `invalidating_rule_refs`
    - `explicit_fallback_scope`
    - `allowed_shared_snapshot_mismatch_file_refs`
+   - same-round stable landing retarget fallback after `rule_sync` has already validated the retargeted candidate units and converted them into explicit fallback scope
 
-`impact_sync` must not interpret raw rule-specific exception inputs.
+`impact_sync` must not interpret raw rule-specific exception inputs such as stable landing owners, stable landing refs, or retargeted unit lists.
 
 Before `impact_sync` revalidates any process file or writes any fallback result, the executor must read and apply:
 

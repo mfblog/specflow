@@ -536,6 +536,7 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 		ruleIDs := fs.String("rule-ids", "", "comma-separated rule ids")
 		stableLandingUnit := fs.String("stable-landing-unit", "", "formal unit whose same-round stable landing should not invalidate itself")
 		stableLandingRuleRefs := fs.String("stable-landing-rule-refs", "", "comma-separated exact rule refs written by the same-round stable landing")
+		retargetedUnits := fs.String("retargeted-units", "", "comma-separated candidate units retargeted to same-round stable landing rule refs")
 		boundObjectsOnlyRuleFileRefs := fs.String("bound-objects-only-rule-file-refs", "", "comma-separated rule file refs proven to be bound_objects-only deltas")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
@@ -547,6 +548,7 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 			RuleIDs:                      parseCSV(*ruleIDs),
 			StableLandingModule:          strings.TrimSpace(*stableLandingUnit),
 			StableLandingRuleRefs:        parseCSV(*stableLandingRuleRefs),
+			RetargetedUnits:              parseCSV(*retargetedUnits),
 			BoundObjectsOnlyRuleFileRefs: parseCSV(*boundObjectsOnlyRuleFileRefs),
 		})
 		if err != nil {
@@ -559,6 +561,7 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 		writeList(stdout, "Scoped rule ids", result.ScopedRuleIDs)
 		fmt.Fprintf(stdout, "Stable landing unit: %s\n", noneIfEmpty(result.StableLandingModule))
 		writeList(stdout, "Stable landing rule refs", result.StableLandingRuleRefs)
+		writeList(stdout, "Retargeted units", result.RetargetedUnits)
 		writeList(stdout, "Bound-objects-only rule file refs", result.BoundObjectsOnlyRuleFileRefs)
 		fmt.Fprintf(stdout, "Unit results (%d):\n", len(result.ModuleResults))
 		if len(result.ModuleResults) == 0 {
@@ -921,6 +924,7 @@ func writeProcessUsage(w io.Writer) {
 func writeRuleUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl rule sync-impact (--rule-refs c_b_rule_x@0.1.0 | --rule-ids b_rule_x) [--units unit_a,unit_b] [--stable-landing-unit unit_a --stable-landing-rule-refs s_b_rule_x@1.0.0] [--bound-objects-only-rule-file-refs docs/specs/rules/stable/s_b_rule_x.md] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl rule sync-impact --rule-refs c_b_rule_x@0.1.0,s_b_rule_x@0.1.0 --stable-landing-unit unit_a --stable-landing-rule-refs s_b_rule_x@0.1.0 --retargeted-units unit_b [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl rule reconcile-bound-objects [--units unit_a,unit_b] [--rule-refs c_b_rule_x@0.1.0] [--rule-ids b_rule_x] [--repo-root PATH]")
 }
 

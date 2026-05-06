@@ -20,7 +20,7 @@ func TestReviewRunInitAndValidateCLI(t *testing.T) {
 	if !strings.Contains(output, "Review run-state created:") {
 		t.Fatalf("expected created output, got %s", output)
 	}
-	if !strings.Contains(output, "docs/specs/_governance_review/spec_flow_review.md") {
+	if !strings.Contains(filepath.ToSlash(output), "docs/specs/_governance_review/spec_flow_review.md") {
 		t.Fatalf("expected fixed spec_flow_review run-state path, got %s", output)
 	}
 
@@ -131,7 +131,7 @@ func TestDesignReviewRunInitAndValidateCLI(t *testing.T) {
 	if !strings.Contains(output, "Review run-state created:") || !strings.Contains(output, "spec_flow_design_review") {
 		t.Fatalf("expected design created output, got %s", output)
 	}
-	if !strings.Contains(output, "docs/specs/_governance_review/spec_flow_design_review.md") {
+	if !strings.Contains(filepath.ToSlash(output), "docs/specs/_governance_review/spec_flow_design_review.md") {
 		t.Fatalf("expected fixed spec_flow_design_review run-state path, got %s", output)
 	}
 

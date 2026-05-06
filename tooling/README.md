@@ -115,8 +115,9 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
 20. `rule sync-impact`
    - compute rule-specific scope, resolve rule-only exceptions into generic impact input, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
    - when stable landing self-exemption is needed, the caller must pass both `--stable-landing-unit` and exact `--stable-landing-rule-refs`
+   - when the same stable landing round retargeted candidate units to those stable landing rule refs, the caller must pass those units through `--retargeted-units` and must select both the old candidate Rule refs and the new stable Rule refs through exact `--rule-refs`
    - when a current-round Rule file delta is proven to be limited to `bound_objects` metadata, the caller must pass its exact file path through `--bound-objects-only-rule-file-refs`
-   - the caller may narrow the derived unit subset with `--units`, but at least one rule trigger input must still be provided through `--rule-refs` or `--rule-ids`
+   - the caller may narrow the derived unit subset with `--units`, but at least one rule trigger input must still be provided through `--rule-refs` or `--rule-ids`; retargeted stable landing requires exact `--rule-refs`
 21. `rule reconcile-bound-objects`
    - rewrite Rule `bound_objects` metadata from current formal bindings
 
@@ -268,6 +269,7 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --unit ai --from-command unit_promote --reason evidence_incomplete
 ./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type scenario --object task_execution --stable yes --candidate no --active-layer stable --next-command scenario_fork
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_app_config_topology@0.2.0 --units ai
+./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_runtime_model@0.3.0,s_b_rule_runtime_model@0.3.0 --stable-landing-unit skill --stable-landing-rule-refs s_b_rule_runtime_model@0.3.0 --retargeted-units agent
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs s_b_rule_app_config_topology@0.2.0 --bound-objects-only-rule-file-refs docs/specs/rules/stable/s_b_rule_app_config_topology.md
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule reconcile-bound-objects --rule-ids b_rule_app_config_topology
 ```

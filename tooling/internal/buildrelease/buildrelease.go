@@ -69,6 +69,8 @@ func BuildAll(repoRoot string, targets []Target) (BuildResult, error) {
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		return BuildResult{}, fmt.Errorf("mkdir bin dir: %w", err)
 	}
+	cacheDir := filepath.Join(repoRoot, ".tmp", "go-build")
+	modCacheDir := filepath.Join(repoRoot, ".tmp", "go-mod-cache")
 
 	result := BuildResult{Targets: make([]string, 0, len(targets))}
 	for _, target := range targets {
@@ -88,8 +90,8 @@ func BuildAll(repoRoot string, targets []Target) (BuildResult, error) {
 				"GOOS="+target.GOOS,
 				"GOARCH="+target.GOARCH,
 				"CGO_ENABLED=0",
-				"GOCACHE=/tmp/go-build",
-				"GOMODCACHE=/tmp/go-mod-cache",
+				"GOCACHE="+cacheDir,
+				"GOMODCACHE="+modCacheDir,
 			)
 			if output, err := cmd.CombinedOutput(); err != nil {
 				return result, fmt.Errorf("build %s/%s %s failed: %v: %s", target.GOOS, target.GOARCH, build.packagePath, err, string(output))

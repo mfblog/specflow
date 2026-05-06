@@ -18,6 +18,7 @@ type Options struct {
 	RuleIDs                      []string
 	StableLandingModule          string
 	StableLandingRuleRefs        []string
+	RetargetedUnits              []string
 	BoundObjectsOnlyRuleFileRefs []string
 }
 
@@ -28,6 +29,7 @@ type Result struct {
 	ScopedRuleIDs                []string
 	StableLandingModule          string
 	StableLandingRuleRefs        []string
+	RetargetedUnits              []string
 	BoundObjectsOnlyRuleFileRefs []string
 	ModuleResults                []ModuleResult
 	FlowResults                  []ObjectResult
@@ -57,6 +59,7 @@ type sharedFile struct {
 	Layer              string
 	FileRef            string
 	VersionRef         string
+	RuleVersion        string
 	BoundObjects       []string
 	PromotionOwnerUnit string
 }
@@ -83,6 +86,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		RuleIDs:                      normalizeStrings(options.RuleIDs),
 		StableLandingModule:          strings.TrimSpace(options.StableLandingModule),
 		StableLandingRuleRefs:        normalizeStrings(options.StableLandingRuleRefs),
+		RetargetedUnits:              normalizeStrings(options.RetargetedUnits),
 		BoundObjectsOnlyRuleFileRefs: normalizeStrings(options.BoundObjectsOnlyRuleFileRefs),
 	}
 	if len(normalized.RuleRefs) == 0 && len(normalized.RuleIDs) == 0 {
@@ -159,6 +163,10 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	} else if len(normalized.StableLandingRuleRefs) > 0 {
 		return Result{}, fmt.Errorf("stable landing rule refs require stable landing unit")
 	}
+	retargetedUnitSet, err := validateRetargetedUnits(moduleBindings, sharedFilesByRef, normalized)
+	if err != nil {
+		return Result{}, err
+	}
 
 	boundObjectsOnlyFileRefs := map[string]bool{}
 	for _, fileRef := range normalized.BoundObjectsOnlyRuleFileRefs {
@@ -190,12 +198,13 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	scopeModules = unionSortedStrings(scopeModules, normalized.RetargetedUnits)
 	scopeFlows, err := buildScopeObjects(flowBindings, sharedFilesByRef, sharedFilesByID, normalized.RuleRefs, normalized.RuleIDs, removedBindingFlows)
 	if err != nil {
 		return Result{}, err
 	}
 
-	moduleImpactScope, err := scopedModulesForImpact(scopeModules, moduleBindings, normalized, sharedFilesByRef, sharedFilesByID, boundObjectsOnlyFileRefs, removedBindingModules)
+	moduleImpactScope, err := scopedModulesForImpact(scopeModules, moduleBindings, normalized, sharedFilesByRef, sharedFilesByID, boundObjectsOnlyFileRefs, removedBindingModules, retargetedUnitSet)
 	if err != nil {
 		return Result{}, err
 	}
@@ -219,6 +228,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		ScopedRuleIDs:                normalized.RuleIDs,
 		StableLandingModule:          normalized.StableLandingModule,
 		StableLandingRuleRefs:        normalized.StableLandingRuleRefs,
+		RetargetedUnits:              normalized.RetargetedUnits,
 		BoundObjectsOnlyRuleFileRefs: normalized.BoundObjectsOnlyRuleFileRefs,
 		ModuleResults:                impactResult.ModuleResults,
 		FlowResults:                  impactResult.FlowResults,
@@ -482,7 +492,7 @@ func buildScopeModules(moduleBindings map[string]moduleBinding, sharedFilesByRef
 	return sortedKeys(narrowed), nil
 }
 
-func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]moduleBinding, options Options, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile, boundModulesOnlyFileRefs map[string]bool, removedBindingScope map[string]bool) ([]impactsync.ScopedModule, error) {
+func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]moduleBinding, options Options, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile, boundModulesOnlyFileRefs map[string]bool, removedBindingScope map[string]bool, retargetedUnitSet map[string]bool) ([]impactsync.ScopedModule, error) {
 	result := make([]impactsync.ScopedModule, 0, len(scopeModules))
 	stableLandingSharedRefSet := makeStringSet(options.StableLandingRuleRefs)
 	for _, module := range scopeModules {
@@ -503,11 +513,61 @@ func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]mod
 				BindingIssues: append([]string{}, binding.BindingIssues...),
 			},
 			InvalidatingRuleRefs:                  invalidatingRuleRefs,
-			ExplicitFallbackScope:                 removedBindingScope[module],
+			ExplicitFallbackScope:                 removedBindingScope[module] || retargetedUnitSet[module],
 			AllowedSharedSnapshotMismatchFileRefs: allowedSharedSnapshotMismatchFileRefs(selectedRuleRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
 		})
 	}
 	return result, nil
+}
+
+func validateRetargetedUnits(moduleBindings map[string]moduleBinding, sharedFilesByRef map[string]sharedFile, options Options) (map[string]bool, error) {
+	retargetedUnitSet := makeStringSet(options.RetargetedUnits)
+	if len(retargetedUnitSet) == 0 {
+		return retargetedUnitSet, nil
+	}
+	if options.StableLandingModule == "" || len(options.StableLandingRuleRefs) == 0 {
+		return nil, fmt.Errorf("retargeted units require stable landing unit and stable landing rule refs")
+	}
+	stableLandingRuleRefSet := makeStringSet(options.StableLandingRuleRefs)
+	for _, ref := range options.StableLandingRuleRefs {
+		shared, ok := sharedFilesByRef[ref]
+		if !ok {
+			return nil, fmt.Errorf("stable landing rule ref %q is not present under docs/specs/rules/", ref)
+		}
+		if shared.Layer != "stable" {
+			return nil, fmt.Errorf("stable landing rule ref %q must point to a stable-layer rule file", ref)
+		}
+		if !hasSameVersionCandidateRuleRef(shared, options.RuleRefs, sharedFilesByRef) {
+			return nil, fmt.Errorf("stable landing rule ref %q requires a candidate-layer rule ref with the same rule_id and rule_version in --rule-refs", ref)
+		}
+	}
+	for _, unit := range options.RetargetedUnits {
+		binding, ok := moduleBindings[unit]
+		if !ok {
+			return nil, fmt.Errorf("retargeted unit %q is not registered in docs/specs/_status.md", unit)
+		}
+		if binding.Status.ActiveLayer != "candidate" {
+			return nil, fmt.Errorf("retargeted unit %q must currently be at active layer candidate", unit)
+		}
+		selectedStableLandingRefs := intersectStrings(binding.RuleRefs, stableLandingRuleRefSet)
+		if len(selectedStableLandingRefs) == 0 {
+			return nil, fmt.Errorf("retargeted unit %q must currently bind at least one stable landing rule ref", unit)
+		}
+	}
+	return retargetedUnitSet, nil
+}
+
+func hasSameVersionCandidateRuleRef(stable sharedFile, ruleRefs []string, sharedFilesByRef map[string]sharedFile) bool {
+	for _, ref := range ruleRefs {
+		candidate, ok := sharedFilesByRef[ref]
+		if !ok {
+			continue
+		}
+		if candidate.Layer == "candidate" && candidate.RuleID == stable.RuleID && candidate.RuleVersion == stable.RuleVersion {
+			return true
+		}
+	}
+	return false
 }
 
 func scopedObjectsForImpact(objectType string, scopeObjects []string, bindings map[string]objectBinding, scopedRefs, scopedIDs []string, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile, boundModulesOnlyFileRefs map[string]bool, removedBindingScope map[string]bool) ([]impactsync.ScopedObject, error) {
@@ -679,6 +739,23 @@ func subtractStringSet(values []string, excluded map[string]bool) []string {
 	return normalizeStrings(result)
 }
 
+func intersectStrings(values []string, included map[string]bool) []string {
+	if len(values) == 0 || len(included) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if included[value] {
+			result = append(result, value)
+		}
+	}
+	return normalizeStrings(result)
+}
+
+func unionSortedStrings(left, right []string) []string {
+	return normalizeStrings(append(append([]string{}, left...), right...))
+}
+
 func makeStringSet(values []string) map[string]bool {
 	result := make(map[string]bool, len(values))
 	for _, value := range values {
@@ -745,6 +822,7 @@ func parseSharedFile(relPath, content string) (sharedFile, error) {
 		case "layer":
 			shared.Layer = value
 		case "rule_version":
+			shared.RuleVersion = value
 			shared.VersionRef = fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(relPath), ".md"), value)
 		case "promotion_owner_unit":
 			shared.PromotionOwnerUnit = value

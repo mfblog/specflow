@@ -121,6 +121,8 @@ Object-specific minimums:
    - `_plans/draft/{unit}.md`
    - `_plans/active/{unit}.md`
    - `_verify_result/unit/{unit}.md`
+   - every same-round stable landing retargeted unit candidate main file when `unit_promote` changes that unit's `rule_refs`
+   - every same-round stable landing retargeted unit candidate process file that may be deleted by post-promotion rule impact reconciliation
 2. `scenario_promote`
    - `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
    - `docs/specs/scenarios/stable/s_scenario_{scenario}.md` when present

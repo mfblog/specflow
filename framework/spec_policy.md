@@ -430,6 +430,11 @@ Rules:
    - `unit:<id>`
    - `scenario:<id>`
 7. when `rule_refs` is written as a markdown list, executors must normalize the ref order by exact rule ref string in ascending lexical order
+8. during a same-round stable landing by `unit_promote`, another candidate-layer unit may be retargeted from a candidate-layer Rule ref to the stable-layer Rule ref created by that same landing only after the stable Rule file has been written in the same repository state
+9. same-round stable landing retargeting is legal only when the candidate and stable Rule refs share the same `rule_id` and `rule_version`, and the change is a layer target change from `candidate` to `stable`
+10. same-round stable landing retargeting must not change Rule body truth, unit-local behavior truth, or acceptance meaning beyond the exact `rule_refs` layer target and the directly required body-level reference wording
+11. any unit retargeted by same-round stable landing must be at `candidate`; stable units must fork before their truth can be retargeted
+12. a retargeted candidate unit's process files are no longer reusable and must fall back to `unit_check` through rule impact reconciliation
 
 ### 6.2 Dependency Direction Contract
 

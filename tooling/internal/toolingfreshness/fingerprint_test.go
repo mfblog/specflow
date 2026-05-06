@@ -95,6 +95,9 @@ func TestShellFingerprintScriptMatchesLiveFingerprint(t *testing.T) {
 	if _, err := exec.LookPath("bash"); err != nil {
 		t.Skip("bash is not available")
 	}
+	if err := exec.Command("bash", "-lc", "true").Run(); err != nil {
+		t.Skipf("bash is not usable in this environment: %v", err)
+	}
 
 	repoRoot, err := filepath.Abs(filepath.Join("..", "..", "..", ".."))
 	if err != nil {
