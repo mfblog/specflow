@@ -833,6 +833,13 @@ The user-facing main answer must be understandable without internal specFlow kno
 It must use the language priority defined in Section 2.1.
 It must not present internal command names, lifecycle state names, object-family names, policy-file names, or formal route names as the recommended action.
 
+Natural language routing also consumes registered project-local output standards through the shared response surface:
+
+1. the shared surface is `specflow_response` / `user_facing_response_clarity` as defined by `specflow/framework/project_standards_policy.md`
+2. natural-language routing output may consume only project-local standards selected by that shared surface
+3. registered standards on that surface may tighten or clarify only the user-facing main answer and execution-note separation
+4. registered standards must not route the request, change the chosen first step, create a new command result, affect lifecycle state, or replace the required ordinary-language fields below
+
 The execution note may include:
 
 1. the recognized intent
@@ -869,7 +876,7 @@ The main answer must not make the user understand internal object-family names, 
 Internal names may be included only in the execution note after the project-structure explanation.
 
 If the output starts an existing standard command, the command's own output contract controls the final close-out.
-That command output must still follow the user-facing language separation required by `specflow/framework/command_policy.md`.
+That command output must still follow the user-facing language separation required by `specflow/framework/command_policy.md` and the same shared response surface defined by `specflow/framework/project_standards_policy.md`.
 
 ---
 

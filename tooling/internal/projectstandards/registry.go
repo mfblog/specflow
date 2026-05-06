@@ -52,6 +52,19 @@ var supportedTypes = map[string]bool{
 }
 
 var contracts = map[string]map[string]surfaceContract{
+	"specflow_response": {
+		"user_facing_response_clarity": {
+			StandardType: "output_standard",
+			AllowedEffects: map[string]bool{
+				"clarify": true,
+				"tighten": true,
+			},
+			AllowedKinds: map[string]bool{
+				"all_targets_on_surface": true,
+			},
+			AllowAllOnSurface: true,
+		},
+	},
 	"unit_check": {
 		"candidate_closure_review": {
 			StandardType: "review_standard",
@@ -135,7 +148,7 @@ func ValidateRegistry(repoRoot string) (ValidationResult, error) {
 			entryValid = false
 		}
 		if entry.ConsumedBy == "" || entry.ConsumedBy == "all" {
-			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: consumed_by must name one supported command or internal flow", rowPrefix))
+			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: consumed_by must name one supported command, internal flow, or shared-output consumer", rowPrefix))
 			entryValid = false
 		}
 		if entry.ConflictRule != "framework_wins" {

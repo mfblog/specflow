@@ -47,7 +47,7 @@ In plain words:
 The ownership boundary is fixed:
 
 1. framework policy files define the extension mechanism and shared limits
-2. command or internal-flow documents define the consumption contract of a concrete `surface`
+2. command, internal-flow, or explicitly declared shared-output policy documents define the consumption contract of a concrete `surface`
 3. project-local standard files define the project's concrete review, output, or decision rules
 4. `docs/project_standards/_registry.md` defines only which registered project-local standards are enabled for the current project
 
@@ -118,11 +118,11 @@ Field meanings:
 2. `type`
    - one supported type from Section 5
 3. `surface`
-   - a stable consumption surface already defined by the consuming command or internal flow
+   - a stable consumption surface already defined by the consuming command, internal flow, or shared-output consumer
 4. `file`
    - the project-local standard file path under `docs/project_standards/`
 5. `consumed_by`
-   - which command or internal flow must read it
+   - which command, internal flow, or explicitly declared shared-output consumer must read it
 6. `applies_to`
    - which units, flows, or review scenarios it applies to
    - it must use one of the fixed selector forms below instead of project-invented prose
@@ -143,7 +143,7 @@ Fixed `applies_to` selector forms:
    - no spaces are allowed inside the comma-separated list
 4. `review_scenario:<stable_name>`
    - applies only to one command-defined review scenario name
-   - the consuming command or internal flow must already define that scenario name formally before a registry entry may use it
+   - the consuming command, internal flow, or shared-output consumer must already define that scenario name formally before a registry entry may use it
 
 Additional rules:
 
@@ -151,9 +151,9 @@ Additional rules:
 2. `effect=tighten` may add a stricter project-local requirement
 3. project-local standards must not use an effect meaning such as `override`, `relax`, or `disable`
 4. `surface` is not a free project-defined name
-5. a registry entry may reference a `surface` only after the consuming command or internal flow has formally defined that `surface`
+5. a registry entry may reference a `surface` only after the consuming command, internal flow, or shared-output consumer has formally defined that `surface`
 6. the registry must not create a new `surface`, widen a command's consumption scope, or add a new write-back contract by registration alone
-7. `consumed_by` may reference only a command or internal flow that already declares support for that `type` and `surface`
+7. `consumed_by` may reference only a command, internal flow, or explicitly declared shared-output consumer that already declares support for that `type` and `surface`
 8. project-local standards may define project extension fields only when the consuming command explicitly allows those fields as project-side write-back
 9. project extension fields are not framework fixed fields
 10. `applies_to` is not a free-form note field
@@ -170,7 +170,7 @@ Applicable shape rule:
 
 ## 7. Consumption Order
 
-When a command or internal flow supports project-local standards, it must read in this order:
+When a command, internal flow, or shared-output consumer supports project-local standards, it must read in this order:
 
 1. framework baseline governance files
 2. the consuming command or internal-flow document that defines the target `surface`
@@ -212,10 +212,10 @@ If a conflict is found:
 
 Direct governance-drift cases include at least:
 
-1. a registry entry references a `surface` not formally defined by the consuming command or internal flow
+1. a registry entry references a `surface` not formally defined by the consuming command, internal flow, or shared-output consumer
 2. a project-local standard attempts to define a command interface, command lifecycle duty, or framework fixed field
 3. a project-local standard attempts to weaken a framework gate
-4. a registry entry points to a command or internal flow that does not declare support for that standard type or `surface`
+4. a registry entry points to a command, internal flow, or shared-output consumer that does not declare support for that standard type or `surface`
 
 ---
 
@@ -242,7 +242,7 @@ If the registry exists but one entry is invalid:
 
 This policy does not automatically force every command to read project-local standards.
 
-Each command or internal flow that consumes project-local standards must explicitly say:
+Each command, internal flow, or shared-output policy consumer that consumes project-local standards must explicitly say:
 
 1. that it reads `docs/project_standards/_registry.md`
 2. which `surface` names it defines and supports
@@ -250,6 +250,50 @@ Each command or internal flow that consumes project-local standards must explici
 4. which part of its decision surface those project-local standards may tighten or clarify
 5. whether those standards may affect pass, fallback, or output write-back
 6. which project-side extension fields, if any, are allowed
+
+A shared-output policy consumer is allowed only when a framework policy owns a user-facing output contract that is inherited by more than one command or governance entry.
+The shared consumer name must be declared by the owning framework policy before any registry entry may use it.
+Such a consumer may tighten or clarify only output wording, ordering, or separation rules.
+It must not create a new lifecycle command, change routing, change result types, change pass or fallback semantics, or create a new durable write-back container.
+
+### 10.1 Shared Spec Flow Response Surface
+
+The shared response consumer is:
+
+1. shared consumer: `specflow_response`
+2. surface: `user_facing_response_clarity`
+3. accepted standard type: `output_standard`
+4. accepted `applies_to` selector: `all_targets_on_surface`
+5. accepted effects: `clarify` or `tighten`
+6. registry source: `docs/project_standards/_registry.md`
+
+This surface applies to user-visible Spec Flow responses produced by framework-owned output contracts, including:
+
+1. formal command `user-facing close-out block` output
+2. natural-language routing output
+3. governance review output
+4. checkpoint, blocked, fix-required, and prerequisite stop reports
+5. ordinary completion reports for Spec Flow governance work
+
+Registered standards on this surface may tighten or clarify only:
+
+1. user-facing wording
+2. answer ordering
+3. main-answer and execution-note separation
+4. Mermaid usage in user-facing explanation
+
+Registered standards on this surface must not:
+
+1. route a request
+2. change a command or governance-flow result type
+3. affect pass, fallback, checkpoint, or lifecycle semantics
+4. advance or rewrite `_status.md`
+5. write or suppress `_check_result`, `_plans`, `_verify_result`, or run-state files
+6. create a new durable write-back container
+
+Files that define a user-visible Spec Flow output contract should reference this shared surface instead of restating the registry shape.
+Project-local standards selected by this surface define only project wording and clarity rules.
+They do not define the framework consumption boundary.
 
 `spec_flow_review` is one such governance flow.
 When it runs in the current project instance, it should:

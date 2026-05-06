@@ -287,6 +287,11 @@ Rules:
 
 Every formal command output must include a `user-facing close-out block`.
 
+Formal command close-out output is part of the shared `specflow_response` / `user_facing_response_clarity` output surface defined by `specflow/framework/project_standards_policy.md`.
+Registered project-local standards selected by that surface may tighten or clarify only command close-out wording, ordering, and execution-note separation.
+They must not affect command result types, lifecycle advancement, `_status.md`, `_check_result` writeback, fallback selection, checkpoint semantics, or command-local required fields.
+Command files inherit this shared output surface through this section and must not restate the registry shape in each command file.
+
 This block must report at least:
 
 1. `round conclusion`

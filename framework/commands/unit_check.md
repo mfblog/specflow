@@ -26,12 +26,12 @@ By default this command reviews:
 2. whether `content completeness` holds
 3. whether `Rule Alignment` is explicit and internally consistent
 4. whether bound Rule relations and body dependencies are consistent
-7. whether shared-candidate signals require routing into rule governance or directly reporting a dual-source-of-truth conflict
-8. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
-9. whether any registered project-local review standard applies on a `unit_check`-owned generic review extension surface and tightens the closure decision for the current candidate
-10. whether the candidate records a coherent current design rather than an over-broad, unresolved, or chat-dependent proposal
-11. whether the candidate source fields and evidence appendix requirements from `onboarding_decision_policy.md` are satisfied
-12. whether `Testability / Acceptance Criteria` contains explicit acceptance items that satisfy `spec_policy.md` Section 5.5
+5. whether shared-candidate signals require routing into rule governance or directly reporting a dual-source-of-truth conflict
+6. whether the remaining blocker is actually a user-intent clarification or decision-point that must be written back before closure can pass
+7. whether any registered project-local review standard applies on a `unit_check`-owned generic review extension surface and tightens the closure decision for the current candidate
+8. whether the candidate records a coherent current design rather than an over-broad, unresolved, or chat-dependent proposal
+9. whether the candidate source fields and evidence appendix requirements from `onboarding_decision_policy.md` are satisfied
+10. whether `Testability / Acceptance Criteria` contains explicit acceptance items that satisfy `spec_policy.md` Section 5.5
 
 ### 2.1 Command Read Summary
 
@@ -158,27 +158,28 @@ Project-local review extension contract:
    - the candidate must not depend on chat context, guidance discussion, README vision, or rejected alternatives for implementation-critical meaning
    - over-broad scope, unresolved direction, unverifiable success, or chat-dependent behavior truth can only result in `blocked` or `fix_required`
 9. complete the framework-baseline closure checks owned by `unit_check`, including the fixed completeness review objects, `Candidate Design Quality`, baseline, rule, and rule-truth checks below, before finalizing any project-local review merge
-10. for each `unit_check`-owned supported generic review extension surface:
+10. process formal global baseline alignment and any candidate-carried global rule proposal:
+   - if the formal global baseline exists and the candidate is still compatible, a mechanical update to the current version is allowed
+   - if incompatible, the result can only be `blocked` or `fix_required`
+   - if a global rule proposal is present, it must clearly state the proposed global rule delta, the reason the current baseline is insufficient, the unit-local implementation/verification impact, and the affected units or rules
+   - if those fields are unclear, the result can only be `blocked` or `fix_required`
+11. for each `unit_check`-owned supported generic review extension surface:
    - resolve matching registered `review_standard` entries from `docs/project_standards/_registry.md`
    - let each registered standard's own applicability contract decide whether it applies to the current target inside that surface
    - execute only the standards whose applicability contract applies to the current target
    - merge the result only as tightening or clarifying input into `progressability`, `content completeness`, and structured findings
    - do not let project-local review bypass framework-baseline closure checks
-   - if the formal global baseline exists and the candidate is still compatible, a mechanical update to the current version is allowed
-   - if incompatible, the result can only be `blocked` or `fix_required`
-   - if present, it must clearly state the proposed global rule delta, the reason the current baseline is insufficient, the unit-local implementation/verification impact, and the affected units or rules
-   - if those fields are unclear, the result can only be `blocked` or `fix_required`
-13. process `rule_refs`:
+12. process `rule_refs`:
    - if current behavior depends on Rule truth but bindings are missing or incomplete, the result can only be `blocked` or `fix_required`
    - if bindings exist but the body does not explain which behavior chain reuses them, the result can only be `blocked` or `fix_required`
-14. process candidate source fields:
+13. process candidate source fields:
    - `source_basis` must be one of `new_design`, `existing_implementation`, `mixed`, or `replacement`
    - `evidence_appendix_ref` must be present
    - if `source_basis=existing_implementation` or `source_basis=mixed`, `evidence_appendix_ref` must name an existing candidate evidence appendix and that appendix must be read
    - if `source_basis=new_design` or `source_basis=replacement`, `evidence_appendix_ref` must be `none`
    - evidence appendix conflicts or unknowns that still affect selected candidate behavior are critical completeness gaps unless the candidate main Spec explicitly makes a bounded selected rule that no longer depends on them
    - evidence appendix text must not be treated as implementation truth; only the candidate main Spec and bound formal truth may constrain implementation
-15. process explicit acceptance items:
+14. process explicit acceptance items:
    - the candidate must contain a `Testability / Acceptance Criteria` section, or an explicitly equivalent acceptance section title
    - each acceptance item must record `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, and `pass_condition`
    - `verification_surface` must use only the fixed values from `spec_policy.md` Section 5.5
@@ -187,34 +188,34 @@ Project-local review extension contract:
    - for `verification_surface=integration`, the item must name the runnable integration entrypoint or mark the item as `not_runnable_yet` with a concrete missing-entrypoint reason
    - if an item is marked `not_runnable_yet`, `unit_check` may treat the item as explicitly bounded only when the reason is concrete and the candidate does not use that same item as a current pass claim
    - if a current-gate acceptance item is missing, vague, structurally incomplete, or falsely implied to pass while marked non-runnable, the result can only be `blocked` or `fix_required` with `fallback_reason_code=truth_incomplete`
-16. process shared-candidate signals:
+15. process shared-candidate signals:
    - by default, shared-candidate hints only trigger a suggestion to enter natural-language rule governance
    - if the current required reading range already confirms a dual source of truth, report it directly as a blocking issue with `fallback_reason_code=shared_truth_conflict`
-17. determine whether a blocking checkpoint is the correct stop form:
+16. determine whether a blocking checkpoint is the correct stop form:
    - use `clarification` when user intent, boundary meaning, or acceptance meaning is still missing from truth
    - use `decision` when multiple materially different directions remain and the user must choose one
-18. checkpoint rules:
+17. checkpoint rules:
    - a checkpoint is not `pass`
    - if a checkpoint conclusion changes behavior truth, it must be written back to candidate or appendix before `unit_check` may be rerun
    - do not write `_check_result/unit/{unit}.md` for checkpoint-only stops
-19. merge conclusions in this order:
+18. merge conclusions in this order:
    - `progressability`
    - `content completeness`
    - `Candidate Design Quality`
    - overall gate conclusion
-20. merge rules:
+19. merge rules:
    - if `progressability` fails -> only `blocked` or `fix_required`
    - if any `critical` completeness gap exists -> only `blocked` or `fix_required`
    - if `Candidate Design Quality` fails on scope, selected direction, acceptance usefulness, or chat-dependent truth -> only `blocked` or `fix_required`
    - if only `important` or `elaboration` issues remain, `pass` is still possible
-21. if the result is `pass`, create or update `docs/specs/_check_result/unit/{unit}.md`
+20. if the result is `pass`, create or update `docs/specs/_check_result/unit/{unit}.md`
    - when a supported project-local review extension surface was consumed and this file allows project-side extension write-back for that surface, write the corresponding `project_review_extensions` items together with the pass gate
    - write the accepted acceptance-item set into the pass gate summary by item `id`, `verification_surface`, and `not_runnable_yet` state
-22. if the result is not `pass`, do not write a failed `_check_result/unit/{unit}.md`; delete an old pass gate if it is no longer valid
-23. if the result is `blocked` or `fix_required`, close the current `unit_check` run after writing any required findings:
+21. if the result is not `pass`, do not write a failed `_check_result/unit/{unit}.md`; delete an old pass gate if it is no longer valid
+22. if the result is `blocked` or `fix_required`, close the current `unit_check` run after writing any required findings:
    - any later truth repair belongs to follow-up work, not to a still-open `unit_check`
    - any later repair-side reassessment or scoped follow-up review remains non-authoritative unless a new fresh full-scope `unit_check` run is entered through command routing
-24. update `_status.md`:
+23. update `_status.md`:
    - if pass -> `Next Command=unit_plan`
    - otherwise -> `Next Command=unit_check`
 

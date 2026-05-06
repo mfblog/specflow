@@ -54,6 +54,52 @@ func TestValidateRegistryPassesForKnownCandCheckEntry(t *testing.T) {
 	}
 }
 
+func TestValidateRegistryPassesForSpecFlowResponseOutputStandard(t *testing.T) {
+	repoRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repoRoot, "docs/project_standards"), 0o755); err != nil {
+		t.Fatalf("mkdir project standards: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(repoRoot, "docs/specs"), 0o755); err != nil {
+		t.Fatalf("mkdir specs: %v", err)
+	}
+
+	status := strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+	}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(repoRoot, "docs/specs/_status.md"), []byte(status), 0o644); err != nil {
+		t.Fatalf("write status: %v", err)
+	}
+
+	registry := strings.Join([]string{
+		"# 项目标准注册表",
+		"",
+		"## Active Standards",
+		"",
+		"| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule | notes |",
+		"|---|---|---|---|---|---|---|---|---|---|",
+		"| `response_clarity` | `output_standard` | `user_facing_response_clarity` | `docs/project_standards/specflow_response_clarity.md` | `specflow_response` | `all_targets_on_surface` | `tighten` | `framework_wins` | note |",
+	}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(repoRoot, "docs/project_standards/_registry.md"), []byte(registry), 0o644); err != nil {
+		t.Fatalf("write registry: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(repoRoot, "docs/project_standards/specflow_response_clarity.md"), []byte("# Response"), 0o644); err != nil {
+		t.Fatalf("write standard file: %v", err)
+	}
+
+	result, err := ValidateRegistry(repoRoot)
+	if err != nil {
+		t.Fatalf("ValidateRegistry: %v", err)
+	}
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("expected no diagnostics, got %v", result.Diagnostics)
+	}
+}
+
 func TestValidateRegistryRejectsUnsupportedScenarioForCandCheck(t *testing.T) {
 	repoRoot := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(repoRoot, "docs/project_standards"), 0o755); err != nil {
