@@ -23,7 +23,7 @@ By default it handles:
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `unit_verify`-local entry, output, and stop rules.
 
-Process-file consumption and writeback for `_check_result/unit/{unit}.md`, `_plans/active/{unit}.md`, and `_verify_result/unit/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9, including the tool-backed validation rule when the snapshot validation tooling is available for the current process kind.
+Process-file consumption and writeback for `_check_result/unit/{unit}.md`, `_plans/active/{unit}.md`, and `_verify_result/unit/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for the current process kind, the matching `snapshot validate-process` command is the mandatory tool-backed validation step before treating a process file as consumable, reporting a verification pass, or advancing lifecycle state.
 
 ## 3. Preconditions
 

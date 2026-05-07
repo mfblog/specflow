@@ -9,7 +9,7 @@
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `scenario_check`-local entry, output, stop, and fresh-rerun rules.
 
-Process-file writeback and validation for `_check_result/scenario/{scenario}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9, including the tool-backed validation rule when snapshot validation tooling is available for scenario check process files.
+Process-file writeback and validation for `_check_result/scenario/{scenario}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for scenario check process files, the matching `snapshot validate-process` command is the mandatory tool-backed validation step before reporting a pass gate or lifecycle advance.
 
 `scenario_check` is not a failed-result storage command.
 It writes `_check_result/scenario/{scenario}.md` only when the current candidate scenario passes.

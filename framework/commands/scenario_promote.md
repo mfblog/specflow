@@ -9,7 +9,9 @@
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `scenario_promote`-local entry, output, and stop rules.
 
-Process-file consumption for `_verify_result/scenario/{scenario}.md` and stable acceptance summary writeback under `_verify_result/stable/scenario/{scenario}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9, including the tool-backed validation rule when snapshot validation tooling is available for scenario process files.
+Process-file consumption for `_verify_result/scenario/{scenario}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for scenario process files, `snapshot validate-process --process verify` is the mandatory tool-backed validation step before treating `_verify_result/scenario/{scenario}.md` as consumable, reporting the promotion handoff as valid, or advancing lifecycle state.
+
+Stable acceptance summary writeback under `_verify_result/stable/scenario/{scenario}.md` must follow the stable summary field contract in `specflow/framework/process_snapshot_contract.md` Section 3.3. It is not validated with `snapshot validate-process` because that tooling command supports only `check`, `plan`, and `verify` process kinds.
 
 ## 3. Preconditions
 

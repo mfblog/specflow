@@ -32,6 +32,10 @@ It is navigation only and does not replace the preconditions, procedure, stop co
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `unit_promote`-local entry, output, and stop rules.
 
+Process-file consumption for `_verify_result/unit/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for the current process kind, `snapshot validate-process --process verify` is the mandatory tool-backed validation step before treating `_verify_result/unit/{unit}.md` as consumable, reporting the promotion handoff as valid, or advancing lifecycle state.
+
+Stable acceptance summary writeback under `_verify_result/stable/unit/{unit}.md` must follow the stable summary field contract in `specflow/framework/process_snapshot_contract.md` Section 3.3. It is not validated with `snapshot validate-process` because that tooling command supports only `check`, `plan`, and `verify` process kinds.
+
 ## 3. Preconditions
 
 1. complete required pre-checks
