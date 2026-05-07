@@ -185,11 +185,13 @@ const TRANSLATIONS = {
     },
     lifecycle: {
       scenario_new: "创建新的端到端流程设计",
+      scenario_stable_verify: "检查端到端流程是否仍符合已确认设计",
       scenario_check: "检查流程设计是否足够支撑验证",
       scenario_verify: "验证端到端流程",
       scenario_promote: "把流程确认结果沉淀为正式基线",
       scenario_fork: "从已确认流程开启新一轮设计",
       unit_init: "初始化能力真相",
+      unit_stable_verify: "检查实现是否仍符合已确认设计",
       unit_new: "创建新的能力设计",
       unit_check: "检查设计是否足够支撑开发",
       unit_plan: "把设计整理成开发计划",
@@ -200,11 +202,13 @@ const TRANSLATIONS = {
     },
     lifecycleShort: {
       scenario_new: "新建",
+      scenario_stable_verify: "稳定复核",
       scenario_check: "检查",
       scenario_verify: "验证",
       scenario_promote: "沉淀",
       scenario_fork: "开新轮",
       unit_init: "初始化",
+      unit_stable_verify: "稳定复核",
       unit_new: "新建",
       unit_check: "检查",
       unit_plan: "计划",
@@ -427,11 +431,13 @@ const TRANSLATIONS = {
     },
     lifecycle: {
       scenario_new: "Create a new end-to-end flow design",
+      scenario_stable_verify: "Check whether the flow still matches the confirmed design",
       scenario_check: "Check whether the flow design is enough to support verification",
       scenario_verify: "Verify the end-to-end flow",
       scenario_promote: "Promote the confirmed flow result into the formal baseline",
       scenario_fork: "Start a new design round from a confirmed flow",
       unit_init: "Initialize capability truth",
+      unit_stable_verify: "Check whether implementation still matches the confirmed design",
       unit_new: "Create a new capability design",
       unit_check: "Check whether the design is enough to support development",
       unit_plan: "Turn the design into an implementation plan",
@@ -442,11 +448,13 @@ const TRANSLATIONS = {
     },
     lifecycleShort: {
       scenario_new: "New",
+      scenario_stable_verify: "Stable check",
       scenario_check: "Check",
       scenario_verify: "Verify",
       scenario_promote: "Promote",
       scenario_fork: "Fork",
       unit_init: "Init",
+      unit_stable_verify: "Stable check",
       unit_new: "New",
       unit_check: "Check",
       unit_plan: "Plan",
@@ -1496,21 +1504,23 @@ function lifecycleSteps(kind) {
   if (kind === "scenario") {
     return [
       lifecycleStep("scenario_new"),
+      lifecycleStep("scenario_stable_verify"),
+      lifecycleStep("scenario_fork"),
       lifecycleStep("scenario_check"),
       lifecycleStep("scenario_verify"),
-      lifecycleStep("scenario_promote"),
-      lifecycleStep("scenario_fork")
+      lifecycleStep("scenario_promote")
     ];
   }
   return [
     lifecycleStep("unit_init"),
+    lifecycleStep("unit_stable_verify"),
+    lifecycleStep("unit_fork"),
     lifecycleStep("unit_new"),
     lifecycleStep("unit_check"),
     lifecycleStep("unit_plan"),
     lifecycleStep("unit_impl"),
     lifecycleStep("unit_verify"),
-    lifecycleStep("unit_promote"),
-    lifecycleStep("unit_fork")
+    lifecycleStep("unit_promote")
   ];
 }
 
