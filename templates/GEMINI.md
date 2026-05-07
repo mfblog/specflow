@@ -6,10 +6,7 @@ Content outside the managed block below belongs to the host repository.
 
 Keep repository-specific rules outside the managed block. `specFlow` tooling may update only the managed block.
 
-## Mermaid Communication Rules
 
-- When explaining a Mermaid diagram, refer to nodes by the exact visible text shown in the diagram. Do not refer to nodes only as hidden IDs such as `A`, `B`, or `C`.
-- If short node identifiers are needed for repeated references, include the identifier in the visible node label as well, for example `B["B. Unit Main Spec"]`, and use that same visible name in the prose.
 
 <!-- SPECFLOW:BEGIN -->
 ## specFlow Addendum
