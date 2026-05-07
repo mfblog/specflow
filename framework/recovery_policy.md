@@ -60,31 +60,89 @@ It is not:
 
 For candidate-side invalidation:
 
-1. use the smallest fallback step defined by the active command family
-2. delete process files that are no longer safe for reuse
+1. classify the failed surface before choosing a fallback target
+2. use the nearest command that owns rebuilding or reproving that failed surface
 3. update `_status.md` to the smallest legal next step
-4. do not invent extra temporary states
+4. delete only the failed process layer and process files downstream of that layer
+5. do not invent extra temporary states
 
-Default candidate fallback targets:
+### 4.1 Failure Layers
 
-1. invalid `unit` candidate -> `unit_check`
-2. invalid `scenario` candidate -> `scenario_check`
+Candidate-side recovery uses these fixed layers:
 
-Default candidate cleanup map:
+1. `truth_layer`
+   - candidate truth, acceptance item set, Rule snapshot, global baseline, repository mapping, or formal binding meaning changed
+   - fallback target:
+     - `unit -> unit_check`
+     - `scenario -> scenario_check`
+2. `gate_layer`
+   - the check gate is missing, malformed, or not tool-valid, while current truth and current bindings still match
+   - fallback target:
+     - `unit -> unit_check`
+     - `scenario -> scenario_check`
+3. `plan_layer`
+   - the unit active plan is missing, malformed, not tool-valid, or no longer covers the current acceptance item ids, while the unit check gate still covers current truth
+   - fallback target:
+     - `unit -> unit_plan`
+   - this layer does not apply to `scenario`
+4. `implementation_layer`
+   - implementation no longer satisfies the current unit truth and current active plan, while both upstream process layers remain valid
+   - fallback target:
+     - `unit -> unit_impl`
+   - this layer does not allow `scenario` to repair units; scenario verification must report affected units instead
+5. `evidence_layer`
+   - verification evidence is missing, stale, incomplete, or malformed, while truth, check gate, and any required plan still stand
+   - fallback target:
+     - `unit -> unit_verify`
+     - `scenario -> scenario_verify`
+6. `dependency_readiness_layer`
+   - `scenario_promote` found a required unit or Rule dependency that is candidate-layer, missing, or not safely resolvable as stable, while scenario truth and verification evidence still stand
+   - fallback target:
+     - `scenario -> scenario_promote`
+   - this layer waits for dependency landing or scenario binding writeback; it does not delete scenario check or verify process files by itself
 
-1. `unit -> unit_check`
+Layer rules:
+
+1. only `truth_layer` permits deleting every current candidate-side process artifact for the object
+2. `gate_layer` deletes the check gate only
+3. `plan_layer` deletes unit draft plan, unit active plan, and unit verify result
+4. `implementation_layer` deletes only verification results that can no longer remain current
+5. `evidence_layer` deletes only verification results
+6. `dependency_readiness_layer` deletes no scenario process files unless a separate truth or evidence layer is also proven
+
+### 4.2 Default Candidate Cleanup Map
+
+1. `unit truth_layer -> unit_check`
    - delete `_check_result/unit/{unit}.md`
    - delete `_plans/draft/{unit}.md`
    - delete `_plans/active/{unit}.md`
    - delete `_verify_result/unit/{unit}.md`
-2. `scenario -> scenario_check`
+2. `unit gate_layer -> unit_check`
+   - delete `_check_result/unit/{unit}.md`
+3. `unit plan_layer -> unit_plan`
+   - delete `_plans/draft/{unit}.md`
+   - delete `_plans/active/{unit}.md`
+   - delete `_verify_result/unit/{unit}.md`
+4. `unit implementation_layer -> unit_impl`
+   - delete `_verify_result/unit/{unit}.md`
+5. `unit evidence_layer -> unit_verify`
+   - delete `_verify_result/unit/{unit}.md`
+6. `scenario truth_layer -> scenario_check`
    - delete `_check_result/scenario/{scenario}.md`
    - delete `_verify_result/scenario/{scenario}.md`
+7. `scenario gate_layer -> scenario_check`
+   - delete `_check_result/scenario/{scenario}.md`
+8. `scenario evidence_layer -> scenario_verify`
+   - delete `_verify_result/scenario/{scenario}.md`
+9. `scenario dependency_readiness_layer -> scenario_promote`
+   - delete no process files
 
 Plain meaning:
 
 1. candidate-side drift does not create a second state machine
-2. it only rewinds the object to the first step that must be rerun
+2. recovery rewinds only to the nearest step that can rebuild or reprove the failed layer
+3. a process artifact format error is not automatically a truth error
+4. a command must not keep using a process file that failed its required tool validation
 
 ## 5. Stable-Side Recovery Baseline
 

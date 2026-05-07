@@ -247,8 +247,9 @@ Candidate-side process files become invalid when any current required binding ch
 
 At minimum:
 
-1. `unit` candidate process files fall back to `unit_check`
-2. `scenario` candidate process files fall back to `scenario_check`
+1. truth or binding drift in `unit` candidate process files falls back to `unit_check`
+2. truth or binding drift in `scenario` candidate process files falls back to `scenario_check`
+3. process-shape, plan, evidence, implementation, and dependency-readiness failures follow the layered recovery targets in `specflow/framework/recovery_policy.md`
 
 ### 8.2 Stable Drift
 

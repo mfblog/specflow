@@ -34,6 +34,10 @@ Candidate-side fallback, blocking, and resume explanations must use these standa
 12. `direction_unresolved`
 13. `stable_dependency_not_ready`
 14. `promotion_recovery`
+15. `plan_layer`
+16. `gate_layer`
+17. `evidence_layer`
+18. `dependency_readiness_layer`
 
 Meaning rules:
 
@@ -65,6 +69,14 @@ Meaning rules:
    - `scenario_promote` cannot write stable scenario truth because one or more current `unit_refs` or `rule_refs` entries are candidate-layer, missing, or not safely resolvable as stable-layer dependencies
 14. `promotion_recovery`
    - a promote command had already started mutating repository state and had to restore the target object back to candidate semantics before the chain could continue
+15. `plan_layer`
+   - the unit active plan is missing, malformed, not tool-valid, or incomplete while the current unit check gate still covers current truth
+16. `gate_layer`
+   - a check gate is missing, malformed, or not tool-valid while current truth and bindings still match
+17. `evidence_layer`
+   - verification evidence is missing, malformed, stale, or incomplete while truth and upstream process artifacts still stand
+18. `dependency_readiness_layer`
+   - scenario promotion is blocked only because a required dependency is not stable-ready yet
 
 Executors may add natural-language explanation, but the standardized code must appear first when a fallback or blocking reason is reported.
 
@@ -145,7 +157,8 @@ If a current-gate acceptance item is not covered by the active plan, the handoff
 
 ### 4.4 Smallest Fallback
 
-If either artifact is missing or invalid, the smallest fallback is `unit_check`.
+If the check gate is missing or invalid because truth or bindings drifted, the smallest fallback is `unit_check`.
+If the active plan is missing, malformed, not tool-valid, or does not cover the current acceptance item ids while the check gate still covers current truth, the smallest fallback is `unit_plan`.
 
 ### 4.5 Allowed Reason Codes
 
@@ -156,6 +169,8 @@ Use only:
 3. `binding_drift`
 4. `baseline_drift`
 5. `rule_drift`
+6. `gate_layer`
+7. `plan_layer`
 
 ---
 
@@ -185,6 +200,7 @@ The evidence matrix must be organized by the candidate acceptance item `id` set 
 ### 5.4 Smallest Fallback
 
 If bindings drift, the smallest fallback is `unit_check`.
+If the active plan is missing, malformed, not tool-valid, or does not cover the current acceptance item ids while the check gate still covers current truth, the smallest fallback is `unit_plan`.
 If candidate truth still stands but implementation diverged, the fallback is `unit_impl`.
 
 ### 5.5 Allowed Reason Codes
@@ -199,6 +215,8 @@ Use only:
 6. `implementation_deviation`
 7. `evidence_incomplete`
 8. `truth_incomplete`
+9. `plan_layer`
+10. `evidence_layer`
 
 ---
 
@@ -274,7 +292,8 @@ The verify run must use the accepted scenario acceptance-item set as its evidenc
 
 ### 7.4 Smallest Fallback
 
-If the handoff is invalid, the smallest fallback is `scenario_check`.
+If scenario truth, repository mapping, unit bindings, Rule bindings, baseline, or acceptance item ids drifted, the smallest fallback is `scenario_check`.
+If the scenario check gate is missing, malformed, or not tool-valid while current scenario truth and bindings still match, the smallest fallback is `scenario_check` as a gate rebuild, not a truth fallback.
 If current `repository_mapping_snapshot` no longer matches `docs/specs/repository_mapping.md`, use `binding_drift`.
 
 ### 7.5 Allowed Reason Codes
@@ -286,6 +305,7 @@ Use only:
 3. `binding_drift`
 4. `baseline_drift`
 5. `rule_drift`
+6. `gate_layer`
 
 ---
 
@@ -325,7 +345,8 @@ It must also confirm stable dependency readiness before any stable scenario trut
 If verification evidence is outdated or incomplete but the check gate still covers current truth, the smallest fallback is `scenario_verify`.
 If candidate scenario truth or upstream bindings drifted, the smallest fallback is `scenario_check`.
 If current `repository_mapping_snapshot` no longer matches `docs/specs/repository_mapping.md`, the smallest fallback is `scenario_check` with `binding_drift`.
-If stable dependency readiness fails because a dependency is candidate-layer, missing, or not safely resolvable, `scenario_promote` must stop before stable writeback, keep candidate semantics, report the affected dependency and its current legal next step from `_status.md` when present, and require dependency landing or scenario binding writeback followed by fresh `scenario_check` and `scenario_verify` before promotion is retried.
+If stable dependency readiness fails because a dependency is candidate-layer, missing, or not safely resolvable, `scenario_promote` must stop before stable writeback, keep candidate semantics, report the affected dependency and its current legal next step from `_status.md` when present, and remain at `scenario_promote` under `dependency_readiness_layer`.
+After dependency landing, `scenario_promote` must revalidate the current verify handoff and stable dependency readiness before promotion. A fresh `scenario_check` and `scenario_verify` are required only when scenario truth, scenario bindings, repository mapping, Rule bindings, baseline, acceptance item ids, or verification evidence changed.
 
 ### 8.5 Allowed Reason Codes
 
@@ -337,6 +358,8 @@ Use only:
 4. `rule_drift`
 5. `evidence_incomplete`
 6. `stable_dependency_not_ready`
+7. `evidence_layer`
+8. `dependency_readiness_layer`
 
 ---
 
