@@ -59,7 +59,7 @@ Before `impact_sync` revalidates any process file or writes any fallback result,
 1. `specflow/framework/process_snapshot_contract.md`
 2. `specflow/framework/recovery_policy.md`
 
-`impact_sync` must not invent local snapshot shapes, local fingerprint rules, local ordering rules, local cleanup maps, or local fallback targets when those rules are defined by those contracts.
+`impact_sync` must not invent local snapshot shapes, local fingerprint rules, local ordering rules, local cleanup maps, recovery layers, or local fallback targets when those rules are defined by those contracts.
 
 ## 4. Writeback Contract
 
@@ -70,8 +70,15 @@ Before `impact_sync` revalidates any process file or writes any fallback result,
 
 Candidate fallback rules:
 
-1. invalid `unit` -> `unit_check`
-2. invalid `scenario` -> `scenario_check`
+1. invalid `unit` truth layer -> `unit_check`
+2. invalid `unit` gate layer -> `unit_check`
+3. invalid `unit` plan layer -> `unit_plan`
+4. invalid `unit` implementation layer -> `unit_impl`
+5. invalid `unit` evidence layer -> `unit_verify`
+6. invalid `scenario` truth layer -> `scenario_check`
+7. invalid `scenario` gate layer -> `scenario_check`
+8. invalid `scenario` evidence layer -> `scenario_verify`
+9. invalid `scenario` dependency readiness layer -> `scenario_promote`
 
 Stable fallback rules:
 
@@ -83,12 +90,13 @@ Snapshot revalidation rules:
 1. rebuild current process snapshots according to `process_snapshot_contract.md`
 2. apply the fingerprint, ordering, and exact-comparison rules from that contract
 3. apply only caller-resolved generic exceptions that the contract allows, such as `allowed_shared_snapshot_mismatch_file_refs`
-4. treat the process file as invalid for downstream use when any required stored field differs from the rebuilt value after allowed exceptions
+4. classify each invalid process file by `recovery_policy.md` Section 4 before cleanup
+5. treat the process file as invalid for downstream use when any required stored field differs from the rebuilt value after allowed exceptions
 
 Candidate-side cleanup rules:
 
-1. when an invalid downstream `unit` falls back to `unit_check`, update `_status.md` to that next step and delete exactly the candidate-side files listed for `unit -> unit_check` in `recovery_policy.md`
-2. when an invalid downstream `scenario` falls back to `scenario_check`, update `_status.md` to that next step and delete exactly the candidate-side files listed for `scenario -> scenario_check` in `recovery_policy.md`
+1. update `_status.md` to the next step selected by the recovery layer
+2. delete exactly the process files listed for that object family and recovery layer in `recovery_policy.md`
 3. a cleanup target that is already absent is recorded as an absent cleanup target; it does not create a different fallback state
 
 Stable-side fallback rules:

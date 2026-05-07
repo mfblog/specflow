@@ -333,6 +333,23 @@ At minimum:
 6. for active plan files, rebuild the current candidate acceptance item set and verify that `acceptance_item_plan_coverage` still covers it
 7. compare stored and rebuilt values exactly
 
+Tool-backed validation rule:
+
+1. when the repository provides deterministic snapshot validation tooling for the target object family and process kind, process-file writeback and process-file consumption must use that tooling as the authoritative validation step
+2. for current `unit` and `scenario` process files, the required validation command is:
+
+```text
+specflow/tooling/bin/specflowctl-<os>-<arch> snapshot validate-process --repo-root <repo-root> --object-type unit|scenario --object <object> --process check|plan|verify
+```
+
+`plan` is valid only for `--object-type unit`.
+
+3. a command that writes a covered process file must run the matching validation command after writeback and before reporting a pass gate, active handoff, verification pass, or lifecycle advance
+4. a command that consumes a covered process file must run the matching validation command before treating that file as current and consumable
+5. when validation fails, the tool must report the failure layer and recommended next command when it can derive them deterministically
+6. a manual hash calculation, shell checksum, editor display, or conversation-derived value may be used only as diagnostic evidence; it must not replace the tooling result for lifecycle progression
+7. if the required validation tooling is missing, stale, unsupported for the target process kind, or fails to execute, the command must report that tooling validation is unavailable and must not claim a new pass gate, active handoff, verification pass, or lifecycle advance from that process file
+
 Rule-specific exception rule:
 
 1. if a rule file is explicitly declared by the active caller as `bound_objects`-only for the current round, a difference caused only by that metadata delta does not invalidate the process file on that basis alone

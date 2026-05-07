@@ -39,11 +39,12 @@ Rules:
 11. Snapshot fields in this file must use the fixed definitions from `specflow/framework/process_snapshot_contract.md`.
 12. `verification_scope_ref` minimally means that the current verify result still covers current candidate truth plus the current object state that was verified in that round.
 13. `scenario_verify` must report `affected_units`, but those units do not become implicitly repaired or complete from that report alone.
-14. When commands explain why verification must continue, fall back, or reroute, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.
-15. Stable acceptance coverage summaries must be written to:
+14. If only verification evidence is missing, stale, malformed, or incomplete while upstream truth and process artifacts still stand, the recovery layer is `evidence_layer`; cleanup must delete only the current verify result.
+15. When commands explain why verification must continue, fall back, or reroute, they must use the standardized `fallback_reason_code` taxonomy first, then the recovery layer, and then add natural-language explanation.
+16. Stable acceptance coverage summaries must be written to:
    - `docs/specs/_verify_result/stable/unit/{unit}.md`
    - `docs/specs/_verify_result/stable/scenario/{scenario}.md`
-16. Stable acceptance coverage summaries must record at least:
+17. Stable acceptance coverage summaries must record at least:
    - `object_type`
    - `object_ref`
    - `stable_truth_file_ref`
@@ -53,4 +54,4 @@ Rules:
    - `acceptance_item_set`
    - `acceptance_item_coverage_summary`
    - `key_evidence_source_refs`
-17. A stable acceptance coverage summary records the evidence that closed promotion. It is not a claim that later code still aligns with stable truth.
+18. A stable acceptance coverage summary records the evidence that closed promotion. It is not a claim that later code still aligns with stable truth.

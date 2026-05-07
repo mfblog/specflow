@@ -13,7 +13,8 @@ Rules:
 5. `unit_plan` writes or updates `active/{unit}.md` only when the round is `plan-ready`.
 6. `unit_plan` may write or update `draft/{unit}.md` when planning is blocked, in checkpoint, or still accumulating bounded implementation facts.
 7. `unit_impl` and `unit_verify` must consume only `active/{unit}.md`.
-8. `truth-fallback`, `unit_fork`, `unit_promote`, candidate-side recovery, and `Candidate=no` must not leave stale draft/active plan files behind.
-9. File-specific rules live in:
+8. `truth_layer`, `plan_layer`, `unit_fork`, `unit_promote`, candidate-side recovery, and `Candidate=no` must not leave stale draft/active plan files behind.
+9. `gate_layer` and `evidence_layer` recovery must not delete active plans that still match current truth.
+10. File-specific rules live in:
    - `docs/specs/_plans/draft/README.md`
    - `docs/specs/_plans/active/README.md`

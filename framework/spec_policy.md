@@ -541,8 +541,9 @@ The exact snapshot field definitions come from `process_snapshot_contract.md`.
 When upstream truth or binding changes:
 
 1. invalidate downstream process files deterministically
-2. fall back the downstream object to the minimum legal next step defined by its command family
-3. keep Rule topology reconciliation and generic impact reconciliation separate
+2. classify the affected process surface through the layered recovery rules in `recovery_policy.md`
+3. fall back the downstream object to the nearest legal next step for that failed layer
+4. keep Rule topology reconciliation and generic impact reconciliation separate
 
 Formal routing remains:
 

@@ -36,4 +36,5 @@ Rules:
 12. Consumers must validate bindings, snapshots, and acceptance item sets, not just existence.
 13. Snapshot fields in this file must use the fixed definitions from `specflow/framework/process_snapshot_contract.md`.
 14. `_check_result/{object_type}/{object}.md` carries only the current pass-gate snapshot. It does not carry failed fallback records.
-15. When commands explain why this pass gate cannot be consumed or why the object must fall back, they must use the standardized `fallback_reason_code` taxonomy first and then add natural-language explanation.
+15. If this file is malformed or fails tool validation while current truth and bindings still match, the recovery layer is `gate_layer`; the owning `check` command must rebuild the gate instead of treating the issue as truth drift.
+16. When commands explain why this pass gate cannot be consumed or why the object must fall back, they must use the standardized `fallback_reason_code` taxonomy first, then the recovery layer, and then add natural-language explanation.

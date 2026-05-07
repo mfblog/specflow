@@ -46,9 +46,9 @@ Rules:
    - `verification_note`
 20. `unit_verify` still requires a current valid `active/{unit}.md`.
 21. `unit_verify` must consume `Execution Surface Plan`, `Retirement Targets`, `Verification Targets`, and `acceptance_item_plan_coverage` as part of the round's formal verification input.
-22. If candidate truth changes, the active plan becomes outdated.
-23. It also becomes outdated when formal global baseline bindings, Rule bindings, or acceptance item sets drift.
-24. Once outdated, the flow must go back to `unit_check` first and then re-run `unit_plan`.
+22. If candidate truth changes, the active plan becomes outdated through `truth_layer`.
+23. It also becomes outdated through `truth_layer` when formal global baseline bindings, Rule bindings, or acceptance item sets drift.
+24. If only the active plan is missing, malformed, not tool-valid, or missing required coverage while the check gate still covers current truth, the recovery layer is `plan_layer`; the flow returns to `unit_plan` without deleting a still-valid check gate.
 25. `unit_fork` must delete the previous round's `active/{unit}.md`.
 26. `unit_promote` must delete the corresponding `active/{unit}.md`.
 27. When `Candidate=no`, `active/{unit}.md` should not remain.

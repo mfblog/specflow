@@ -135,6 +135,11 @@ Fallback rules:
 
 1. invalid candidate `scenario` falls back to `scenario_check`
 2. invalid stable `scenario` falls back to `scenario_stable_verify`
+3. invalid candidate process artifacts follow `recovery_policy.md` layered recovery:
+   - truth, repository mapping, unit binding, Rule, baseline, or acceptance-id drift uses `truth_layer`
+   - malformed check gate with current truth still matching uses `gate_layer`
+   - verification evidence gaps with current truth and gate still matching use `evidence_layer`
+   - promotion dependency readiness gaps use `dependency_readiness_layer`
 
 ## 8. Non-Goals
 
