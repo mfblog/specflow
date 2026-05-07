@@ -73,7 +73,7 @@ This file states only `unit_fork`-local entry, output, and stop rules.
    - update `bound_objects` only as declarative metadata so each remaining touched Rule file matches the real binding set implied by unit and scenario `rule_refs`
    - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule reconcile-bound-objects --units {unit}` and additional `--rule-refs` / `--rule-ids` filters when the active flow has already identified them
 14. delete old `_check_result/unit/{unit}.md`, `_verify_result/unit/{unit}.md`, `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and previous-round candidate appendix files
-   - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --unit {unit} --mode unit_fork`
+   - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --object-type unit --object {unit} --mode unit_fork`
 15. update `_status.md`:
    - `Stable=yes`
    - `Candidate=yes`

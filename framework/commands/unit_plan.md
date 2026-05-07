@@ -35,6 +35,8 @@ It is navigation only and does not replace the preconditions, procedure, stop co
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `unit_plan`-local entry, output, and stop rules.
 
+Process-file consumption and writeback for `_check_result/unit/{unit}.md` and `_plans/active/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9, including the tool-backed validation rule when the snapshot validation tooling is available for the current process kind.
+
 ## 3. Preconditions
 
 1. complete required pre-checks

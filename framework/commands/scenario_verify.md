@@ -9,6 +9,8 @@
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `scenario_verify`-local entry, output, and stop rules.
 
+Process-file consumption and writeback for `_check_result/scenario/{scenario}.md` and `_verify_result/scenario/{scenario}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9, including the tool-backed validation rule when snapshot validation tooling is available for scenario process files.
+
 ## 3. Preconditions
 
 1. `_status.md` says `Object Type=scenario`, `Active Layer=candidate`, `Next Command=scenario_verify`
@@ -21,11 +23,9 @@ This file states only `scenario_verify`-local entry, output, and stop rules.
 2. revalidate `_check_result/scenario/{scenario}.md` according to the `scenario_check -> scenario_verify` handoff in `specflow/framework/candidate_handoff_contract.md`
 3. revalidate current repository mapping, bound units, rules, and baseline snapshots
 4. confirm that the check gate's accepted acceptance-item set still matches the current candidate scenario
-5. if the check handoff is missing or invalid, if the acceptance-item set no longer matches current truth, or if repository mapping, unit, rule, or baseline bindings drifted, stop verification and fall back to `scenario_check`:
-   - delete `_check_result/scenario/{scenario}.md` when it exists but no longer qualifies as a current valid check gate
-   - delete `_verify_result/scenario/{scenario}.md` when it exists because it cannot remain current after the check handoff failed
-   - update `_status.md` to `Next Command=scenario_check`
-   - report the matching `fallback_reason_code` allowed by the `scenario_check -> scenario_verify` handoff in `specflow/framework/candidate_handoff_contract.md`
+5. if the check handoff is missing or invalid, classify the failure before cleanup:
+   - if scenario truth, acceptance item ids, repository mapping, unit snapshot, Rule snapshot, or baseline binding drifted, use `truth_layer`, delete `_check_result/scenario/{scenario}.md` and `_verify_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_check`, and report the matching drift code
+   - if only the check gate is missing, malformed, or not tool-valid while current scenario truth and bindings still match, use `gate_layer`, delete `_check_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_check`, and do not delete unrelated current evidence unless it separately fails validation
 6. verify the declared trigger-to-outcome path from entry to claimed outcome
 7. build the scenario evidence matrix by acceptance item `id`:
    - each row must name `acceptance_item_id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `evidence`, and `status`
@@ -44,7 +44,7 @@ This file states only `scenario_verify`-local entry, output, and stop rules.
 9. if any current-gate acceptance item is `fail`, `partial`, `not_checked`, or `not_runnable_yet`, do not write a pass verify result unless `specflow/framework/downgrade_policy.md` explicitly allows that non-pass evidence state for the current scenario round:
    - if the non-pass state reveals incomplete scenario truth, fall back to `scenario_check`
    - if the non-pass state is caused by affected unit work, stop as `blocked_by_affected_units`
-   - otherwise stop as `evidence_incomplete`, keep or set the scenario row to `Next Command=scenario_verify`, delete any stale `_verify_result/scenario/{scenario}.md`, and report `fallback_reason_code=evidence_incomplete`
+   - otherwise stop as `evidence_incomplete` with `failure_layer=evidence_layer`, keep or set the scenario row to `Next Command=scenario_verify`, delete any stale `_verify_result/scenario/{scenario}.md`, and report `fallback_reason_code=evidence_incomplete`
 10. if pass, write `_verify_result/scenario/{scenario}.md` so it satisfies the `scenario_verify -> scenario_promote` handoff, including the acceptance-item evidence matrix and covered `id` set, then advance `Next Command=scenario_promote`
 
 ## 5. Stop Conditions

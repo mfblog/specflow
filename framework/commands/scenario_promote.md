@@ -9,6 +9,8 @@
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `scenario_promote`-local entry, output, and stop rules.
 
+Process-file consumption for `_verify_result/scenario/{scenario}.md` and stable acceptance summary writeback under `_verify_result/stable/scenario/{scenario}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9, including the tool-backed validation rule when snapshot validation tooling is available for scenario process files.
+
 ## 3. Preconditions
 
 1. `_status.md` says `Object Type=scenario`, `Active Layer=candidate`, `Next Command=scenario_promote`
@@ -25,13 +27,15 @@ This file states only `scenario_promote`-local entry, output, and stop rules.
    - each current-gate acceptance item must have an allowed promotion state according to `scenario_verify` and any applicable downgrade policy
 4. if `_verify_result/scenario/{scenario}.md` is invalid, stop before truth-file mutation:
    - if candidate truth, repository mapping snapshot, required unit bindings, bound Rule snapshots, or formal global baseline snapshots drifted, delete current-round scenario `_check_result/scenario/{scenario}.md` and `_verify_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_check`, and use the matching standardized code: `truth_drift`, `binding_drift`, `rule_drift`, or `baseline_drift`
-   - if only verification coverage is stale or incomplete while the check gate still covers current truth, delete `_verify_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_verify`, and use `fallback_reason_code=evidence_incomplete`
+   - if only the scenario check gate process shape is malformed while current scenario truth and bindings still match, delete `_check_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_check`, and use `failure_layer=gate_layer`
+   - if only verification coverage is stale, malformed, or incomplete while the check gate still covers current truth, delete `_verify_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_verify`, and use `fallback_reason_code=evidence_incomplete` with `failure_layer=evidence_layer`
 5. before the first truth-file mutation, resolve every current `unit_refs` and `rule_refs` entry in the candidate scenario:
    - each `unit_refs` entry must resolve to existing stable-layer unit truth
    - each `rule_refs` entry must resolve to existing stable-layer Rule truth
    - `rule_refs=none` is valid only when the candidate scenario formally binds no Rule
    - do not treat `unit_snapshot`, `rule_snapshot`, `bound_objects`, repository history, or directory shape as a replacement for the formal refs
-   - if any dependency is candidate-layer, missing, or not safely resolvable, stop before stable writeback, keep candidate semantics, report the affected dependency and its current legal next step from `_status.md` when present, use `fallback_reason_code=stable_dependency_not_ready`, and require dependency landing or scenario binding writeback followed by fresh `scenario_check` and `scenario_verify` before promotion is retried
+   - if any dependency is candidate-layer, missing, or not safely resolvable, stop before stable writeback, keep candidate semantics, report the affected dependency and its current legal next step from `_status.md` when present, use `fallback_reason_code=stable_dependency_not_ready` with `failure_layer=dependency_readiness_layer`, and keep `Next Command=scenario_promote`
+   - after dependency landing, retry `scenario_promote` by revalidating the current verify handoff and stable dependency readiness; require fresh `scenario_check` and `scenario_verify` only when scenario truth, scenario bindings, repository mapping, Rule bindings, baseline, acceptance item ids, or verification evidence changed
 6. continue only when candidate truth, verification coverage, required bindings, and stable dependency readiness still remain valid
 7. before the first truth-file mutation, capture the recovery baseline required by `recovery_policy.md`
 8. write `docs/specs/scenarios/stable/s_scenario_{scenario}.md`

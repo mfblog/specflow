@@ -23,6 +23,8 @@ By default it handles:
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `unit_verify`-local entry, output, and stop rules.
 
+Process-file consumption and writeback for `_check_result/unit/{unit}.md`, `_plans/active/{unit}.md`, and `_verify_result/unit/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9, including the tool-backed validation rule when the snapshot validation tooling is available for the current process kind.
+
 ## 3. Preconditions
 
 1. complete required pre-checks
@@ -38,12 +40,10 @@ This file states only `unit_verify`-local entry, output, and stop rules.
 1. read the candidate Spec, required appendix files, Rule files, pass gate, and plan
 2. validate all required bindings
 3. confirm that the candidate acceptance item set still matches the pass gate and active plan coverage
-4. if the pass gate or plan is invalid, or if the acceptance item set no longer matches the pass gate or active plan, stop immediately:
-   - delete `_check_result/unit/{unit}.md`
-   - delete `_plans/draft/{unit}.md`
-   - delete `_plans/active/{unit}.md`
-   - delete `_verify_result/unit/{unit}.md` if it exists
-   - fall back `_status.md` to `unit_check`
+4. if the pass gate or plan is invalid, or if the acceptance item set no longer matches the pass gate or active plan, stop through layered recovery:
+   - `truth_layer`: truth, acceptance, Rule, baseline, appendix, or binding drift; delete the unit candidate-side process chain and set `_status.md` to `unit_check`
+   - `gate_layer`: check gate process shape is invalid while current truth and bindings still match; delete `_check_result/unit/{unit}.md` and set `_status.md` to `unit_check`
+   - `plan_layer`: active plan is missing, malformed, not tool-valid, or missing coverage while the check gate still covers current truth; delete `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and `_verify_result/unit/{unit}.md` if present, then set `_status.md` to `unit_plan`
 5. establish the current-round evidence basis before making any pass claim:
    - evidence must be collected or refreshed in the current `unit_verify` run
    - old test output, previous command output, agent reports, or implementation claims may be used only as pointers to what must be rechecked
@@ -81,8 +81,8 @@ This file states only `unit_verify`-local entry, output, and stop rules.
 16. output `Coverage Summary` by acceptance item status, including totals for `pass`, `fail`, `partial`, `not_checked`, and `not_runnable_yet`
 17. determine whether a `human_verify` checkpoint is required:
    - use it only when automated verification is insufficient but a small amount of human effect judgment can close the remaining uncertainty
-   - if human verification confirms implementation deviation while candidate truth still stands, fall back to `unit_impl`
-   - if human verification shows acceptance truth itself is still incomplete, fall back to `unit_check`
+   - if human verification confirms implementation deviation while candidate truth still stands, use `implementation_layer` and fall back to `unit_impl`
+   - if human verification shows acceptance truth itself is still incomplete, use `truth_layer` and fall back to `unit_check`
 18. classify deviations with the shared severity meanings defined by `specflow/framework/severity_policy.md`
 19. conclude:
    - if `fail` exists, do not enter `unit_promote`

@@ -49,6 +49,8 @@ It is navigation only and does not replace the preconditions, procedure, stop co
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `unit_check`-local entry, output, stop, and fresh-rerun rules.
 
+Process-file writeback and validation for `_check_result/unit/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9, including the tool-backed validation rule when the snapshot validation tooling is available for the current process kind.
+
 `unit_check` is not a "minimum can-move-forward review."
 `unit_check pass` always means:
 

@@ -53,31 +53,40 @@ This file states only `unit_promote`-local entry, output, and stop rules.
 3. validate the full binding relation of `_verify_result/unit/{unit}.md` according to the candidate handoff contract
    - the verify result must cover the current candidate acceptance item `id` set exactly
    - each current-gate acceptance item must have an allowed promotion state according to `unit_verify` and any applicable downgrade policy
-4. if `_verify_result/unit/{unit}.md` is invalid, identify the reason and stop immediately:
-   - if code changed after verification:
+4. if `_verify_result/unit/{unit}.md` is invalid, identify the failure layer before cleanup:
+   - if code changed after verification or evidence is stale while truth, check gate, and active plan still stand:
      - delete `_verify_result/unit/{unit}.md`
-     - fall back to `unit_verify`
+     - use `evidence_layer` and fall back to `unit_verify`
    - if implementation drift against candidate exists:
      - delete `_verify_result/unit/{unit}.md`
-     - fall back to `unit_impl`
+     - use `implementation_layer` and fall back to `unit_impl`
+   - if the active plan is missing, malformed, not tool-valid, or no longer covers current acceptance ids while the check gate still covers current truth:
+     - delete `_plans/draft/{unit}.md`
+     - delete `_plans/active/{unit}.md`
+     - delete `_verify_result/unit/{unit}.md`
+     - use `plan_layer` and fall back to `unit_plan`
+   - if the check gate process shape is invalid while current truth and bindings still match:
+     - delete `_check_result/unit/{unit}.md`
+     - delete `_verify_result/unit/{unit}.md`
+     - use `gate_layer` and fall back to `unit_check`
    - if another required binding of `_verify_result/unit/{unit}.md` no longer matches the current round:
      - delete `_check_result/unit/{unit}.md`
      - delete `_plans/draft/{unit}.md`
      - delete `_plans/active/{unit}.md`
      - delete `_verify_result/unit/{unit}.md`
-     - use `fallback_reason_code=binding_drift` and fall back to `unit_check`
+     - use `fallback_reason_code=binding_drift`, `failure_layer=truth_layer`, and fall back to `unit_check`
    - if bound Rule truth, layer, version, or snapshot drifted:
      - delete `_check_result/unit/{unit}.md`
      - delete `_plans/draft/{unit}.md`
      - delete `_plans/active/{unit}.md`
      - delete `_verify_result/unit/{unit}.md`
-     - use `fallback_reason_code=rule_drift` and fall back to `unit_check`
+     - use `fallback_reason_code=rule_drift`, `failure_layer=truth_layer`, and fall back to `unit_check`
    - if candidate truth or formal global baseline changed:
      - delete `_check_result/unit/{unit}.md`
      - delete `_plans/draft/{unit}.md`
      - delete `_plans/active/{unit}.md`
      - delete `_verify_result/unit/{unit}.md`
-     - fall back to `unit_check`
+     - use `truth_layer` and fall back to `unit_check`
    - if the candidate acceptance item set changed after verification:
      - delete `_verify_result/unit/{unit}.md`
      - if the existing `_check_result/unit/{unit}.md` and `_plans/active/{unit}.md` still match the current candidate truth and acceptance item set, fall back to `unit_verify`
@@ -153,7 +162,7 @@ This file states only `unit_promote`-local entry, output, and stop rules.
    - `_plans/draft/{unit}.md`
    - `_plans/active/{unit}.md`
    - `_verify_result/unit/{unit}.md`
-   - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --unit {unit} --mode unit_promote`
+   - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --object-type unit --object {unit} --mode unit_promote`
 19. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
 20. if the round changed any unit `rule_refs` value or any file under `docs/specs/rules/**`, run `rule_sync` only after `_status.md` already reflects the promoted stable layer and Step 17 has written the surviving Rule-file metadata, even when no additional affected object is known yet
    - this post-promotion `rule_sync` closes external affected-object fallout and Rule-state reconciliation; it must not overturn the promoted unit's own successful stable landing merely because the same promotion round also wrote the stable Rule file or stable binding that the promoted unit now legally uses

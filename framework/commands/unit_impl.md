@@ -38,12 +38,10 @@ This file states only `unit_impl`-local entry, output, and stop rules.
 5. validate all required bindings of the pass gate and plan file according to the candidate handoff contract
    - this includes validating that the active plan still covers the current candidate acceptance item `id` set
 6. when a required appendix is an evidence appendix, treat it only as reviewed evidence covered by the pass gate; it must not supply implementation requirements, acceptance criteria, or behavior rules
-7. if any binding is invalid, stop immediately:
-   - delete `_check_result/unit/{unit}.md`
-   - delete `_plans/draft/{unit}.md`
-   - delete `_plans/active/{unit}.md`
-   - delete `_verify_result/unit/{unit}.md` if it exists
-   - fall back `_status.md` to `unit_check`
+7. if handoff validation fails, classify the failure through `recovery_policy.md` Section 4 before cleanup:
+   - if the check gate no longer covers current truth or bindings, use `truth_layer`, delete the unit candidate-side process chain, and fall back `_status.md` to `unit_check`
+   - if only the active plan is missing, malformed, not tool-valid, or missing acceptance coverage while the check gate still covers current truth, use `plan_layer`, delete `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and `_verify_result/unit/{unit}.md` if present, then set `_status.md` to `unit_plan`
+   - if only the check gate process shape is malformed while current truth and bindings still match, use `gate_layer`, delete `_check_result/unit/{unit}.md`, and set `_status.md` to `unit_check`
 8. only when both pass gate and plan are still valid may implementation continue
 9. implement slice by slice in the order defined by the current plan unless the plan itself declares a dependency-safe different order
 10. for each slice, use the recorded objective, file scope, dependencies, verification action, and done condition as the execution boundary
@@ -89,9 +87,9 @@ This file states only `unit_impl`-local entry, output, and stop rules.
 6. plan write-back result
 7. blocked-slice result when implementation could not finish the current plan round
 8. `handoff validation result`
-9. cleanup result when implementation fell back to `unit_check`
-10. `fallback_reason_code` when implementation fell back to `unit_check`
-11. fallback reason when implementation fell back to `unit_check`
+9. cleanup result when implementation stopped through layered recovery
+10. `fallback_reason_code` and `failure_layer` when implementation stopped through layered recovery
+11. fallback reason when implementation stopped through layered recovery
 12. `_status.md` update result
 13. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
    - `current state` must explicitly confirm the written `Active Layer` and `Next Command`
@@ -110,6 +108,8 @@ Allowed `fallback_reason_code` values:
 4. `baseline_drift`
 5. `rule_drift`
 6. `truth_incomplete`
+7. `gate_layer`
+8. `plan_layer`
 
 ## 7. Non-Goals
 
