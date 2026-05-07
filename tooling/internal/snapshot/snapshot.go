@@ -64,22 +64,30 @@ type AcceptanceEvidenceEntry struct {
 }
 
 type Snapshot struct {
+	ObjectType             string
+	Object                 string
 	Module                 string
 	TruthLayerRef          string
 	SpecFileRef            string
 	SpecVersionRef         string
 	SpecFingerprint        string
 	ModuleAppendixSnapshot []AppendixEntry
+	RepositoryMapping      RepositoryMappingEntry
+	UnitSnapshot           []ObjectSnapshotEntry
 	RuleSnapshot           []RuleEntry
 	AcceptanceItemSet      []AcceptanceItemEntry
 }
 
 type ValidationResult struct {
-	ProcessKind string
-	ProcessFile string
-	Valid       bool
-	Mismatches  []string
-	Expected    Snapshot
+	ObjectType   string
+	Object       string
+	ProcessKind  string
+	ProcessFile  string
+	Valid        bool
+	Mismatches   []string
+	FailureLayer string
+	NextCommand  string
+	Expected     Snapshot
 }
 
 type ProcessSnapshotData struct {
@@ -99,7 +107,7 @@ type ProcessSnapshotData struct {
 
 var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
 
-var requiredProcessSnapshotFields = map[string][]string{
+var requiredUnitProcessSnapshotFields = map[string][]string{
 	"check": {
 		"object_type",
 		"object_ref",
@@ -146,6 +154,47 @@ var requiredProcessSnapshotFields = map[string][]string{
 	},
 }
 
+var requiredScenarioProcessSnapshotFields = map[string][]string{
+	"check": {
+		"object_type",
+		"object_ref",
+		"gate",
+		"decision",
+		"allow_next",
+		"next_command",
+		"blocking_summary",
+		"coverage_summary",
+		"truth_layer_ref",
+		"truth_file_ref",
+		"truth_version_ref",
+		"truth_fingerprint",
+		"repository_mapping_snapshot",
+		"unit_snapshot",
+		"rule_snapshot",
+		"acceptance_item_set",
+	},
+	"verify": {
+		"object_type",
+		"object_ref",
+		"gate",
+		"decision",
+		"allow_next",
+		"next_command",
+		"blocking_summary",
+		"coverage_summary",
+		"truth_layer_ref",
+		"truth_file_ref",
+		"truth_version_ref",
+		"truth_fingerprint",
+		"repository_mapping_snapshot",
+		"unit_snapshot",
+		"verification_scope_ref",
+		"rule_snapshot",
+		"acceptance_item_set",
+		"acceptance_item_evidence_matrix",
+	},
+}
+
 var allowedAcceptanceEvidenceStatuses = map[string]bool{
 	"pass":             true,
 	"fail":             true,
@@ -165,12 +214,18 @@ var allowedVerificationSurfaces = map[string]bool{
 }
 
 func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
-	moduleStatus, err := statusfile.LookupModuleStatus(repoRoot, module)
+	return RebuildCurrentObject(repoRoot, "unit", module)
+}
+
+func RebuildCurrentObject(repoRoot, objectType, object string) (Snapshot, error) {
+	objectType = strings.TrimSpace(objectType)
+	object = strings.TrimSpace(object)
+	status, err := statusfile.LookupObjectStatus(repoRoot, objectType, object)
 	if err != nil {
 		return Snapshot{}, err
 	}
 
-	mainSpecRef, err := specpaths.MainSpecFileRef(moduleStatus.ActiveLayer, moduleStatus.Module)
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef(objectType, status.ActiveLayer, status.Object)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -185,8 +240,10 @@ func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
 	}
 
 	result := Snapshot{
-		Module:          module,
-		TruthLayerRef:   moduleStatus.ActiveLayer,
+		ObjectType:      objectType,
+		Object:          object,
+		Module:          object,
+		TruthLayerRef:   status.ActiveLayer,
 		SpecFileRef:     mainSpecRef,
 		SpecFingerprint: hashNormalizedText(string(mainSpecContent)),
 	}
@@ -196,13 +253,31 @@ func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
 	}
 	result.SpecVersionRef = fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(mainSpecRef), ".md"), version)
 
-	appendixEntries, err := buildAppendixSnapshot(repoRoot, mainSpecRef, body)
-	if err != nil {
-		return Snapshot{}, err
+	if objectType == "unit" {
+		appendixEntries, err := buildAppendixSnapshot(repoRoot, mainSpecRef, body)
+		if err != nil {
+			return Snapshot{}, err
+		}
+		result.ModuleAppendixSnapshot = appendixEntries
 	}
-	result.ModuleAppendixSnapshot = appendixEntries
+	if objectType == "scenario" {
+		repositoryMapping, err := BuildRepositoryMappingSnapshot(repoRoot)
+		if err != nil {
+			return Snapshot{}, err
+		}
+		result.RepositoryMapping = repositoryMapping
+		unitRefs, _, err := parseNamedRefs(body, "unit_refs")
+		if err != nil {
+			return Snapshot{}, err
+		}
+		unitSnapshot, err := buildObjectDependencySnapshot(repoRoot, "unit", unitRefs)
+		if err != nil {
+			return Snapshot{}, err
+		}
+		result.UnitSnapshot = unitSnapshot
+	}
 
-	sharedEntries, err := buildRuleSnapshot(repoRoot, moduleStatus.ActiveLayer, body)
+	sharedEntries, err := buildRuleSnapshot(repoRoot, status.ActiveLayer, body)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -217,16 +292,20 @@ func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
 }
 
 func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult, error) {
-	expected, err := RebuildCurrent(repoRoot, module)
+	return ValidateProcessFileForObject(repoRoot, "unit", module, processKind)
+}
+
+func ValidateProcessFileForObject(repoRoot, objectType, object, processKind string) (ValidationResult, error) {
+	expected, err := RebuildCurrentObject(repoRoot, objectType, object)
 	if err != nil {
 		return ValidationResult{}, err
 	}
-	requiredFields, ok := requiredProcessSnapshotFields[processKind]
+	requiredFields, ok := requiredFieldsForObjectProcess(objectType, processKind)
 	if !ok {
-		return ValidationResult{}, fmt.Errorf("unsupported process kind %q", processKind)
+		return ValidationResult{}, fmt.Errorf("process kind %q is not supported for object type %q", processKind, objectType)
 	}
 
-	processFile, err := ProcessFilePath("unit", module, processKind)
+	processFile, err := ProcessFilePath(objectType, object, processKind)
 	if err != nil {
 		return ValidationResult{}, err
 	}
@@ -242,6 +321,8 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 	}
 
 	result := ValidationResult{
+		ObjectType:  objectType,
+		Object:      object,
 		ProcessKind: processKind,
 		ProcessFile: processFile,
 		Expected:    expected,
@@ -282,15 +363,16 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 			}
 		}
 		validateAcceptancePlanCoverage(&result, actual, expected.AcceptanceItemSet)
+		finalizeValidationResult(&result)
 		return result, nil
 	}
 
-	expectedGate, expectedNextCommand, err := expectedModuleProcessRouting(processKind)
+	expectedGate, expectedNextCommand, err := expectedProcessRouting(objectType, processKind)
 	if err != nil {
 		return ValidationResult{}, err
 	}
-	compareScalar(&result, "object_type", actual.scalars["object_type"], "unit")
-	compareScalar(&result, "object_ref", actual.scalars["object_ref"], expected.Module)
+	compareScalar(&result, "object_type", actual.scalars["object_type"], objectType)
+	compareScalar(&result, "object_ref", actual.scalars["object_ref"], expected.Object)
 	compareScalar(&result, "gate", actual.scalars["gate"], expectedGate)
 	compareScalar(&result, "decision", actual.scalars["decision"], "pass")
 	compareScalar(&result, "allow_next", actual.scalars["allow_next"], "true")
@@ -304,12 +386,30 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 		validateAcceptanceEvidenceMatrix(&result, actual, expected.AcceptanceItemSet)
 	}
 
-	if _, ok := actual.scalars["unit_appendix_snapshot"]; ok || actual.appendixPresent {
+	if objectType == "unit" && (actual.scalars["unit_appendix_snapshot"] != "" || actual.appendixPresent) {
 		actualAppendix := normalizeAppendixList(actual.appendixEntries)
 		expectedAppendix := normalizeAppendixList(expected.ModuleAppendixSnapshot)
 		if actualAppendix != expectedAppendix {
 			result.Valid = false
 			result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
+		}
+	}
+	if objectType == "scenario" {
+		if actual.repositoryMappingPresent || actual.scalars["repository_mapping_snapshot"] != "" {
+			actualMapping := normalizeRepositoryMapping(actual.repositoryMapping)
+			expectedMapping := normalizeRepositoryMapping(expected.RepositoryMapping)
+			if actualMapping != expectedMapping {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("repository_mapping_snapshot mismatch: actual=%s expected=%s", actualMapping, expectedMapping))
+			}
+		}
+		if actual.modulePresent || actual.scalars["unit_snapshot"] != "" {
+			actualUnits := normalizeObjectSnapshotList(actual.moduleEntries)
+			expectedUnits := normalizeObjectSnapshotList(expected.UnitSnapshot)
+			if actualUnits != expectedUnits {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_snapshot mismatch: actual=%s expected=%s", actualUnits, expectedUnits))
+			}
 		}
 	}
 	if _, ok := actual.scalars["rule_snapshot"]; ok || actual.sharedPresent {
@@ -321,20 +421,43 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 		}
 	}
 
+	finalizeValidationResult(&result)
 	return result, nil
 }
 
-func expectedModuleProcessRouting(processKind string) (string, string, error) {
-	switch processKind {
-	case "check":
-		return "unit_check", "unit_plan", nil
-	case "plan":
-		return "unit_plan", "unit_impl", nil
-	case "verify":
-		return "unit_verify", "unit_promote", nil
+func requiredFieldsForObjectProcess(objectType, processKind string) ([]string, bool) {
+	switch objectType {
+	case "unit":
+		fields, ok := requiredUnitProcessSnapshotFields[processKind]
+		return fields, ok
+	case "scenario":
+		fields, ok := requiredScenarioProcessSnapshotFields[processKind]
+		return fields, ok
 	default:
-		return "", "", fmt.Errorf("unsupported process kind %q", processKind)
+		return nil, false
 	}
+}
+
+func expectedProcessRouting(objectType, processKind string) (string, string, error) {
+	switch objectType {
+	case "unit":
+		switch processKind {
+		case "check":
+			return "unit_check", "unit_plan", nil
+		case "plan":
+			return "unit_plan", "unit_impl", nil
+		case "verify":
+			return "unit_verify", "unit_promote", nil
+		}
+	case "scenario":
+		switch processKind {
+		case "check":
+			return "scenario_check", "scenario_verify", nil
+		case "verify":
+			return "scenario_verify", "scenario_promote", nil
+		}
+	}
+	return "", "", fmt.Errorf("process kind %q is not supported for object type %q", processKind, objectType)
 }
 
 func LoadProcessSnapshot(repoRoot, objectType, object, processKind string) (ProcessSnapshotData, error) {
@@ -374,9 +497,17 @@ func LoadProcessSnapshot(repoRoot, objectType, object, processKind string) (Proc
 }
 
 func Render(snapshot Snapshot) string {
+	objectType := snapshot.ObjectType
+	if objectType == "" {
+		objectType = "unit"
+	}
+	object := snapshot.Object
+	if object == "" {
+		object = snapshot.Module
+	}
 	lines := []string{
-		"object_type: unit",
-		fmt.Sprintf("object_ref: %s", snapshot.Module),
+		fmt.Sprintf("object_type: %s", objectType),
+		fmt.Sprintf("object_ref: %s", object),
 		fmt.Sprintf("truth_layer_ref: %s", snapshot.TruthLayerRef),
 		fmt.Sprintf("truth_file_ref: %s", snapshot.SpecFileRef),
 		fmt.Sprintf("truth_version_ref: %s", snapshot.SpecVersionRef),
@@ -384,10 +515,16 @@ func Render(snapshot Snapshot) string {
 		"acceptance_item_set:",
 	}
 	lines = append(lines, renderAcceptanceItemLines(snapshot.AcceptanceItemSet)...)
-	lines = append(lines,
-		"unit_appendix_snapshot:",
-	)
-	lines = append(lines, renderAppendixLines(snapshot.ModuleAppendixSnapshot)...)
+	if objectType == "unit" {
+		lines = append(lines, "unit_appendix_snapshot:")
+		lines = append(lines, renderAppendixLines(snapshot.ModuleAppendixSnapshot)...)
+	}
+	if objectType == "scenario" {
+		lines = append(lines, "repository_mapping_snapshot:")
+		lines = append(lines, renderRepositoryMappingLines(snapshot.RepositoryMapping)...)
+		lines = append(lines, "unit_snapshot:")
+		lines = append(lines, renderObjectSnapshotLines("unit", snapshot.UnitSnapshot)...)
+	}
 	lines = append(lines, "rule_snapshot:")
 	lines = append(lines, renderSharedLines(snapshot.RuleSnapshot)...)
 	return strings.Join(lines, "\n")
@@ -567,6 +704,78 @@ func buildRuleSnapshot(repoRoot, moduleLayer, body string) ([]RuleEntry, error) 
 	return sortRuleEntries(entries), nil
 }
 
+func buildObjectDependencySnapshot(repoRoot, expectedObjectType string, refs []string) ([]ObjectSnapshotEntry, error) {
+	entries := make([]ObjectSnapshotEntry, 0, len(refs))
+	for _, ref := range refs {
+		entry, err := resolveObjectVersionRef(repoRoot, expectedObjectType, ref)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+	return sortObjectSnapshotEntries(entries), nil
+}
+
+func resolveObjectVersionRef(repoRoot, expectedObjectType, ref string) (ObjectSnapshotEntry, error) {
+	ref = strings.Trim(strings.TrimSpace(ref), "`")
+	prefix, version, ok := strings.Cut(ref, "@")
+	if !ok || strings.TrimSpace(version) == "" {
+		return ObjectSnapshotEntry{}, fmt.Errorf("invalid %s ref %q", expectedObjectType, ref)
+	}
+	layer := ""
+	object := ""
+	switch expectedObjectType {
+	case "unit":
+		switch {
+		case strings.HasPrefix(prefix, "c_unit_"):
+			layer = "candidate"
+			object = strings.TrimPrefix(prefix, "c_unit_")
+		case strings.HasPrefix(prefix, "s_unit_"):
+			layer = "stable"
+			object = strings.TrimPrefix(prefix, "s_unit_")
+		}
+	case "scenario":
+		switch {
+		case strings.HasPrefix(prefix, "c_scenario_"):
+			layer = "candidate"
+			object = strings.TrimPrefix(prefix, "c_scenario_")
+		case strings.HasPrefix(prefix, "s_scenario_"):
+			layer = "stable"
+			object = strings.TrimPrefix(prefix, "s_scenario_")
+		}
+	}
+	if layer == "" || object == "" {
+		return ObjectSnapshotEntry{}, fmt.Errorf("invalid %s ref %q", expectedObjectType, ref)
+	}
+	fileRef, err := specpaths.ObjectMainSpecFileRef(expectedObjectType, layer, object)
+	if err != nil {
+		return ObjectSnapshotEntry{}, err
+	}
+	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)))
+	if err != nil {
+		return ObjectSnapshotEntry{}, fmt.Errorf("read %s: %w", fileRef, err)
+	}
+	frontmatter, _, err := parseFrontmatter(string(content))
+	if err != nil {
+		return ObjectSnapshotEntry{}, fmt.Errorf("%s: %w", fileRef, err)
+	}
+	currentVersion := strings.TrimSpace(frontmatter["version"])
+	if currentVersion == "" {
+		return ObjectSnapshotEntry{}, fmt.Errorf("%s: missing frontmatter.version", fileRef)
+	}
+	expectedVersionRef := fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(fileRef), ".md"), currentVersion)
+	if ref != expectedVersionRef {
+		return ObjectSnapshotEntry{}, fmt.Errorf("%s ref %q does not match current version %q", expectedObjectType, ref, expectedVersionRef)
+	}
+	return ObjectSnapshotEntry{
+		ObjectRef:   object,
+		Layer:       layer,
+		FileRef:     fileRef,
+		VersionRef:  expectedVersionRef,
+		Fingerprint: hashNormalizedText(string(content)),
+	}, nil
+}
+
 func buildStableGlobalRuleEntries(repoRoot string) ([]RuleEntry, error) {
 	matches, err := filepath.Glob(filepath.Join(repoRoot, filepath.FromSlash("docs/specs/rules/stable/s_g_rule_*.md")))
 	if err != nil {
@@ -608,9 +817,23 @@ func buildStableGlobalRuleEntries(repoRoot string) ([]RuleEntry, error) {
 
 func sortRuleEntries(entries []RuleEntry) []RuleEntry {
 	items := append([]RuleEntry(nil), entries...)
-	sort.Slice(entries, func(i, j int) bool {
+	sort.Slice(items, func(i, j int) bool {
 		if items[i].RuleID != items[j].RuleID {
 			return items[i].RuleID < items[j].RuleID
+		}
+		if items[i].Layer != items[j].Layer {
+			return items[i].Layer < items[j].Layer
+		}
+		return items[i].FileRef < items[j].FileRef
+	})
+	return items
+}
+
+func sortObjectSnapshotEntries(entries []ObjectSnapshotEntry) []ObjectSnapshotEntry {
+	items := append([]ObjectSnapshotEntry(nil), entries...)
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].ObjectRef != items[j].ObjectRef {
+			return items[i].ObjectRef < items[j].ObjectRef
 		}
 		if items[i].Layer != items[j].Layer {
 			return items[i].Layer < items[j].Layer
@@ -661,10 +884,14 @@ func hashNormalizedText(content string) string {
 }
 
 func parseRuleRefs(body string) ([]string, bool, error) {
+	return parseNamedRefs(body, "rule_refs")
+}
+
+func parseNamedRefs(body, fieldName string) ([]string, bool, error) {
 	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 	for idx, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		right, matched, err := parseNamedFieldLine(trimmed, "rule_refs")
+		right, matched, err := parseNamedFieldLine(trimmed, fieldName)
 		if err != nil {
 			return nil, false, err
 		}
@@ -675,7 +902,7 @@ func parseRuleRefs(body string) ([]string, bool, error) {
 			return nil, true, nil
 		}
 		if right != "" {
-			return nil, false, fmt.Errorf("rule_refs must use literal none or a markdown list")
+			return nil, false, fmt.Errorf("%s must use literal none or a markdown list", fieldName)
 		}
 		refs := []string{}
 		seen := map[string]bool{}
@@ -687,24 +914,30 @@ func parseRuleRefs(body string) ([]string, bool, error) {
 			if strings.HasPrefix(nextTrimmed, "## ") || regexp.MustCompile(`^\d+\.`).MatchString(nextTrimmed) {
 				break
 			}
+			if _, matched, _ := parseNamedFieldLine(nextTrimmed, "rule_refs"); matched && fieldName != "rule_refs" {
+				break
+			}
+			if _, matched, _ := parseNamedFieldLine(nextTrimmed, "unit_refs"); matched && fieldName != "unit_refs" {
+				break
+			}
 			if !strings.HasPrefix(nextTrimmed, "- ") {
-				return nil, false, fmt.Errorf("rule_refs must be a markdown list of rule refs")
+				return nil, false, fmt.Errorf("%s must be a markdown list", fieldName)
 			}
 			ref := strings.TrimSpace(strings.TrimPrefix(nextTrimmed, "- "))
 			ref = strings.Trim(ref, "`")
 			if ref == "" {
-				return nil, false, fmt.Errorf("rule_refs contains an empty item")
+				return nil, false, fmt.Errorf("%s contains an empty item", fieldName)
 			}
 			if seen[ref] {
-				return nil, false, fmt.Errorf("rule_refs contains duplicate item %q", ref)
+				return nil, false, fmt.Errorf("%s contains duplicate item %q", fieldName, ref)
 			}
 			seen[ref] = true
 			refs = append(refs, ref)
 		}
 		if len(refs) == 0 {
-			return nil, false, fmt.Errorf("rule_refs must not be an empty list")
+			return nil, false, fmt.Errorf("%s must not be an empty list", fieldName)
 		}
-		if err := validateOrderedRuleRefs(refs); err != nil {
+		if err := validateOrderedRefs(fieldName, refs); err != nil {
 			return nil, false, err
 		}
 		return refs, true, nil
@@ -713,6 +946,10 @@ func parseRuleRefs(body string) ([]string, bool, error) {
 }
 
 func validateOrderedRuleRefs(refs []string) error {
+	return validateOrderedRefs("rule_refs", refs)
+}
+
+func validateOrderedRefs(fieldName string, refs []string) error {
 	if len(refs) < 2 {
 		return nil
 	}
@@ -720,7 +957,7 @@ func validateOrderedRuleRefs(refs []string) error {
 	sort.Strings(expected)
 	for idx := range refs {
 		if refs[idx] != expected[idx] {
-			return fmt.Errorf("rule_refs must be sorted by exact rule ref string in ascending lexical order")
+			return fmt.Errorf("%s must be sorted by exact ref string in ascending lexical order", fieldName)
 		}
 	}
 	return nil
@@ -1355,6 +1592,87 @@ func normalizeSharedList(entries []RuleEntry) string {
 	return strings.Join(parts, ";")
 }
 
+func normalizeRepositoryMapping(entry RepositoryMappingEntry) string {
+	if entry.FileRef == "" && entry.VersionRef == "" && entry.Fingerprint == "" {
+		return "none"
+	}
+	return fmt.Sprintf("%s|%s|%s", entry.FileRef, entry.VersionRef, entry.Fingerprint)
+}
+
+func normalizeObjectSnapshotList(entries []ObjectSnapshotEntry) string {
+	if len(entries) == 0 {
+		return "none"
+	}
+	items := sortObjectSnapshotEntries(entries)
+	parts := make([]string, 0, len(items))
+	for _, item := range items {
+		parts = append(parts, fmt.Sprintf("%s|%s|%s|%s|%s", item.ObjectRef, item.Layer, item.FileRef, item.VersionRef, item.Fingerprint))
+	}
+	return strings.Join(parts, ";")
+}
+
+func finalizeValidationResult(result *ValidationResult) {
+	if result.Valid {
+		result.FailureLayer = "none"
+		result.NextCommand = ""
+		return
+	}
+	result.FailureLayer = classifyFailureLayer(result.ObjectType, result.ProcessKind, result.Mismatches)
+	result.NextCommand = nextCommandForFailureLayer(result.ObjectType, result.ProcessKind, result.FailureLayer)
+}
+
+func classifyFailureLayer(objectType, processKind string, mismatches []string) string {
+	for _, mismatch := range mismatches {
+		switch {
+		case strings.Contains(mismatch, "truth_"),
+			strings.Contains(mismatch, "spec_file_ref mismatch"),
+			strings.Contains(mismatch, "spec_version_ref mismatch"),
+			strings.Contains(mismatch, "spec_fingerprint mismatch"),
+			strings.Contains(mismatch, "acceptance_item_set mismatch"),
+			strings.Contains(mismatch, "unit_snapshot mismatch"),
+			strings.Contains(mismatch, "repository_mapping_snapshot mismatch"),
+			strings.Contains(mismatch, "rule_snapshot mismatch"):
+			return "truth_layer"
+		}
+	}
+	switch processKind {
+	case "plan":
+		return "plan_layer"
+	case "verify":
+		return "evidence_layer"
+	case "check":
+		return "gate_layer"
+	default:
+		return "truth_layer"
+	}
+}
+
+func nextCommandForFailureLayer(objectType, processKind, failureLayer string) string {
+	switch objectType {
+	case "unit":
+		switch failureLayer {
+		case "truth_layer", "gate_layer":
+			return "unit_check"
+		case "plan_layer":
+			return "unit_plan"
+		case "implementation_layer":
+			return "unit_impl"
+		case "evidence_layer":
+			return "unit_verify"
+		}
+	case "scenario":
+		switch failureLayer {
+		case "truth_layer", "gate_layer":
+			return "scenario_check"
+		case "evidence_layer":
+			return "scenario_verify"
+		case "dependency_readiness_layer":
+			return "scenario_promote"
+		}
+	}
+	return ""
+}
+
 func copyStringBoolMap(source map[string]bool) map[string]bool {
 	result := make(map[string]bool, len(source))
 	for key, value := range source {
@@ -1386,6 +1704,34 @@ func renderSharedLines(entries []RuleEntry) []string {
 	for _, entry := range entries {
 		lines = append(lines,
 			fmt.Sprintf("  - rule_id: %s", entry.RuleID),
+			fmt.Sprintf("    layer: %s", entry.Layer),
+			fmt.Sprintf("    file_ref: %s", entry.FileRef),
+			fmt.Sprintf("    version_ref: %s", entry.VersionRef),
+			fmt.Sprintf("    fingerprint: %s", entry.Fingerprint),
+		)
+	}
+	return lines
+}
+
+func renderRepositoryMappingLines(entry RepositoryMappingEntry) []string {
+	if entry.FileRef == "" && entry.VersionRef == "" && entry.Fingerprint == "" {
+		return []string{"  none"}
+	}
+	return []string{
+		fmt.Sprintf("  file_ref: %s", entry.FileRef),
+		fmt.Sprintf("  version_ref: %s", entry.VersionRef),
+		fmt.Sprintf("  fingerprint: %s", entry.Fingerprint),
+	}
+}
+
+func renderObjectSnapshotLines(objectField string, entries []ObjectSnapshotEntry) []string {
+	if len(entries) == 0 {
+		return []string{"  none"}
+	}
+	lines := []string{}
+	for _, entry := range sortObjectSnapshotEntries(entries) {
+		lines = append(lines,
+			fmt.Sprintf("  - %s: %s", objectField, entry.ObjectRef),
 			fmt.Sprintf("    layer: %s", entry.Layer),
 			fmt.Sprintf("    file_ref: %s", entry.FileRef),
 			fmt.Sprintf("    version_ref: %s", entry.VersionRef),

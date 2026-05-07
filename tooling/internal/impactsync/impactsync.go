@@ -37,6 +37,7 @@ type ScopedObject struct {
 	Binding               ObjectBinding
 	InvalidatingRuleRefs  []string
 	ExplicitFallbackScope bool
+	ValidateProcess       bool
 }
 
 type Input struct {
@@ -54,6 +55,7 @@ type ModuleResult struct {
 	ActiveLayer        string
 	Outcome            string
 	FallbackReasonCode string
+	FailureLayer       string
 	NextCommand        string
 	DeletedFiles       []string
 	MissingFiles       []string
@@ -66,6 +68,7 @@ type ObjectResult struct {
 	ActiveLayer        string
 	Outcome            string
 	FallbackReasonCode string
+	FailureLayer       string
 	NextCommand        string
 	DeletedFiles       []string
 	MissingFiles       []string
@@ -74,7 +77,6 @@ type ObjectResult struct {
 }
 
 type objectFamilyConfig struct {
-	CandidateNextCommand  string
 	StableNextCommand     string
 	CandidateProcessKinds []string
 }
@@ -142,7 +144,7 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 	expectedSnapshot, err := snapshot.RebuildCurrent(repoRoot, binding.Module)
 	if err != nil {
 		if fallbackReason != "" {
-			return applyCandidateFallback(repoRoot, result, fallbackReason)
+			return applyCandidateFallback(repoRoot, result, fallbackReason, "truth_layer")
 		}
 		return ModuleResult{}, err
 	}
@@ -150,6 +152,7 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 	processFound := false
 	sharedMismatch := false
 	nonSharedMismatch := false
+	failureLayer := ""
 	for _, processKind := range []string{"check", "plan", "verify"} {
 		processPath, err := snapshot.ProcessFilePath("unit", binding.Module, processKind)
 		if err != nil {
@@ -171,6 +174,9 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 		}
 		if validation.Valid {
 			continue
+		}
+		if failureLayer == "" {
+			failureLayer = validation.FailureLayer
 		}
 
 		processSnapshot, err := snapshot.LoadProcessSnapshot(repoRoot, "unit", binding.Module, processKind)
@@ -197,20 +203,34 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 
 	switch {
 	case fallbackReason != "":
+		failureLayer = "truth_layer"
 	case nonSharedMismatch:
-		fallbackReason = "truth_drift"
+		switch failureLayer {
+		case "plan_layer":
+			fallbackReason = "gate_missing"
+		case "evidence_layer":
+			fallbackReason = "evidence_incomplete"
+		case "gate_layer":
+			fallbackReason = "gate_missing"
+		default:
+			fallbackReason = "truth_drift"
+			failureLayer = "truth_layer"
+		}
 	case sharedMismatch:
 		fallbackReason = "rule_drift"
+		failureLayer = "truth_layer"
 	case !processFound && len(invalidatingRuleRefs) > 0:
 		fallbackReason = "rule_drift"
+		failureLayer = "truth_layer"
 	case !processFound && explicitFallbackScope && binding.NextCommand != "unit_check":
 		fallbackReason = "binding_drift"
+		failureLayer = "truth_layer"
 	}
 
 	if fallbackReason == "" {
 		return result, nil
 	}
-	return applyCandidateFallback(repoRoot, result, fallbackReason)
+	return applyCandidateFallback(repoRoot, result, fallbackReason, failureLayer)
 }
 
 func reconcileStable(repoRoot string, binding ModuleBinding, result ModuleResult, invalidatingRuleRefs []string, explicitFallbackScope, bindingIssue bool) (ModuleResult, error) {
@@ -238,11 +258,26 @@ func reconcileStable(repoRoot string, binding ModuleBinding, result ModuleResult
 	return result, nil
 }
 
-func applyCandidateFallback(repoRoot string, result ModuleResult, fallbackReason string) (ModuleResult, error) {
+func applyCandidateFallback(repoRoot string, result ModuleResult, fallbackReason string, failureLayer string) (ModuleResult, error) {
 	result.FallbackReasonCode = fallbackReason
+	result.FailureLayer = failureLayer
 	result.Outcome = "invalidated"
-	result.NextCommand = "unit_check"
-	for _, processKind := range []string{"check", "plan", "verify"} {
+	processKinds := []string{"check", "plan", "verify"}
+	switch failureLayer {
+	case "gate_layer":
+		result.NextCommand = "unit_check"
+		processKinds = []string{"check"}
+	case "plan_layer":
+		result.NextCommand = "unit_plan"
+		processKinds = []string{"plan", "verify"}
+	case "evidence_layer":
+		result.NextCommand = "unit_verify"
+		processKinds = []string{"verify"}
+	default:
+		result.NextCommand = "unit_check"
+		result.FailureLayer = "truth_layer"
+	}
+	for _, processKind := range processKinds {
 		processPaths, err := snapshot.ProcessArtifactPaths("unit", result.Module, processKind)
 		if err != nil {
 			return ModuleResult{}, err
@@ -284,6 +319,13 @@ func reconcileObject(repoRoot string, scoped ScopedObject) (ObjectResult, error)
 		Diagnostics: append([]string{}, binding.BindingIssues...),
 	}
 
+	config, err := objectFamilyConfigFor(binding.ObjectType)
+	if err != nil {
+		return ObjectResult{}, err
+	}
+	if binding.ActiveLayer == "candidate" {
+		return reconcileCandidateObject(repoRoot, scoped, result, config)
+	}
 	fallbackReason := ""
 	switch {
 	case len(binding.BindingIssues) > 0:
@@ -295,14 +337,6 @@ func reconcileObject(repoRoot string, scoped ScopedObject) (ObjectResult, error)
 	default:
 		return result, nil
 	}
-
-	config, err := objectFamilyConfigFor(binding.ObjectType)
-	if err != nil {
-		return ObjectResult{}, err
-	}
-	if binding.ActiveLayer == "candidate" {
-		return applyObjectCandidateFallback(repoRoot, result, binding.ObjectType, config, fallbackReason)
-	}
 	return applyObjectStableReroute(repoRoot, result, binding.ObjectType, config, fallbackReason)
 }
 
@@ -310,7 +344,6 @@ func objectFamilyConfigFor(objectType string) (objectFamilyConfig, error) {
 	switch objectType {
 	case "scenario":
 		return objectFamilyConfig{
-			CandidateNextCommand:  "scenario_check",
 			StableNextCommand:     "scenario_stable_verify",
 			CandidateProcessKinds: []string{"check", "verify"},
 		}, nil
@@ -319,12 +352,93 @@ func objectFamilyConfigFor(objectType string) (objectFamilyConfig, error) {
 	}
 }
 
-func applyObjectCandidateFallback(repoRoot string, result ObjectResult, objectType string, config objectFamilyConfig, fallbackReason string) (ObjectResult, error) {
-	result.FallbackReasonCode = fallbackReason
-	result.Outcome = "invalidated"
-	result.NextCommand = config.CandidateNextCommand
+func reconcileCandidateObject(repoRoot string, scoped ScopedObject, result ObjectResult, config objectFamilyConfig) (ObjectResult, error) {
+	binding := scoped.Binding
+	fallbackReason := ""
+	switch {
+	case len(binding.BindingIssues) > 0:
+		fallbackReason = "binding_drift"
+	case len(scoped.InvalidatingRuleRefs) > 0:
+		fallbackReason = "rule_drift"
+	case scoped.ExplicitFallbackScope:
+		fallbackReason = "binding_drift"
+	}
+	if fallbackReason != "" {
+		return applyObjectCandidateFallback(repoRoot, result, binding.ObjectType, "truth_layer", fallbackReason)
+	}
+	if !scoped.ValidateProcess {
+		return result, nil
+	}
 
-	for _, processPath := range objectProcessPaths(objectType, result.Object, config.CandidateProcessKinds) {
+	failureLayer := ""
+	reason := ""
+	fileKinds := []string{}
+	for _, processKind := range config.CandidateProcessKinds {
+		processPath, err := snapshot.ProcessFilePath(binding.ObjectType, binding.Object, processKind)
+		if err != nil {
+			return ObjectResult{}, err
+		}
+		processAbs := filepath.Join(repoRoot, filepath.FromSlash(processPath))
+		if _, err := os.Stat(processAbs); err != nil {
+			if os.IsNotExist(err) {
+				result.MissingFiles = append(result.MissingFiles, processPath)
+				continue
+			}
+			return ObjectResult{}, fmt.Errorf("stat %s: %w", processPath, err)
+		}
+
+		validation, err := snapshot.ValidateProcessFileForObject(repoRoot, binding.ObjectType, binding.Object, processKind)
+		if err != nil {
+			return ObjectResult{}, err
+		}
+		if validation.Valid {
+			continue
+		}
+		result.Diagnostics = append(result.Diagnostics, prefixItems(validation.Mismatches, processKind)...)
+		if validation.FailureLayer == "truth_layer" {
+			return applyObjectCandidateFallback(repoRoot, result, binding.ObjectType, "truth_layer", scenarioTruthFallbackReason(validation.Mismatches))
+		}
+		switch validation.FailureLayer {
+		case "gate_layer":
+			if failureLayer == "" || failureLayer == "evidence_layer" {
+				failureLayer = "gate_layer"
+				reason = "gate_missing"
+			}
+			fileKinds = append(fileKinds, "check")
+		case "evidence_layer":
+			if failureLayer == "" {
+				failureLayer = "evidence_layer"
+				reason = "evidence_incomplete"
+			}
+			fileKinds = append(fileKinds, "verify")
+		}
+	}
+	if failureLayer == "" {
+		result.MissingFiles = normalizeStrings(result.MissingFiles)
+		return result, nil
+	}
+	return applyObjectCandidateFallbackWithKinds(repoRoot, result, binding.ObjectType, failureLayer, reason, fileKinds)
+}
+
+func applyObjectCandidateFallback(repoRoot string, result ObjectResult, objectType string, failureLayer, fallbackReason string) (ObjectResult, error) {
+	_, fileKinds, err := scenarioRecoveryRule(failureLayer)
+	if err != nil {
+		return ObjectResult{}, err
+	}
+	return applyObjectCandidateFallbackWithKinds(repoRoot, result, objectType, failureLayer, fallbackReason, fileKinds)
+}
+
+func applyObjectCandidateFallbackWithKinds(repoRoot string, result ObjectResult, objectType string, failureLayer, fallbackReason string, fileKinds []string) (ObjectResult, error) {
+	nextCommand, _, err := scenarioRecoveryRule(failureLayer)
+	if err != nil {
+		return ObjectResult{}, err
+	}
+	result.FallbackReasonCode = fallbackReason
+	result.FailureLayer = failureLayer
+	result.Outcome = "invalidated"
+	result.NextCommand = nextCommand
+
+	for _, processPath := range objectProcessPaths(objectType, result.Object, fileKinds) {
 		processAbs := filepath.Join(repoRoot, filepath.FromSlash(processPath))
 		if _, err := os.Stat(processAbs); err != nil {
 			if os.IsNotExist(err) {
@@ -347,6 +461,36 @@ func applyObjectCandidateFallback(repoRoot string, result ObjectResult, objectTy
 	result.DeletedFiles = normalizeStrings(result.DeletedFiles)
 	result.MissingFiles = normalizeStrings(result.MissingFiles)
 	return result, nil
+}
+
+func scenarioRecoveryRule(failureLayer string) (string, []string, error) {
+	switch failureLayer {
+	case "truth_layer":
+		return "scenario_check", []string{"check", "verify"}, nil
+	case "gate_layer":
+		return "scenario_check", []string{"check"}, nil
+	case "evidence_layer":
+		return "scenario_verify", []string{"verify"}, nil
+	case "dependency_readiness_layer":
+		return "scenario_promote", nil, nil
+	default:
+		return "", nil, fmt.Errorf("unsupported scenario failure layer %q", failureLayer)
+	}
+}
+
+func scenarioTruthFallbackReason(mismatches []string) string {
+	for _, mismatch := range mismatches {
+		switch {
+		case strings.Contains(mismatch, "rule_snapshot"):
+			return "rule_drift"
+		case strings.Contains(mismatch, "repository_mapping_snapshot"),
+			strings.Contains(mismatch, "unit_snapshot"):
+			return "binding_drift"
+		case strings.Contains(mismatch, "baseline"):
+			return "baseline_drift"
+		}
+	}
+	return "truth_drift"
 }
 
 func applyObjectStableReroute(repoRoot string, result ObjectResult, objectType string, config objectFamilyConfig, fallbackReason string) (ObjectResult, error) {

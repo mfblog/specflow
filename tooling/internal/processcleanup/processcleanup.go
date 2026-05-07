@@ -12,9 +12,12 @@ import (
 )
 
 type CleanupResult struct {
+	ObjectType    string
+	Object        string
 	Module        string
 	FromCommand   string
 	Reason        string
+	FailureLayer  string
 	NextCommand   string
 	DeletedFiles  []string
 	MissingFiles  []string
@@ -22,6 +25,8 @@ type CleanupResult struct {
 }
 
 type SuccessCleanupResult struct {
+	ObjectType   string
+	Object       string
 	Module       string
 	Mode         string
 	DeletedFiles []string
@@ -33,75 +38,50 @@ type cleanupRule struct {
 	FileKinds   []string
 }
 
-var rules = map[string]map[string]cleanupRule{
-	"unit_plan": {
-		"gate_missing":     {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"truth_drift":      {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"binding_drift":    {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"baseline_drift":   {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"rule_drift":       {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"truth_incomplete": {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
+var layeredRules = map[string]map[string]cleanupRule{
+	"unit": {
+		"truth_layer":          {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
+		"gate_layer":           {NextCommand: "unit_check", FileKinds: []string{"check"}},
+		"plan_layer":           {NextCommand: "unit_plan", FileKinds: []string{"plan", "verify"}},
+		"implementation_layer": {NextCommand: "unit_impl", FileKinds: []string{"verify"}},
+		"evidence_layer":       {NextCommand: "unit_verify", FileKinds: []string{"verify"}},
 	},
-	"unit_impl": {
-		"gate_missing":   {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"truth_drift":    {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"binding_drift":  {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"baseline_drift": {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"rule_drift":     {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-	},
-	"unit_verify": {
-		"gate_missing":   {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"truth_drift":    {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"binding_drift":  {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"baseline_drift": {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"rule_drift":     {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"implementation_deviation": {
-			NextCommand: "unit_impl",
-			FileKinds:   []string{"verify"},
-		},
-		"evidence_incomplete": {
-			NextCommand: "unit_verify",
-			FileKinds:   []string{"verify"},
-		},
-		"truth_incomplete": {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-	},
-	"unit_promote": {
-		"truth_drift":    {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"binding_drift":  {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"baseline_drift": {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"rule_drift":     {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"implementation_deviation": {
-			NextCommand: "unit_impl",
-			FileKinds:   []string{"verify"},
-		},
-		"evidence_incomplete": {
-			NextCommand: "unit_verify",
-			FileKinds:   []string{"verify"},
-		},
+	"scenario": {
+		"truth_layer":                {NextCommand: "scenario_check", FileKinds: []string{"check", "verify"}},
+		"gate_layer":                 {NextCommand: "scenario_check", FileKinds: []string{"check"}},
+		"evidence_layer":             {NextCommand: "scenario_verify", FileKinds: []string{"verify"}},
+		"dependency_readiness_layer": {NextCommand: "scenario_promote", FileKinds: nil},
 	},
 }
 
 func ApplyFallback(repoRoot, module, fromCommand, reason string) (CleanupResult, error) {
+	return ApplyObjectFallback(repoRoot, "unit", module, fromCommand, reason, inferFailureLayer("unit", fromCommand, reason))
+}
+
+func ApplyObjectFallback(repoRoot, objectType, object, fromCommand, reason, failureLayer string) (CleanupResult, error) {
 	result := CleanupResult{
-		Module:      strings.TrimSpace(module),
-		FromCommand: strings.TrimSpace(fromCommand),
-		Reason:      strings.TrimSpace(reason),
+		ObjectType:   strings.TrimSpace(objectType),
+		Object:       strings.TrimSpace(object),
+		Module:       strings.TrimSpace(object),
+		FromCommand:  strings.TrimSpace(fromCommand),
+		Reason:       strings.TrimSpace(reason),
+		FailureLayer: strings.TrimSpace(failureLayer),
 	}
 
-	if result.Module == "" || result.FromCommand == "" || result.Reason == "" {
-		return result, fmt.Errorf("module, from command, and reason are required")
+	if result.ObjectType == "" || result.Object == "" || result.FromCommand == "" || result.Reason == "" || result.FailureLayer == "" {
+		return result, fmt.Errorf("object type, object, from command, reason, and failure layer are required")
 	}
-	if _, err := ensureFormalModule(repoRoot, result.Module); err != nil {
+	if _, err := ensureFormalObject(repoRoot, result.ObjectType, result.Object); err != nil {
 		return result, err
 	}
 
-	rule, err := lookupRule(result.FromCommand, result.Reason)
+	rule, err := lookupLayeredRule(result.ObjectType, result.FailureLayer)
 	if err != nil {
 		return result, err
 	}
 	result.NextCommand = rule.NextCommand
 
-	for _, relPath := range filePathsForModule(result.Module, rule.FileKinds) {
+	for _, relPath := range filePathsForObject(result.ObjectType, result.Object, rule.FileKinds) {
 		absPath := filepath.Join(repoRoot, filepath.FromSlash(relPath))
 		if _, err := os.Stat(absPath); err != nil {
 			if os.IsNotExist(err) {
@@ -116,7 +96,7 @@ func ApplyFallback(repoRoot, module, fromCommand, reason string) (CleanupResult,
 		result.DeletedFiles = append(result.DeletedFiles, relPath)
 	}
 
-	updated, err := statusfile.UpdateNextCommand(repoRoot, result.Module, result.NextCommand)
+	updated, err := statusfile.UpdateObjectNextCommand(repoRoot, result.ObjectType, result.Object, result.NextCommand)
 	if err != nil {
 		return result, err
 	}
@@ -125,18 +105,24 @@ func ApplyFallback(repoRoot, module, fromCommand, reason string) (CleanupResult,
 }
 
 func ApplySuccessCleanup(repoRoot, module, mode string) (SuccessCleanupResult, error) {
+	return ApplyObjectSuccessCleanup(repoRoot, "unit", module, mode)
+}
+
+func ApplyObjectSuccessCleanup(repoRoot, objectType, object, mode string) (SuccessCleanupResult, error) {
 	result := SuccessCleanupResult{
-		Module: strings.TrimSpace(module),
-		Mode:   strings.TrimSpace(mode),
+		ObjectType: strings.TrimSpace(objectType),
+		Object:     strings.TrimSpace(object),
+		Module:     strings.TrimSpace(object),
+		Mode:       strings.TrimSpace(mode),
 	}
-	if result.Module == "" || result.Mode == "" {
-		return result, fmt.Errorf("module and mode are required")
+	if result.ObjectType == "" || result.Object == "" || result.Mode == "" {
+		return result, fmt.Errorf("object type, object, and mode are required")
 	}
-	if _, err := ensureFormalModule(repoRoot, result.Module); err != nil {
+	if _, err := ensureFormalObject(repoRoot, result.ObjectType, result.Object); err != nil {
 		return result, err
 	}
 
-	paths, err := successCleanupPaths(repoRoot, result.Module, result.Mode)
+	paths, err := successCleanupPaths(repoRoot, result.ObjectType, result.Object, result.Mode)
 	if err != nil {
 		return result, err
 	}
@@ -157,22 +143,26 @@ func ApplySuccessCleanup(repoRoot, module, mode string) (SuccessCleanupResult, e
 	return result, nil
 }
 
-func lookupRule(fromCommand, reason string) (cleanupRule, error) {
-	commandRules, ok := rules[fromCommand]
+func lookupLayeredRule(objectType, failureLayer string) (cleanupRule, error) {
+	objectRules, ok := layeredRules[objectType]
 	if !ok {
-		return cleanupRule{}, fmt.Errorf("unsupported from-command %q", fromCommand)
+		return cleanupRule{}, fmt.Errorf("unsupported object type %q", objectType)
 	}
-	rule, ok := commandRules[reason]
+	rule, ok := objectRules[failureLayer]
 	if !ok {
-		return cleanupRule{}, fmt.Errorf("no deterministic fallback cleanup is defined for %q + %q", fromCommand, reason)
+		return cleanupRule{}, fmt.Errorf("no deterministic fallback cleanup is defined for %q + %q", objectType, failureLayer)
 	}
 	return rule, nil
 }
 
 func filePathsForModule(module string, fileKinds []string) []string {
+	return filePathsForObject("unit", module, fileKinds)
+}
+
+func filePathsForObject(objectType, object string, fileKinds []string) []string {
 	paths := make([]string, 0, len(fileKinds))
 	for _, fileKind := range fileKinds {
-		filePaths, err := snapshot.ProcessArtifactPaths("unit", module, fileKind)
+		filePaths, err := snapshot.ProcessArtifactPaths(objectType, object, fileKind)
 		if err != nil {
 			continue
 		}
@@ -181,24 +171,73 @@ func filePathsForModule(module string, fileKinds []string) []string {
 	return sortAndDedupeStrings(paths)
 }
 
-func successCleanupPaths(repoRoot, module, mode string) ([]string, error) {
+func inferFailureLayer(objectType, fromCommand, reason string) string {
+	switch reason {
+	case "truth_drift", "binding_drift", "baseline_drift", "rule_drift", "truth_incomplete", "shared_truth_conflict", "governance_drift":
+		return "truth_layer"
+	case "implementation_deviation":
+		return "implementation_layer"
+	case "evidence_incomplete":
+		return "evidence_layer"
+	case "stable_dependency_not_ready":
+		return "dependency_readiness_layer"
+	case "gate_missing":
+		if strings.HasSuffix(fromCommand, "_impl") {
+			return "plan_layer"
+		}
+		return "gate_layer"
+	default:
+		if objectType == "unit" && strings.Contains(fromCommand, "_plan") {
+			return "plan_layer"
+		}
+		return "truth_layer"
+	}
+}
+
+func successCleanupPaths(repoRoot, objectType, object, mode string) ([]string, error) {
 	paths := []string{}
 	switch mode {
 	case "unit_fork":
-		paths = append(paths, filePathsForModule(module, []string{"check", "plan", "verify"})...)
-		appendixPaths, err := candidateAppendixPaths(repoRoot, module)
+		if objectType != "unit" {
+			return nil, fmt.Errorf("mode %q requires object type unit", mode)
+		}
+		paths = append(paths, filePathsForObject(objectType, object, []string{"check", "plan", "verify"})...)
+		appendixPaths, err := candidateAppendixPaths(repoRoot, objectType, object)
 		if err != nil {
 			return nil, err
 		}
 		paths = append(paths, appendixPaths...)
 	case "unit_promote":
-		candidateMainRef, err := specpaths.MainSpecFileRef("candidate", module)
+		if objectType != "unit" {
+			return nil, fmt.Errorf("mode %q requires object type unit", mode)
+		}
+		candidateMainRef, err := specpaths.ObjectMainSpecFileRef(objectType, "candidate", object)
 		if err != nil {
 			return nil, err
 		}
 		paths = append(paths, candidateMainRef)
-		paths = append(paths, filePathsForModule(module, []string{"check", "plan", "verify"})...)
-		appendixPaths, err := candidateAppendixPaths(repoRoot, module)
+		paths = append(paths, filePathsForObject(objectType, object, []string{"check", "plan", "verify"})...)
+		appendixPaths, err := candidateAppendixPaths(repoRoot, objectType, object)
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, appendixPaths...)
+	case "scenario_fork":
+		if objectType != "scenario" {
+			return nil, fmt.Errorf("mode %q requires object type scenario", mode)
+		}
+		paths = append(paths, filePathsForObject(objectType, object, []string{"check", "verify"})...)
+	case "scenario_promote":
+		if objectType != "scenario" {
+			return nil, fmt.Errorf("mode %q requires object type scenario", mode)
+		}
+		candidateMainRef, err := specpaths.ObjectMainSpecFileRef(objectType, "candidate", object)
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, candidateMainRef)
+		paths = append(paths, filePathsForObject(objectType, object, []string{"check", "verify"})...)
+		appendixPaths, err := candidateAppendixPaths(repoRoot, objectType, object)
 		if err != nil {
 			return nil, err
 		}
@@ -209,8 +248,12 @@ func successCleanupPaths(repoRoot, module, mode string) ([]string, error) {
 	return sortAndDedupeStrings(paths), nil
 }
 
-func candidateAppendixPaths(repoRoot, module string) ([]string, error) {
-	pattern := filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixGlob(module)))
+func candidateAppendixPaths(repoRoot, objectType, object string) ([]string, error) {
+	glob, err := specpaths.ObjectCandidateAppendixGlob(objectType, object)
+	if err != nil {
+		return nil, err
+	}
+	pattern := filepath.Join(repoRoot, filepath.FromSlash(glob))
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, err
@@ -227,16 +270,20 @@ func candidateAppendixPaths(repoRoot, module string) ([]string, error) {
 }
 
 func ensureFormalModule(repoRoot, module string) (bool, error) {
-	modules, err := statusfile.LoadModules(repoRoot)
+	return ensureFormalObject(repoRoot, "unit", module)
+}
+
+func ensureFormalObject(repoRoot, objectType, object string) (bool, error) {
+	statuses, err := statusfile.LoadObjectStatuses(repoRoot)
 	if err != nil {
 		return false, err
 	}
-	for _, candidate := range modules {
-		if candidate == module {
+	for _, candidate := range statuses {
+		if candidate.ObjectType == objectType && candidate.Object == object {
 			return true, nil
 		}
 	}
-	return false, fmt.Errorf("module %q is not registered in docs/specs/_status.md", module)
+	return false, fmt.Errorf("%s %q is not registered in docs/specs/_status.md", objectType, object)
 }
 
 func sortAndDedupeStrings(values []string) []string {

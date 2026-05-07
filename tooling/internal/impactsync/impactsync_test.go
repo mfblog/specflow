@@ -229,6 +229,80 @@ func TestApplyUsesExplicitFallbackScopeForObjects(t *testing.T) {
 	}
 }
 
+func TestApplyClassifiesScenarioGateLayerAndKeepsVerify(t *testing.T) {
+	repoRoot := t.TempDir()
+	snap := setupImpactScenarioSnapshotRepo(t, repoRoot)
+	checkPath := filepath.Join(repoRoot, "docs/specs/_check_result/scenario/checkout.md")
+	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/scenario/checkout.md")
+	mustWriteImpactFile(t, checkPath, strings.Replace(renderImpactScenarioCheckProcessSnapshot(snap), "coverage_summary: current candidate\n", "", 1))
+	mustWriteImpactFile(t, verifyPath, renderImpactScenarioVerifyProcessSnapshot(snap, "pass"))
+
+	result, err := Apply(repoRoot, Input{
+		Flows: []ScopedObject{{
+			Binding: ObjectBinding{
+				ObjectType:  "scenario",
+				Object:      "checkout",
+				ActiveLayer: "candidate",
+				NextCommand: "scenario_verify",
+			},
+			ValidateProcess: true,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if len(result.FlowResults) != 1 {
+		t.Fatalf("expected one flow result, got %+v", result.FlowResults)
+	}
+	flowResult := result.FlowResults[0]
+	if flowResult.Outcome != "invalidated" || flowResult.FailureLayer != "gate_layer" || flowResult.NextCommand != "scenario_check" {
+		t.Fatalf("expected gate_layer scenario_check, got %+v", flowResult)
+	}
+	if _, err := os.Stat(checkPath); !os.IsNotExist(err) {
+		t.Fatalf("expected check file deleted, stat err=%v", err)
+	}
+	if _, err := os.Stat(verifyPath); err != nil {
+		t.Fatalf("expected verify file to remain, stat err=%v", err)
+	}
+}
+
+func TestApplyClassifiesScenarioEvidenceLayerAndKeepsCheck(t *testing.T) {
+	repoRoot := t.TempDir()
+	snap := setupImpactScenarioSnapshotRepo(t, repoRoot)
+	checkPath := filepath.Join(repoRoot, "docs/specs/_check_result/scenario/checkout.md")
+	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/scenario/checkout.md")
+	mustWriteImpactFile(t, checkPath, renderImpactScenarioCheckProcessSnapshot(snap))
+	mustWriteImpactFile(t, verifyPath, renderImpactScenarioVerifyProcessSnapshot(snap, "skipped"))
+
+	result, err := Apply(repoRoot, Input{
+		Flows: []ScopedObject{{
+			Binding: ObjectBinding{
+				ObjectType:  "scenario",
+				Object:      "checkout",
+				ActiveLayer: "candidate",
+				NextCommand: "scenario_promote",
+			},
+			ValidateProcess: true,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if len(result.FlowResults) != 1 {
+		t.Fatalf("expected one flow result, got %+v", result.FlowResults)
+	}
+	flowResult := result.FlowResults[0]
+	if flowResult.Outcome != "invalidated" || flowResult.FailureLayer != "evidence_layer" || flowResult.NextCommand != "scenario_verify" {
+		t.Fatalf("expected evidence_layer scenario_verify, got %+v", flowResult)
+	}
+	if _, err := os.Stat(checkPath); err != nil {
+		t.Fatalf("expected check file to remain, stat err=%v", err)
+	}
+	if _, err := os.Stat(verifyPath); !os.IsNotExist(err) {
+		t.Fatalf("expected verify file deleted, stat err=%v", err)
+	}
+}
+
 func TestApplyKeepsObjectsUnchangedWithoutFallbackInputs(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupImpactRepo(t, repoRoot, strings.Join([]string{
@@ -415,6 +489,79 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 	return "docs/specs/rules/candidate/c_b_rule_demo.md"
 }
 
+func setupImpactScenarioSnapshotRepo(t *testing.T, repoRoot string) snapshot.Snapshot {
+	t.Helper()
+	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs"))
+	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate"))
+	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/units/stable"))
+	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/rules/stable"))
+	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/scenario"))
+	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/scenario"))
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `ai` | `yes` | `no` | `stable` | `unit_fork` | stable dependency |",
+		"| `scenario` | `checkout` | `no` | `yes` | `candidate` | `scenario_verify` | current round |",
+	}, "\n")+"\n")
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), strings.Join([]string{
+		"---",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Repository Mapping",
+		"",
+	}, "\n"))
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), strings.Join([]string{
+		"---",
+		"rule_id: g_rule_repository_baseline",
+		"rule_scope: global",
+		"layer: stable",
+		"rule_version: 1.0.0",
+		"bound_objects: all",
+		"---",
+		"",
+		"# Baseline",
+		"",
+	}, "\n"))
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_ai.md"), strings.Join([]string{
+		"---",
+		"id: ai",
+		"layer: stable",
+		"version: 1.0.0",
+		"---",
+		"",
+		"# AI",
+		"",
+	}, "\n"))
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/c_scenario_checkout.md"), strings.Join([]string{
+		"---",
+		"id: checkout",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Checkout",
+		"",
+		"## Bindings",
+		"",
+		"repository_mapping_ref: repository_mapping@0.1.0",
+		"unit_refs:",
+		"   - s_unit_ai@1.0.0",
+		"rule_refs: none",
+		"",
+	}, "\n")+strings.Join(acceptanceSectionFixtureLines("checkout"), "\n")+"\n")
+
+	snap, err := snapshot.RebuildCurrentObject(repoRoot, "scenario", "checkout")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	return snap
+}
+
 func mustMkdirImpactAll(t *testing.T, path string) {
 	t.Helper()
 	if err := os.MkdirAll(path, 0o755); err != nil {
@@ -552,6 +699,119 @@ func renderImpactAcceptancePlanCoverage(entries []snapshot.AcceptanceItemEntry) 
 		lines = append(lines,
 			"  - id: "+entry.ID,
 			"    coverage: covered",
+		)
+	}
+	return lines
+}
+
+func renderImpactScenarioCheckProcessSnapshot(snap snapshot.Snapshot) string {
+	lines := []string{
+		"# check",
+		"",
+		"```yaml",
+		"object_type: scenario",
+		"object_ref: " + snap.Object,
+		"gate: scenario_check",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: scenario_verify",
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
+		"truth_layer_ref: " + snap.TruthLayerRef,
+		"truth_file_ref: " + snap.SpecFileRef,
+		"truth_version_ref: " + snap.SpecVersionRef,
+		"truth_fingerprint: " + snap.SpecFingerprint,
+	}
+	lines = append(lines, renderImpactRepositoryMappingSnapshot(snap.RepositoryMapping)...)
+	lines = append(lines, renderImpactObjectSnapshot("unit_snapshot", "unit", snap.UnitSnapshot)...)
+	lines = append(lines, renderImpactRuleSnapshot(snap.RuleSnapshot)...)
+	lines = append(lines, renderImpactAcceptanceItemSet(snap.AcceptanceItemSet)...)
+	lines = append(lines, "```", "")
+	return strings.Join(lines, "\n")
+}
+
+func renderImpactScenarioVerifyProcessSnapshot(snap snapshot.Snapshot, status string) string {
+	lines := []string{
+		"# verify",
+		"",
+		"```yaml",
+		"object_type: scenario",
+		"object_ref: " + snap.Object,
+		"gate: scenario_verify",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: scenario_promote",
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
+		"truth_layer_ref: " + snap.TruthLayerRef,
+		"truth_file_ref: " + snap.SpecFileRef,
+		"truth_version_ref: " + snap.SpecVersionRef,
+		"truth_fingerprint: " + snap.SpecFingerprint,
+	}
+	lines = append(lines, renderImpactRepositoryMappingSnapshot(snap.RepositoryMapping)...)
+	lines = append(lines, renderImpactObjectSnapshot("unit_snapshot", "unit", snap.UnitSnapshot)...)
+	lines = append(lines,
+		"verification_scope_ref: current",
+	)
+	lines = append(lines, renderImpactRuleSnapshot(snap.RuleSnapshot)...)
+	lines = append(lines, renderImpactAcceptanceItemSet(snap.AcceptanceItemSet)...)
+	lines = append(lines, renderImpactAcceptanceEvidence(snap.AcceptanceItemSet, status)...)
+	lines = append(lines, "```", "")
+	return strings.Join(lines, "\n")
+}
+
+func renderImpactRepositoryMappingSnapshot(entry snapshot.RepositoryMappingEntry) []string {
+	return []string{
+		"repository_mapping_snapshot:",
+		"  file_ref: " + entry.FileRef,
+		"  version_ref: " + entry.VersionRef,
+		"  fingerprint: " + entry.Fingerprint,
+	}
+}
+
+func renderImpactObjectSnapshot(fieldName, objectField string, entries []snapshot.ObjectSnapshotEntry) []string {
+	if len(entries) == 0 {
+		return []string{fieldName + ": none"}
+	}
+	lines := []string{fieldName + ":"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - "+objectField+": "+entry.ObjectRef,
+			"    layer: "+entry.Layer,
+			"    file_ref: "+entry.FileRef,
+			"    version_ref: "+entry.VersionRef,
+			"    fingerprint: "+entry.Fingerprint,
+		)
+	}
+	return lines
+}
+
+func renderImpactRuleSnapshot(entries []snapshot.RuleEntry) []string {
+	if len(entries) == 0 {
+		return []string{"rule_snapshot: none"}
+	}
+	lines := []string{"rule_snapshot:"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - rule_id: "+entry.RuleID,
+			"    layer: "+entry.Layer,
+			"    file_ref: "+entry.FileRef,
+			"    version_ref: "+entry.VersionRef,
+			"    fingerprint: "+entry.Fingerprint,
+		)
+	}
+	return lines
+}
+
+func renderImpactAcceptanceEvidence(entries []snapshot.AcceptanceItemEntry, status string) []string {
+	if len(entries) == 0 {
+		return []string{"acceptance_item_evidence_matrix: none"}
+	}
+	lines := []string{"acceptance_item_evidence_matrix:"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - id: "+entry.ID,
+			"    status: "+status,
 		)
 	}
 	return lines

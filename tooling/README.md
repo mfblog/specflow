@@ -105,9 +105,9 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
 15. `snapshot validate-process`
    - compare one process file against rebuilt current truth
 16. `process cleanup-fallback`
-   - execute deterministic unit fallback cleanup
+   - execute deterministic layered fallback cleanup for one unit or scenario
 17. `process cleanup-success`
-   - execute deterministic unit success cleanup
+   - execute deterministic success cleanup for one unit or scenario
 18. `status set-unit`
    - write one deterministic `unit` row in `_status.md`
 19. `status set-object`
@@ -265,8 +265,9 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-validate --flow spec_flow_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-refresh --flow spec_flow_design_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-touch --flow spec_flow_design_review
-./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --unit ai
-./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --unit ai --from-command unit_promote --reason evidence_incomplete
+./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --object-type unit --object ai
+./specflow/tooling/bin/specflowctl-linux-amd64 snapshot validate-process --object-type scenario --object task_execution --process verify
+./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --object-type unit --object ai --from-command unit_promote --reason evidence_incomplete --failure-layer evidence_layer
 ./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type scenario --object task_execution --stable yes --candidate no --active-layer stable --next-command scenario_fork
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_app_config_topology@0.2.0 --units ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_runtime_model@0.3.0,s_b_rule_runtime_model@0.3.0 --stable-landing-unit skill --stable-landing-rule-refs s_b_rule_runtime_model@0.3.0 --retargeted-units agent

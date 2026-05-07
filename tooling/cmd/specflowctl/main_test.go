@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 )
 
 func TestReviewRunInitAndValidateCLI(t *testing.T) {
@@ -145,6 +147,44 @@ func TestDesignReviewRunInitAndValidateCLI(t *testing.T) {
 	}
 }
 
+func TestSnapshotValidateProcessUsesObjectFlagsCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepo(t)
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+strings.Join([]string{
+		"spec_file_ref: " + expected.SpecFileRef,
+		"spec_version_ref: " + expected.SpecVersionRef,
+		"spec_fingerprint: " + expected.SpecFingerprint,
+		"unit_appendix_snapshot: none",
+		"rule_snapshot: none",
+		"acceptance_item_plan_coverage:",
+		"  - id: demo.core",
+		"    coverage: implementation slice and verification target",
+	}, "\n")+"\n```\n")
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err = runSnapshot([]string{"validate-process", "--object-type", "unit", "--object", "demo", "--process", "plan", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("validate-process failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Process snapshot is valid.") {
+		t.Fatalf("expected valid output, got %s", stdout.String())
+	}
+}
+
+func TestSnapshotValidateProcessRejectsScenarioPlanCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepo(t)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := runSnapshot([]string{"validate-process", "--object-type", "scenario", "--object", "demo_flow", "--process", "plan", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "process kind \"plan\" is not supported for object type \"scenario\"") {
+		t.Fatalf("expected unsupported scenario plan error, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
+	}
+}
+
 func createCLITestRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
@@ -231,6 +271,69 @@ func createCLITestRepo(t *testing.T) string {
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# Global Rules\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo Candidate\n")
+	return repoRoot
+}
+
+func createCLISnapshotRepo(t *testing.T) string {
+	t.Helper()
+	repoRoot := t.TempDir()
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
+		"# Spec Status\n\n"+
+		"## Formal Objects\n\n"+
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n"+
+		"|---|---|---|---|---|---|---|\n"+
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_impl` | test |\n"+
+		"| `scenario` | `demo_flow` | `no` | `yes` | `candidate` | `scenario_verify` | test |\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), `---
+id: demo
+layer: candidate
+version: 0.1.0
+---
+
+# Demo
+
+rule_refs: none
+
+## Testability / Acceptance Criteria
+
+acceptance_item_set:
+  - id: demo.core
+    target: Demo behavior is accepted.
+    verification_surface: internal_flow
+    implementation_surface: AgentCore/internal/demo
+    verification_method: Go test for the demo behavior.
+    pass_condition: The demo behavior passes under the declared checks.
+    not_runnable_yet: no
+`)
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/c_scenario_demo_flow.md"), `---
+id: demo_flow
+layer: candidate
+version: 0.1.0
+---
+
+# Demo Flow
+
+unit_refs: none
+rule_refs: none
+
+## Testability / Acceptance Criteria
+
+acceptance_item_set:
+  - id: demo_flow.e2e
+    target: Demo flow is accepted.
+    verification_surface: integration
+    implementation_surface: AgentCore/runtime
+    verification_method: Run the demo flow.
+    pass_condition: The demo result is observed.
+    not_runnable_yet: no
+`)
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), `---
+id: repository_mapping
+version: 0.1.0
+---
+
+# Repository Mapping
+`)
 	return repoRoot
 }
 

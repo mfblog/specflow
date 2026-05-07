@@ -464,25 +464,28 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("process cleanup-fallback", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		module := fs.String("unit", "", "formal unit name")
+		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		object := fs.String("object", "", "formal object name")
 		fromCommand := fs.String("from-command", "", "origin command")
 		reason := fs.String("reason", "", "fallback reason code")
+		failureLayer := fs.String("failure-layer", "", "failure layer")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
-		if strings.TrimSpace(*module) == "" || strings.TrimSpace(*fromCommand) == "" || strings.TrimSpace(*reason) == "" {
+		if strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" || strings.TrimSpace(*fromCommand) == "" || strings.TrimSpace(*reason) == "" || strings.TrimSpace(*failureLayer) == "" {
 			writeProcessUsage(stderr)
-			return errors.New("unit, from-command, and reason are required")
+			return errors.New("object-type, object, from-command, reason, and failure-layer are required")
 		}
 
-		result, err := processcleanup.ApplyFallback(mustAbs(*repoRoot), *module, *fromCommand, *reason)
+		result, err := processcleanup.ApplyObjectFallback(mustAbs(*repoRoot), *objectType, *object, *fromCommand, *reason, *failureLayer)
 		if err != nil {
 			return err
 		}
 
-		fmt.Fprintf(stdout, "Applied fallback cleanup for %s\n", result.Module)
+		fmt.Fprintf(stdout, "Applied fallback cleanup for %s %s\n", result.ObjectType, result.Object)
 		fmt.Fprintf(stdout, "From command: %s\n", result.FromCommand)
 		fmt.Fprintf(stdout, "Fallback reason: %s\n", result.Reason)
+		fmt.Fprintf(stdout, "Failure layer: %s\n", result.FailureLayer)
 		fmt.Fprintf(stdout, "Next Command: %s\n", result.NextCommand)
 		writeList(stdout, "Deleted files", result.DeletedFiles)
 		writeList(stdout, "Missing files", result.MissingFiles)
@@ -492,21 +495,22 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("process cleanup-success", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		module := fs.String("unit", "", "formal unit name")
+		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		object := fs.String("object", "", "formal object name")
 		mode := fs.String("mode", "", "success cleanup mode")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
-		if strings.TrimSpace(*module) == "" || strings.TrimSpace(*mode) == "" {
+		if strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" || strings.TrimSpace(*mode) == "" {
 			writeProcessUsage(stderr)
-			return errors.New("unit and mode are required")
+			return errors.New("object-type, object, and mode are required")
 		}
 
-		result, err := processcleanup.ApplySuccessCleanup(mustAbs(*repoRoot), *module, *mode)
+		result, err := processcleanup.ApplyObjectSuccessCleanup(mustAbs(*repoRoot), *objectType, *object, *mode)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "Applied success cleanup for %s\n", result.Module)
+		fmt.Fprintf(stdout, "Applied success cleanup for %s %s\n", result.ObjectType, result.Object)
 		fmt.Fprintf(stdout, "Mode: %s\n", result.Mode)
 		writeList(stdout, "Deleted files", result.DeletedFiles)
 		writeList(stdout, "Missing files", result.MissingFiles)
@@ -653,15 +657,16 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("snapshot rebuild", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		module := fs.String("unit", "", "formal unit name")
+		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		object := fs.String("object", "", "formal object name")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
-		if strings.TrimSpace(*module) == "" {
+		if strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" {
 			writeSnapshotUsage(stderr)
-			return errors.New("unit is required")
+			return errors.New("object-type and object are required")
 		}
-		result, err := snapshot.RebuildCurrent(mustAbs(*repoRoot), *module)
+		result, err := snapshot.RebuildCurrentObject(mustAbs(*repoRoot), *objectType, *object)
 		if err != nil {
 			return err
 		}
@@ -671,16 +676,17 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("snapshot validate-process", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		module := fs.String("unit", "", "formal unit name")
+		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		object := fs.String("object", "", "formal object name")
 		processKind := fs.String("process", "", "check | plan | verify")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
-		if strings.TrimSpace(*module) == "" || strings.TrimSpace(*processKind) == "" {
+		if strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" || strings.TrimSpace(*processKind) == "" {
 			writeSnapshotUsage(stderr)
-			return errors.New("unit and process are required")
+			return errors.New("object-type, object, and process are required")
 		}
-		result, err := snapshot.ValidateProcessFile(mustAbs(*repoRoot), *module, *processKind)
+		result, err := snapshot.ValidateProcessFileForObject(mustAbs(*repoRoot), *objectType, *object, *processKind)
 		if err != nil {
 			return err
 		}
@@ -691,6 +697,10 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 		fmt.Fprintf(stdout, "Process snapshot is invalid. file=%s\n", result.ProcessFile)
 		for _, mismatch := range result.Mismatches {
 			fmt.Fprintf(stdout, "- %s\n", mismatch)
+		}
+		fmt.Fprintf(stdout, "Failure layer: %s\n", result.FailureLayer)
+		if result.NextCommand != "" {
+			fmt.Fprintf(stdout, "Recommended Next Command: %s\n", result.NextCommand)
 		}
 		return errors.New("process snapshot mismatch")
 	case "-h", "--help", "help":
@@ -917,8 +927,8 @@ func requireReviewFlow(flow string, stderr io.Writer) error {
 
 func writeProcessUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl process cleanup-fallback --unit UNIT --from-command COMMAND --reason CODE [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl process cleanup-success --unit UNIT --mode unit_fork|unit_promote [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl process cleanup-fallback --object-type unit|scenario --object OBJECT --from-command COMMAND --reason CODE --failure-layer LAYER [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl process cleanup-success --object-type unit|scenario --object OBJECT --mode unit_fork|unit_promote|scenario_fork|scenario_promote [--repo-root PATH]")
 }
 
 func writeRuleUsage(w io.Writer) {
@@ -930,8 +940,8 @@ func writeRuleUsage(w io.Writer) {
 
 func writeSnapshotUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl snapshot rebuild --unit UNIT [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl snapshot validate-process --unit UNIT --process check|plan|verify [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl snapshot rebuild --object-type unit|scenario --object OBJECT [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl snapshot validate-process --object-type unit|scenario --object OBJECT --process check|plan|verify [--repo-root PATH]")
 }
 
 func writeStatusUsage(w io.Writer) {

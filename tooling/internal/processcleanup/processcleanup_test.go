@@ -142,6 +142,97 @@ func TestApplyFallbackForVerifyTruthIncomplete(t *testing.T) {
 	}
 }
 
+func TestApplyObjectFallbackForUnitPlanLayer(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/active"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/draft"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+
+	status := strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `ai` | `yes` | `yes` | `candidate` | `unit_impl` | note |",
+	}, "\n") + "\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/ai.md"), "check")
+	for _, relPath := range []string{
+		"docs/specs/_plans/active/ai.md",
+		"docs/specs/_plans/draft/ai.md",
+		"docs/specs/_verify_result/unit/ai.md",
+	} {
+		mustWriteFile(t, filepath.Join(repoRoot, relPath), relPath)
+	}
+
+	result, err := ApplyObjectFallback(repoRoot, "unit", "ai", "unit_impl", "gate_missing", "plan_layer")
+	if err != nil {
+		t.Fatalf("ApplyObjectFallback: %v", err)
+	}
+	if result.NextCommand != "unit_plan" {
+		t.Fatalf("expected next command unit_plan, got %s", result.NextCommand)
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/unit/ai.md")); err != nil {
+		t.Fatalf("expected check file to remain, stat err=%v", err)
+	}
+	for _, relPath := range []string{
+		"docs/specs/_plans/active/ai.md",
+		"docs/specs/_plans/draft/ai.md",
+		"docs/specs/_verify_result/unit/ai.md",
+	} {
+		if _, err := os.Stat(filepath.Join(repoRoot, relPath)); !os.IsNotExist(err) {
+			t.Fatalf("expected %s to be deleted, stat err=%v", relPath, err)
+		}
+	}
+}
+
+func TestApplyObjectFallbackForScenarioDependencyReadinessKeepsProcessFiles(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/scenario"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/scenario"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+
+	status := strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `scenario` | `checkout` | `no` | `yes` | `candidate` | `scenario_promote` | note |",
+	}, "\n") + "\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+	for _, relPath := range []string{
+		"docs/specs/_check_result/scenario/checkout.md",
+		"docs/specs/_verify_result/scenario/checkout.md",
+	} {
+		mustWriteFile(t, filepath.Join(repoRoot, relPath), relPath)
+	}
+
+	result, err := ApplyObjectFallback(repoRoot, "scenario", "checkout", "scenario_promote", "stable_dependency_not_ready", "dependency_readiness_layer")
+	if err != nil {
+		t.Fatalf("ApplyObjectFallback: %v", err)
+	}
+	if result.NextCommand != "scenario_promote" {
+		t.Fatalf("expected next command scenario_promote, got %s", result.NextCommand)
+	}
+	if len(result.DeletedFiles) != 0 {
+		t.Fatalf("expected no deleted files, got %v", result.DeletedFiles)
+	}
+	for _, relPath := range []string{
+		"docs/specs/_check_result/scenario/checkout.md",
+		"docs/specs/_verify_result/scenario/checkout.md",
+	} {
+		if _, err := os.Stat(filepath.Join(repoRoot, relPath)); err != nil {
+			t.Fatalf("expected %s to remain, stat err=%v", relPath, err)
+		}
+	}
+}
+
 func TestApplySuccessCleanupForPromote(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))

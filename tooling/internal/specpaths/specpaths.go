@@ -52,3 +52,14 @@ func AppendixDir(layer string) (string, error) {
 func CandidateAppendixGlob(unit string) string {
 	return fmt.Sprintf("%s/c_unit_%s_*.md", CandidateAppendixDir, unit)
 }
+
+func ObjectCandidateAppendixGlob(objectType, object string) (string, error) {
+	switch objectType {
+	case "unit":
+		return fmt.Sprintf("%s/c_unit_%s_*.md", CandidateAppendixDir, object), nil
+	case "scenario":
+		return fmt.Sprintf("%s/appendix/c_scenario_%s_*.md", CandidateFlowDir, object), nil
+	default:
+		return "", fmt.Errorf("unsupported object type %q", objectType)
+	}
+}
