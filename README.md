@@ -478,8 +478,9 @@ The reader refresh button requests a new snapshot from disk immediately.
 Open pages also poll the local reader server on a fixed interval.
 The reader does not rely on filesystem watch events.
 
-The three common views are:
+The four common views are:
 
+- `Spec View`: candidate Specs that still need confirmation and stable Specs that are already accepted
 - `Status`: object layer and next step
 - `Project Structure`: path ownership and implementation locations
 - `SpecFlow`: relationships among Specs, rules, stable g_ rules, and support files
