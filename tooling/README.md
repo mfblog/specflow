@@ -156,6 +156,7 @@ Reader front-end rules:
 9. the front-end refresh button requests a new snapshot immediately.
 10. the front-end also polls `/api/snapshot` on a fixed interval so open pages converge to the latest disk state without relying on filesystem events.
 11. the Markdown document panel builds an in-memory side guide from the source document's Markdown headings, lets the reader open or close that guide locally, and uses it only for scrolling inside the currently opened document.
+12. the Spec View front-end view shows current candidate main Specs, current stable main Specs for registered objects, and current stable rule Specs from the existing snapshot; it must not create a new review state or write any page conclusion back to project files.
 
 ## Review Run-State Commands
 

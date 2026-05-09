@@ -7,12 +7,12 @@ let activeTruthOwnerID = null;
 let activeDocMode = "rendered";
 let mermaidReady = false;
 let activeSpecflowNavGroup = "unit";
-let activeReviewNavGroup = "capability";
+let activeReviewNavGroup = "candidate";
 let activeTodoNavGroup = "stableVerify";
 let snapshotRequestInFlight = false;
 let snapshotDataSignature = "";
 let activeSourceHeadings = [];
-let docGuideOpen = true;
+let docGuideOpen = false;
 
 const LANGUAGE_STORAGE_KEY = "specflow-reader-language";
 const SUPPORTED_LANGUAGES = ["zh-CN", "en"];
@@ -35,7 +35,7 @@ const TRANSLATIONS = {
     },
     tabs: {
       todo: { title: "待处理", subtitle: "下一步" },
-      review: { title: "Spec 审核", subtitle: "本轮确认" },
+      spec: { title: "Spec 查看", subtitle: "文档入口" },
       status: { title: "状态", subtitle: "进度对齐" },
       project: { title: "项目结构", subtitle: "仓库路径" },
       specflow: { subtitle: "治理层级" }
@@ -72,15 +72,18 @@ const TRANSLATIONS = {
         summary: "从状态索引汇总每个对象的下一步动作。这里是统一入口，先看要做什么，再打开对应材料。",
         nav: "下一步动作"
       },
-      review: {
-        title: "Spec 审核",
-        summary: "按本轮需要确认的 candidate 主文和非 evidence 附录组织文档审核入口。完整下一步动作请看“待处理”。",
-        nav: "待审核 Spec"
+      spec: {
+        title: "Spec 查看",
+        summary: "查看当前需要确认的 candidate Spec，以及已经成为 stable 的正式 Spec。完整下一步动作请看“待处理”。",
+        nav: "Spec 文档"
       },
       project: {
         title: "项目结构",
         summary: "从仓库路径看实现位置：哪些代码或工程路径已经归到具体责任对象，先不展示 SpecFlow 自己的 Spec 文档和支撑文件。",
-        nav: "目录"
+        nav: "目录",
+        groups: {
+          areas: "实现区域"
+        }
       },
       specflow: {
         title: "SpecFlow",
@@ -178,15 +181,15 @@ const TRANSLATIONS = {
       }
     },
     review: {
-      empty: "暂无待审核 candidate Spec。",
-      emptyNav: "暂无待审核 Spec。",
-      emptyDetailTitle: "暂无待审核 Spec",
-      emptyDetail: "当前没有需要默认审核的 candidate 主文或非 evidence 附录。stable、evidence、项目结构和全局规则不会作为本轮默认审核对象。",
+      empty: "暂无可查看 Spec。",
+      emptyNav: "暂无 Spec 文档。",
+      emptyDetailTitle: "暂无 Spec 文档",
+      emptyDetail: "当前快照里没有可查看的 candidate 或 stable 主 Spec。",
       openSource: "打开 Spec 原文",
-      fileType: "审核对象",
+      fileType: "文档分组",
       object: "对应项目对象",
-      reviewTarget: "你要审核",
-      readingFocus: "阅读重点",
+      reviewTarget: "查看说明",
+      readingFocus: "查看重点",
       relationships: "相关关系",
       relationEmpty: "暂无相关关系快照。",
       progressTitle: "本轮进度",
@@ -198,6 +201,7 @@ const TRANSLATIONS = {
       relation: {
         implementation: "实现路径",
         rule: "规则",
+        ruleFile: "规则文件",
         bound: "绑定对象",
         appendix: "附录文件",
         evidence: "证据参考",
@@ -206,13 +210,24 @@ const TRANSLATIONS = {
         system: "全局规则参考"
       },
       types: {
-        capability: "待确认单元设计",
-        scenario: "待确认端到端设计",
-        rule: "待确认规则",
+        candidate: "待确认 candidate",
+        stable: "已确认 stable",
+        stableRule: "已确认规则",
+        capability: "单元设计",
+        scenario: "端到端设计",
+        rule: "规则",
         structure: "项目结构文件",
         system: "全局规则文件"
       },
+      states: {
+        candidate: "待确认",
+        stable: "已确认",
+        stableRule: "已确认"
+      },
       targets: {
+        candidate: "这是当前正在确认的 Spec，确认完成前不能当作正式基线。",
+        stable: "这是已经确认的正式 Spec，可作为当前正式基线查看。",
+        stableRule: "这是已经确认的共享规则 Spec，可作为当前正式规则查看。",
         capability: "整份文件是否正确表达该能力的当前设计或规则。",
         scenario: "整份文件是否正确表达从入口到最终结果的端到端链路。",
         rule: "整份文件是否正确表达这条规则及其复用边界。",
@@ -220,6 +235,9 @@ const TRANSLATIONS = {
         system: "整份文件是否正确表达全仓库规则、默认选择和例外。"
       },
       focus: {
+        candidate: "当前设计、边界、验收条件、附录、规则引用",
+        stable: "正式设计、下一步动作、附录、证据、规则引用",
+        stableRule: "规则正文、复用边界、绑定对象",
         capability: "责任边界、输入输出、错误处理、验收条件、规则引用",
         scenario: "入口、经过的能力、最终结果、失败处理、验证方式",
         rule: "复用对象、规则正文、绑定关系、是否仍是局部规则",
@@ -273,7 +291,8 @@ const TRANSLATIONS = {
         responsibility: "职责",
         notes: "备注",
         file: "文件",
-        connections: "连接"
+        connections: "连接",
+        paths: "路径"
       },
       groups: {
         truth: "Spec 文档",
@@ -299,6 +318,7 @@ const TRANSLATIONS = {
     kind: {
       project_root: "仓库目录",
       project_path: "路径",
+      project_area: "实现区域",
       repository_mapping: "项目结构文件",
       status_index: "状态索引",
       rule: "全局规则",
@@ -324,7 +344,7 @@ const TRANSLATIONS = {
     },
     tabs: {
       todo: { title: "To Do", subtitle: "Next steps" },
-      review: { title: "Spec Review", subtitle: "Current round" },
+      spec: { title: "Spec View", subtitle: "Documents" },
       status: { title: "Status", subtitle: "Progress" },
       project: { title: "Project", subtitle: "Repository paths" },
       specflow: { subtitle: "Governance layers" }
@@ -361,15 +381,18 @@ const TRANSLATIONS = {
         summary: "Collects each object's next action from the status index. This is the unified entry: see what to do, then open the relevant material.",
         nav: "Next actions"
       },
-      review: {
-        title: "Spec Review",
-        summary: "Organizes document review by candidate main Spec files and non-evidence appendices. Use To Do for the full next-action queue.",
-        nav: "Specs to review"
+      spec: {
+        title: "Spec View",
+        summary: "Shows candidate Specs that still need confirmation and stable Specs that are already accepted. Use To Do for the full next-action queue.",
+        nav: "Spec documents"
       },
       project: {
         title: "Project Structure",
         summary: "Shows implementation locations from repository paths: which code or engineering paths are assigned to responsibility objects. SpecFlow's own Spec documents and support files are not shown here.",
-        nav: "Directories"
+        nav: "Directories",
+        groups: {
+          areas: "Implementation areas"
+        }
       },
       specflow: {
         title: "SpecFlow",
@@ -467,15 +490,15 @@ const TRANSLATIONS = {
       }
     },
     review: {
-      empty: "No candidate Specs to review.",
-      emptyNav: "No Specs to review.",
-      emptyDetailTitle: "No Specs to review",
-      emptyDetail: "There are no candidate main files or non-evidence appendices that need default review. Stable, evidence, project structure, and global rules files are not default review targets for this round.",
+      empty: "No Specs to view.",
+      emptyNav: "No Spec documents.",
+      emptyDetailTitle: "No Spec documents",
+      emptyDetail: "The current snapshot has no candidate or stable main Spec documents to view.",
       openSource: "Open Spec source",
-      fileType: "Review object",
+      fileType: "Document group",
       object: "Project object",
-      reviewTarget: "Review target",
-      readingFocus: "Reading focus",
+      reviewTarget: "View note",
+      readingFocus: "View focus",
       relationships: "Relationships",
       relationEmpty: "No relationship snapshot.",
       progressTitle: "Current round progress",
@@ -487,6 +510,7 @@ const TRANSLATIONS = {
       relation: {
         implementation: "Implementation paths",
         rule: "Rules",
+        ruleFile: "Rule files",
         bound: "Bound objects",
         appendix: "Appendix files",
         evidence: "Evidence references",
@@ -495,13 +519,24 @@ const TRANSLATIONS = {
         system: "Global rules reference"
       },
       types: {
-        capability: "Unit design to confirm",
-        scenario: "End-to-end design to confirm",
-        rule: "Rules to confirm",
+        candidate: "Candidate to confirm",
+        stable: "Accepted stable",
+        stableRule: "Accepted rules",
+        capability: "Unit design",
+        scenario: "End-to-end design",
+        rule: "Rule",
         structure: "Project structure file",
         system: "Global rules file"
       },
+      states: {
+        candidate: "To confirm",
+        stable: "Accepted",
+        stableRule: "Accepted"
+      },
       targets: {
+        candidate: "This Spec is still being confirmed and is not the formal baseline yet.",
+        stable: "This Spec is already accepted and can be read as the current formal baseline.",
+        stableRule: "This shared rule Spec is already accepted and can be read as the current formal rule.",
         capability: "Whether the whole file correctly expresses this capability's current design or rules.",
         scenario: "Whether the whole file correctly expresses the end-to-end chain from entry to final outcome.",
         rule: "Whether the whole file correctly expresses this rule and its reuse boundary.",
@@ -509,6 +544,9 @@ const TRANSLATIONS = {
         system: "Whether the whole file correctly expresses repository-wide constraints, defaults, and exceptions."
       },
       focus: {
+        candidate: "Current design, boundaries, acceptance conditions, appendices, rule references",
+        stable: "Formal design, next action, appendices, evidence, rule references",
+        stableRule: "Rule body, reuse boundary, bound objects",
         capability: "Responsibility boundary, inputs and outputs, error handling, acceptance conditions, rule references",
         scenario: "Entry, participating capabilities, final outcome, failure handling, verification method",
         rule: "Reusing objects, rule body, binding relationships, whether it remains a local rule",
@@ -562,7 +600,8 @@ const TRANSLATIONS = {
         responsibility: "Responsibility",
         notes: "Notes",
         file: "File",
-        connections: "Connections"
+        connections: "Connections",
+        paths: "Paths"
       },
       groups: {
         truth: "Spec documents",
@@ -588,6 +627,7 @@ const TRANSLATIONS = {
     kind: {
       project_root: "Repository directory",
       project_path: "Path",
+      project_area: "Implementation area",
       repository_mapping: "Repository mapping file",
       status_index: "Status index",
       rule: "Global rules",
@@ -736,7 +776,7 @@ function snapshotSignature(value) {
 function render() {
   if (!snapshot) return;
   document.body.classList.toggle("todo-view-active", currentView === "todo");
-  document.body.classList.toggle("review-view-active", currentView === "review");
+  document.body.classList.toggle("spec-view-active", currentView === "spec");
   document.body.classList.toggle("status-view-active", currentView === "status");
   const objects = list(snapshot.objects);
   projectMeta.textContent = `${snapshot.project.repo_root} · version ${snapshot.version} · ${t("counts.objects", { count: objects.length })}`;
@@ -785,13 +825,14 @@ function renderNav() {
 
   if (currentView === "project") {
     const graph = graphForCurrentView();
-    const roots = graph.nodes.filter((node) => node.group === "root").sort(byLabel);
-    roots.forEach((node) => {
-      const count = graph.edges.filter((edge) => edge.from === node.id && edge.kind === "contains").length;
+    const objects = graph.nodes
+      .filter((node) => (node.group === "unit" || node.group === "scenario" || node.group === "rule") && list(node.raw_paths).length > 0)
+      .sort(byLabel);
+    objects.forEach((node) => {
       const button = document.createElement("button");
       button.className = node.id === selectedNodeID ? "nav-item active" : "nav-item";
       button.type = "button";
-      button.innerHTML = `<strong>${escapeHTML(node.label)}</strong><span>${escapeHTML(t("counts.paths", { count }))}</span>`;
+      button.innerHTML = `<strong>${escapeHTML(node.label)}</strong><span>${escapeHTML(t("counts.paths", { count: list(node.raw_paths).length }))}</span>`;
       button.addEventListener("click", () => focusNode(node.id));
       navPanel.appendChild(button);
     });
@@ -808,7 +849,7 @@ function renderNav() {
     return;
   }
 
-  if (currentView === "review") {
+  if (currentView === "spec") {
     renderReviewNav();
     return;
   }
@@ -1026,7 +1067,7 @@ function renderGraph() {
     renderTodoBoard();
     return;
   }
-  if (currentView === "review") {
+  if (currentView === "spec") {
     if (cy) {
       cy.destroy();
       cy = null;
@@ -1148,7 +1189,7 @@ function renderGraph() {
 
 function graphForCurrentView() {
   if (currentView === "todo") return graphForTodoView();
-  if (currentView === "review") return graphForReviewView();
+  if (currentView === "spec") return graphForReviewView();
   if (currentView === "project") return graphForProjectView();
   if (currentView === "specflow") return graphForSpecflowView();
   if (currentView === "status") return graphForStatusView();
@@ -1201,25 +1242,31 @@ function graphForProjectView() {
   const nodesByID = new Map();
   const edges = [];
   const rootsByID = new Map();
+  const areasByID = new Map();
   const addNode = (node) => {
     if (!nodesByID.has(node.id)) nodesByID.set(node.id, node);
+  };
+  const updateNode = (node) => {
+    nodesByID.set(node.id, { ...(nodesByID.get(node.id) || {}), ...node });
   };
   const addEdge = (edge) => {
       if (!edges.some((item) => item.id === edge.id)) edges.push(edge);
   };
 
   list(snapshot.objects).forEach((object) => {
-    if (list(object.implementation_paths).length === 0) return;
+    const implementationPaths = list(object.implementation_paths);
+    if (implementationPaths.length === 0) return;
     const objectID = objectNodeID(object);
     addNode({
       id: objectID,
       kind: object.kind,
       label: object.label,
       group: object.kind === "rule" ? "rule" : object.kind,
-      source: firstSourceRef(object.sources)
+      source: firstSourceRef(object.sources),
+      raw_paths: implementationPaths
     });
-    list(object.implementation_paths).forEach((ref) => {
-      const pathID = addProjectPath(addNode, addEdge, rootsByID, ref);
+    implementationPaths.forEach((ref) => {
+      const pathID = addProjectArea(addNode, addEdge, rootsByID, areasByID, ref);
       addEdge({
         id: `${pathID}->${objectID}`,
         from: pathID,
@@ -1231,24 +1278,52 @@ function graphForProjectView() {
     });
   });
 
+  areasByID.forEach((area) => {
+    updateNode({
+      id: area.id,
+      label: `${area.aggregate_path_label} · ${t("counts.paths", { count: area.raw_paths.length })}`,
+      aggregate_path_count: area.raw_paths.length,
+      raw_paths: area.raw_paths
+    });
+  });
+  rootsByID.forEach((root) => {
+    updateNode({
+      id: root.id,
+      aggregate_path_count: root.raw_paths.length,
+      raw_paths: root.raw_paths
+    });
+  });
+
   return { nodes: [...nodesByID.values()], edges };
 }
 
-function addProjectPath(addNode, addEdge, rootsByID, ref) {
+function addProjectArea(addNode, addEdge, rootsByID, areasByID, ref) {
   if (!ref || !ref.path) return "";
   const root = rootForImplementationPath(ref.path);
   if (!rootsByID.has(root.id)) {
+    root.raw_paths = [];
     rootsByID.set(root.id, root);
     addNode(root);
   }
-  const pathID = `project_path:${ref.path}`;
-  addNode({
-    id: pathID,
-    kind: "project_path",
-    label: ref.path,
-    group: "implementation",
-    source: ref
-  });
+  rootsByID.get(root.id).raw_paths.push(ref);
+
+  const areaPath = projectAreaForImplementationPath(ref.path);
+  const pathID = `project_area:${areaPath}`;
+  if (!areasByID.has(pathID)) {
+    const area = {
+      id: pathID,
+      kind: "project_area",
+      label: areaPath,
+      group: "implementation",
+      source: sourceForImplementationRef(ref),
+      aggregate_path_label: areaPath,
+      aggregate_path_count: 0,
+      raw_paths: []
+    };
+    areasByID.set(pathID, area);
+    addNode(area);
+  }
+  areasByID.get(pathID).raw_paths.push(ref);
   addEdge({
     id: `${root.id}->${pathID}`,
     from: root.id,
@@ -1258,6 +1333,15 @@ function addProjectPath(addNode, addEdge, rootsByID, ref) {
     source: ref
   });
   return pathID;
+}
+
+function projectAreaForImplementationPath(rawPath) {
+  const path = String(rawPath || "").replaceAll("\\", "/").replace(/\/\*\*$/, "/");
+  if (path.endsWith("/")) return path;
+  const segments = path.split("/");
+  if (segments.length <= 1) return path;
+  segments.pop();
+  return `${segments.join("/")}/`;
 }
 
 function rootForImplementationPath(path) {
@@ -1326,37 +1410,37 @@ function readablePositions(nodes, edges) {
 function projectPositions(nodes, edges) {
   const positions = {};
   const roots = nodes.filter((node) => node.group === "root").sort(byLabel);
-  const paths = nodes.filter((node) => node.kind === "project_path").sort(byLabel);
-  const objects = nodes.filter((node) => node.kind !== "project_path" && node.group !== "root").sort(byLabel);
+  const areas = nodes.filter((node) => node.kind === "project_area").sort(byLabel);
+  const objects = nodes
+    .filter((node) => node.kind !== "project_area" && node.group !== "root")
+    .sort(byLabel);
   const top = 80;
-  const pathGap = 64;
-  const rootGap = 130;
+  const areaGap = 68;
+  const rootGap = 150;
+  const objectGap = 116;
   const rootX = 120;
-  const pathX = 470;
+  const areaX = 520;
   const objectX = 860;
 
-  roots.forEach((node, index) => {
-    positions[node.id] = { x: rootX, y: top + index * rootGap };
-  });
-
-  let nextY = top;
-  roots.forEach((root) => {
-    const children = paths.filter((node) => edges.some((edge) => edge.from === root.id && edge.to === node.id));
-    if (children.length === 0) return;
-    children.forEach((node, index) => {
-      positions[node.id] = { x: pathX, y: nextY + index * pathGap };
-    });
-    positions[root.id] = { x: rootX, y: average(children.map((node) => positions[node.id].y)) };
-    nextY += children.length * pathGap + 34;
-  });
-
   objects.forEach((node, index) => {
-    const parents = edges
-      .filter((edge) => edge.to === node.id && positions[edge.from])
-      .map((edge) => positions[edge.from].y);
-    positions[node.id] = { x: objectX, y: parents.length > 0 ? average(parents) : top + index * pathGap };
+    positions[node.id] = { x: objectX, y: top + index * objectGap };
   });
-  distributeColumn(objects, positions, objectX, top, 58);
+
+  areas.forEach((node, index) => {
+    const owners = edges
+      .filter((edge) => edge.from === node.id && positions[edge.to])
+      .map((edge) => positions[edge.to].y);
+    positions[node.id] = { x: areaX, y: owners.length > 0 ? average(owners) : top + index * areaGap };
+  });
+  distributeColumn(areas, positions, areaX, top, areaGap);
+
+  roots.forEach((node, index) => {
+    const children = edges
+      .filter((edge) => edge.from === node.id && positions[edge.to])
+      .map((edge) => positions[edge.to].y);
+    positions[node.id] = { x: rootX, y: children.length > 0 ? average(children) : top + index * rootGap };
+  });
+  distributeColumn(roots, positions, rootX, top, rootGap);
   return positions;
 }
 
@@ -1502,12 +1586,12 @@ function firstNodeIDForView(nodes) {
   if (currentView === "todo") {
     return (nodes[0] || {}).id || null;
   }
-  if (currentView === "review") {
+  if (currentView === "spec") {
     return (nodes[0] || {}).id || null;
   }
   if (currentView === "project") {
-    const rootNode = nodes.find((node) => node.group === "root");
-    return (rootNode || nodes[0] || {}).id || null;
+    const objectNode = nodes.find((node) => (node.group === "unit" || node.group === "scenario" || node.group === "rule") && list(node.raw_paths).length > 0);
+    return (objectNode || nodes[0] || {}).id || null;
   }
   if (currentView === "specflow") {
     const supportNode = nodes.find((node) => node.id === "rule:baseline");
@@ -2060,19 +2144,49 @@ function reviewItems() {
     seen.add(key);
     items.push({
       ...item,
-      id: `review:${item.reviewType}:${item.path}:${item.object ? item.object.id : item.objectLabel}`,
+      id: `spec:${item.reviewType}:${item.path}:${item.object ? item.object.id : item.objectLabel}`,
       fileLabel: fileName(item.path),
       source: item.source || { path: item.path },
-      nextCommand: item.object ? item.object.next_command : ""
+      nextCommand: item.object ? item.object.next_command : "",
+      stateLabel: t(`review.states.${item.reviewType}`),
+      targetType: item.targetType || reviewTargetTypeForObject(item.object)
     });
   };
 
   list(snapshot.objects).forEach((object) => {
-    const reviewType = reviewTypeForObject(object);
-    if (!reviewType) return;
-    uniqueSources(object.truth_paths).filter((source) => isPrimaryReviewSource(source, object)).forEach((source) => {
+    const targetType = reviewTargetTypeForObject(object);
+    if (!targetType) return;
+    if ((object.kind === "unit" || object.kind === "scenario") && object.layer === "candidate") {
+      uniqueSources(object.truth_paths).filter((source) => isPrimaryReviewSource(source, object, "candidate")).forEach((source) => {
+        addItem({
+          reviewType: "candidate",
+          targetType,
+          path: source.path,
+          source,
+          object,
+          objectLabel: object.label || object.id || t("fallback.undeclared")
+        });
+      });
+      return;
+    }
+    if ((object.kind === "unit" || object.kind === "scenario") && object.layer === "stable") {
+      uniqueSources(object.truth_paths).filter((source) => isPrimaryReviewSource(source, object, "stable")).forEach((source) => {
+        addItem({
+          reviewType: "stable",
+          targetType,
+          path: source.path,
+          source,
+          object,
+          objectLabel: object.label || object.id || t("fallback.undeclared")
+        });
+      });
+      return;
+    }
+    if (object.kind !== "rule" || object.layer !== "stable") return;
+    uniqueSources(object.truth_paths).filter((source) => isPrimaryReviewSource(source, object, "stable")).forEach((source) => {
       addItem({
-        reviewType,
+        reviewType: "stableRule",
+        targetType,
         path: source.path,
         source,
         object,
@@ -2089,11 +2203,11 @@ function reviewItemByID(itemID) {
 }
 
 function reviewItemByPath(path) {
-  if (currentView !== "review") return null;
+  if (currentView !== "spec") return null;
   return reviewItems().find((item) => item.path === path) || null;
 }
 
-function reviewTypeForObject(object) {
+function reviewTargetTypeForObject(object) {
   if (!object) return "";
   if (object.kind === "unit") return "capability";
   if (object.kind === "scenario") return "scenario";
@@ -2102,24 +2216,25 @@ function reviewTypeForObject(object) {
 }
 
 function reviewTypeOrder() {
-  return ["capability", "rule", "scenario"];
+  return ["candidate", "stable", "stableRule"];
 }
 
 function compareReviewItems(left, right) {
-  return Number(Boolean(right.nextCommand)) - Number(Boolean(left.nextCommand))
-    || reviewTypeOrder().indexOf(left.reviewType) - reviewTypeOrder().indexOf(right.reviewType)
+  return reviewTypeOrder().indexOf(left.reviewType) - reviewTypeOrder().indexOf(right.reviewType)
+    || Number(Boolean(right.nextCommand)) - Number(Boolean(left.nextCommand))
     || String(left.objectLabel || "").localeCompare(String(right.objectLabel || ""))
     || String(left.path || "").localeCompare(String(right.path || ""));
 }
 
-function isPrimaryReviewSource(source, object) {
+function isPrimaryReviewSource(source, object, layer) {
   const path = String(source && source.path ? source.path : "");
-  if (!path.includes("/candidate/")) return false;
+  if (!path.includes(`/${layer}/`)) return false;
   if (isEvidenceReference(source)) return false;
   const name = fileName(path);
-  if (object.kind === "unit") return /^c_unit_[^/]+\.md$/.test(name);
-  if (object.kind === "scenario") return /^c_scenario_[^/]+\.md$/.test(name);
-  if (object.kind === "rule") return /^c_b_rule_[^/]+\.md$/.test(name);
+  const prefix = layer === "stable" ? "s" : "c";
+  if (object.kind === "unit") return new RegExp(`^${prefix}_unit_[^/]+\\.md$`).test(name);
+  if (object.kind === "scenario") return new RegExp(`^${prefix}_scenario_[^/]+\\.md$`).test(name);
+  if (object.kind === "rule") return new RegExp(`^${prefix}_[gb]_rule_[^/]+\\.md$`).test(name);
   return false;
 }
 
@@ -2154,7 +2269,8 @@ function reviewFocusItems(type) {
 }
 
 function reviewNavSubtitle(item) {
-  return item.objectLabel;
+  const state = item.stateLabel || reviewTypeLabel(item.reviewType);
+  return `${state} · ${item.objectLabel}`;
 }
 
 function reviewNextCommandText(item) {
@@ -2167,6 +2283,7 @@ function reviewNextCommandText(item) {
 function renderReviewProgressHeader(path) {
   const item = currentView === "todo" ? todoItemForSource(path) : reviewItemByPath(path);
   if (!item || !item.object) return "";
+  if (item.object.kind !== "unit" && item.object.kind !== "scenario") return "";
   const view = lifecycleView(item.object, item.nextCommand);
   const command = item.commandText || reviewNextCommandText(item);
   if (command) {
@@ -2237,8 +2354,13 @@ function reviewRelationGroups(item) {
   const groups = [];
   const implementation = list(object.implementation_paths).map((ref) => ref.path).filter(Boolean);
   if (implementation.length > 0) groups.push({ label: t("review.relation.implementation"), items: implementation, linkable: false });
-  const rules = list(object.rule_refs).filter(Boolean);
-  if (rules.length > 0) groups.push({ label: t("review.relation.rule"), items: rules, linkable: false });
+  const ruleFiles = ruleSourcesForObject(object).map((ref) => ref.path).filter(Boolean);
+  if (ruleFiles.length > 0) {
+    groups.push({ label: t("review.relation.ruleFile"), items: ruleFiles, linkable: true });
+  } else {
+    const rules = list(object.rule_refs).filter(Boolean);
+    if (rules.length > 0) groups.push({ label: t("review.relation.rule"), items: rules, linkable: false });
+  }
   const bound = list(object.bound_objects).filter(Boolean);
   if (bound.length > 0) groups.push({ label: t("review.relation.bound"), items: bound, linkable: false });
   const appendix = uniqueSources(object.truth_paths)
@@ -2273,6 +2395,7 @@ function renderReviewDetail(item) {
     <dl class="detail-grid">
       <dt>${escapeHTML(t("review.fileType"))}</dt><dd>${escapeHTML(reviewTypeLabel(item.reviewType))}</dd>
       <dt>${escapeHTML(t("review.object"))}</dt><dd>${escapeHTML(item.objectLabel)}</dd>
+      <dt>${escapeHTML(t("inspector.fields.status"))}</dt><dd>${escapeHTML(item.stateLabel || reviewTypeLabel(item.reviewType))}</dd>
       <dt>${escapeHTML(t("inspector.fields.file"))}</dt><dd>${escapeHTML(item.path)}</dd>
     </dl>
     <section class="review-detail-section">
@@ -2327,7 +2450,7 @@ function fileName(path) {
 
 function compactLabel(node) {
   const label = String(node.label || "");
-  if (node.kind === "project_path") {
+  if (node.kind === "project_path" || node.kind === "project_area") {
     return label
       .replace(/^docs\/specs\/units\/candidate\/appendix\//, "appendix/")
       .replace(/^docs\/specs\/units\/candidate\//, "units/candidate/")
@@ -2412,7 +2535,7 @@ function renderDetail(object) {
       <dt>${escapeHTML(t("inspector.fields.notes"))}</dt><dd>${escapeHTML(object.notes || t("fallback.none"))}</dd>
     </dl>
     ${renderChipGroup(t("inspector.groups.truth"), object.truth_paths, true)}
-    ${renderChipGroup(t("inspector.groups.implementation"), object.implementation_paths, false)}
+    ${renderImplementationPathGroup(t("inspector.groups.implementation"), object.implementation_paths)}
     ${renderTextChips(t("inspector.groups.rule"), object.rule_refs)}
     ${renderTextChips(t("inspector.groups.bound"), object.bound_objects)}
   `;
@@ -2430,7 +2553,7 @@ function renderDetailForNode(nodeID) {
     renderTodoEmptyDetail();
     return;
   }
-  if (currentView === "review") {
+  if (currentView === "spec") {
     const item = reviewItemByID(nodeID);
     if (item) {
       renderReviewDetail(item);
@@ -2449,6 +2572,14 @@ function renderDetailForNode(nodeID) {
   if (!node) {
     detailPanel.innerHTML = `<h2>${escapeHTML(t("fallback.noObject"))}</h2>`;
     updateTruthTab([], nodeID);
+    return;
+  }
+  if (currentView === "project" && node.kind === "project_area") {
+    renderProjectAreaDetail(node, graph);
+    return;
+  }
+  if (currentView === "project" && node.kind === "project_root") {
+    renderProjectRootDetail(node, graph);
     return;
   }
   const truthRefs = truthRefsForNode(node);
@@ -2470,6 +2601,47 @@ function renderDetailForNode(nodeID) {
   `;
   bindInspectorLinks();
   updateTruthTab(truthRefs, nodeID);
+}
+
+function renderProjectAreaDetail(node, graph) {
+  const ownerNodes = graph.edges
+    .filter((edge) => edge.from === node.id && edge.kind === "maps_to")
+    .map((edge) => graph.nodes.find((item) => item.id === edge.to))
+    .filter(Boolean)
+    .sort(byLabel);
+  const truthRefs = uniqueSources(list(node.raw_paths).map(sourceForImplementationRef));
+  detailPanel.innerHTML = `
+    <h2>${escapeHTML(node.aggregate_path_label || node.label)}</h2>
+    <dl class="detail-grid">
+      <dt>${escapeHTML(t("inspector.fields.type"))}</dt><dd>${escapeHTML(labelForKind(node.kind))}</dd>
+      <dt>${escapeHTML(t("inspector.fields.connections"))}</dt><dd>${escapeHTML(ownerNodes.length)}</dd>
+      <dt>${escapeHTML(t("inspector.fields.paths"))}</dt><dd>${escapeHTML(t("counts.paths", { count: list(node.raw_paths).length }))}</dd>
+    </dl>
+    ${renderImplementationPathGroup(t("inspector.groups.implementation"), node.raw_paths)}
+    ${renderNodeList(t("inspector.groups.connected"), ownerNodes)}
+  `;
+  bindInspectorLinks();
+  updateTruthTab(truthRefs, node.id);
+}
+
+function renderProjectRootDetail(node, graph) {
+  const areaNodes = graph.edges
+    .filter((edge) => edge.from === node.id && edge.kind === "contains")
+    .map((edge) => graph.nodes.find((item) => item.id === edge.to))
+    .filter(Boolean)
+    .sort(byLabel);
+  const truthRefs = uniqueSources(list(node.raw_paths).map(sourceForImplementationRef));
+  detailPanel.innerHTML = `
+    <h2>${escapeHTML(node.label)}</h2>
+    <dl class="detail-grid">
+      <dt>${escapeHTML(t("inspector.fields.type"))}</dt><dd>${escapeHTML(labelForKind(node.kind))}</dd>
+      <dt>${escapeHTML(t("inspector.fields.connections"))}</dt><dd>${escapeHTML(areaNodes.length)}</dd>
+      <dt>${escapeHTML(t("inspector.fields.paths"))}</dt><dd>${escapeHTML(t("counts.paths", { count: list(node.raw_paths).length }))}</dd>
+    </dl>
+    ${renderNodeList(t("views.project.groups.areas"), areaNodes)}
+  `;
+  bindInspectorLinks();
+  updateTruthTab(truthRefs, node.id);
 }
 
 function renderTodoDetail(item) {
@@ -2542,7 +2714,8 @@ function bindInspectorLinks() {
   detailPanel.querySelectorAll("[data-source]").forEach((link) => {
     link.addEventListener("click", (event) => {
       event.preventDefault();
-      openSource(link.dataset.source);
+      const line = Number(link.dataset.sourceLine || 0);
+      openSource(link.dataset.source, line > 0 ? { line } : {});
     });
   });
   detailPanel.querySelectorAll("[data-node]").forEach((button) => {
@@ -2555,6 +2728,9 @@ function truthRefsForObject(object) {
 }
 
 function truthRefsForNode(node) {
+  if (node && list(node.raw_paths).length > 0) {
+    return uniqueSources(list(node.raw_paths).map(sourceForImplementationRef));
+  }
   if (!node || !node.source || !isReadableOriginalPath(node.source.path)) return [];
   return [node.source];
 }
@@ -2651,6 +2827,25 @@ function labelForKind(kind) {
   return kind;
 }
 
+function renderImplementationPathGroup(title, refs) {
+  if (!refs || refs.length === 0) return "";
+  const chips = refs.map((ref) => {
+    const source = sourceForImplementationRef(ref);
+    if (source && isReadableOriginalPath(source.path)) {
+      return `<button class="chip" type="button" data-source="${escapeAttr(source.path)}" ${source.line ? `data-source-line="${escapeAttr(source.line)}"` : ""}>${escapeHTML(ref.path)}</button>`;
+    }
+    return `<span class="chip">${escapeHTML(ref.path)}</span>`;
+  }).join("");
+  return `<h2>${title}</h2><div class="chips">${chips}</div>`;
+}
+
+function sourceForImplementationRef(ref) {
+  if (!ref) return null;
+  const sourcePath = ref.label && isReadableOriginalPath(ref.label) ? ref.label : snapshot.project.mapping_file;
+  if (!sourcePath) return null;
+  return { path: sourcePath, line: ref.line || 0, label: ref.path || sourcePath };
+}
+
 function renderChipGroup(title, refs, linkable) {
   if (!refs || refs.length === 0) return "";
   const chips = refs.map((ref) => {
@@ -2678,6 +2873,7 @@ function renderSources(sources) {
 
 async function openSource(path, options = {}) {
   const activate = options.activate !== false;
+  const targetLine = Number(options.line || 0);
   const response = await fetch(`/api/source?path=${encodeURIComponent(path)}`);
   if (!response.ok) {
     const message = await response.text();
@@ -2701,7 +2897,12 @@ async function openSource(path, options = {}) {
   bindRenderedDocLinks(source.path);
   bindDocGuideLinks();
   renderMermaidBlocks();
-  setDocMode(activeDocMode);
+  if (targetLine > 0) {
+    setDocMode("raw");
+    requestAnimationFrame(() => scrollRawSourceToLine(targetLine));
+  } else {
+    setDocMode(activeDocMode);
+  }
   if (activate) setInspectorTab("truth");
 }
 

@@ -478,29 +478,29 @@ button:hover {
   background-size: 32px 32px;
 }
 
-.review-view-active .layout {
+.spec-view-active .layout {
   grid-template-columns: 280px minmax(0, 1fr);
 }
 
-.review-view-active .workspace,
-.review-view-active .resize-bar {
+.spec-view-active .workspace,
+.spec-view-active .resize-bar {
   display: none;
 }
 
-.review-view-active .inspector-panel {
+.spec-view-active .inspector-panel {
   border-left: 1px solid var(--line);
   border-radius: 8px;
 }
 
-.review-view-active .graph-shell {
+.spec-view-active .graph-shell {
   grid-template-rows: minmax(0, 1fr);
 }
 
-.review-view-active .graph-legend {
+.spec-view-active .graph-legend {
   display: none;
 }
 
-.review-view-active .graph-view {
+.spec-view-active .graph-view {
   background: #f8fafc;
 }
 
@@ -1466,16 +1466,16 @@ button:hover {
     display: none;
   }
 
-  .review-view-active .layout {
+  .spec-view-active .layout {
     grid-template-columns: 240px minmax(0, 1fr);
   }
 
-  .review-view-active .workspace,
-  .review-view-active .resize-bar {
+  .spec-view-active .workspace,
+  .spec-view-active .resize-bar {
     display: none;
   }
 
-  .review-view-active .inspector-panel {
+  .spec-view-active .inspector-panel {
     display: flex;
   }
 }
@@ -1511,16 +1511,16 @@ button:hover {
     min-height: 360px;
   }
 
-  .review-view-active .layout {
+  .spec-view-active .layout {
     grid-template-columns: 1fr;
   }
 
-  .review-view-active .sidebar {
+  .spec-view-active .sidebar {
     min-height: auto;
     margin-right: 0;
   }
 
-  .review-view-active .inspector-panel {
+  .spec-view-active .inspector-panel {
     min-height: 520px;
   }
 
