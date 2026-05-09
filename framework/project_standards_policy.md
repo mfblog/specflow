@@ -258,6 +258,8 @@ It must not create a new lifecycle command, change routing, change result types,
 
 ### 10.1 Shared Spec Flow Response Surface
 
+The framework baseline for this shared surface is defined by `specflow/framework/output_baseline.md`. That file defines the minimum output quality rules that apply automatically to every specFlow consumer producing user-facing output on this surface. The baseline rules apply without project-level activation. Registered project-local standards on this surface are evaluated after the baseline and may only tighten or clarify beyond it.
+
 The shared response consumer is:
 
 1. shared consumer: `specflow_response`

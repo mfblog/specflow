@@ -220,6 +220,8 @@ Repository mapping changes are required only when the object map, truth-surface 
 8. `unit_verify`
 9. `unit_promote`
 
+Note: `unit_init:{unit}` creates the initial stable Spec for a brand-new unit and bypasses `unit_stable_verify` because there is no prior stable truth to verify against. After a later `unit_fork`, the new candidate round must still pass through `unit_stable_verify` before the next stable landing.
+
 ### 7.2 Scenario
 
 1. `scenario_new`
@@ -283,12 +285,16 @@ Rules:
 2. once a command has ended with a non-pass result, every later repair, local confirmation, scoped recheck, or follow-up assessment is non-authoritative unless that command file explicitly allows a checkpoint as a resumable stop
 3. a non-authoritative follow-up may report that local repair is complete, but it must not claim new lifecycle progression, write advancing `_status.md` updates, or repackage a local recheck as a new formal pass
 4. individual command files may tighten rerun conditions within their own boundary, but they must not weaken the authoritative / non-authoritative distinction defined here
+5. when a command enters recovery mode because repository mutation started but the command cannot safely close, the command must follow `specflow/framework/recovery_policy.md` for layered recovery (incomplete promotion recovery for promote commands, rule-governance recovery for rule flows) before any checkpoint answer can be processed or before the next command may enter
 
 ### 8.6 User-Facing Close-Out Block Contract
 
 Every formal command output must include a `user-facing close-out block`.
 
 Formal command close-out output is part of the shared `specflow_response` / `user_facing_response_clarity` output surface defined by `specflow/framework/project_standards_policy.md`.
+The command close-out block also inherits the framework output baseline defined by `specflow/framework/output_baseline.md`.
+The fields listed below are the command-specific minimum for close-out blocks on top of the baseline.
+Fields not applicable in a given close-out context are covered by the baseline's escape hatch for non-applicable items.
 Registered project-local standards selected by that surface may tighten or clarify only command close-out wording, ordering, and execution-note separation.
 They must not affect command result types, lifecycle advancement, `_status.md`, `_check_result` writeback, fallback selection, checkpoint semantics, or command-local required fields.
 Command files inherit this shared output surface through this section and must not restate the registry shape in each command file.
