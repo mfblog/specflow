@@ -40,11 +40,12 @@ This file states only `unit_new`-local entry, output, and stop rules.
 6. read `docs/specs/repository_mapping.md`
 7. confirm the target unit is not already present in the Governed Object Map and does not conflict with any current `unit`, `scenario`, `rule`, support-surface, or ignore rule
 8. read `specflow/framework/onboarding_decision_policy.md` and decide the first candidate's `source_basis` and `evidence_appendix_ref`
-9. if the first candidate uses `source_basis=existing_implementation` or `source_basis=mixed`, prepare the required evidence appendix in the same round
-10. if the first candidate depends on rule truth that is not yet formalized as `rule`, or if the shared/unit boundary is still unstable, do not start `unit_new`; resolve that rule truth through natural-language rule governance first
-11. if the first candidate reuses already-existing rule truth, read the relevant `rule` files before writing `rule_refs`
-12. if the round will create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `rule_sync.md`
-13. if the round may update `bound_objects` or remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit or scenario main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
+9. read `specflow/framework/candidate_intent_policy.md`; first candidates use `candidate_intent=change`
+10. if the first candidate uses `source_basis=existing_implementation` or `source_basis=mixed`, prepare the required evidence appendix in the same round
+11. if the first candidate depends on rule truth that is not yet formalized as `rule`, or if the shared/unit boundary is still unstable, do not start `unit_new`; resolve that rule truth through natural-language rule governance first
+12. if the first candidate reuses already-existing rule truth, read the relevant `rule` files before writing `rule_refs`
+13. if the round will create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `rule_sync.md`
+14. if the round may remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit or scenario main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
 
 ## 4. Procedure
 
@@ -60,29 +61,28 @@ This file states only `unit_new`-local entry, output, and stop rules.
    - if current repository truth is insufficient to write the exact mapping update without guessing, stop before candidate and `_status.md` writeback
 5. create `docs/specs/units/candidate/c_unit_{unit}.md`
 6. initialize `frontmatter.version` to `0.1.0`
-7. initialize `frontmatter.source_basis` and `frontmatter.evidence_appendix_ref` according to `onboarding_decision_policy.md`
-8. if `source_basis=existing_implementation` or `source_basis=mixed`, create the evidence appendix named by `evidence_appendix_ref`; if `source_basis=new_design` or `source_basis=replacement`, write `evidence_appendix_ref=none`
-9. ensure the file covers the core sections of a formal Spec, including `Testability / Acceptance Criteria` with explicit acceptance items that satisfy `spec_writing_guide.md` Section 5
-10. initialize `Rule Alignment`:
+7. initialize `frontmatter.candidate_intent=change`
+8. initialize `frontmatter.source_basis` and `frontmatter.evidence_appendix_ref` according to `onboarding_decision_policy.md`
+9. if `source_basis=existing_implementation` or `source_basis=mixed`, create the evidence appendix named by `evidence_appendix_ref`; if `source_basis=new_design` or `source_basis=replacement`, write `evidence_appendix_ref=none`
+10. ensure the file covers the core sections of a formal Spec, including `Testability / Acceptance Criteria` with explicit acceptance items that satisfy `spec_writing_guide.md` Section 5
+11. initialize `Rule Alignment`:
    - write `rule_refs=none` only when the first candidate does not yet reuse rule truth
    - if the first candidate already reuses existing rule truth, write the explicit `rule_refs` set using the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1 and explain that reuse in the candidate body in the same round
    - `rule_reuse_summary`
    - `rule_exceptions`
-11. write the prepared `docs/specs/repository_mapping.md` update in the same round as the candidate writeback
-12. if the round changed Rule bindings or touched Rule files:
+12. write the prepared `docs/specs/repository_mapping.md` update in the same round as the candidate writeback
+13. if the round changed Rule bindings or touched Rule files:
    - derive the real repository-wide binding set of each touched Rule from current-layer unit and scenario `rule_refs` plus this round's prepared target-unit candidate writeback
    - if current repository truth is insufficient to derive that touched real binding set safely, stop and reroute through natural-language rule governance from current repository truth instead of guessing
-   - update `bound_objects` only as declarative metadata so each touched Rule file matches the real binding set implied by that repository-wide binding view plus this round's prepared target-unit writeback
-   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule reconcile-bound-objects --units {unit}` and additional `--rule-refs` / `--rule-ids` filters when the active flow has already identified them
+   - do not write consumer metadata into touched Rule files; every touched Rule file must omit `bound_objects` after this writeback
    - if a touched Rule file now has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-13. update `_status.md`:
+14. update `_status.md`:
    - `Stable=no`
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=unit_check`
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable no --candidate yes --active-layer candidate --next-command unit_check --notes <status-note> --create`
-14. if the round changed any unit `rule_refs` value or any file under `docs/specs/rules/**`, run `rule_sync` after `_status.md` has been updated, even when no additional affected object is known yet
-   - if any touched rule file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_rule_file_refs` with the exact file refs for those files
+15. if the round changed any unit `rule_refs` value or any file under `docs/specs/rules/**`, run `rule_sync` after `_status.md` has been updated, even when no additional affected object is known yet
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule sync-impact --rule-refs <rule-ref> --units {unit}` or the corresponding `--rule-ids` form, and at least one rule trigger input must already be known before this deterministic execution starts
 
 ## 5. Stop Conditions
@@ -101,17 +101,18 @@ This file states only `unit_new`-local entry, output, and stop rules.
 1. initiation judgment
 2. created file path
 3. initialized candidate version
-4. initialized `source_basis`
-5. initialized `evidence_appendix_ref` and evidence appendix write result when required
-6. initialized formal global baseline reference or `none`
-7. initialized acceptance-item structure result
-8. initialized explicit Rule binding set or confirmed `rule_refs=none`
-9. whether the command had to stop and reroute through natural-language rule governance because repository truth was insufficient to close rule-truth binding metadata safely
-10. `docs/specs/repository_mapping.md` writeback result, including the new Governed Object Map entry and any truth-surface or path-ownership entries written in this round
-11. `_status.md` update result
-12. Rule reconciliation result when the round changed rule truth or bindings
-13. remaining closure items
-14. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
+4. initialized `candidate_intent=change`
+5. initialized `source_basis`
+6. initialized `evidence_appendix_ref` and evidence appendix write result when required
+7. initialized formal global baseline reference or `none`
+8. initialized acceptance-item structure result
+9. initialized explicit Rule binding set or confirmed `rule_refs=none`
+10. whether the command had to stop and reroute through natural-language rule governance because repository truth was insufficient to close rule-truth binding metadata safely
+11. `docs/specs/repository_mapping.md` writeback result, including the new Governed Object Map entry and any truth-surface or path-ownership entries written in this round
+12. `_status.md` update result
+13. Rule reconciliation result when the round changed rule truth or bindings
+14. remaining closure items
+15. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
    - `current state` must explicitly confirm `Active Layer=candidate` and `Next Command=unit_check`
    - `next-stage entry gap` must explicitly confirm that entry into the later different command `unit_check` is already satisfied after `unit_new` closes
 

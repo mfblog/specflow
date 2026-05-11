@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
@@ -40,6 +41,13 @@ func ResolveRef(repoRoot, moduleLayer, ref string) (ResolvedRef, error) {
 		return ResolvedRef{}, fmt.Errorf("read rule %s: %w", fileRef, err)
 	}
 	content := string(contentBytes)
+	hasBoundObjects, err := rulerefs.HasRuleBoundObjects(fileRef, content)
+	if err != nil {
+		return ResolvedRef{}, err
+	}
+	if hasBoundObjects {
+		return ResolvedRef{}, fmt.Errorf("%s: bound_objects is forbidden; derive consumers from current-layer rule_refs", fileRef)
+	}
 
 	frontmatter, err := parseFrontmatter(content)
 	if err != nil {

@@ -10,13 +10,13 @@ import (
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulebinding"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
 type AppendixEntry struct {
 	FileRef     string
-	AppendixRef string
 	Fingerprint string
 }
 
@@ -277,7 +277,11 @@ func RebuildCurrentObject(repoRoot, objectType, object string) (Snapshot, error)
 		result.UnitSnapshot = unitSnapshot
 	}
 
-	sharedEntries, err := buildRuleSnapshot(repoRoot, status.ActiveLayer, body)
+	ruleRefs, err := rulerefs.ParseObjectRuleRefs(mainSpecRef, string(mainSpecContent))
+	if err != nil {
+		return Snapshot{}, err
+	}
+	sharedEntries, err := buildRuleSnapshot(repoRoot, status.ActiveLayer, ruleRefs)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -339,6 +343,10 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 			result.Valid = false
 			result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s must not be empty", field))
 		}
+	}
+	for _, field := range actual.invalidFields {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, field)
 	}
 
 	if processKind == "plan" {
@@ -654,38 +662,24 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 		if module := strings.TrimSpace(frontmatter["unit"]); module != "" && module != currentModule {
 			return nil, fmt.Errorf("%s: appendix module %q does not match main spec module %q", relPath, module, currentModule)
 		}
-		appendixPrefix := strings.TrimSuffix(filepath.Base(relPath), ".md")
-		appendixVersionRef := strings.TrimSpace(frontmatter["spec_version_ref"])
-		appendixRef := appendixPrefix + "@unversioned"
-		if appendixVersionRef != "" {
-			appendixRef = appendixPrefix + "@" + appendixVersionRef
-		}
 		entries = append(entries, AppendixEntry{
 			FileRef:     relPath,
-			AppendixRef: appendixRef,
 			Fingerprint: hashNormalizedText(string(content)),
 		})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
-		if entries[i].FileRef == entries[j].FileRef {
-			return entries[i].AppendixRef < entries[j].AppendixRef
-		}
 		return entries[i].FileRef < entries[j].FileRef
 	})
 	return entries, nil
 }
 
-func buildRuleSnapshot(repoRoot, moduleLayer, body string) ([]RuleEntry, error) {
-	refs, hasField, err := parseRuleRefs(body)
-	if err != nil {
-		return nil, err
-	}
+func buildRuleSnapshot(repoRoot, moduleLayer string, refs []string) ([]RuleEntry, error) {
 	entries, err := buildStableGlobalRuleEntries(repoRoot)
 	if err != nil {
 		return nil, err
 	}
-	if hasField && len(refs) == 0 {
+	if len(refs) == 0 {
 		return sortRuleEntries(entries), nil
 	}
 	for _, ref := range refs {
@@ -792,6 +786,13 @@ func buildStableGlobalRuleEntries(repoRoot string) ([]RuleEntry, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read %s: %w", fileRef, err)
 		}
+		hasBoundObjects, err := rulerefs.HasRuleBoundObjects(fileRef, string(content))
+		if err != nil {
+			return nil, err
+		}
+		if hasBoundObjects {
+			return nil, fmt.Errorf("%s: bound_objects is forbidden; derive consumers from current-layer rule_refs", fileRef)
+		}
 		frontmatter, _, err := parseFrontmatter(string(content))
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", fileRef, err)
@@ -881,10 +882,6 @@ func hashNormalizedText(content string) string {
 	text += "\n"
 	sum := sha256.Sum256([]byte(text))
 	return fmt.Sprintf("%x", sum)
-}
-
-func parseRuleRefs(body string) ([]string, bool, error) {
-	return parseNamedRefs(body, "rule_refs")
 }
 
 func parseNamedRefs(body, fieldName string) ([]string, bool, error) {
@@ -1031,6 +1028,7 @@ type processSnapshot struct {
 	acceptancePlanPresent     bool
 	acceptanceEvidenceEntries []AcceptanceEvidenceEntry
 	acceptanceEvidencePresent bool
+	invalidFields             []string
 }
 
 func parseProcessSnapshot(content string) (processSnapshot, error) {
@@ -1100,6 +1098,10 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 			listItemStart := strings.HasPrefix(trimmed, "- ")
 			switch currentList {
 			case "unit_appendix_snapshot":
+				if !allowedAppendixSnapshotField(key) {
+					result.invalidFields = append(result.invalidFields, fmt.Sprintf("unsupported field: unit_appendix_snapshot.%s", key))
+					continue
+				}
 				if currentIndex < 0 || (listItemStart && key == "file_ref") {
 					result.appendixEntries = append(result.appendixEntries, AppendixEntry{})
 					currentIndex = len(result.appendixEntries) - 1
@@ -1215,12 +1217,19 @@ func splitKeyValue(line string) (string, string) {
 	return key, value
 }
 
+func allowedAppendixSnapshotField(key string) bool {
+	switch key {
+	case "file_ref", "fingerprint":
+		return true
+	default:
+		return false
+	}
+}
+
 func assignAppendixField(entry *AppendixEntry, key, value string) {
 	switch key {
 	case "file_ref":
 		entry.FileRef = value
-	case "appendix_ref":
-		entry.AppendixRef = value
 	case "fingerprint":
 		entry.Fingerprint = value
 	}
@@ -1546,14 +1555,11 @@ func normalizeAppendixList(entries []AppendixEntry) string {
 	items := make([]AppendixEntry, len(entries))
 	copy(items, entries)
 	sort.Slice(items, func(i, j int) bool {
-		if items[i].FileRef == items[j].FileRef {
-			return items[i].AppendixRef < items[j].AppendixRef
-		}
 		return items[i].FileRef < items[j].FileRef
 	})
 	parts := make([]string, 0, len(items))
 	for _, item := range items {
-		parts = append(parts, fmt.Sprintf("%s|%s|%s", item.FileRef, item.AppendixRef, item.Fingerprint))
+		parts = append(parts, fmt.Sprintf("%s|%s", item.FileRef, item.Fingerprint))
 	}
 	return strings.Join(parts, ";")
 }
@@ -1689,7 +1695,6 @@ func renderAppendixLines(entries []AppendixEntry) []string {
 	for _, entry := range entries {
 		lines = append(lines,
 			fmt.Sprintf("  - file_ref: %s", entry.FileRef),
-			fmt.Sprintf("    appendix_ref: %s", entry.AppendixRef),
 			fmt.Sprintf("    fingerprint: %s", entry.Fingerprint),
 		)
 	}

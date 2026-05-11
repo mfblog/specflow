@@ -47,7 +47,7 @@ Before execution:
 10. if the task also touches global baseline, shared mechanisms, or exceptions, read `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 11. if the unit involves technical choices, shared infrastructure, cross-unit reuse, global exceptions, or system-level constraint relationships, the first `stable` must include `Rule Alignment` or an equivalent section
 12. if the round creates, updates, or deletes any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `specflow/framework/rule_sync.md` first
-13. if the round may update `bound_objects` or remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit or scenario main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
+13. if the round may remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit or scenario main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
 
 ## 4. Procedure
 
@@ -70,8 +70,7 @@ Before execution:
 9. if the round changed Rule bindings or touched Rule files:
    - derive the real repository-wide binding set of each touched Rule from current-layer unit and scenario `rule_refs` plus this round's prepared target-unit stable writeback
    - if current repository truth is insufficient to derive that touched real binding set safely, stop and reroute through natural-language rule governance from current repository truth instead of guessing
-   - update `bound_objects` only as declarative metadata so each touched Rule file matches the real binding set implied by that repository-wide binding view plus this round's prepared target-unit writeback
-   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule reconcile-bound-objects --units {unit}` and additional `--rule-refs` / `--rule-ids` filters when the active flow has already identified them
+   - do not write consumer metadata into touched Rule files; every touched Rule file must omit `bound_objects` after this writeback
    - if a touched Rule file now has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 10. update `docs/specs/_status.md`:
    - `Stable=yes`
@@ -82,7 +81,6 @@ Before execution:
 11. if the round changed any unit `rule_refs` value or any file under `docs/specs/rules/**`, run `rule_sync` after `_status.md` has been updated, even when no additional affected object is known yet
    - pass execution-local `current_stable_landing_unit={unit}` into that `rule_sync` run because this same round just wrote the unit's first stable truth together with its current stable Rule binding
    - pass execution-local `stable_landing_rule_refs=<exact-shared-ref-list-written-by-this-landing>` into that same `rule_sync` run; `current_stable_landing_unit` alone is not sufficient
-   - if any touched rule file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_rule_file_refs` with the exact file refs for those files
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule sync-impact --rule-refs <rule-ref> --units {unit} --stable-landing-unit {unit} --stable-landing-rule-refs <exact-stable-landing-rule-ref-list>` or the corresponding `--rule-ids` form, and at least one rule trigger input must already be known before this deterministic execution starts
 
 ## 5. Stop Conditions

@@ -179,7 +179,7 @@ Use `implementation_only` only when all of the following hold:
    - add or adjust tests
    - add logging, tracing, or other observability
    - performance optimization with unchanged semantics
-   - repair an implementation deviation where current Spec already defines the correct behavior
+   - small repair of an implementation deviation where current Spec already defines the correct behavior and the repair can be completed and checked in the same handling round
 
 ### 6.2 `truth_writeback_required`
 
@@ -200,8 +200,9 @@ Use `boundary_unclear` when current repository truth is not sufficient to suppor
 2. it is unclear whether the requested code change is an implementation repair or a behavior change
 4. the executor would have to make a new behavior decision in code and explain it later
 5. the target scope has no current formal truth and onboarding source decision has not selected ordinary candidate creation, candidate with evidence appendix, or a stable-governed route
-6. the current candidate is missing `source_basis` or `evidence_appendix_ref`
-7. the current candidate records `source_basis=existing_implementation` or `source_basis=mixed`, but the referenced evidence appendix is missing or cannot be read
+6. the current unit candidate is missing `candidate_intent`
+7. the current candidate is missing `source_basis` or `evidence_appendix_ref`
+8. the current candidate records `source_basis=existing_implementation` or `source_basis=mixed`, but the referenced evidence appendix is missing or cannot be read
 
 Rules:
 
@@ -219,11 +220,12 @@ The smallest legal next step after classification is fixed as follows:
 |---|---|
 | brand-new unit, user directly asks to write code | `unit_new:{unit}` |
 | no formal truth exists and candidate source is not yet decided | route through `onboarding_decision_policy.md` before creating candidate truth or editing code |
-| existing `stable` unit, and the requested change would alter formal behavior truth | `unit_fork:{unit}` first, then write the new candidate truth before implementation |
+| existing `stable` unit, and the requested change would alter formal behavior truth | `unit_fork:{unit}` first, creating `candidate_intent=change`, then write the new candidate truth before implementation |
+| existing `stable` unit, current stable truth is correct, and the repair is too large to safely complete and verify as a direct small implementation repair | `unit_fork:{unit}` first, creating `candidate_intent=repair` |
 | existing `candidate` unit, and the requested change would alter current candidate truth | write back into the current candidate main file, required appendix truth, or required Rule truth first, then rerun `unit_check:{unit}` |
 | existing `candidate` unit is missing required candidate source fields or required evidence appendix | repair the candidate source fields or evidence appendix first, then rerun `unit_check:{unit}` |
 | request touches cross-unit rule truth | natural-language routing into the rule-governance branch defined by `natural_language_routing.md` |
-| `implementation_only`, target unit has `Active Layer=stable` | implementation may continue only within current stable truth; after code changes, the unit must return to `unit_stable_verify:{unit}` before stable alignment may be claimed again |
+| small `implementation_only`, target unit has `Active Layer=stable` | implementation may continue only within current stable truth; after code changes, the unit must return to `unit_stable_verify:{unit}` before stable alignment may be claimed again |
 | `implementation_only`, target unit has `Active Layer=candidate` and `_status.md` says `Next Command=unit_impl` | implementation may continue, but only under `unit_impl` semantics |
 | `implementation_only`, target unit has `Active Layer=candidate` and `_status.md` says any `Next Command` other than `unit_impl` | do not modify code; return to the currently recorded smallest legal next step first |
 

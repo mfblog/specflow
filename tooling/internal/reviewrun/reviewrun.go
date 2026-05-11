@@ -847,6 +847,13 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			InputFiles:     reviewDependencyFiles("truth_and_implementation_gates", "routing_and_command_policy"),
 		},
 		{
+			ID:             "state_space_closure",
+			SliceType:      "cross_convergence",
+			ReviewQuestion: "Do important SpecFlow states and non-success transitions have legal state-changing next actions.",
+			DependsOn:      []string{"routing_and_command_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility"},
+			InputFiles:     reviewDependencyFiles("routing_and_command_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility"),
+		},
+		{
 			ID:             "shared_to_impact_convergence",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Do rule-governance rules and impact-state rules converge for downstream invalidation.",

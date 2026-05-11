@@ -57,6 +57,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runUpgrade(args[1:], stdout, stderr)
 	case "build-release":
 		return runBuildRelease(args[1:], stdout, stderr)
+	case "command":
+		return runCommand(args[1:], stdout, stderr)
 	case "entry":
 		return runEntry(args[1:], stdout, stderr)
 	case "registry":
@@ -80,6 +82,250 @@ func run(args []string, stdout, stderr io.Writer) error {
 		writeRootUsage(stderr)
 		return fmt.Errorf("unknown command %q", args[0])
 	}
+}
+
+type commandPreflightResult struct {
+	Command                string
+	ObjectType             string
+	Object                 string
+	MayContinue            bool
+	FailureLayer           string
+	RecommendedNextCommand string
+	Diagnostics            []string
+	ValidatedProcesses     []commandPreflightProcess
+}
+
+type commandPreflightProcess struct {
+	ProcessKind            string
+	ProcessFile            string
+	Result                 string
+	FailureLayer           string
+	RecommendedNextCommand string
+	Diagnostics            []string
+}
+
+func runCommand(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		writeCommandUsage(stderr)
+		return errors.New("missing command subcommand")
+	}
+
+	switch args[0] {
+	case "preflight":
+		fs := flag.NewFlagSet("command preflight", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		command := fs.String("command", "", "standard command name")
+		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		object := fs.String("object", "", "formal object name")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*command) == "" || strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" {
+			writeCommandUsage(stderr)
+			return errors.New("command, object-type, and object are required")
+		}
+
+		result := runCommandPreflight(mustAbs(*repoRoot), *command, *objectType, *object)
+		writeCommandPreflightResult(stdout, result)
+		if !result.MayContinue {
+			return errors.New("command preflight failed")
+		}
+		return nil
+	case "-h", "--help", "help":
+		writeCommandUsage(stdout)
+		return nil
+	default:
+		writeCommandUsage(stderr)
+		return fmt.Errorf("unknown command subcommand %q", args[0])
+	}
+}
+
+func runCommandPreflight(repoRoot, command, objectType, object string) commandPreflightResult {
+	result := commandPreflightResult{
+		Command:                strings.TrimSpace(command),
+		ObjectType:             strings.TrimSpace(objectType),
+		Object:                 strings.TrimSpace(object),
+		MayContinue:            true,
+		FailureLayer:           "none",
+		RecommendedNextCommand: "none",
+	}
+
+	status, err := statusfile.LookupObjectStatus(repoRoot, result.ObjectType, result.Object)
+	if err != nil {
+		result.MayContinue = false
+		result.FailureLayer = "status_layer"
+		result.Diagnostics = append(result.Diagnostics, err.Error())
+		result.RecommendedNextCommand = "none"
+		return result
+	}
+	if status.NextCommand != result.Command {
+		result.MayContinue = false
+		result.FailureLayer = "status_layer"
+		result.RecommendedNextCommand = status.NextCommand
+		result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("status next command mismatch: actual=%s expected=%s", status.NextCommand, result.Command))
+		return result
+	}
+	if diagnostics := rulesync.ValidateCurrentBindings(repoRoot, ""); len(diagnostics) > 0 {
+		result.MayContinue = false
+		result.FailureLayer = "truth_layer"
+		result.RecommendedNextCommand = checkCommandForObjectType(result.ObjectType)
+		result.Diagnostics = append(result.Diagnostics, diagnostics...)
+		return result
+	}
+
+	processKinds, err := preflightProcessKinds(result.ObjectType, result.Command)
+	if err != nil {
+		result.MayContinue = false
+		result.FailureLayer = "unsupported_command"
+		result.Diagnostics = append(result.Diagnostics, err.Error())
+		result.RecommendedNextCommand = status.NextCommand
+		return result
+	}
+
+	for _, processKind := range processKinds {
+		process := validatePreflightProcess(repoRoot, result.ObjectType, result.Object, processKind)
+		result.ValidatedProcesses = append(result.ValidatedProcesses, process)
+		if process.Result == "valid" {
+			continue
+		}
+		result.MayContinue = false
+		result.FailureLayer = process.FailureLayer
+		result.RecommendedNextCommand = noneIfEmpty(process.RecommendedNextCommand)
+		result.Diagnostics = append(result.Diagnostics, process.Diagnostics...)
+		break
+	}
+	return result
+}
+
+func preflightProcessKinds(objectType, command string) ([]string, error) {
+	switch objectType {
+	case "unit":
+		switch command {
+		case "unit_init", "unit_new", "unit_fork", "unit_stable_verify", "unit_check":
+			return nil, nil
+		case "unit_plan":
+			return []string{"check"}, nil
+		case "unit_impl":
+			return []string{"check", "plan"}, nil
+		case "unit_verify":
+			return []string{"check", "plan"}, nil
+		case "unit_promote":
+			return []string{"verify"}, nil
+		default:
+			return nil, fmt.Errorf("command %q is not supported for object type %q", command, objectType)
+		}
+	case "scenario":
+		switch command {
+		case "scenario_new", "scenario_fork", "scenario_stable_verify", "scenario_check":
+			return nil, nil
+		case "scenario_verify":
+			return []string{"check"}, nil
+		case "scenario_promote":
+			return []string{"verify"}, nil
+		default:
+			return nil, fmt.Errorf("command %q is not supported for object type %q", command, objectType)
+		}
+	default:
+		return nil, fmt.Errorf("object type %q is not supported", objectType)
+	}
+}
+
+func validatePreflightProcess(repoRoot, objectType, object, processKind string) commandPreflightProcess {
+	process := commandPreflightProcess{
+		ProcessKind:            processKind,
+		Result:                 "invalid",
+		FailureLayer:           "tooling_gap",
+		RecommendedNextCommand: "none",
+	}
+	processFile, err := snapshot.ProcessFilePath(objectType, object, processKind)
+	if err == nil {
+		process.ProcessFile = processFile
+	}
+
+	if processFile != "" {
+		processAbs := filepath.Join(repoRoot, filepath.FromSlash(processFile))
+		if _, err := os.Stat(processAbs); err != nil {
+			if os.IsNotExist(err) {
+				process.Diagnostics = append(process.Diagnostics, fmt.Sprintf("missing process file: %s", processFile))
+				layer, next := fallbackForMissingOrUnavailableProcess(objectType, processKind)
+				process.FailureLayer = layer
+				process.RecommendedNextCommand = next
+				return process
+			}
+			process.Diagnostics = append(process.Diagnostics, fmt.Sprintf("stat %s: %v", processFile, err))
+			return process
+		}
+	}
+
+	validation, err := snapshot.ValidateProcessFileForObject(repoRoot, objectType, object, processKind)
+	if err != nil {
+		process.Diagnostics = append(process.Diagnostics, err.Error())
+		return process
+	}
+	process.ProcessFile = validation.ProcessFile
+	if validation.Valid {
+		process.Result = "valid"
+		process.FailureLayer = "none"
+		process.RecommendedNextCommand = "none"
+		return process
+	}
+	process.Diagnostics = append(process.Diagnostics, validation.Mismatches...)
+	process.FailureLayer = noneIfEmpty(validation.FailureLayer)
+	process.RecommendedNextCommand = noneIfEmpty(validation.NextCommand)
+	return process
+}
+
+func fallbackForMissingOrUnavailableProcess(objectType, processKind string) (string, string) {
+	switch objectType {
+	case "unit":
+		switch processKind {
+		case "check":
+			return "gate_layer", "unit_check"
+		case "plan":
+			return "plan_layer", "unit_plan"
+		case "verify":
+			return "evidence_layer", "unit_verify"
+		}
+	case "scenario":
+		switch processKind {
+		case "check":
+			return "gate_layer", "scenario_check"
+		case "verify":
+			return "evidence_layer", "scenario_verify"
+		}
+	}
+	return "tooling_gap", "none"
+}
+
+func writeCommandPreflightResult(stdout io.Writer, result commandPreflightResult) {
+	preflightResult := "pass"
+	if !result.MayContinue {
+		preflightResult = "fail"
+	}
+	fmt.Fprintf(stdout, "preflight_result: %s\n", preflightResult)
+	fmt.Fprintf(stdout, "command: %s\n", result.Command)
+	fmt.Fprintf(stdout, "object_type: %s\n", result.ObjectType)
+	fmt.Fprintf(stdout, "object: %s\n", result.Object)
+	fmt.Fprintf(stdout, "may_continue: %t\n", result.MayContinue)
+	fmt.Fprintf(stdout, "failure_layer: %s\n", noneIfEmpty(result.FailureLayer))
+	fmt.Fprintf(stdout, "recommended_next_command: %s\n", noneIfEmpty(result.RecommendedNextCommand))
+	fmt.Fprintln(stdout, "validated_processes:")
+	if len(result.ValidatedProcesses) == 0 {
+		fmt.Fprintln(stdout, "- none")
+	} else {
+		for _, process := range result.ValidatedProcesses {
+			fmt.Fprintf(stdout, "- process: %s\n", process.ProcessKind)
+			fmt.Fprintf(stdout, "  file: %s\n", noneIfEmpty(process.ProcessFile))
+			fmt.Fprintf(stdout, "  result: %s\n", process.Result)
+			fmt.Fprintf(stdout, "  failure_layer: %s\n", noneIfEmpty(process.FailureLayer))
+			fmt.Fprintf(stdout, "  recommended_next_command: %s\n", noneIfEmpty(process.RecommendedNextCommand))
+			for _, diagnostic := range process.Diagnostics {
+				fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)
+			}
+		}
+	}
+	writeList(stdout, "diagnostics", result.Diagnostics)
 }
 
 func runInit(args []string, stdout, stderr io.Writer) error {
@@ -541,19 +787,17 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 		stableLandingUnit := fs.String("stable-landing-unit", "", "formal unit whose same-round stable landing should not invalidate itself")
 		stableLandingRuleRefs := fs.String("stable-landing-rule-refs", "", "comma-separated exact rule refs written by the same-round stable landing")
 		retargetedUnits := fs.String("retargeted-units", "", "comma-separated candidate units retargeted to same-round stable landing rule refs")
-		boundObjectsOnlyRuleFileRefs := fs.String("bound-objects-only-rule-file-refs", "", "comma-separated rule file refs proven to be bound_objects-only deltas")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 
 		result, err := rulesync.SyncImpact(mustAbs(*repoRoot), rulesync.Options{
-			Modules:                      parseCSV(*modules),
-			RuleRefs:                     parseCSV(*ruleRefs),
-			RuleIDs:                      parseCSV(*ruleIDs),
-			StableLandingModule:          strings.TrimSpace(*stableLandingUnit),
-			StableLandingRuleRefs:        parseCSV(*stableLandingRuleRefs),
-			RetargetedUnits:              parseCSV(*retargetedUnits),
-			BoundObjectsOnlyRuleFileRefs: parseCSV(*boundObjectsOnlyRuleFileRefs),
+			Modules:               parseCSV(*modules),
+			RuleRefs:              parseCSV(*ruleRefs),
+			RuleIDs:               parseCSV(*ruleIDs),
+			StableLandingModule:   strings.TrimSpace(*stableLandingUnit),
+			StableLandingRuleRefs: parseCSV(*stableLandingRuleRefs),
+			RetargetedUnits:       parseCSV(*retargetedUnits),
 		})
 		if err != nil {
 			return err
@@ -566,7 +810,6 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 		fmt.Fprintf(stdout, "Stable landing unit: %s\n", noneIfEmpty(result.StableLandingModule))
 		writeList(stdout, "Stable landing rule refs", result.StableLandingRuleRefs)
 		writeList(stdout, "Retargeted units", result.RetargetedUnits)
-		writeList(stdout, "Bound-objects-only rule file refs", result.BoundObjectsOnlyRuleFileRefs)
 		fmt.Fprintf(stdout, "Unit results (%d):\n", len(result.ModuleResults))
 		if len(result.ModuleResults) == 0 {
 			fmt.Fprintln(stdout, "- none")
@@ -581,16 +824,6 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 			}
 			for _, path := range item.MissingFiles {
 				fmt.Fprintf(stdout, "  missing: %s\n", path)
-			}
-		}
-		fmt.Fprintf(stdout, "Bound-object drifts (%d):\n", len(result.BoundObjectDrifts))
-		if len(result.BoundObjectDrifts) == 0 {
-			fmt.Fprintln(stdout, "- none")
-		} else {
-			for _, drift := range result.BoundObjectDrifts {
-				fmt.Fprintf(stdout, "- %s | file=%s | version=%s | bound_objects_only_delta=%t\n", drift.RuleID, drift.FileRef, drift.VersionRef, drift.BoundObjectsOnlyDelta)
-				fmt.Fprintf(stdout, "  declared=%s\n", strings.Join(defaultListValue(drift.DeclaredObjects), ", "))
-				fmt.Fprintf(stdout, "  actual=%s\n", strings.Join(defaultListValue(drift.ActualObjects), ", "))
 			}
 		}
 		fmt.Fprintf(stdout, "Flow results (%d):\n", len(result.FlowResults))
@@ -610,32 +843,56 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 			}
 		}
 		return nil
-	case "reconcile-bound-objects":
-		fs := flag.NewFlagSet("rule reconcile-bound-objects", flag.ContinueOnError)
+	case "consumers":
+		fs := flag.NewFlagSet("rule consumers", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		modules := fs.String("units", "", "comma-separated formal units")
-		ruleRefs := fs.String("rule-refs", "", "comma-separated rule version refs")
-		ruleIDs := fs.String("rule-ids", "", "comma-separated rule ids")
+		ruleID := fs.String("rule-id", "", "rule id")
+		ruleRef := fs.String("rule-ref", "", "exact rule version ref")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
-
-		result, err := rulesync.ReconcileBoundModules(mustAbs(*repoRoot), rulesync.ReconcileBoundModulesOptions{
-			Modules:  parseCSV(*modules),
-			RuleRefs: parseCSV(*ruleRefs),
-			RuleIDs:  parseCSV(*ruleIDs),
+		result, err := rulesync.Consumers(mustAbs(*repoRoot), rulesync.ConsumerOptions{
+			RuleID:  *ruleID,
+			RuleRef: *ruleRef,
 		})
 		if err != nil {
 			return err
 		}
-
-		writeList(stdout, "Scoped units", result.ScopedModules)
-		writeList(stdout, "Scoped rule refs", result.ScopedRuleRefs)
-		writeList(stdout, "Scoped rule ids", result.ScopedRuleIDs)
-		writeList(stdout, "Touched rule files", result.TouchedFiles)
-		writeList(stdout, "Updated rule files", result.UpdatedFiles)
-		writeList(stdout, "Unchanged rule files", result.UnchangedFiles)
+		fmt.Fprintf(stdout, "Rule id: %s\n", noneIfEmpty(result.RuleID))
+		fmt.Fprintf(stdout, "Rule ref: %s\n", noneIfEmpty(result.RuleRef))
+		fmt.Fprintf(stdout, "Consumers (%d):\n", len(result.Consumers))
+		if len(result.Consumers) == 0 {
+			fmt.Fprintln(stdout, "- none")
+		}
+		for _, consumer := range result.Consumers {
+			fmt.Fprintf(stdout, "- %s:%s | layer=%s | file=%s | refs=%s\n", consumer.ObjectType, consumer.Object, consumer.ActiveLayer, consumer.FileRef, strings.Join(defaultListValue(consumer.RuleRefs), ", "))
+		}
+		return nil
+	case "release-version":
+		fs := flag.NewFlagSet("rule release-version", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		ruleID := fs.String("rule-id", "", "rule id")
+		fromRef := fs.String("from-ref", "", "old stable rule version ref")
+		toRef := fs.String("to-ref", "", "new stable rule version ref")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		result, err := rulesync.ReleaseVersion(mustAbs(*repoRoot), rulesync.ReleaseVersionOptions{
+			RuleID:  *ruleID,
+			FromRef: *fromRef,
+			ToRef:   *toRef,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "Released rule version: %s from %s to %s\n", result.RuleID, result.FromRef, result.ToRef)
+		writeList(stdout, "Candidate current-layer objects updated", result.CandidateUpdated)
+		writeList(stdout, "Stable current-layer objects forked", result.StableForked)
+		writeList(stdout, "Process files removed", result.ProcessFilesRemoved)
+		writeList(stdout, "Synced units", result.Sync.ScopedModules)
+		writeList(stdout, "Synced scenarios", result.Sync.ScopedFlows)
 		return nil
 	case "-h", "--help", "help":
 		writeRuleUsage(stdout)
@@ -834,6 +1091,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  doctor   Check installed specFlow structure")
 	fmt.Fprintln(w, "  upgrade  Refresh framework-managed files")
 	fmt.Fprintln(w, "  build-release Build platform binaries into specflow/tooling/bin")
+	fmt.Fprintln(w, "  command  Run standard-command mechanical preflight checks")
 	fmt.Fprintln(w, "  entry    Check or sync registered entry-file managed blocks")
 	fmt.Fprintln(w, "  registry Validate docs/project_standards/_registry.md")
 	fmt.Fprintln(w, "  repository-mapping Validate docs/specs/repository_mapping.md")
@@ -842,6 +1100,11 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  rule     Execute deterministic rule-impact reconciliation helpers")
 	fmt.Fprintln(w, "  snapshot Rebuild or compare process snapshot fields")
 	fmt.Fprintln(w, "  status   Apply deterministic _status.md row writeback")
+}
+
+func writeCommandUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl command preflight --command COMMAND --object-type unit|scenario --object OBJECT [--repo-root PATH]")
 }
 
 func writeEntryUsage(w io.Writer) {
@@ -933,9 +1196,10 @@ func writeProcessUsage(w io.Writer) {
 
 func writeRuleUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl rule sync-impact (--rule-refs c_b_rule_x@0.1.0 | --rule-ids b_rule_x) [--units unit_a,unit_b] [--stable-landing-unit unit_a --stable-landing-rule-refs s_b_rule_x@1.0.0] [--bound-objects-only-rule-file-refs docs/specs/rules/stable/s_b_rule_x.md] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl rule sync-impact (--rule-refs c_b_rule_x@0.1.0 | --rule-ids b_rule_x) [--units unit_a,unit_b] [--stable-landing-unit unit_a --stable-landing-rule-refs s_b_rule_x@1.0.0] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl rule sync-impact --rule-refs c_b_rule_x@0.1.0,s_b_rule_x@0.1.0 --stable-landing-unit unit_a --stable-landing-rule-refs s_b_rule_x@0.1.0 --retargeted-units unit_b [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl rule reconcile-bound-objects [--units unit_a,unit_b] [--rule-refs c_b_rule_x@0.1.0] [--rule-ids b_rule_x] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl rule consumers (--rule-id b_rule_x | --rule-ref s_b_rule_x@1.0.0) [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl rule release-version --rule-id b_rule_x --from-ref s_b_rule_x@0.3.0 --to-ref s_b_rule_x@0.4.0 [--repo-root PATH]")
 }
 
 func writeSnapshotUsage(w io.Writer) {
@@ -997,6 +1261,13 @@ func noneIfEmpty(value string) string {
 		return "none"
 	}
 	return value
+}
+
+func checkCommandForObjectType(objectType string) string {
+	if objectType == "scenario" {
+		return "scenario_check"
+	}
+	return "unit_check"
 }
 
 func defaultListValue(items []string) []string {

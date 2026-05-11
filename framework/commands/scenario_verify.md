@@ -11,6 +11,8 @@ This file states only `scenario_verify`-local entry, output, and stop rules.
 
 Process-file consumption and writeback for `_check_result/scenario/{scenario}.md` and `_verify_result/scenario/{scenario}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for scenario process files, the matching `snapshot validate-process` command is the mandatory tool-backed validation step before treating a process file as consumable, reporting a verification pass, or advancing lifecycle state.
 
+Before reading `_check_result/scenario/{scenario}.md` as a usable verification input, run `specflowctl command preflight --command scenario_verify --object-type scenario --object {scenario}`. If command preflight is unavailable, run `snapshot validate-process --object-type scenario --object {scenario} --process check` explicitly. After writing `_verify_result/scenario/{scenario}.md`, run `snapshot validate-process --process verify` before reporting a verification pass.
+
 ## 3. Preconditions
 
 1. `_status.md` says `Object Type=scenario`, `Active Layer=candidate`, `Next Command=scenario_verify`
@@ -20,8 +22,9 @@ Process-file consumption and writeback for `_check_result/scenario/{scenario}.md
 ## 4. Procedure
 
 1. read current candidate scenario truth
-2. revalidate `_check_result/scenario/{scenario}.md` according to the `scenario_check -> scenario_verify` handoff in `specflow/framework/candidate_handoff_contract.md`
-3. revalidate current repository mapping, bound units, rules, and baseline snapshots
+2. run command preflight for `scenario_verify:{scenario}` and stop before verification judgment if authoritative validation is unavailable
+3. revalidate `_check_result/scenario/{scenario}.md` according to the `scenario_check -> scenario_verify` handoff in `specflow/framework/candidate_handoff_contract.md`
+4. revalidate current repository mapping, bound units, rules, and baseline snapshots using only preflight or `snapshot validate-process` as the authoritative process-file validation source
 4. confirm that the check gate's accepted acceptance-item set still matches the current candidate scenario
 5. if the check handoff is missing or invalid, classify the failure before cleanup:
    - if scenario truth, acceptance item ids, repository mapping, unit snapshot, Rule snapshot, or baseline binding drifted, use `truth_layer`, delete `_check_result/scenario/{scenario}.md` and `_verify_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_check`, and report the matching drift code

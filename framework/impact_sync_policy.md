@@ -106,12 +106,16 @@ Each step depends on the previous step. Do not skip to cleanup before snapshot r
 3. apply only caller-resolved generic exceptions that the contract allows, such as `allowed_shared_snapshot_mismatch_file_refs`
 4. classify each invalid process file by `recovery_policy.md` Section 4 before cleanup
 5. treat the process file as invalid for downstream use when any required stored field differs from the rebuilt value after allowed exceptions
+6. when `snapshot validate-process` supports the target object family and process kind, use that tool-backed validation result before treating a process file as valid or invalid
+7. manual hashes, shell checksums, editor display, conversation-derived values, and temporary scripts are diagnostic only and must not trigger downstream fallback or cleanup
 
 ### 4.5 Candidate-Side Cleanup Rules
 
 1. update `_status.md` to the next step selected by the recovery layer
 2. delete exactly the process files listed for that object family and recovery layer in `recovery_policy.md`
 3. a cleanup target that is already absent is recorded as an absent cleanup target; it does not create a different fallback state
+4. when `specflowctl process cleanup-fallback` supports the selected object family and recovery layer, use it for the cleanup writeback
+5. if deterministic cleanup tooling does not support a selected command-declared layer, stop and report the tooling gap instead of deleting files manually
 
 ### 4.6 Output Report
 

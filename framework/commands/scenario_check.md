@@ -11,6 +11,8 @@ This file states only `scenario_check`-local entry, output, stop, and fresh-reru
 
 Process-file writeback and validation for `_check_result/scenario/{scenario}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for scenario check process files, the matching `snapshot validate-process` command is the mandatory tool-backed validation step before reporting a pass gate or lifecycle advance.
 
+After writing `_check_result/scenario/{scenario}.md`, run `snapshot validate-process --object-type scenario --object {scenario} --process check` before reporting `pass`, `allow_next=true`, or `Next Command=scenario_verify`. If validation tooling is unavailable or fails, do not advance `_status.md` and do not use manual hashes to keep or delete process files.
+
 `scenario_check` is not a failed-result storage command.
 It writes `_check_result/scenario/{scenario}.md` only when the current candidate scenario passes.
 

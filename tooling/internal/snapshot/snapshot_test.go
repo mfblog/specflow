@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/testfixtures"
 )
 
 const testAcceptanceSection = `## Testability / Acceptance Criteria
@@ -34,6 +35,9 @@ func TestRebuildCurrentCollectsAppendixAndSharedSnapshot(t *testing.T) {
 id: demo
 layer: candidate
 version: 0.1.0
+candidate_intent: change
+source_basis: new_design
+evidence_appendix_ref: none
 ---
 
 # Demo
@@ -55,7 +59,6 @@ See [appendix](./appendix/c_unit_demo_prompt.md).
 	appendix := `---
 unit: demo
 layer: candidate
-spec_version_ref: c_unit_demo@0.1.0
 ---
 
 # Appendix
@@ -100,14 +103,75 @@ bound_objects: all_units
 	if len(result.ModuleAppendixSnapshot) != 1 {
 		t.Fatalf("expected one appendix snapshot entry, got %d", len(result.ModuleAppendixSnapshot))
 	}
-	if result.ModuleAppendixSnapshot[0].AppendixRef != "c_unit_demo_prompt@c_unit_demo@0.1.0" {
-		t.Fatalf("unexpected appendix ref: %s", result.ModuleAppendixSnapshot[0].AppendixRef)
-	}
 	if len(result.RuleSnapshot) != 2 {
 		t.Fatalf("expected global and explicit rule snapshot entries, got %d", len(result.RuleSnapshot))
 	}
 	if result.RuleSnapshot[1].VersionRef != "c_b_rule_demo@0.2.0" {
 		t.Fatalf("unexpected rule version ref: %s", result.RuleSnapshot[1].VersionRef)
+	}
+}
+
+func TestRebuildCurrentAcceptsRepairCandidateIntent(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/units/stable"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/units/candidate"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
+
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_check` | repair |\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_demo.md"), `---
+id: demo
+layer: stable
+version: 0.1.0
+---
+
+# Demo
+
+`+testAcceptanceSection)
+
+	mainSpec := `---
+id: demo
+layer: candidate
+version: 0.1.1
+candidate_intent: repair
+repair_basis: s_unit_demo@0.1.0
+source_basis: new_design
+evidence_appendix_ref: none
+---
+
+# Demo
+
+## Repair Scope
+
+1. Restore ` + "`demo.core`" + ` to the stable behavior recorded by ` + "`s_unit_demo@0.1.0`" + `.
+
+` + testAcceptanceSection + `
+## Rule Alignment
+
+2. rule_refs: none
+`
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), mainSpec)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	if expected.SpecVersionRef != "c_unit_demo@0.1.1" {
+		t.Fatalf("unexpected spec version ref: %s", expected.SpecVersionRef)
+	}
+
+	writeCheckProcessFile(t, repoRoot, renderFormalCheckProcessBody(expected))
+	result, err := ValidateProcessFile(repoRoot, "demo", "check")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if !result.Valid {
+		t.Fatalf("expected repair candidate snapshot to validate, got %+v", result)
 	}
 }
 
@@ -124,6 +188,9 @@ func TestRebuildCurrentCollectsEquivalentAppendixSubdirAndPlainFieldNames(t *tes
 id: demo
 layer: candidate
 version: 0.1.0
+candidate_intent: change
+source_basis: new_design
+evidence_appendix_ref: none
 ---
 
 # Demo
@@ -145,7 +212,6 @@ See [support](./support/c_unit_demo_prompt.md).
 	appendix := `---
 unit: demo
 layer: candidate
-spec_version_ref: c_unit_demo@0.1.0
 ---
 
 # Appendix
@@ -209,6 +275,9 @@ func TestRebuildCurrentRejectsUnsortedRuleRefs(t *testing.T) {
 id: demo
 layer: candidate
 version: 0.1.0
+candidate_intent: change
+source_basis: new_design
+evidence_appendix_ref: none
 ---
 
 # Demo
@@ -280,7 +349,6 @@ Use appendix path `+"`./appendix/c_unit_demo_prompt.md`"+` for detailed prompts.
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_demo_prompt.md"), `---
 unit: demo
 layer: candidate
-spec_version_ref: c_unit_demo@0.1.0
 ---
 
 	# Appendix
@@ -311,6 +379,9 @@ func TestRebuildCurrentRejectsRootDirectoryAppendixDrift(t *testing.T) {
 id: demo
 layer: candidate
 version: 0.1.0
+candidate_intent: change
+source_basis: new_design
+evidence_appendix_ref: none
 ---
 
 # Demo
@@ -326,7 +397,6 @@ See [support](./c_unit_demo_prompt.md).
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "c_unit_demo_prompt.md"), `---
 unit: demo
 layer: candidate
-spec_version_ref: c_unit_demo@0.1.0
 ---
 
 # Drift
@@ -442,7 +512,6 @@ See [appendix](./appendix/c_unit_demo_prompt.md).
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_demo_prompt.md"), `---
 unit: demo
 layer: candidate
-spec_version_ref: c_unit_demo@0.1.0
 ---
 
 # Appendix
@@ -476,7 +545,6 @@ spec_version_ref: c_unit_demo@0.1.0
 		"    `not_runnable_yet`: `no`",
 		"- `unit_appendix_snapshot`:",
 		"  - `file_ref`: `" + expected.ModuleAppendixSnapshot[0].FileRef + "`",
-		"  - `appendix_ref`: `" + expected.ModuleAppendixSnapshot[0].AppendixRef + "`",
 		"  - `fingerprint`: `" + expected.ModuleAppendixSnapshot[0].Fingerprint + "`",
 		"- `rule_snapshot`: `none`",
 		"",
@@ -488,6 +556,78 @@ spec_version_ref: c_unit_demo@0.1.0
 	}
 	if !result.Valid {
 		t.Fatalf("expected valid result, got mismatches %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsUnsupportedAppendixSnapshotField(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), `---
+id: demo
+layer: candidate
+version: 0.1.0
+---
+
+# Demo
+
+`+testAcceptanceSection+`
+See [appendix](./appendix/c_unit_demo_prompt.md).
+
+## Rule Alignment
+
+2. rule_refs: none
+`)
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_demo_prompt.md"), `---
+unit: demo
+layer: candidate
+---
+
+# Appendix
+`)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	unsupportedField := "label"
+
+	writeCheckProcessFile(t, repoRoot, strings.Join([]string{
+		"object_type: unit",
+		"object_ref: demo",
+		"gate: unit_check",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: unit_plan",
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
+		"truth_layer_ref: " + expected.TruthLayerRef,
+		"truth_file_ref: " + expected.SpecFileRef,
+		"truth_version_ref: " + expected.SpecVersionRef,
+		"truth_fingerprint: " + expected.SpecFingerprint,
+		"acceptance_item_set:",
+		renderAcceptanceItemSetForTest(expected.AcceptanceItemSet),
+		"unit_appendix_snapshot:",
+		"  - file_ref: " + expected.ModuleAppendixSnapshot[0].FileRef,
+		"    " + unsupportedField + ": c_unit_demo_prompt",
+		"    fingerprint: " + expected.ModuleAppendixSnapshot[0].Fingerprint,
+		"rule_snapshot: none",
+	}, "\n"))
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "check")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "unsupported field: unit_appendix_snapshot."+unsupportedField) {
+		t.Fatalf("expected unsupported appendix snapshot field mismatch, got %+v", result.Mismatches)
 	}
 }
 
@@ -1024,6 +1164,9 @@ func setupSnapshotValidationRepo(t *testing.T, repoRoot string) {
 id: demo
 layer: candidate
 version: 0.1.0
+candidate_intent: change
+source_basis: new_design
+evidence_appendix_ref: none
 ---
 
 # Demo
@@ -1325,6 +1468,7 @@ func mustMkdirAll(t *testing.T, path string) {
 
 func mustWriteFile(t *testing.T, path, content string) {
 	t.Helper()
+	content = testfixtures.NormalizeSpecFlowContent(path, content)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
 	}

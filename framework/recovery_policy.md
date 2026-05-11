@@ -144,6 +144,19 @@ Plain meaning:
 3. a process artifact format error is not automatically a truth error
 4. a command must not keep using a process file that failed its required tool validation
 
+### 4.3 Deterministic Cleanup Tool Contract
+
+When the repository provides deterministic cleanup tooling, candidate-side cleanup must use that tooling instead of ad hoc file deletion.
+
+Rules:
+
+1. the current cleanup entry is `specflowctl process cleanup-fallback --object-type unit|scenario --object <object> --from-command <command> --reason <code> --failure-layer <layer>`
+2. the cleanup tool must cover every failure layer listed in Section 4.1 for the object family it supports
+3. if the cleanup tool reports that no deterministic cleanup is defined for a command-declared failure layer, the executor must stop and report a specFlow tooling gap
+4. when Rule 3 applies, the executor must not manually delete process files, manually rewrite `_status.md`, or claim fallback cleanup complete
+5. success cleanup after fork or promotion must use `specflowctl process cleanup-success` when that deterministic entry exists; without that tool-backed cleanup result, the command must not claim deterministic cleanup closure
+6. a cleanup target that is already absent is a recorded missing cleanup target, not a different recovery decision
+
 ## 5. Stable-Side Recovery Baseline
 
 For stable-side invalidation:
@@ -254,6 +267,9 @@ Before the first file write in any rule-governance flow that may mutate:
 3. any downstream unit or scenario candidate file that may be rewritten (rule_refs, body text)
 4. `docs/specs/repository_mapping.md` when the round may change the rule object map
 5. every other file under `docs/specs/rules/**` that may be touched by this round
+6. every candidate-side process file for each downstream unit or scenario candidate file that the round may rewrite or invalidate
+   - unit: `_check_result/unit/{unit}.md`, `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, `_verify_result/unit/{unit}.md`
+   - scenario: `_check_result/scenario/{scenario}.md`, `_verify_result/scenario/{scenario}.md`
 
 #### 6.5.2 When Recovery Is Required
 
@@ -268,7 +284,12 @@ Rule-governance recovery is required when both are true:
 2. restore every mutated file covered by the recovery baseline to its exact pre-mutation state
 3. delete any new file created only by the interrupted round that did not exist in the recovery baseline
 4. if `repository_mapping.md` was modified, restore it from the recovery baseline
-5. if any downstream unit or scenario candidate file was mutated and later restored, those objects may need candidate-side process invalidation through the candidate fallback rules from Section 4
+5. for every downstream unit or scenario candidate file restored by Step 2, handle candidate-side process files deterministically:
+   - restore each covered process file to its exact pre-mutation bytes when it existed in the recovery baseline
+   - delete each process file created after the recovery baseline
+   - delete each process file whose exact pre-mutation bytes cannot be proven from the recovery baseline
+   - use the Section 4 `truth_layer` cleanup target for that object when deletion is required
+   - do not keep any process file written against the interrupted rule-governance mutation
 
 #### 6.5.4 Recovery Result
 

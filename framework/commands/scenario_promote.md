@@ -13,6 +13,8 @@ Process-file consumption for `_verify_result/scenario/{scenario}.md` must follow
 
 Stable acceptance summary writeback under `_verify_result/stable/scenario/{scenario}.md` must follow the stable summary field contract in `specflow/framework/process_snapshot_contract.md` Section 3.3. It is not validated with `snapshot validate-process` because that tooling command supports only `check`, `plan`, and `verify` process kinds.
 
+Before reading `_verify_result/scenario/{scenario}.md` as a usable promotion input, run `specflowctl command preflight --command scenario_promote --object-type scenario --object {scenario}`. If command preflight is unavailable, run `snapshot validate-process --object-type scenario --object {scenario} --process verify` explicitly. Stable acceptance summary fingerprints must be computed under the process snapshot contract; shell checksums and manual hashes are not authoritative.
+
 ## 3. Preconditions
 
 1. `_status.md` says `Object Type=scenario`, `Active Layer=candidate`, `Next Command=scenario_promote`
@@ -22,43 +24,54 @@ Stable acceptance summary writeback under `_verify_result/stable/scenario/{scena
 
 ## 4. Procedure
 
-1. read and re-check the latest `_verify_result/scenario/{scenario}.md`
-2. read and re-check `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
-3. validate `_verify_result/scenario/{scenario}.md` according to the `scenario_verify -> scenario_promote` handoff in `specflow/framework/candidate_handoff_contract.md`
+1. run command preflight for `scenario_promote:{scenario}` and stop before stable truth-file mutation if authoritative validation is unavailable
+2. read and re-check the latest `_verify_result/scenario/{scenario}.md`
+3. read and re-check `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
+4. validate `_verify_result/scenario/{scenario}.md` according to the `scenario_verify -> scenario_promote` handoff in `specflow/framework/candidate_handoff_contract.md`
    - the verify result must cover the current candidate scenario acceptance item `id` set exactly
    - each current-gate acceptance item must have an allowed promotion state according to `scenario_verify` and any applicable downgrade policy
-4. if `_verify_result/scenario/{scenario}.md` is invalid, stop before truth-file mutation:
+5. if `_verify_result/scenario/{scenario}.md` is invalid, stop before truth-file mutation and use only the preflight or `snapshot validate-process` result plus command-local evidence rules to classify the failure:
    - if candidate truth, repository mapping snapshot, required unit bindings, bound Rule snapshots, or formal global baseline snapshots drifted, delete current-round scenario `_check_result/scenario/{scenario}.md` and `_verify_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_check`, and use the matching standardized code: `truth_drift`, `binding_drift`, `rule_drift`, or `baseline_drift`
    - if only the scenario check gate process shape is malformed while current scenario truth and bindings still match, delete `_check_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_check`, and use `failure_layer=gate_layer`
    - if only verification coverage is stale, malformed, or incomplete while the check gate still covers current truth, delete `_verify_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_verify`, and use `fallback_reason_code=evidence_incomplete` with `failure_layer=evidence_layer`
-5. before the first truth-file mutation, resolve every current `unit_refs` and `rule_refs` entry in the candidate scenario:
+6. before the first truth-file mutation, resolve every current `unit_refs` and `rule_refs` entry in the candidate scenario:
    - each `unit_refs` entry must resolve to existing stable-layer unit truth
    - each `rule_refs` entry must resolve to existing stable-layer Rule truth
    - `rule_refs=none` is valid only when the candidate scenario formally binds no Rule
    - do not treat `unit_snapshot`, `rule_snapshot`, `bound_objects`, repository history, or directory shape as a replacement for the formal refs
    - if any dependency is candidate-layer, missing, or not safely resolvable, stop before stable writeback, keep candidate semantics, report the affected dependency and its current legal next step from `_status.md` when present, use `fallback_reason_code=stable_dependency_not_ready` with `failure_layer=dependency_readiness_layer`, and keep `Next Command=scenario_promote`
    - after dependency landing, retry `scenario_promote` by revalidating the current verify handoff and stable dependency readiness; require fresh `scenario_check` and `scenario_verify` only when scenario truth, scenario bindings, repository mapping, Rule bindings, baseline, acceptance item ids, or verification evidence changed
-6. continue only when candidate truth, verification coverage, required bindings, and stable dependency readiness still remain valid
-7. before the first truth-file mutation, capture the recovery baseline required by `recovery_policy.md`
-8. write `docs/specs/scenarios/stable/s_scenario_{scenario}.md`
-9. write the minimal stable acceptance coverage summary for this promoted round before current-round verify cleanup:
+7. continue only when candidate truth, verification coverage, required bindings, and stable dependency readiness still remain valid
+8. before the first truth-file mutation, capture the recovery baseline required by `recovery_policy.md`
+9. write `docs/specs/scenarios/stable/s_scenario_{scenario}.md`
+10. write the minimal stable acceptance coverage summary for this promoted round before current-round verify cleanup:
    - target path: `docs/specs/_verify_result/stable/scenario/{scenario}.md`
    - record the promoted stable truth file, version, fingerprint, acceptance item `id` set, each item's final verification status, and the key evidence source refs from the current `_verify_result/scenario/{scenario}.md`
    - this summary is not behavior truth and must not replace the stable scenario Spec's `Testability / Acceptance Criteria` section
    - if this summary cannot be written while promotion otherwise needs to delete the current `_verify_result/scenario/{scenario}.md`, stop before cleanup rather than losing the only acceptance coverage record for the promoted round
-10. write `_status.md`:
+11. write `_status.md`:
    - `Stable=yes`
    - `Candidate=no`
    - `Active Layer=stable`
    - `Next Command=scenario_fork`
-11. only after `_status.md` has already been updated to `Candidate=no`, delete:
+12. only after `_status.md` has already been updated to `Candidate=no`, delete:
    - `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
    - current-round scenario evidence appendix files
    - current-round scenario `_check_result/scenario/{scenario}.md`
    - current-round scenario `_verify_result/scenario/{scenario}.md`
-12. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
+13. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
 
-## 5. Output Contract
+## 5. Stop Conditions
+
+1. if authoritative validation is unavailable, the command stops before stable truth-file mutation and does not claim promotion, stable summary writeback, cleanup, or lifecycle advancement
+2. if the verify handoff is invalid before stable truth-file mutation, the command has completed the selected fallback cleanup and `_status.md` points to the fallback target selected by the failure layer
+3. if stable dependency readiness fails, no stable scenario truth is written, candidate semantics remain active, `_status.md` keeps `Next Command=scenario_promote`, and the affected dependency plus its current legal next step is reported when `_status.md` can provide it
+4. if the stable acceptance summary cannot be written before current-round verify cleanup, the current-round verify result remains undeleted; if promotion mutation has already started, incomplete promotion recovery is complete before close-out
+5. if promotion succeeds, stable scenario truth exists, the stable acceptance summary for the promoted round is written, `_status.md` records `Stable=yes`, `Candidate=no`, `Active Layer=stable`, and `Next Command=scenario_fork`
+6. if promotion succeeds, candidate scenario truth, candidate evidence appendix files, current-round scenario check result, and current-round scenario verify result are deleted only after `_status.md` already records candidate removal
+7. if promotion internals started but final cleanup did not finish, incomplete promotion recovery restored candidate semantics and the scenario can restart from `scenario_check`
+
+## 6. Output Contract
 
 The output must report:
 
@@ -92,7 +105,7 @@ Allowed `fallback_reason_code` values:
 6. `stable_dependency_not_ready`
 7. `promotion_recovery`
 
-## 6. Non-Goals
+## 7. Non-Goals
 
 1. unit promotion
 2. changing repository mapping

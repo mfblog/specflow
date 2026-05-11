@@ -220,7 +220,7 @@ Repository mapping changes are required only when the object map, truth-surface 
 8. `unit_verify`
 9. `unit_promote`
 
-Note: `unit_init:{unit}` creates the initial stable Spec for a brand-new unit and bypasses `unit_stable_verify` because there is no prior stable truth to verify against. After a later `unit_fork`, the new candidate round must still pass through `unit_stable_verify` before the next stable landing.
+Note: `unit_init:{unit}` creates the initial stable Spec for a brand-new unit and bypasses `unit_stable_verify` because there is no prior stable truth to verify against. For later clean upgrade rounds, `unit_stable_verify` confirms the current stable layer before `unit_fork` opens a normal change candidate. When stable verification finds that current code is not aligned, `unit_stable_verify` may still route to `unit_fork` only to open a controlled unit candidate with `candidate_intent=repair` or `candidate_intent=change` as defined by `candidate_intent_policy.md`. After `unit_fork` writes the candidate layer, the next step is `unit_check`.
 
 ### 7.2 Scenario
 
@@ -267,13 +267,26 @@ At minimum:
 1. if a command depends on bound `rule` truth, it must read the exact currently bound rule files
 2. if a command depends on the formal global baseline, it must read `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 3. if a command depends on repository path ownership, it must read `docs/specs/repository_mapping.md`
-4. `bound_objects`-only metadata drift does not by itself invalidate downstream process files
+4. Rule consumers are derived only from current-layer `unit` and `scenario` frontmatter `rule_refs`; Rule files must not record `bound_objects`
 
 ### 8.4 Impact Reconciliation
 
 1. when one object family's truth or binding change may invalidate downstream objects, the handling round must complete deterministic downstream reconciliation before claiming closure
 2. `rule_sync` remains the rule-governance impact-discovery flow for rule changes
 3. `impact_sync` is the generic internal fallback-and-cleanup flow once the affected downstream object set is already fixed
+
+### 8.4.1 Preflight Before Judgment
+
+Commands must not make lifecycle, drift, fallback, cleanup, or promotion judgments from process-file contents before the required mechanical validation has passed.
+
+Rules:
+
+1. when a command consumes `_check_result`, `_plans/active`, or `_verify_result`, the first command-local judgment step must be `specflowctl command preflight` for the current command and object
+2. if `command preflight` is not available, the command must run each required `snapshot validate-process` command explicitly before reading the process file as a usable gate, plan, or verification result
+3. a failed preflight may be used only as an entry stop or as input to the command's explicitly defined tool-backed fallback path
+4. before authoritative validation succeeds, the command must not delete process files, update `_status.md`, write an active plan, write a verify result, write a stable truth file, or promote stable acceptance coverage
+5. manual hash output, shell checksum output, editor display, conversation-derived values, and temporary script results are diagnostic only and must not classify drift, choose a failure layer, select cleanup, or advance lifecycle state
+6. stable-layer verification commands that compare truth, Rule, repository mapping, or global-baseline fingerprints must use the fingerprint contract or deterministic tooling named by the active policy; if no authoritative comparison is available, they must report that alignment cannot be confirmed instead of claiming pass or drift from manual hashes
 
 ### 8.5 Authoritative And Non-Authoritative Result Contract
 

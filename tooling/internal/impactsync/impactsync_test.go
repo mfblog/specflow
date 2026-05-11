@@ -8,6 +8,7 @@ import (
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/testfixtures"
 )
 
 func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
@@ -572,6 +573,7 @@ func mustMkdirImpactAll(t *testing.T, path string) {
 func mustWriteImpactFile(t *testing.T, path, content string) {
 	t.Helper()
 	content = withCandidateAcceptanceFixture(path, content)
+	content = testfixtures.NormalizeSpecFlowContent(path, content)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
 	}

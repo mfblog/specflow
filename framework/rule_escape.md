@@ -53,10 +53,11 @@ Before execution:
 1. read `specflow/framework/spec_policy.md`
 2. read `specflow/framework/command_policy.md`
 3. read `specflow/framework/checkpoint_protocol.md`
-4. read `docs/specs/_status.md` when the request names existing formal units or scenarios
-5. resolve every named existing unit or scenario's current layer from `_status.md` before reading its main Spec
-6. read any current-layer unit files, scenario files, appendix files, and `rule` files needed to judge the true boundary
-7. read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may cross into project-wide default-rule promotion
+4. read `specflow/framework/recovery_policy.md` when control may have returned after file mutation
+5. read `docs/specs/_status.md` when the request names existing formal units or scenarios
+6. resolve every named existing unit or scenario's current layer from `_status.md` before reading its main Spec
+7. read any current-layer unit files, scenario files, appendix files, and `rule` files needed to judge the true boundary
+8. read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may cross into project-wide default-rule promotion
 
 ---
 

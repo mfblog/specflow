@@ -76,7 +76,7 @@ If the request names units that do not yet have current-layer Spec files and the
    - one rule object per rule file
    - do not merge unrelated shared topics into one file
 5. if the round may create or update a candidate-layer file for a `rule_id` that already has a stable-layer sibling, resolve the repository-wide binding set and the affected-unit owner set for that already-stable rule object from current repository truth before owner selection:
-   - derive the binding set from unit and scenario `rule_refs` rather than from `bound_objects`
+   - derive the binding set from current-layer unit and scenario frontmatter `rule_refs`
    - include command-target objects that currently bind the stable-layer sibling and command-target objects that already bind its current candidate-layer sibling when that sibling exists
    - derive the affected-unit owner set from the unit subset of that binding set
    - if current repository truth is insufficient to derive that binding set or owner set safely, stop this flow and return control to `rule_escape` through rule-governance routing instead of guessing
@@ -105,7 +105,7 @@ If the request names units that do not yet have current-layer Spec files and the
    - keep rule truth-path rules consistent with the resulting rule file location
    - if current repository truth is insufficient to write the exact mapping update without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
 11. if no command-target object formally binds the rule truth yet:
-   - keep `bound_objects=none`
+   - keep the Rule file without `bound_objects`
    - record expected future consumers only as planning text in the rule file body
 12. if the same truth still remains duplicated as formal unit truth elsewhere, stop and report that boundary closure is incomplete
 13. after any write to `docs/specs/rules/**`, execute `rule_sync` before claiming closure, even when the binding set or affected-unit owner set is currently empty

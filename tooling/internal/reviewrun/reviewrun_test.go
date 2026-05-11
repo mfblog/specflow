@@ -45,6 +45,40 @@ func TestInitCreatesValidRunState(t *testing.T) {
 	}
 }
 
+func TestInitIncludesStateSpaceClosureSlice(t *testing.T) {
+	repoRoot, file, _ := createInitializedRun(t)
+	state := mustParse(t, file)
+	slice := findSlice(t, state, "state_space_closure")
+
+	if slice.SliceType != "cross_convergence" {
+		t.Fatalf("expected state_space_closure to be cross_convergence, got %s", slice.SliceType)
+	}
+	for _, dependency := range []string{
+		"routing_and_command_policy",
+		"truth_and_implementation_gates",
+		"process_and_impact_state",
+		"project_instance_contract_compatibility",
+	} {
+		if !containsString(slice.DependsOn, dependency) {
+			t.Fatalf("expected state_space_closure dependency %s, got %+v", dependency, slice.DependsOn)
+		}
+	}
+	for _, input := range []string{
+		"specflow/framework/command_policy.md",
+		"specflow/framework/implementation_change_policy.md",
+		"specflow/framework/process_snapshot_contract.md",
+		"docs/specs/_status.md",
+		"specflow/framework/commands/unit_check.md",
+	} {
+		if !containsString(slice.InputFiles, input) {
+			t.Fatalf("expected state_space_closure input %s, got %+v", input, slice.InputFiles)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md")); err != nil {
+		t.Fatalf("expected command fixture file: %v", err)
+	}
+}
+
 func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	repoRoot := createReviewRunRepo(t)
 	now := time.Date(2026, 4, 26, 10, 30, 0, 0, time.UTC)
@@ -572,6 +606,26 @@ func TestRefreshPropagatesStaleToCrossConvergenceSlice(t *testing.T) {
 	refreshed := mustParse(t, file)
 	if got := findSlice(t, refreshed, "routing_to_command_convergence").Status; got != sliceStale {
 		t.Fatalf("expected cross stale status, got %s", got)
+	}
+}
+
+func TestRefreshMarksStateSpaceClosureStaleWhenCommandInputChanges(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	setSliceStatus(t, &state, "state_space_closure", slicePassed)
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check changed\n")
+
+	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if !containsString(result.StaleSlices, "state_space_closure") {
+		t.Fatalf("expected state_space_closure stale after command input change, got %+v", result.StaleSlices)
+	}
+	refreshed := mustParse(t, file)
+	if got := findSlice(t, refreshed, "state_space_closure").Status; got != sliceStale {
+		t.Fatalf("expected state_space_closure stale status, got %s", got)
 	}
 }
 

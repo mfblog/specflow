@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/testfixtures"
 )
 
 func TestResolveRefRequiresPromotionOwnerUnitWhenCandidateSharedHasStableSibling(t *testing.T) {
@@ -92,6 +94,7 @@ func mustMkdirAll(t *testing.T, path string) {
 
 func mustWriteFile(t *testing.T, path, content string) {
 	t.Helper()
+	content = testfixtures.NormalizeSpecFlowContent(path, content)
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("WriteFile(%s): %v", path, err)
 	}

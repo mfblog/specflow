@@ -9,6 +9,7 @@ import (
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/impactsync"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulebinding"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
@@ -92,15 +93,17 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if len(normalized.RuleRefs) == 0 && len(normalized.RuleIDs) == 0 {
 		return Result{}, fmt.Errorf("at least one of rule refs or rule ids is required")
 	}
+	if len(normalized.BoundObjectsOnlyRuleFileRefs) > 0 {
+		return Result{}, fmt.Errorf("bound_objects-only sync is no longer supported; derive consumers from current-layer rule_refs")
+	}
 
 	sharedFilesByRef, err := loadSharedFiles(repoRoot)
 	if err != nil {
 		return Result{}, err
 	}
 	sharedFilesByID := buildSharedFilesByID(sharedFilesByRef)
-	sharedFilesByFileRef := buildSharedFilesByFileRef(sharedFilesByRef)
 
-	moduleBindings, actualModulesByRef, _, unresolvedRuleRefs, err := loadModuleBindings(repoRoot)
+	moduleBindings, _, _, unresolvedRuleRefs, err := loadModuleBindings(repoRoot)
 	if err != nil {
 		return Result{}, err
 	}
@@ -169,22 +172,6 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	}
 
 	boundObjectsOnlyFileRefs := map[string]bool{}
-	for _, fileRef := range normalized.BoundObjectsOnlyRuleFileRefs {
-		shared, ok := sharedFilesByFileRef[fileRef]
-		if !ok {
-			return Result{}, fmt.Errorf("bound_objects-only rule file ref %q is not present under docs/specs/rules/", fileRef)
-		}
-		boundObjectsOnlyFileRefs[shared.FileRef] = true
-	}
-
-	actualBoundObjectsByRef, err := collectActualBoundObjectsByRef(repoRoot, actualModulesByRef, flowBindings)
-	if err != nil {
-		return Result{}, err
-	}
-	drifts, err := collectBoundObjectDrifts(sharedFilesByRef, actualBoundObjectsByRef, boundObjectsOnlyFileRefs)
-	if err != nil {
-		return Result{}, err
-	}
 
 	removedBindingModules, err := candidateModulesWithRemovedSelectedBinding(repoRoot, moduleBindings, normalized.RuleRefs, normalized.RuleIDs, sharedFilesByRef, sharedFilesByID)
 	if err != nil {
@@ -222,21 +209,23 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	}
 
 	return Result{
-		ScopedModules:                scopeModules,
-		ScopedFlows:                  scopeFlows,
-		ScopedRuleRefs:               normalized.RuleRefs,
-		ScopedRuleIDs:                normalized.RuleIDs,
-		StableLandingModule:          normalized.StableLandingModule,
-		StableLandingRuleRefs:        normalized.StableLandingRuleRefs,
-		RetargetedUnits:              normalized.RetargetedUnits,
-		BoundObjectsOnlyRuleFileRefs: normalized.BoundObjectsOnlyRuleFileRefs,
-		ModuleResults:                impactResult.ModuleResults,
-		FlowResults:                  impactResult.FlowResults,
-		BoundObjectDrifts:            drifts,
+		ScopedModules:         scopeModules,
+		ScopedFlows:           scopeFlows,
+		ScopedRuleRefs:        normalized.RuleRefs,
+		ScopedRuleIDs:         normalized.RuleIDs,
+		StableLandingModule:   normalized.StableLandingModule,
+		StableLandingRuleRefs: normalized.StableLandingRuleRefs,
+		RetargetedUnits:       normalized.RetargetedUnits,
+		ModuleResults:         impactResult.ModuleResults,
+		FlowResults:           impactResult.FlowResults,
 	}, nil
 }
 
 func ReconcileBoundModules(repoRoot string, options ReconcileBoundModulesOptions) (ReconcileBoundModulesResult, error) {
+	return ReconcileBoundModulesResult{}, fmt.Errorf("rule reconcile-bound-objects is no longer supported; derive consumers from current-layer rule_refs")
+}
+
+func reconcileBoundModulesDeprecated(repoRoot string, options ReconcileBoundModulesOptions) (ReconcileBoundModulesResult, error) {
 	normalized := ReconcileBoundModulesOptions{
 		Modules:  normalizeStrings(options.Modules),
 		RuleRefs: normalizeStrings(options.RuleRefs),
@@ -705,25 +694,11 @@ func selectedRuleRefsForObject(objectRefs, scopedRefs, scopedIDs []string, share
 }
 
 func filterInvalidatingRuleRefs(selectedRefs []string, sharedFilesByRef map[string]sharedFile, boundObjectsOnlyFileRefs map[string]bool) []string {
-	result := make([]string, 0, len(selectedRefs))
-	for _, ref := range selectedRefs {
-		shared, ok := sharedFilesByRef[ref]
-		if !ok || !boundObjectsOnlyFileRefs[shared.FileRef] {
-			result = append(result, ref)
-		}
-	}
-	return normalizeStrings(result)
+	return normalizeStrings(selectedRefs)
 }
 
 func allowedSharedSnapshotMismatchFileRefs(selectedRefs []string, sharedFilesByRef map[string]sharedFile, boundObjectsOnlyFileRefs map[string]bool) []string {
-	result := []string{}
-	for _, ref := range selectedRefs {
-		shared, ok := sharedFilesByRef[ref]
-		if ok && boundObjectsOnlyFileRefs[shared.FileRef] {
-			result = append(result, shared.FileRef)
-		}
-	}
-	return normalizeStrings(result)
+	return nil
 }
 
 func subtractStringSet(values []string, excluded map[string]bool) []string {
@@ -768,6 +743,13 @@ func makeStringSet(values []string) map[string]bool {
 }
 
 func parseSharedFile(relPath, content string) (sharedFile, error) {
+	hasBoundObjects, err := rulerefs.HasRuleBoundObjects(relPath, content)
+	if err != nil {
+		return sharedFile{}, err
+	}
+	if hasBoundObjects {
+		return sharedFile{}, fmt.Errorf("%s: bound_objects is forbidden; derive consumers from current-layer rule_refs", relPath)
+	}
 	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
 	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
 		return sharedFile{}, fmt.Errorf("%s: missing frontmatter start marker", relPath)
@@ -784,31 +766,10 @@ func parseSharedFile(relPath, content string) (sharedFile, error) {
 	}
 
 	shared := sharedFile{FileRef: relPath}
-	inBoundObjects := false
 	for _, line := range lines[1:endIdx] {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" {
 			continue
-		}
-		if strings.HasPrefix(trimmed, "bound_objects:") {
-			inBoundObjects = true
-			if strings.HasSuffix(trimmed, "none") {
-				inBoundObjects = false
-			}
-			continue
-		}
-		if inBoundObjects {
-			if strings.HasPrefix(trimmed, "- ") {
-				ref := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
-				ref = strings.Trim(ref, "`")
-				boundRef, err := normalizeTypedBoundObjectRef(ref)
-				if err != nil {
-					return sharedFile{}, fmt.Errorf("%s: %w", relPath, err)
-				}
-				shared.BoundObjects = append(shared.BoundObjects, boundRef)
-				continue
-			}
-			inBoundObjects = false
 		}
 		parts := strings.SplitN(trimmed, ":", 2)
 		if len(parts) != 2 {
@@ -831,7 +792,6 @@ func parseSharedFile(relPath, content string) (sharedFile, error) {
 	if shared.RuleID == "" || shared.Layer == "" || shared.VersionRef == "" {
 		return sharedFile{}, fmt.Errorf("%s: missing rule_id, layer, or rule_version", relPath)
 	}
-	shared.BoundObjects = normalizeStrings(shared.BoundObjects)
 	return shared, nil
 }
 

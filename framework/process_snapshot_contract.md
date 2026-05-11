@@ -199,7 +199,6 @@ Rules:
 1. literal `none`
 2. a normalized ordered list where each item contains:
    - `file_ref`
-   - `appendix_ref`
    - `fingerprint`
 
 `rule_snapshot` has only two legal forms:
@@ -249,8 +248,7 @@ Rules:
 2. `repository_mapping_snapshot` captures only `docs/specs/repository_mapping.md`
 3. `unit_snapshot` includes only units formally bound by current `scenario` truth
 4. `rule_snapshot` includes all stable global rules and every formal rule listed by `rule_refs`
-5. `bound_objects` metadata is never a formal inclusion source
-6. a `bound_objects`-only delta does not by itself invalidate downstream process files
+5. Rule files must not record `bound_objects`; consumer lists are derived from current-layer frontmatter `rule_refs`
 
 ## 6. Fingerprint Contract
 
@@ -298,7 +296,6 @@ Ordering rules:
 
 1. `unit_appendix_snapshot`
    - sort by `file_ref`
-   - then by `appendix_ref`
 2. `unit_snapshot`
    - sort by `unit`
    - then by `layer`
@@ -344,16 +341,25 @@ specflow/tooling/bin/specflowctl-<os>-<arch> snapshot validate-process --repo-ro
 
 `plan` is valid only for `--object-type unit`.
 
-3. a command that writes a covered process file must run the matching validation command after writeback and before reporting a pass gate, active handoff, verification pass, or lifecycle advance
-4. a command that consumes a covered process file must run the matching validation command before treating that file as current and consumable
-5. when validation fails, the tool must report the failure layer and recommended next command when it can derive them deterministically
-6. a manual hash calculation, shell checksum, editor display, or conversation-derived value may be used only as diagnostic evidence; it must not replace the tooling result for lifecycle progression
-7. if the required validation tooling is missing, stale, unsupported for the target process kind, or fails to execute, the command must report that tooling validation is unavailable and must not claim a new pass gate, active handoff, verification pass, or lifecycle advance from that process file
+3. a command that consumes a covered process file must run the matching validation command before treating that file as current and consumable
+4. a command that writes a covered process file must run the matching validation command after writeback and before reporting a pass gate, active handoff, verification pass, or lifecycle advance
+5. when validation fails, the tool result is the authoritative failure input; fallback cleanup and `_status.md` fallback may use only the tool-reported mismatch surface, failure layer, and recommended next command, or a command-local failure layer that the active command file explicitly defines for that validation failure shape
+6. a manual hash calculation, shell checksum, editor display, conversation-derived value, or temporary script result may be used only as diagnostic evidence; it must not replace the tooling result, trigger drift classification, trigger fallback cleanup, trigger `_status.md` writeback, or support lifecycle progression
+7. if the required validation tooling is missing, stale, unsupported for the target process kind, or fails to execute, the command must report `tooling validation unavailable`, stop before lifecycle judgment, and must not claim a new pass gate, active handoff, verification pass, stable-alignment pass, fallback cleanup, or lifecycle advance from that process file
+8. if a command writes a stable acceptance summary that is not supported by `snapshot validate-process`, it must still compute the summary fields with this fingerprint contract and must not use shell checksum output, editor display, or conversation-derived values as the authoritative field source
+
+Command preflight rule:
+
+1. when the repository provides `specflowctl command preflight`, standard commands that consume current process files must run it before reading process-file contents for command judgment
+2. `command preflight` may validate only mechanical entry facts: current `_status.md` row, expected command, required process-file existence, and required `snapshot validate-process` results
+3. if `command preflight` is unavailable, the command must explicitly run each required `snapshot validate-process` command before continuing
+4. if `command preflight` fails, the command must not compensate with manual hash calculation or local file inspection; it must stop or enter the command's tool-backed fallback path using only the reported failure data
+5. a command with no covered process-file input may treat preflight as a status-row check only; this does not create permission to skip command-local semantic checks
 
 Rule-specific exception rule:
 
-1. if a rule file is explicitly declared by the active caller as `bound_objects`-only for the current round, a difference caused only by that metadata delta does not invalidate the process file on that basis alone
-2. executors must not infer a `bound_objects`-only delta from fingerprint difference alone
+1. executors must not infer a metadata-only Rule exception from fingerprint difference alone
+2. any Rule file that records `bound_objects` is invalid before snapshot comparison continues
 
 If any required field differs after applying only allowed exceptions, the process file is invalid for downstream use.
 

@@ -33,6 +33,7 @@ This file states only `unit_fork`-local entry, output, and stop rules.
 7. if the round will create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `rule_sync.md`
 8. if the round may remove, retarget, or otherwise change an existing Rule binding, read every current-layer unit or scenario main file needed to derive the real binding set of each touched Rule from `rule_refs`
 9. read `specflow/framework/onboarding_decision_policy.md` for stable-fork candidate source handling
+10. read `specflow/framework/candidate_intent_policy.md`; after selecting the target `candidate_intent`, read the selected intent standard named by that policy
 
 ## 4. Procedure
 
@@ -40,17 +41,24 @@ This file states only `unit_fork`-local entry, output, and stop rules.
 2. read `s_g_rule_repository_baseline.md` if it exists; otherwise continue with no formal global baseline
 3. read `docs/specs/units/stable/s_unit_{unit}.md` and any explicitly referenced appendix files
 4. read bound stable Rule files if any
-5. apply the stable-fork candidate source rule from `specflow/framework/onboarding_decision_policy.md` Section 6.1
+5. determine the target `candidate_intent` before writing the candidate:
+   - use `change` for a clean behavior upgrade, extension, replacement, or first selected truth change
+   - use `repair` only when the previous `unit_stable_verify` result requires a controlled candidate round to restore current stable truth
+   - use `change` when the previous `unit_stable_verify` result says the stable truth, protocol, boundary, or acceptance standard itself must change
+   - stop before candidate writeback if the intent cannot be determined from `_status.md`, the prior stable verification conclusion, or the current user-entered command context
+6. apply the stable-fork candidate source rule from `specflow/framework/onboarding_decision_policy.md` Section 6.1 together with the selected intent standard
    - if the fork uses only stable formal truth plus the current round's selected design changes, prepare `source_basis=new_design` and `evidence_appendix_ref=none`
    - if the fork selects behavior from implementation, tests, runtime behavior, historical material, or other non-stable evidence, prepare the required `source_basis`, `evidence_appendix_ref`, and candidate evidence appendix in the same round
    - if that source decision or evidence appendix is not ready, stop before writing the candidate main Spec
-6. determine the target formal version for this round:
+7. determine the target formal version for this round:
    - compatible new capability -> next `MINOR`
    - incompatible change -> next `MAJOR`
    - compatible fix or alignment -> next `PATCH`
-7. generate `docs/specs/units/candidate/c_unit_{unit}.md` from the current stable file and write the prepared `source_basis` and `evidence_appendix_ref` fields in the same candidate write
-8. set candidate `frontmatter.version` to that target version
-9. ensure the candidate `Testability / Acceptance Criteria` section uses explicit acceptance items that satisfy `spec_writing_guide.md` Section 5
+8. generate `docs/specs/units/candidate/c_unit_{unit}.md` from the current stable file and write the prepared `candidate_intent`, `source_basis`, and `evidence_appendix_ref` fields in the same candidate write
+   - for `candidate_intent=repair`, also write `repair_basis` and the candidate-only `Repair Scope` required by the selected intent standard
+   - for `candidate_intent=change`, do not write `repair_basis`
+9. set candidate `frontmatter.version` to that target version
+10. ensure the candidate `Testability / Acceptance Criteria` section uses explicit acceptance items that satisfy `spec_writing_guide.md` Section 5
    - if the stable source already has structured acceptance items, carry them forward and edit only the items affected by the new round
    - if the stable source still has historical prose-only acceptance text, convert the relevant current acceptance scope into explicit items in the candidate instead of preserving the ambiguity
 11. re-check `rule_refs`:
@@ -63,15 +71,14 @@ This file states only `unit_fork`-local entry, output, and stop rules.
 12. if Step 11 removes or retargets any existing Rule binding:
    - derive the real repository-wide binding set of each touched Rule from current-layer unit and scenario `rule_refs` plus the target unit candidate writeback prepared in Step 11
    - if repository truth is insufficient to decide whether any touched Rule file would become unbound after this round, stop and reroute through natural-language rule governance from current repository truth instead of leaving cleanup ownership implicit
-13. if the round changed rule bindings or rule files, resolve Rule terminal state and `bound_objects` in the same round:
+13. if the round changed rule bindings or rule files, resolve Rule terminal state in the same round:
    - if a touched Rule file would have no formal bound units after this round, in the same round either delete it when cleanup is legal under `spec_policy.md` or explicitly keep it as independently authored rule truth by writing that file with:
      - `unbound_retention: intentional`
      - `unbound_retention_reason: <why this unbound state is intentional now>`
      - `unbound_retention_owner: unit_fork`
    - reject closure if neither deletion nor explicit keep-writeback has happened for a touched now-unbound Rule file
    - if a touched Rule file still has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-   - update `bound_objects` only as declarative metadata so each remaining touched Rule file matches the real binding set implied by unit and scenario `rule_refs`
-   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule reconcile-bound-objects --units {unit}` and additional `--rule-refs` / `--rule-ids` filters when the active flow has already identified them
+   - do not write consumer metadata into touched Rule files; every remaining touched Rule file must omit `bound_objects`
 14. delete old `_check_result/unit/{unit}.md`, `_verify_result/unit/{unit}.md`, `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and previous-round candidate appendix files
    - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --object-type unit --object {unit} --mode unit_fork`
 15. update `_status.md`:
@@ -82,13 +89,13 @@ This file states only `unit_fork`-local entry, output, and stop rules.
    - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable yes --candidate yes --active-layer candidate --next-command unit_check --notes <status-note>`
 16. do not update `docs/specs/repository_mapping.md` only because this fork changed the active layer from `stable` to `candidate`; the current unit main Spec path is resolved from `_status.md` plus the `unit_default` truth-surface rule
 17. if the round changed any unit `rule_refs` value or any file under `docs/specs/rules/**`, run `rule_sync` only after `_status.md` already reflects `Active Layer=candidate` for this unit, even when no additional affected object is known yet
-   - if any touched rule file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_rule_file_refs` with the exact file refs for those files
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule sync-impact --rule-refs <rule-ref> --units {unit}` or the corresponding `--rule-ids` form, and at least one rule trigger input must already be known before this deterministic execution starts
    - if that `rule_sync` returns control because repository truth is still insufficient to continue safely, stop `unit_fork` as `blocked`, keep the newly created candidate-layer state in place, and reroute through natural-language rule governance from current repository truth instead of claiming Rule side effects are closed
 
 ## 5. Stop Conditions
 
-1. the new `candidate` exists with valid `source_basis` and `evidence_appendix_ref`
+1. the new `candidate` exists with valid `candidate_intent`, `source_basis`, and `evidence_appendix_ref`
+   - repair candidates also have valid `repair_basis` and `Repair Scope`
 2. previous-round process files are cleaned up
 3. the new candidate contains explicit acceptance items for the current round
 4. Rule side effects are closed
@@ -101,16 +108,18 @@ This file states only `unit_fork`-local entry, output, and stop rules.
 1. fork decision
 2. created file path
 3. initialized candidate version
-4. initialized `source_basis`
-5. initialized `evidence_appendix_ref` and evidence appendix write result when required
-6. candidate acceptance-item structure result
-7. written formal global baseline reference or `none`
-8. Rule terminal-state result when the round changed rule bindings or rule files
-9. cleanup result
-10. `_status.md` update result
-11. Rule reconciliation result when the round changed rule truth or bindings
-12. when post-fork `rule_sync` could not continue safely, that the command stopped as `blocked` and must resume through natural-language rule governance
-13. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
+4. initialized `candidate_intent`
+5. initialized `repair_basis` and `Repair Scope` result when the intent is `repair`
+6. initialized `source_basis`
+7. initialized `evidence_appendix_ref` and evidence appendix write result when required
+8. candidate acceptance-item structure result
+9. written formal global baseline reference or `none`
+10. Rule terminal-state result when the round changed rule bindings or rule files
+11. cleanup result
+12. `_status.md` update result
+13. Rule reconciliation result when the round changed rule truth or bindings
+14. when post-fork `rule_sync` could not continue safely, that the command stopped as `blocked` and must resume through natural-language rule governance
+15. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
    - `current state` must explicitly confirm the candidate-layer state written to `_status.md`
    - if post-fork follow-up is blocked on rule governance, the block must name natural-language rule-governance rerouting as the immediate `next step`
 

@@ -28,6 +28,7 @@ Common rules:
 2. both families enter `docs/specs/_status.md`
 3. only these two families are standard command targets
 4. every candidate main Spec for these families records `source_basis` and `evidence_appendix_ref` as defined by `onboarding_decision_policy.md`
+5. every unit candidate main Spec also records `candidate_intent` as defined by `candidate_intent_policy.md`
 
 Family differences:
 
@@ -87,7 +88,7 @@ Rule files use two formal scopes:
    - candidate `g_` rules are proposals and do not apply automatically
 2. `b_` rules are bound-scope rules
    - they apply only when a `unit` or `scenario` truth file lists them in `rule_refs`
-   - `bound_objects` is metadata and does not replace `rule_refs`
+   - consumers are derived from current-layer `unit` and `scenario` frontmatter `rule_refs`
 
 It is not a command target.
 Users enter rule work through the rule-governance branch defined by `natural_language_routing.md`.
@@ -106,9 +107,7 @@ Formal object identity uses the following rules:
    - `c_unit_agent.md`
    - `s_unit_ai.md`
    - `c_scenario_task_execution.md`
-3. `bound_objects` in Rule files must use typed refs
-   - `unit:ai`
-   - `scenario:task_execution`
+3. Rule files must not store consumer refs; consumer refs live only in current-layer `unit` and `scenario` frontmatter `rule_refs`
 
 ### 3.2 `unit`
 
@@ -279,8 +278,8 @@ Conditional field:
    - `unbound_retention_reason: <non-empty reason>`
    - `unbound_retention_owner: <owning command or rule-governance flow>`
 5. `unbound_retention_owner` must name the command or internal rule-governance flow that owns the terminal-state decision in the current round, for example `unit_fork`, `unit_promote`, or `rule_topology`
-6. the intentional-unbound retention fields may be recorded only when `bound_objects=none`
-7. when the resulting rule file has one or more formal bound objects, the intentional-unbound retention fields must not be recorded
+6. the intentional-unbound retention fields may be recorded only when the current-layer `unit` and `scenario` `rule_refs` graph contains no consumer for that Rule ref
+7. when the current-layer `unit` and `scenario` `rule_refs` graph contains one or more consumers for the resulting Rule ref, the intentional-unbound retention fields must not be recorded
 8. when a file that previously carried intentional-unbound retention becomes formally bound again, the same round that restores the binding must remove `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner`
 9. intentional-unbound retention fields are terminal-state truth for the rule file only; they do not replace `rule_refs`, do not create a formal binding, and do not skip required `rule_sync` or `impact_sync` reconciliation
 
@@ -295,17 +294,15 @@ Rules:
 1. `rule_refs` must name the exact layer and file currently bound
 2. stable-layer command-target objects may bind only stable-layer rule truth
 3. candidate-layer command-target objects may bind stable-layer or candidate-layer rule truth, but the bound layer must be explicit
-4. `bound_objects` is declarative metadata only; it does not replace the command-target object's formal binding source
-5. a `bound_objects`-only delta does not by itself invalidate downstream process files
-6. `bound_objects` must use typed refs only
-   - `unit:<id>`
-   - `scenario:<id>`
-7. when `rule_refs` is written as a markdown list, executors must normalize the ref order by exact rule ref string in ascending lexical order
-8. during a same-round stable landing by `unit_promote`, another candidate-layer unit may be retargeted from a candidate-layer Rule ref to the stable-layer Rule ref created by that same landing only after the stable Rule file has been written in the same repository state
-9. same-round stable landing retargeting is legal only when the candidate and stable Rule refs share the same `rule_id` and `rule_version`, and the change is a layer target change from `candidate` to `stable`
-10. same-round stable landing retargeting must not change Rule body truth, unit-local behavior truth, or acceptance meaning beyond the exact `rule_refs` layer target and the directly required body-level reference wording
-11. any unit retargeted by same-round stable landing must be at `candidate`; stable units must fork before their truth can be retargeted
-12. a retargeted candidate unit's process files are no longer reusable and must fall back to `unit_check` through rule impact reconciliation
+4. `rule_refs` must be recorded in frontmatter
+5. an object with no formal Rule binding must record `rule_refs: none` in frontmatter
+6. the body may explain reuse through `rule_reuse_summary` and `rule_exceptions`, but it must not contain the formal `rule_refs` list
+7. Rule files must not record `bound_objects`; consumer lists are derived only by scanning current-layer `unit` and `scenario` frontmatter `rule_refs`
+8. when `rule_refs` is written as a YAML list, executors must normalize the ref order by exact rule ref string in ascending lexical order
+9. during a same-round stable landing by `unit_promote`, consumer retargeting must be performed through `specflowctl rule release-version`
+10. `release-version` may directly rewrite candidate current-layer `rule_refs`
+11. `release-version` must not directly rewrite stable current-layer truth; it must create a candidate fork and rewrite the candidate `rule_refs`
+12. a retargeted candidate object's process files are no longer reusable and must fall back to `unit_check` or `scenario_check` through rule impact reconciliation
 
 ### 6.2 Dependency Direction Contract
 
@@ -369,7 +366,7 @@ Rule version rules:
 1. `rule_version` uses `MAJOR.MINOR.PATCH`.
 2. The first candidate-layer file for a brand-new rule object starts at `0.1.0`.
 3. When a current round opens the next candidate-layer file for a rule object that already has a stable-layer file, that candidate file must carry the intended next stable `rule_version`.
-4. When Rule 3 applies, that candidate file must also record the exact `promotion_owner_unit` required by Section 5.4.
+4. When Rule 3 applies, that candidate file must also record the exact `promotion_owner_unit` required by Section 5.1.
 5. `MAJOR`
    - incompatible change to the formally bound rule semantics, required consumer interpretation, or cross-unit contract shape
 6. `MINOR`
@@ -425,6 +422,7 @@ Process files become invalid when their required current truth or required curre
 Candidate evidence appendix files are candidate appendix files for snapshot and invalidation purposes.
 Their inclusion in `unit_appendix_snapshot` or the scenario candidate snapshot proves which evidence was reviewed by the gate, but it does not make the evidence appendix an implementation truth source.
 Implementation and verification commands must use the candidate main Spec, retained behavior rules, bound Rule files, and `s_g_rule_repository_baseline.md` as truth.
+Appendix files must not store the main Spec version in frontmatter; their current binding is derived from the current-layer main Spec link, owner fields, layer, and content fingerprint.
 
 The exact snapshot field definitions come from `process_snapshot_contract.md`.
 

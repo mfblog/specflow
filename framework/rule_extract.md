@@ -25,9 +25,8 @@ It may:
 1. create or update a candidate-layer `rule`
 2. rewrite unit candidate-side references and boundary explanation
 3. remove duplicate formal truth from the source unit candidate side
-4. update the target rule file's declarative `bound_objects` metadata so it matches the real command-target binding set after extraction writeback
-5. trigger `rule_sync` after any rule-truth or binding writeback
-6. stop at a rule-governance checkpoint when any source or consumer unit is currently at `stable`
+4. trigger `rule_sync` after any rule-truth or binding writeback
+5. stop at a rule-governance checkpoint when any source or consumer unit is currently at `stable`
 
 It does not:
 
@@ -58,7 +57,7 @@ Before execution:
 10. if the round may create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `specflow/framework/rule_sync.md` first
 11. if the round may create or update any file under `docs/specs/rules/**`, apply the Rule version rules from `specflow/framework/spec_policy.md` Section 6.3
 12. if the round may create the first file for a brand-new `rule_id` or otherwise change the current rule object map, read `docs/specs/repository_mapping.md` before rule truth writeback
-13. if the round may update `bound_objects`, read every current-layer unit or scenario main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
+13. read every current-layer unit or scenario main file needed to derive the real repository-wide binding set of each touched Rule from frontmatter `rule_refs`
 
 ---
 
@@ -103,13 +102,11 @@ Before execution:
 12. rewrite every source unit candidate side so the extracted truth is no longer duplicated as unit-local formal truth
 13. rewrite every additional writeback-required involved consumer unit candidate-side reference and behavior explanation required by the extraction result
    - any written `rule_refs` must use the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1
-14. update the target rule file's `bound_objects` only as declarative metadata so it matches the real binding set implied by repository-wide unit and scenario `rule_refs` plus this round's prepared unit writebacks
-   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule reconcile-bound-objects --rule-refs c_b_rule_x@0.1.0` and additional `--rule-ids` filters when the active flow has already identified them
+14. do not write consumer metadata into the target Rule file; the target Rule file must omit `bound_objects`
 15. if the target rule file now has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 16. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
 17. if any involved unit that should now consume the extracted truth was not fully reviewed and rewritten where required, stop and report consumer-coverage failure
 18. after any write to `docs/specs/rules/**` or any unit `rule_refs`, execute `rule_sync` before claiming closure
-   - if any touched rule file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_rule_file_refs` with the exact file refs for those files
 
 ---
 
@@ -118,7 +115,7 @@ Before execution:
 Stop when one of the following is true:
 
 1. the shared extraction is complete, duplicate formal truth is removed, and `rule_sync` has finished reconciliation
-   - the target rule file `bound_objects` metadata must already match the real command-target binding set
+   - the target Rule file must omit `bound_objects`
    - involved consumer coverage must already be complete for the current repository truth
    - any required `repository_mapping.md` object-map writeback must already be complete
 2. the request is not really extraction and must be re-routed to another rule flow
@@ -141,7 +138,7 @@ The output must include at least:
 6. the written `rule_version` and why it is correct for the current round
 7. the unit candidate-side rewrite result and whether duplicate formal truth was fully removed
 8. whether involved unit and scenario consumer coverage is complete for the current repository truth
-9. the target rule file `bound_objects` reconciliation result
+9. confirmation that the target rule file omits `bound_objects`
 10. when the resulting candidate-layer rule file has a stable-layer sibling, the written or validated `promotion_owner_unit`
 11. when the round changed the current rule object map, the `docs/specs/repository_mapping.md` writeback result
 12. the `rule_sync` result, including affected downstream objects and fallback if any

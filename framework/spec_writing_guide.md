@@ -53,14 +53,23 @@ Detailed rules for object identity recording, file name prefixes, typed refs, an
 
 ### 4.1 `unit`
 
-Each current-layer unit truth must record:
+Each current-layer unit truth must record these frontmatter fields:
 
+1. `version`
 2. `rule_refs`
 
 Each candidate-layer unit main file must additionally record these frontmatter fields:
 
-1. `source_basis`
-2. `evidence_appendix_ref`
+1. `candidate_intent`
+2. `source_basis`
+3. `evidence_appendix_ref`
+
+For unit candidates:
+
+1. `candidate_intent` must be `repair` or `change` according to `specflow/framework/candidate_intent_policy.md`
+2. when `candidate_intent=repair`, the file must also record `repair_basis`
+3. when `candidate_intent=change`, the file must not record `repair_basis`
+4. `source_basis` and `evidence_appendix_ref` keep their source-selection meaning and must not be used to express repair or change intent
 
 `unit` does not formally record `scenario_refs`.
 
@@ -70,7 +79,7 @@ Each current-layer scenario truth must record:
 
 1. `repository_mapping_ref`
 2. `unit_refs`
-3. `rule_refs`
+3. frontmatter `rule_refs`
 
 Each candidate-layer scenario main file must additionally record these frontmatter fields:
 
@@ -97,11 +106,24 @@ Each current-layer rule file must record:
    - `bound`
 3. `layer`
 4. `rule_version`
-5. `bound_objects`
-   - `all_units` for stable global rules
-   - typed refs or `none` for bound rules and candidate global rules
 
 Rule files may also carry conditional fields (`promotion_owner_unit`, intentional-unbound retention fields) when governance rules require them. Those rules are defined by `specflow/framework/spec_policy.md`.
+
+Rule files must not record `bound_objects`. Tooling derives consumer lists by scanning current-layer `unit` and `scenario` frontmatter `rule_refs`.
+
+### 4.5 Appendix Files
+
+Appendix files are supporting truth for the main Spec that explicitly references them.
+
+Each appendix file must record the owner and layer fields needed to prove that relationship:
+
+1. `unit` or `scenario`
+2. `layer`
+
+Appendix files may record additional appendix-specific metadata.
+Appendix-specific metadata must not duplicate the main Spec version or replace the owner and layer relationship.
+Appendix files must not record `spec_version_ref`.
+The main Spec version is recorded by the main Spec itself and by process snapshot fields when a gate or active plan binds the current truth.
 
 ---
 
@@ -211,8 +233,9 @@ This rule applies to candidate-layer files: `unit` main Specs and appendix files
 
 1. The formal object identity rules, file path templates, truth path resolution, binding contracts, version semantics, process file rules, and governance lifecycle rules are defined by `specflow/framework/spec_policy.md`.
 2. The required frontmatter field `rule_refs` must follow the Rule binding contract defined by `specflow/framework/spec_policy.md` Section 6.1.
-3. Commands that check spec content (`unit_check`, `scenario_check`, `rule_new`, and verify commands) read this file as the baseline for spec writing rules.
-4. Project-level writing standards may tighten these rules through the registered project standards mechanism defined by `project_standards_policy.md`.
+3. Unit candidate intent fields follow `specflow/framework/candidate_intent_policy.md`; this guide records the required field shape, while that policy owns intent-specific command standards.
+4. Commands that check spec content (`unit_check`, `scenario_check`, `rule_new`, and verify commands) read this file as the baseline for spec writing rules.
+5. Project-level writing standards may tighten these rules through the registered project standards mechanism defined by `project_standards_policy.md`.
 
 ---
 

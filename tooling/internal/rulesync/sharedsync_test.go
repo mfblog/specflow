@@ -11,6 +11,7 @@ import (
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/testfixtures"
 )
 
 func TestSyncImpactKeepsCandidateWhenOnlyBoundModulesChanged(t *testing.T) {
@@ -36,24 +37,8 @@ Body stays the same.
 		RuleRefs:                     []string{sharedRef},
 		BoundObjectsOnlyRuleFileRefs: []string{"docs/specs/rules/candidate/c_b_rule_demo.md"},
 	})
-	if err != nil {
-		t.Fatalf("SyncImpact: %v", err)
-	}
-	if len(result.ModuleResults) != 1 {
-		t.Fatalf("expected one module result, got %d", len(result.ModuleResults))
-	}
-	moduleResult := result.ModuleResults[0]
-	if moduleResult.Outcome != "unchanged" {
-		t.Fatalf("expected unchanged outcome, got %+v", moduleResult)
-	}
-	if moduleResult.NextCommand != "unit_plan" {
-		t.Fatalf("expected next command unit_plan, got %s", moduleResult.NextCommand)
-	}
-	if len(result.BoundObjectDrifts) != 1 {
-		t.Fatalf("expected one bound_objects drift, got %d", len(result.BoundObjectDrifts))
-	}
-	if !result.BoundObjectDrifts[0].BoundObjectsOnlyDelta {
-		t.Fatalf("expected bound_objects-only drift, got %+v", result.BoundObjectDrifts[0])
+	if err == nil || !strings.Contains(err.Error(), "bound_objects-only sync is no longer supported") {
+		t.Fatalf("expected bound_objects-only rejection, got result=%+v err=%v", result, err)
 	}
 	checkPath := filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md")
 	if _, err := os.Stat(checkPath); err != nil {
@@ -85,18 +70,8 @@ Body stays the same.
 		RuleRefs:                     []string{sharedRef},
 		BoundObjectsOnlyRuleFileRefs: []string{"docs/specs/rules/candidate/c_b_rule_demo.md"},
 	})
-	if err != nil {
-		t.Fatalf("SyncImpact: %v", err)
-	}
-	if len(result.ModuleResults) != 1 {
-		t.Fatalf("expected one module result, got %d", len(result.ModuleResults))
-	}
-	moduleResult := result.ModuleResults[0]
-	if moduleResult.Outcome != "unchanged" {
-		t.Fatalf("expected unchanged outcome, got %+v", moduleResult)
-	}
-	if moduleResult.FallbackReasonCode != "" {
-		t.Fatalf("expected no fallback reason, got %+v", moduleResult)
+	if err == nil || !strings.Contains(err.Error(), "bound_objects-only sync is no longer supported") {
+		t.Fatalf("expected bound_objects-only rejection, got result=%+v err=%v", result, err)
 	}
 }
 
@@ -127,14 +102,11 @@ Body stays the same.
 		t.Fatalf("expected one module result, got %d", len(result.ModuleResults))
 	}
 	moduleResult := result.ModuleResults[0]
-	if moduleResult.Outcome != "invalidated" {
-		t.Fatalf("expected invalidated outcome, got %+v", moduleResult)
+	if moduleResult.Outcome != "unchanged" {
+		t.Fatalf("expected unchanged outcome after bound_objects removal, got %+v", moduleResult)
 	}
-	if moduleResult.FallbackReasonCode != "rule_drift" {
-		t.Fatalf("expected rule_drift, got %s", moduleResult.FallbackReasonCode)
-	}
-	if result.BoundObjectDrifts[0].BoundObjectsOnlyDelta {
-		t.Fatalf("expected drift to remain unproven without explicit declaration, got %+v", result.BoundObjectDrifts[0])
+	if len(result.BoundObjectDrifts) != 0 {
+		t.Fatalf("expected no bound_objects drift after metadata removal, got %+v", result.BoundObjectDrifts)
 	}
 }
 
@@ -265,18 +237,8 @@ Body stays the same.
 		RuleRefs:                     []string{sharedRef},
 		BoundObjectsOnlyRuleFileRefs: []string{"docs/specs/rules/candidate/c_b_rule_demo.md"},
 	})
-	if err != nil {
-		t.Fatalf("SyncImpact: %v", err)
-	}
-	if len(result.FlowResults) != 1 {
-		t.Fatalf("expected one flow result, got %d", len(result.FlowResults))
-	}
-	flowResult := result.FlowResults[0]
-	if flowResult.Outcome != "unchanged" {
-		t.Fatalf("expected unchanged outcome, got %+v", flowResult)
-	}
-	if flowResult.NextCommand != "scenario_verify" {
-		t.Fatalf("expected next command scenario_verify, got %s", flowResult.NextCommand)
+	if err == nil || !strings.Contains(err.Error(), "bound_objects-only sync is no longer supported") {
+		t.Fatalf("expected bound_objects-only rejection, got result=%+v err=%v", result, err)
 	}
 	for _, relPath := range []string{
 		"docs/specs/_check_result/scenario/demo.md",
@@ -778,18 +740,8 @@ Body changed.
 		RuleRefs:                     []string{sharedRef, "c_b_rule_extra@0.2.0"},
 		BoundObjectsOnlyRuleFileRefs: []string{"docs/specs/rules/candidate/c_b_rule_demo.md"},
 	})
-	if err != nil {
-		t.Fatalf("SyncImpact: %v", err)
-	}
-	if len(result.ModuleResults) != 1 {
-		t.Fatalf("expected one module result, got %+v", result.ModuleResults)
-	}
-	moduleResult := result.ModuleResults[0]
-	if moduleResult.Outcome != "invalidated" {
-		t.Fatalf("expected invalidated outcome, got %+v", moduleResult)
-	}
-	if moduleResult.FallbackReasonCode != "rule_drift" {
-		t.Fatalf("expected rule_drift, got %+v", moduleResult)
+	if err == nil || !strings.Contains(err.Error(), "bound_objects-only sync is no longer supported") {
+		t.Fatalf("expected bound_objects-only rejection, got result=%+v err=%v", result, err)
 	}
 }
 
@@ -902,14 +854,11 @@ func TestSyncImpactIncludesCandidateModuleWhenSelectedBindingWasRemovedFromCurre
 	if err != nil {
 		t.Fatalf("SyncImpact: %v", err)
 	}
-	if len(result.ScopedModules) != 1 || result.ScopedModules[0] != "demo" {
-		t.Fatalf("expected removed-binding module to remain in scope, got %+v", result.ScopedModules)
+	if len(result.ScopedModules) != 0 {
+		t.Fatalf("expected removed binding to be ignored after frontmatter migration, got %+v", result.ScopedModules)
 	}
-	if len(result.ModuleResults) != 1 {
-		t.Fatalf("expected one module result, got %+v", result.ModuleResults)
-	}
-	if result.ModuleResults[0].Outcome != "invalidated" || result.ModuleResults[0].NextCommand != "unit_check" {
-		t.Fatalf("expected invalidated module fallback, got %+v", result.ModuleResults[0])
+	if len(result.ModuleResults) != 0 {
+		t.Fatalf("expected no module fallback after frontmatter migration, got %+v", result.ModuleResults)
 	}
 }
 
@@ -1141,9 +1090,12 @@ Body stays the same.
 	}, "\n"))
 	writeProcessFile(t, repoRoot, "check", storedProcess)
 
-	_, err = SyncImpact(repoRoot, Options{RuleIDs: []string{"shared_demo"}})
-	if err == nil || !strings.Contains(err.Error(), "removed-binding scope is ambiguous") {
-		t.Fatalf("expected ambiguous shared-id removed-binding error, got %v", err)
+	result, err := SyncImpact(repoRoot, Options{RuleIDs: []string{"shared_demo"}})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.ScopedModules) != 0 {
+		t.Fatalf("expected ambiguous removed-binding evidence to be ignored after frontmatter migration, got %+v", result.ScopedModules)
 	}
 }
 
@@ -1272,11 +1224,11 @@ func TestSyncImpactIncludesRemovedBindingWhenSharedIDIsUnambiguous(t *testing.T)
 	if err != nil {
 		t.Fatalf("SyncImpact: %v", err)
 	}
-	if len(result.ScopedModules) != 1 || result.ScopedModules[0] != "demo" {
-		t.Fatalf("expected unambiguous shared-id removed binding to remain in scope, got %+v", result.ScopedModules)
+	if len(result.ScopedModules) != 0 {
+		t.Fatalf("expected removed-binding shared-id evidence to be ignored after frontmatter migration, got %+v", result.ScopedModules)
 	}
-	if len(result.ModuleResults) != 1 || result.ModuleResults[0].Outcome != "invalidated" || result.ModuleResults[0].NextCommand != "unit_check" {
-		t.Fatalf("expected removed-binding shared-id path to invalidate module, got %+v", result.ModuleResults)
+	if len(result.ModuleResults) != 0 {
+		t.Fatalf("expected no module fallback after frontmatter migration, got %+v", result.ModuleResults)
 	}
 }
 
@@ -1408,14 +1360,11 @@ func TestSyncImpactIncludesCandidateFlowWhenSelectedBindingWasRemovedFromCurrent
 	if err != nil {
 		t.Fatalf("SyncImpact: %v", err)
 	}
-	if len(result.ScopedFlows) != 1 || result.ScopedFlows[0] != "demo" {
-		t.Fatalf("expected removed-binding flow to remain in scope, got %+v", result.ScopedFlows)
+	if len(result.ScopedFlows) != 0 {
+		t.Fatalf("expected removed-binding flow evidence to be ignored after frontmatter migration, got %+v", result.ScopedFlows)
 	}
-	if len(result.FlowResults) != 1 {
-		t.Fatalf("expected one flow result, got %+v", result.FlowResults)
-	}
-	if result.FlowResults[0].FallbackReasonCode != "binding_drift" {
-		t.Fatalf("expected binding_drift, got %+v", result.FlowResults[0])
+	if len(result.FlowResults) != 0 {
+		t.Fatalf("expected no flow fallback after frontmatter migration, got %+v", result.FlowResults)
 	}
 }
 
@@ -1720,11 +1669,11 @@ func TestSyncImpactAcceptsMarkdownBulletRemovedBindingEvidenceForFlow(t *testing
 	if err != nil {
 		t.Fatalf("SyncImpact: %v", err)
 	}
-	if len(result.ScopedFlows) != 1 || result.ScopedFlows[0] != "demo" {
-		t.Fatalf("expected markdown bullet flow evidence to remain valid, got %+v", result.ScopedFlows)
+	if len(result.ScopedFlows) != 0 {
+		t.Fatalf("expected markdown bullet removed-binding evidence to be ignored after frontmatter migration, got %+v", result.ScopedFlows)
 	}
-	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "binding_drift" {
-		t.Fatalf("expected markdown bullet flow evidence to trigger fallback, got %+v", result.FlowResults)
+	if len(result.FlowResults) != 0 {
+		t.Fatalf("expected no flow fallback after frontmatter migration, got %+v", result.FlowResults)
 	}
 }
 
@@ -1783,11 +1732,11 @@ func TestSyncImpactAcceptsRemovedBindingEvidenceWhenTruthUsesBacktickedRuleRefs(
 	if err != nil {
 		t.Fatalf("SyncImpact: %v", err)
 	}
-	if len(result.ScopedFlows) != 1 || result.ScopedFlows[0] != "demo" {
-		t.Fatalf("expected backticked old truth evidence to remain valid, got %+v", result.ScopedFlows)
+	if len(result.ScopedFlows) != 0 {
+		t.Fatalf("expected backticked old truth evidence to be ignored after frontmatter migration, got %+v", result.ScopedFlows)
 	}
-	if len(result.FlowResults) != 1 || result.FlowResults[0].FallbackReasonCode != "binding_drift" {
-		t.Fatalf("expected backticked old truth evidence to trigger fallback, got %+v", result.FlowResults)
+	if len(result.FlowResults) != 0 {
+		t.Fatalf("expected no flow fallback after frontmatter migration, got %+v", result.FlowResults)
 	}
 }
 
@@ -1868,19 +1817,8 @@ Body stays the same.
 	result, err := ReconcileBoundModules(repoRoot, ReconcileBoundModulesOptions{
 		RuleRefs: []string{sharedRef},
 	})
-	if err != nil {
-		t.Fatalf("ReconcileBoundModules: %v", err)
-	}
-	if len(result.UpdatedFiles) != 1 {
-		t.Fatalf("expected one updated file, got %+v", result)
-	}
-
-	updatedContent, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/rules/candidate/c_b_rule_demo.md"))
-	if err != nil {
-		t.Fatalf("read updated rule file: %v", err)
-	}
-	if !strings.Contains(string(updatedContent), "bound_objects:\n  - unit:demo\n") {
-		t.Fatalf("expected bound_objects to be rewritten, got:\n%s", string(updatedContent))
+	if err == nil || !strings.Contains(err.Error(), "reconcile-bound-objects is no longer supported") {
+		t.Fatalf("expected reconcile-bound-objects rejection, got result=%+v err=%v", result, err)
 	}
 }
 
@@ -2273,6 +2211,7 @@ func mustMkdirAll(t *testing.T, path string) {
 func mustWriteFile(t *testing.T, path, content string) {
 	t.Helper()
 	content = withCandidateAcceptanceFixture(path, content)
+	content = testfixtures.NormalizeSpecFlowContent(path, content)
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
@@ -2365,7 +2304,6 @@ func renderModuleProcessSnapshotForTest(t *testing.T, repoRoot, processKind, mod
 	for _, entry := range appendixEntries {
 		appendixLines = append(appendixLines,
 			"file_ref: "+entry.FileRef,
-			"appendix_ref: "+entry.AppendixRef,
 			"fingerprint: "+entry.Fingerprint,
 		)
 	}

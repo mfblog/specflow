@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulebinding"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
@@ -66,13 +67,9 @@ func readObjectRuleRefs(repoRoot string, status statusfile.ObjectStatus) ([]stri
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", mainSpecRef, err)
 	}
-	_, body, err := parseFrontmatter(string(content))
+	refs, err := rulerefs.ParseObjectRuleRefs(mainSpecRef, string(content))
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", mainSpecRef, err)
-	}
-	refs, _, err := parseRuleRefs(body)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", mainSpecRef, err)
+		return nil, err
 	}
 	return normalizeStrings(refs), nil
 }
@@ -504,10 +501,7 @@ func normalizeAppendixEntries(entries []snapshot.AppendixEntry) []snapshot.Appen
 	}
 	items := append([]snapshot.AppendixEntry(nil), entries...)
 	sort.Slice(items, func(i, j int) bool {
-		if items[i].FileRef != items[j].FileRef {
-			return items[i].FileRef < items[j].FileRef
-		}
-		return items[i].AppendixRef < items[j].AppendixRef
+		return items[i].FileRef < items[j].FileRef
 	})
 	return items
 }
@@ -641,7 +635,7 @@ func rebuildCurrentObjectSnapshot(repoRoot, objectType, object, activeLayer stri
 			}
 		}
 	}
-	sharedRefs, _, err := parseRuleRefs(body)
+	sharedRefs, err := rulerefs.ParseObjectRuleRefs(mainSpecRef, string(content))
 	if err != nil {
 		return currentObjectSnapshot{}, err
 	}
@@ -689,6 +683,13 @@ func buildStableGlobalRuleEntries(repoRoot string) ([]snapshot.RuleEntry, error)
 		content, err := os.ReadFile(absPath)
 		if err != nil {
 			return nil, fmt.Errorf("read %s: %w", fileRef, err)
+		}
+		hasBoundObjects, err := rulerefs.HasRuleBoundObjects(fileRef, string(content))
+		if err != nil {
+			return nil, err
+		}
+		if hasBoundObjects {
+			return nil, fmt.Errorf("%s: bound_objects is forbidden; derive consumers from current-layer rule_refs", fileRef)
 		}
 		frontmatter, _, err := parseFrontmatter(string(content))
 		if err != nil {
@@ -993,47 +994,16 @@ func matchesRemovedBindingTruth(processSnapshot snapshot.ProcessSnapshotData, cu
 }
 
 func reconstructTruthWithStoredSharedSnapshot(currentTruthContent string, storedShared []snapshot.RuleEntry) ([]string, error) {
-	_, body, err := parseFrontmatter(currentTruthContent)
-	if err != nil {
-		return nil, err
-	}
 	refs := make([]string, 0, len(storedShared))
 	for _, entry := range storedShared {
 		refs = append(refs, strings.TrimSpace(entry.VersionRef))
 	}
 	sort.Strings(refs)
-	normalized := strings.ReplaceAll(currentTruthContent, "\r\n", "\n")
-	lines := strings.Split(normalized, "\n")
-	endIdx := -1
-	for idx := 1; idx < len(lines); idx++ {
-		if strings.TrimSpace(lines[idx]) == "---" {
-			endIdx = idx
-			break
-		}
+	rewritten, err := rulerefs.UpdateObjectRuleRefs("stored-truth", currentTruthContent, refs)
+	if err != nil {
+		return nil, err
 	}
-	if endIdx == -1 {
-		return nil, fmt.Errorf("missing frontmatter end marker")
-	}
-	variants := []sharedRefRenderStyle{
-		{wrapWithBackticks: false},
-		{wrapWithBackticks: true},
-	}
-	rebuiltContents := []string{}
-	seen := map[string]bool{}
-	for _, style := range variants {
-		rewrittenBody, err := rewriteRuleRefsInBody(body, refs, style)
-		if err != nil {
-			return nil, err
-		}
-		rebuilt := append([]string{}, lines[:endIdx+1]...)
-		rebuilt = append(rebuilt, strings.Split(rewrittenBody, "\n")...)
-		content := strings.Join(rebuilt, "\n")
-		if !seen[content] {
-			seen[content] = true
-			rebuiltContents = append(rebuiltContents, content)
-		}
-	}
-	return rebuiltContents, nil
+	return []string{rewritten}, nil
 }
 
 type sharedRefRenderStyle struct {

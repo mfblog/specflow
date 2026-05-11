@@ -105,7 +105,7 @@ Forbidden writeback:
 1. do not change unit, scenario, rule, repository-mapping, or global-rule business meaning
 2. do not add fallback logic, compatibility aliases, legacy command names, or dual-format reader rules
 3. do not preserve a stale `_check_result`, active plan, `_verify_result`, or status claim by editing its snapshot fields to match new files
-4. do not invent `version`, `rule_version`, `source_basis`, `evidence_appendix_ref`, `Next Command`, or binding values when the current project truth does not determine them
+4. do not invent `version`, `rule_version`, `candidate_intent`, `repair_basis`, `source_basis`, `evidence_appendix_ref`, `Next Command`, or binding values when the current project truth does not determine them
 5. do not infer object ownership from directory shape when `docs/specs/repository_mapping.md` is missing or unclear
 6. do not change implementation-side files
 7. do not create or modify `specflow/tooling` source or a `specflowctl migrate` command as part of this flow
@@ -129,6 +129,14 @@ Invalidation rules:
 
 Process-state invalidation must follow `specflow/framework/recovery_policy.md`.
 Snapshot comparison must follow `specflow/framework/process_snapshot_contract.md`.
+
+Tool-backed invalidation rules:
+
+1. when `snapshot validate-process` supports a process file being evaluated, use that result before deciding that the file remains consumable or must be invalidated
+2. when deterministic cleanup tooling supports the selected invalidation layer, use it for process-file cleanup and `_status.md` fallback
+3. if validation or cleanup tooling is unavailable, stale, unsupported, or missing a command-declared layer, stop with `blocked_prerequisite` and report the tooling gap
+4. do not use shell checksums, manual hashes, editor display, conversation-derived values, or temporary scripts to preserve, delete, or rewrite process state
+5. migration must never repair a stale process file by editing its fingerprint fields to current values
 
 ---
 

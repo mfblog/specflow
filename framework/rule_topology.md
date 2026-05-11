@@ -107,15 +107,13 @@ Before execution:
      - `unbound_retention_owner: rule_topology`
    - reject closure if neither deletion nor explicit keep-writeback has happened
 10. for each touched rule file that still has one or more formal bound units after Step 8, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-11. update `bound_objects` only as declarative metadata so every remaining touched rule file matches the real binding set implied by repository-wide unit and scenario `rule_refs` plus this round's prepared command-target writebacks
-   - the deterministic metadata writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule reconcile-bound-objects --rule-ids b_rule_x,b_rule_y` and additional `--rule-refs` filters when the active flow has already identified exact touched files
+11. do not write consumer metadata into Rule files; every remaining touched Rule file must omit `bound_objects`, and consumers are derived from current-layer frontmatter `rule_refs`
 12. if the topology plan created, removed, renamed, split, merged, replaced, retired, or otherwise changed the current rule object map, update `docs/specs/repository_mapping.md` in the same round before executing `rule_sync`:
    - record every remaining current `rule` ID and one-line responsibility that changed because of this topology plan
    - remove retired rule IDs from the current object map only when the topology plan has legally resolved their terminal state
    - keep rule truth-path rules consistent with the resulting rule file locations
    - if current repository truth is insufficient to write the exact mapping update without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
 13. after any write to `docs/specs/rules/**` or any unit or scenario `rule_refs`, execute `rule_sync` before claiming closure
-   - if any touched rule file changed only in `bound_objects` during this round, pass execution-local `bound_objects_only_rule_file_refs` with the exact file refs for those files
 14. if `rule_sync` stops because repository truth is insufficient to continue safely, return control to `rule_escape` through rule-governance routing instead of inventing a flow-local checkpoint
 
 ---
@@ -147,7 +145,7 @@ The output must include at least:
 4. the Rule file writeback result, including the written `rule_version` for each created or updated candidate-layer file
 5. for each created or rewritten candidate-layer file that already has a stable-layer sibling, the written `promotion_owner_unit`
 6. the unit or scenario candidate-side retarget or rewrite result
-7. the `bound_objects` reconciliation result for each remaining touched rule file
+7. confirmation that every remaining touched Rule file omits `bound_objects`
 8. when the topology plan changed the current rule object map, the `docs/specs/repository_mapping.md` writeback result
 9. the `rule_sync` result, including affected downstream objects and fallback if any
 10. the checkpoint result when candidate writeback could not legally start yet

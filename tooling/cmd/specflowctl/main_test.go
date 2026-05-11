@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/testfixtures"
 )
 
 func TestReviewRunInitAndValidateCLI(t *testing.T) {
@@ -185,6 +188,184 @@ func TestSnapshotValidateProcessRejectsScenarioPlanCLI(t *testing.T) {
 	}
 }
 
+func TestCommandPreflightPassesWithValidUnitImplementationInputsCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepo(t)
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeCLIUnitCheckProcess(t, repoRoot, expected)
+	writeCLIUnitPlanProcess(t, repoRoot, expected)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err = runCommand([]string{"preflight", "--command", "unit_impl", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("preflight failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	for _, expectedText := range []string{
+		"preflight_result: pass",
+		"may_continue: true",
+		"- process: check",
+		"- process: plan",
+		"result: valid",
+	} {
+		if !strings.Contains(output, expectedText) {
+			t.Fatalf("expected %q in output, got %s", expectedText, output)
+		}
+	}
+}
+
+func TestCommandPreflightUsesNormalizedSnapshotFingerprintCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeCLIUnitCheckProcess(t, repoRoot, expected)
+	specPath := filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md")
+	content, err := os.ReadFile(specPath)
+	if err != nil {
+		t.Fatalf("read spec: %v", err)
+	}
+	crlfContent := strings.ReplaceAll(strings.ReplaceAll(string(content), "\r\n", "\n"), "\n", "\r\n")
+	if err := os.WriteFile(specPath, []byte(crlfContent), 0o644); err != nil {
+		t.Fatalf("rewrite spec with CRLF: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err = runCommand([]string{"preflight", "--command", "unit_plan", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("preflight should pass with normalized line endings: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "preflight_result: pass") {
+		t.Fatalf("expected pass output, got %s", stdout.String())
+	}
+}
+
+func TestCommandPreflightRejectsRawHashWithoutCleanupSideEffectsCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
+	specPath := filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md")
+	content, err := os.ReadFile(specPath)
+	if err != nil {
+		t.Fatalf("read spec: %v", err)
+	}
+	crlfContent := strings.ReplaceAll(strings.ReplaceAll(string(content), "\r\n", "\n"), "\n", "\r\n")
+	if err := os.WriteFile(specPath, []byte(crlfContent), 0o644); err != nil {
+		t.Fatalf("rewrite spec with CRLF: %v", err)
+	}
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	content, err = os.ReadFile(specPath)
+	if err != nil {
+		t.Fatalf("read spec: %v", err)
+	}
+	rawHash := fmt.Sprintf("%x", sha256.Sum256(content))
+	if rawHash == expected.SpecFingerprint {
+		t.Fatalf("test fixture must produce a raw byte hash that differs from normalized fingerprint")
+	}
+	stale := expected
+	stale.SpecFingerprint = rawHash
+	writeCLIUnitCheckProcess(t, repoRoot, stale)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err = runCommand([]string{"preflight", "--command", "unit_plan", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err == nil {
+		t.Fatalf("expected preflight failure, got stdout=%s stderr=%s", stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "preflight_result: fail") || !strings.Contains(output, "may_continue: false") {
+		t.Fatalf("expected fail output, got %s", output)
+	}
+	statusContent, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/_status.md"))
+	if err != nil {
+		t.Fatalf("read status: %v", err)
+	}
+	if !strings.Contains(string(statusContent), "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | test |") {
+		t.Fatalf("preflight must not rewrite status, got %s", string(statusContent))
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md")); err != nil {
+		t.Fatalf("preflight must not delete process file: %v", err)
+	}
+}
+
+func TestCommandPreflightReportsMissingProcessFileAsCommandLayerCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := runCommand([]string{"preflight", "--command", "unit_plan", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err == nil {
+		t.Fatalf("expected preflight failure for missing check result, got stdout=%s stderr=%s", stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	for _, expectedText := range []string{
+		"preflight_result: fail",
+		"may_continue: false",
+		"failure_layer: gate_layer",
+		"recommended_next_command: unit_check",
+		"diagnostic: missing process file: docs/specs/_check_result/unit/demo.md",
+	} {
+		if !strings.Contains(output, expectedText) {
+			t.Fatalf("expected %q in output, got %s", expectedText, output)
+		}
+	}
+}
+
+func TestCommandPreflightTreatsValidationExecutionErrorAsToolingGapCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeCLIUnitCheckProcess(t, repoRoot, expected)
+	specPath := filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md")
+	if err := os.Remove(specPath); err != nil {
+		t.Fatalf("remove candidate spec: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err = runCommand([]string{"preflight", "--command", "unit_plan", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err == nil {
+		t.Fatalf("expected preflight failure for validation execution error, got stdout=%s stderr=%s", stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	for _, expectedText := range []string{
+		"preflight_result: fail",
+		"may_continue: false",
+		"failure_layer: truth_layer",
+		"recommended_next_command: unit_check",
+	} {
+		if !strings.Contains(output, expectedText) {
+			t.Fatalf("expected %q in output, got %s", expectedText, output)
+		}
+	}
+	for _, forbiddenText := range []string{
+		"failure_layer: gate_layer",
+		"failure_layer: tooling_gap",
+	} {
+		if strings.Contains(output, forbiddenText) {
+			t.Fatalf("validation execution error must not produce cleanup layer %q, got %s", forbiddenText, output)
+		}
+	}
+	statusContent, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/_status.md"))
+	if err != nil {
+		t.Fatalf("read status: %v", err)
+	}
+	if !strings.Contains(string(statusContent), "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | test |") {
+		t.Fatalf("preflight must not rewrite status, got %s", string(statusContent))
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md")); err != nil {
+		t.Fatalf("preflight must not delete process file: %v", err)
+	}
+}
+
 func createCLITestRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
@@ -276,6 +457,10 @@ func createCLITestRepo(t *testing.T) string {
 }
 
 func createCLISnapshotRepo(t *testing.T) string {
+	return createCLISnapshotRepoWithStatus(t, "unit_impl")
+}
+
+func createCLISnapshotRepoWithStatus(t *testing.T, unitNextCommand string) string {
 	t.Helper()
 	repoRoot := t.TempDir()
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
@@ -283,7 +468,7 @@ func createCLISnapshotRepo(t *testing.T) string {
 		"## Formal Objects\n\n"+
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n"+
 		"|---|---|---|---|---|---|---|\n"+
-		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_impl` | test |\n"+
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `"+unitNextCommand+"` | test |\n"+
 		"| `scenario` | `demo_flow` | `no` | `yes` | `candidate` | `scenario_verify` | test |\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), `---
 id: demo
@@ -338,8 +523,47 @@ version: 0.1.0
 	return repoRoot
 }
 
+func writeCLIUnitCheckProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot) {
+	t.Helper()
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md"), "# check\n\n```yaml\n"+strings.Join([]string{
+		"object_type: unit",
+		"object_ref: demo",
+		"gate: unit_check",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: unit_plan",
+		"blocking_summary: none",
+		"coverage_summary: demo",
+		"truth_layer_ref: " + snap.TruthLayerRef,
+		"truth_file_ref: " + snap.SpecFileRef,
+		"truth_version_ref: " + snap.SpecVersionRef,
+		"truth_fingerprint: " + snap.SpecFingerprint,
+		"unit_appendix_snapshot: none",
+		"rule_snapshot: none",
+		"acceptance_item_set:",
+		"  - id: demo.core",
+		"    verification_surface: internal_flow",
+		"    not_runnable_yet: no",
+	}, "\n")+"\n```\n")
+}
+
+func writeCLIUnitPlanProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot) {
+	t.Helper()
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+strings.Join([]string{
+		"spec_file_ref: " + snap.SpecFileRef,
+		"spec_version_ref: " + snap.SpecVersionRef,
+		"spec_fingerprint: " + snap.SpecFingerprint,
+		"unit_appendix_snapshot: none",
+		"rule_snapshot: none",
+		"acceptance_item_plan_coverage:",
+		"  - id: demo.core",
+		"    coverage: implementation slice and verification target",
+	}, "\n")+"\n```\n")
+}
+
 func writeCLITestFile(t *testing.T, path, content string) {
 	t.Helper()
+	content = testfixtures.NormalizeSpecFlowContent(path, content)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", path, err)
 	}

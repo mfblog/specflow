@@ -9,6 +9,8 @@
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `scenario_stable_verify`-local entry, output, and stop rules.
 
+Stable binding and fingerprint comparisons must use `specflow/framework/process_snapshot_contract.md` normalization rules or deterministic specFlow tooling when available. Manual hash output, shell checksum output, editor display, conversation-derived values, and temporary script results are diagnostic only; they must not support a stable-alignment pass, a drift conclusion, or `_status.md` writeback.
+
 ## 3. Preconditions
 
 1. `_status.md` says `Object Type=scenario`, `Active Layer=stable`, `Next Command=scenario_stable_verify`
@@ -29,6 +31,7 @@ This file states only `scenario_stable_verify`-local entry, output, and stop rul
    - stable scenario truth may bind only stable-layer unit and Rule truth
    - repository mapping, unit, Rule, and global-rule comparisons must use the binding and fingerprint rules in `specflow/framework/process_snapshot_contract.md`
    - if the binding set, bound layer, bound file, version reference, or fingerprint no longer matches the stable scenario's declared stable chain, stable alignment cannot be claimed
+   - if authoritative fingerprint comparison is unavailable, report that stable alignment cannot be confirmed instead of using manual hashes to claim pass or drift
 4. if `docs/specs/_verify_result/stable/scenario/{scenario}.md` exists, read it only as the preserved promotion coverage summary
    - the stable summary is not behavior truth
    - the stable summary is not a current implementation-alignment claim

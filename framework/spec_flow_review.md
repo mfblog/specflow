@@ -26,7 +26,7 @@ That judgment belongs to `spec_flow_design_review`.
 It does not pass a review only because the required files were read or the required slices were visited.
 Each in-scope rule, file, slice, and cross-convergence path must satisfy the standards in this section.
 
-The fixed standards are `content validity`, `logical closure`, `chain closure`, `governance closure and ownership`, `contract drift`, `cross-convergence`, `agent operability`, `tooling boundary`, `project-instance compatibility`, and `project-instance migration closure`.
+The fixed standards are `content validity`, `logical closure`, `chain closure`, `state-space closure`, `governance closure and ownership`, `contract drift`, `cross-convergence`, `agent operability`, `tooling boundary`, `project-instance compatibility`, and `project-instance migration closure`.
 
 ### 2.1 Content Validity
 
@@ -85,7 +85,53 @@ A governance chain is closed only when:
 
 If a chain is missing one required file, contains a conflicting interface, or only works by executor inference, the related local or cross-convergence slice must not be marked `passed`.
 
-### 2.4 Governance Closure And Ownership
+### 2.4 State-Space Closure
+
+The review must prove that the governance mechanism has legal progress paths for important states.
+Reading every relevant file is not enough.
+A locally consistent rule is still invalid when one of its important results leaves the executor with no legal state-changing next action.
+
+For this review, a `state` is any recorded or implied governance condition that can affect:
+
+1. `Active Layer`
+2. `Next Command`
+3. truth writeback permission or truth writeback target
+4. process-file presence, validity, freshness, cleanup, or reuse
+5. command, review, migration, checkpoint, or tooling gate result
+6. checkpoint position or resume permission
+7. implementation permission
+8. recovery owner
+
+An `important state type` is any class of state that changes at least one of:
+
+1. the next legal action
+2. the allowed writeback location
+3. the verification responsibility
+4. the recovery path
+5. the implementation permission boundary
+
+A `transition` is the complete relation:
+
+```text
+current state + command/result/condition -> allowed writeback -> next state -> next legal owner/action
+```
+
+State-space closure requires all of the following:
+
+1. every important command result, review result, migration result, checkpoint result, tooling freshness result, fallback result, blocked result, drift result, repair result, and impact-sync result in scope has a legal transition
+2. the transition names the allowed writeback target, or explicitly states that no writeback is allowed
+3. the transition names the next legal owner or action
+4. the transition can change governance state, implementation state, or a documented blocker state before the same command, gate, or review is run again
+5. a stop is closed only when the blocking condition, owner, allowed writeback, and resume action are explicit
+6. process invalidation, stale fingerprints, changed truth, migration, impact sync, and recovery states identify the owner that may clear, rebuild, or replace the affected state
+
+If `Next Command` remains the same command after a failed, blocked, stale, or fallback result, the review must prove that an intermediate legal action can change the state consumed by that command before rerun.
+If no such action exists, or if the intermediate action is only implied by executor judgment, the review must report a dead-loop finding.
+
+The review must not use "the files were read", "the local rule is self-consistent", or "an executor can decide what to do" as a substitute for transition proof.
+Missing transitions, ownerless transitions, contradictory transitions, and same-command reruns without a legal state-changing source are findings.
+
+### 2.5 Governance Closure And Ownership
 
 Each in-scope owner area must close from a legal entry to one legal next action, final result, or required stop.
 
@@ -98,7 +144,7 @@ The review must find a real finding when an in-scope rule can cause:
 5. a branch that never rejoins a legal command, review, repair, or stop path
 6. chat agreement, repository history, directory shape, or ordinary term meaning to substitute for durable governance truth
 
-### 2.5 Contract Drift
+### 2.6 Contract Drift
 
 Governance contracts must not drift across rule documents, templates, run-state files, tooling contracts, and tooling source.
 
@@ -114,7 +160,7 @@ Contract drift exists when two in-scope surfaces define or consume the same gove
 
 Any contract drift that can change execution, stop behavior, review judgment, or downstream ownership is a finding.
 
-### 2.6 Cross-Convergence
+### 2.7 Cross-Convergence
 
 Locally correct rules must still compose into one coherent governance baseline.
 
@@ -126,7 +172,7 @@ When onboarding source decision is in scope, the review must verify that candida
 If a narrowed review crosses a boundary whose owner slice is not included, the narrowed review must stop or explicitly remain non-baseline.
 It must not claim default governance-baseline `pass`.
 
-### 2.7 Agent Operability
+### 2.8 Agent Operability
 
 Governance files must be operable by a capable executor without prior `specFlow` memory.
 
@@ -136,7 +182,7 @@ A narrowed review must read and consume that standard whenever the narrowed scop
 Agent-operability review must cover execution clarity, content economy, and formal rule voice.
 A pass claim for an in-scope governance file must not ignore an applicable agent-operability failure.
 
-### 2.8 Tooling Boundary
+### 2.9 Tooling Boundary
 
 Governance tooling may execute only mechanical work already decided by governance rules, prior human judgment, or explicit caller parameters.
 Tooling must not become a second semantic source of truth.
@@ -146,7 +192,7 @@ A narrowed review must read and consume that policy whenever the narrowed scope 
 
 The tooling review must verify tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness rules, and agreement between tooling source and tooling-governing documents.
 
-### 2.9 Project-Instance Compatibility
+### 2.10 Project-Instance Compatibility
 
 Default full-scope `spec_flow_review` must perform a narrow project-instance compatibility check for `docs/specs/`.
 
@@ -160,7 +206,7 @@ The compatibility check may judge only:
 3. agreement between project-instance process files and the template-side process contracts
 4. agreement between project-instance object references and `docs/specs/_status.md`, `docs/specs/repository_mapping.md`, and current framework path rules
 5. whether existing project-instance files use names, states, command forms, and reference formats that the current framework can consume
-6. candidate source metadata shape for current `unit` and `scenario` candidates, including `source_basis`, `evidence_appendix_ref`, required evidence appendix reference presence, and evidence appendix file shape when the current framework requires one
+6. candidate metadata shape for current candidates, including unit `candidate_intent`, unit `repair_basis` when required, `source_basis`, `evidence_appendix_ref`, required evidence appendix reference presence, and evidence appendix file shape when the current framework requires one
 
 The compatibility check must not judge:
 
@@ -174,7 +220,7 @@ The compatibility check must not judge:
 If the project-instance compatibility check finds old file shape, unsupported status values, missing required references, invalid binding format, missing candidate source fields, invalid evidence appendix references, missing required evidence appendix files, or unreadable process-state shape, it is a `spec_flow_review` finding because the framework cannot safely operate on the current project instance.
 If the discovered concern is only about the truth content being wrong, incomplete, or undesirable as business truth, report that it is outside this check and route it to the owning command, rule-governance flow, repository-mapping flow, or design review.
 
-### 2.10 Project-Instance Migration Closure
+### 2.11 Project-Instance Migration Closure
 
 Default full-scope `spec_flow_review` must review `spec_flow_migrate` as the owner of project-instance format migration after framework rule updates.
 
@@ -195,7 +241,7 @@ The migration closure check must judge:
 
 If migration can rewrite project files without a current rule-derived target, preserve stale process pass claims, choose business meaning, or leave invalidated downstream state without a legal next action, it is a `spec_flow_review` finding.
 
-### 2.11 Relationship To The Slice Catalog
+### 2.12 Relationship To The Slice Catalog
 
 The baseline slice catalog is an execution organization for this review.
 It is not the review standard by itself.
@@ -263,7 +309,7 @@ Files excluded from business-truth review include:
 
 Those files may be reviewed for business-truth correctness only when the user explicitly narrows `spec_flow_review` to project-instance state, or when a command, repository-mapping flow, rule-governance flow, or verification flow consumes them under its own policy.
 
-Default full-scope `spec_flow_review` must still perform the project-instance compatibility check from Section 2.9.
+Default full-scope `spec_flow_review` must still perform the project-instance compatibility check from Section 2.10.
 This check is narrow and does not turn `docs/specs/` into default business-truth review scope.
 
 The compatibility input surface includes:
@@ -291,12 +337,14 @@ Default scope must explicitly include:
    - at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, the in-scope tooling source files, and the runtime reader web files
 6. the agent-operability standard
    - at minimum `agent_operability_standard.md`, entry files, routing policy files, onboarding source decision files, command policy files, command files, rule-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
-7. the project-instance compatibility check
-   - at minimum project-instance status, repository mapping, global rules, existing process files, and existing formal truth files under `docs/specs/`, limited by Section 2.9
-8. the project-instance migration flow
+7. the state-space closure check
+   - at minimum routing policy, command policy, command files, implementation permission rules, process-state contracts, recovery rules, impact-sync rules, migration rules, and project-instance compatibility inputs needed to prove important non-success transitions
+8. the project-instance compatibility check
+   - at minimum project-instance status, repository mapping, global rules, existing process files, and existing formal truth files under `docs/specs/`, limited by Section 2.10
+9. the project-instance migration flow
    - at minimum `spec_flow_migrate.md`, `natural_language_routing.md` where it routes project-instance migration, `command_policy.md` where it defines the non-command boundary, `checkpoint_protocol.md`, `process_snapshot_contract.md`, `recovery_policy.md`, `entry_index_registry.md`, and the template-side process and entry files that migration consumes
 
-If any one of those eight coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
+If any one of those nine coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
 
 ## 4. Baseline Slice Catalog
 
@@ -355,15 +403,20 @@ Cross-convergence slices review whether locally correct rules still compose into
    - verifies command pass, fallback, cleanup, snapshot, and process-file consumption rules converge
 3. `truth_to_implementation_convergence`
    - verifies truth writeback, onboarding source decision, repository mapping, implementation gates, evidence appendix non-truth handling, handoff, and recovery converge
-4. `shared_to_impact_convergence`
+4. `state_space_closure`
+   - depends on `routing_and_command_policy`, `truth_and_implementation_gates`, `process_and_impact_state`, and `project_instance_contract_compatibility`
+   - verifies important command results, fallback states, checkpoint states, drift states, blocked states, repair states, migration states, and impact-sync states have legal progress transitions
+   - verifies same-command reruns have a legal state-changing source before the rerun
+   - must not use file-read coverage or local rule consistency as a substitute for transition proof
+5. `shared_to_impact_convergence`
    - verifies rule-governance changes correctly converge with impact reconciliation and downstream process-state invalidation
-5. `entry_extension_to_review_convergence`
+6. `entry_extension_to_review_convergence`
    - verifies entry files and project-local standards cannot bypass the framework baseline, narrow default scope silently, or change review meaning without owner rules
-6. `tooling_to_rule_convergence`
+7. `tooling_to_rule_convergence`
    - verifies tooling executes only rule-decided mechanical work, does not become a second semantic source of truth, and does not introduce a migration command unless a rule owner defines its mechanical surface
-7. `project_instance_to_framework_convergence`
+8. `project_instance_to_framework_convergence`
    - verifies the project-instance compatibility check and `spec_flow_migrate` compose with routing, command, process-state, repository-mapping, shared-binding, entry-file, and tooling rules without judging business truth content
-8. `agent_operability_path_walk`
+9. `agent_operability_path_walk`
    - walks representative execution paths across routing, command, shared, process-state, entry, and tooling rules
    - verifies a new executor can proceed from request to next legal action without hidden context
 
@@ -542,6 +595,10 @@ On reuse:
 4. keep unaffected slices in their current status
 5. add dynamic slices for newly discovered risks
 
+The authoritative refresh entry is `specflowctl review run-refresh --flow spec_flow_review`.
+If that tooling entry is available, executors must use it to update `input_fingerprint` and stale slice state before resuming review work.
+Manual fingerprint calculations may be used only as diagnostics; they must not be written into the run-state file or used to decide that a slice remains fresh.
+
 ### 6.5.1 Slice Input Fingerprint Contract
 
 Slice input fingerprints use the same text normalization rules as `specflow/framework/process_snapshot_contract.md`.
@@ -574,6 +631,7 @@ Rules:
 3. if a missing file prevents the slice from being reviewed, the slice must become `blocked`
 4. executors must not use filesystem timestamps, file size, git metadata, or conversation history as fingerprint input
 5. dynamic slices use the same fingerprint contract as baseline slices
+6. executors must not use shell checksum output, editor display, temporary scripts, or conversation-derived hashes as the authoritative `input_fingerprint`
 
 ### 6.6 Run And Slice Status Values
 
@@ -640,17 +698,23 @@ The output must report at least:
 11. the project-instance compatibility and migration-flow result
 12. the agent-operability result, including local slice results and path-walk result
 13. the cross-convergence results
-14. the findings result:
+14. the state-space coverage result:
+   - covered state carriers
+   - covered commands and governance flows
+   - key non-success transitions reviewed
+   - same-command rerun cases and their legal state-changing source, or explicit `none`
+   - uncovered important state types, if any, reported as findings
+15. the findings result:
    - explicit `none` when no real finding exists
    - otherwise every finding must satisfy Section 8.2
    - when real findings exist, the final or stop report shown to the user must include every minimum required field from Section 8.2 for each finding
    - a run-state file may store the same finding fields, but pointing to that file does not satisfy the user-facing report requirement
    - do not summarize a real finding only as a problem statement, impact statement, or blocked reason
-15. the final conclusion:
+16. the final conclusion:
    - `pass`
    - `blocked`
 
-If the output does not explicitly report Items 7 through 14, the review is not complete.
+If the output does not explicitly report Items 7 through 15, the review is not complete.
 
 ### 8.1 Run-State File Shape
 

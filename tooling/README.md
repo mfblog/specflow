@@ -100,26 +100,33 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - recompute slice input fingerprints for an open run-state file, mark changed `passed` slices as `stale`, and refresh `last_updated_at`
 13. `review run-touch --flow <review_flow>`
    - refresh only `last_updated_at`
-14. `snapshot rebuild`
+14. `command preflight`
+   - mechanically verify a standard command's entry state from `_status.md` and required process snapshot validation results
+   - this entry does not judge candidate completeness, evidence sufficiency, downgrade, or promotion readiness
+15. `snapshot rebuild`
    - rebuild current process snapshots from bound truth
-15. `snapshot validate-process`
+16. `snapshot validate-process`
    - compare one process file against rebuilt current truth
-16. `process cleanup-fallback`
+17. `process cleanup-fallback`
    - execute deterministic layered fallback cleanup for one unit or scenario
-17. `process cleanup-success`
+18. `process cleanup-success`
    - execute deterministic success cleanup for one unit or scenario
-18. `status set-unit`
+19. `status set-unit`
    - write one deterministic `unit` row in `_status.md`
-19. `status set-object`
+20. `status set-object`
    - write one unified object row in `_status.md`
-20. `rule sync-impact`
+21. `rule sync-impact`
    - compute rule-specific scope, resolve rule-only exceptions into generic impact input, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
    - when stable landing self-exemption is needed, the caller must pass both `--stable-landing-unit` and exact `--stable-landing-rule-refs`
    - when the same stable landing round retargeted candidate units to those stable landing rule refs, the caller must pass those units through `--retargeted-units` and must select both the old candidate Rule refs and the new stable Rule refs through exact `--rule-refs`
-   - when a current-round Rule file delta is proven to be limited to `bound_objects` metadata, the caller must pass its exact file path through `--bound-objects-only-rule-file-refs`
    - the caller may narrow the derived unit subset with `--units`, but at least one rule trigger input must still be provided through `--rule-refs` or `--rule-ids`; retargeted stable landing requires exact `--rule-refs`
-21. `rule reconcile-bound-objects`
-   - rewrite Rule `bound_objects` metadata from current formal bindings
+22. `rule consumers`
+   - read current-layer `unit` and `scenario` frontmatter `rule_refs` and print the consumers for one `rule_id` or exact `rule_ref`
+23. `rule release-version`
+   - publish an already-existing stable Rule version by retargeting current-layer consumers from `--from-ref` to `--to-ref`
+   - candidate current-layer objects are rewritten directly
+   - stable current-layer objects are auto-forked to candidate before their candidate `rule_refs` are rewritten
+   - stable unit forks additionally write `candidate_intent=change`; scenario forks do not write `candidate_intent`
 
 ## Reader Command Surface
 
@@ -193,6 +200,31 @@ Rules:
    - for `spec_flow_design_review`, more than two hours and no more than seven days old: stop for a manual reuse-or-delete decision
    - more than seven days old: delete as expired and create a new run state
 12. after reusing an open run-state file, callers must run `review run-refresh` before continuing review work so changed inputs become stale slices instead of hidden drift
+13. `review run-refresh` is the authoritative command for updating `input_fingerprint`; callers must not write manual hash output into run-state files
+
+## Command Preflight
+
+`command preflight` is the mechanical entry check for standard lifecycle commands.
+It validates only facts that are already fixed by governance rules:
+
+1. the current `_status.md` row exists
+2. the row's `Next Command` equals the requested command
+3. every required input process file validates through `snapshot validate-process`
+
+Usage:
+
+```bash
+./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command unit_plan --object-type unit --object assistant
+./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command scenario_promote --object-type scenario --object checkout_flow
+```
+
+Output includes `preflight_result`, `validated_processes`, `failure_layer`, `recommended_next_command`, and `may_continue`.
+
+Rules:
+
+1. lifecycle commands that consume process files should run this before treating a gate, active plan, or verify result as usable
+2. a failed preflight is not cleanup by itself; cleanup remains owned by command policy and `process cleanup-fallback`
+3. manual hashes, shell checksums, editor display, and temporary scripts may diagnose a mismatch but must not replace this entry
 
 ## Tooling Input Set
 
@@ -266,14 +298,15 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-validate --flow spec_flow_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-refresh --flow spec_flow_design_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-touch --flow spec_flow_design_review
+./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command unit_impl --object-type unit --object ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --object-type unit --object ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot validate-process --object-type scenario --object task_execution --process verify
 ./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --object-type unit --object ai --from-command unit_promote --reason evidence_incomplete --failure-layer evidence_layer
 ./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type scenario --object task_execution --stable yes --candidate no --active-layer stable --next-command scenario_fork
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_app_config_topology@0.2.0 --units ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_runtime_model@0.3.0,s_b_rule_runtime_model@0.3.0 --stable-landing-unit skill --stable-landing-rule-refs s_b_rule_runtime_model@0.3.0 --retargeted-units agent
-./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs s_b_rule_app_config_topology@0.2.0 --bound-objects-only-rule-file-refs docs/specs/rules/stable/s_b_rule_app_config_topology.md
-./specflow/tooling/bin/specflowctl-linux-amd64 rule reconcile-bound-objects --rule-ids b_rule_app_config_topology
+./specflow/tooling/bin/specflowctl-linux-amd64 rule consumers --rule-ref s_b_rule_runtime_model@0.4.0
+./specflow/tooling/bin/specflowctl-linux-amd64 rule release-version --rule-id b_rule_runtime_model --from-ref s_b_rule_runtime_model@0.3.0 --to-ref s_b_rule_runtime_model@0.4.0
 ```
 
 ## Freshness Rule

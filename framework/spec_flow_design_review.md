@@ -218,6 +218,8 @@ Structural validation rule:
 1. `review run-validate --flow spec_flow_design_review` checks file shape and all fixed status values, including closed statuses; it is not a reuse decision.
 2. closed run-state files may be structurally valid, but they are not open and must not be reused by startup.
 3. freshness refresh applies only to an open run-state file.
+4. `review run-refresh --flow spec_flow_design_review` is the authoritative entry for updating `input_fingerprint` and marking stale slices.
+5. manual hashes, shell checksum output, editor display, temporary scripts, and conversation-derived values must not be written as `input_fingerprint` values or used to decide that a design-review slice remains fresh.
 
 ### 5.2 Baseline Slice Catalog
 

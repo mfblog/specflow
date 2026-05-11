@@ -44,6 +44,9 @@ This policy covers:
 1. `unit` candidates
 2. `scenario` candidates
 
+For unit candidates, this policy owns only `source_basis` and `evidence_appendix_ref`.
+`candidate_intent` is owned by `specflow/framework/candidate_intent_policy.md`.
+
 This policy does not independently govern `rule`.
 Rule truth remains governed by the rule-governance branch and the internal rule flows.
 
@@ -107,6 +110,7 @@ Rules:
 3. implementation and verification must use the candidate main Spec and formal bindings as truth, not the evidence appendix
 4. if `source_basis` is missing, unsupported, or internally inconsistent with `evidence_appendix_ref`, the candidate is not closed enough for `unit_check` or `scenario_check` to pass
 5. if the candidate's selected behavior depends on existing implementation but the candidate records `new_design` or `replacement`, the candidate is internally inconsistent and must return to candidate repair
+6. unit candidates must also record `candidate_intent`; missing or unsupported unit candidate intent is governed by `specflow/framework/candidate_intent_policy.md`
 
 ---
 
@@ -197,6 +201,9 @@ If the fork command selects behavior from implementation, tests, runtime behavio
 2. stop before candidate writeback when the evidence appendix or source decision is not ready
 
 `unit_fork` and `scenario_fork` must not create a candidate main Spec without both `source_basis` and `evidence_appendix_ref`.
+
+`unit_fork` must also write `candidate_intent` during the same candidate write.
+`scenario_fork` does not write `candidate_intent`.
 
 ---
 

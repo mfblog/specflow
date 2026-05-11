@@ -72,9 +72,11 @@ The allowed action families are:
    - compare rebuilt current state against stored snapshots or managed content
 6. cleanup
    - delete or reset process artifacts when a command-defined cleanup rule already says that cleanup must happen
-7. sync
+7. preflight
+   - verify command entry facts that are already mechanically determined by `_status.md` and process snapshot contracts
+8. sync
    - align managed content or metadata when the source, target, and writeback contract are already explicit
-8. render
+9. render
    - expose a read-only local view derived from already-written truth files without creating, editing, or promoting truth
 
 Writeback rule:
@@ -110,6 +112,7 @@ Additional rule:
 
 1. ordinary branching, parsing guards, and shape checks inside code do not become forbidden merely because they use `if`
 2. the forbidden case is semantic decision-making that substitutes for governance judgment
+3. command preflight tooling may report whether the current status row and required process snapshots mechanically allow a command to continue, but it must not decide whether candidate truth is complete, whether evidence is sufficient, whether downgrade is allowed, or whether a promotion should happen
 
 ## 6. Relationship To `spec_flow_review`
 
@@ -166,6 +169,10 @@ Required rules:
 6. the bypass surface for that freshness gate must stay minimal and cover only recovery or inspection entry points needed to rebuild or diagnose the binary state
 7. `doctor` must report stale current-platform binaries as failures rather than treating binary presence alone as sufficient
 8. compiled binaries must not be committed to git
+
+The tooling freshness fingerprint is separate from process snapshot fingerprints and review input fingerprints.
+It proves that a compiled tool matches the current tooling source input set.
+It must not be used as evidence that a unit, scenario, Rule, process file, or review slice is fresh.
 
 Release helper scripts under `specflow/tooling/scripts/` are default review inputs because they select release binaries for the installed tooling source.
 They are not binary freshness inputs unless they change compiled binary behavior.
