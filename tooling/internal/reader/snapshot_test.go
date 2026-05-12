@@ -24,6 +24,10 @@ func TestBuildSnapshotConnectsUnitSpecAndRule(t *testing.T) {
 	if repairUnit.NextIntent != "repair" || repairUnit.NextIntentLabel != "修复基线" {
 		t.Fatalf("expected repair next intent, got intent=%q label=%q", repairUnit.NextIntent, repairUnit.NextIntentLabel)
 	}
+	repairCandidate := findObject(t, snapshot.Objects, "unit", "memory")
+	if repairCandidate.NextIntent != "repair" || repairCandidate.NextIntentLabel != "修复基线" {
+		t.Fatalf("expected candidate repair intent, got intent=%q label=%q", repairCandidate.NextIntent, repairCandidate.NextIntentLabel)
+	}
 	expectedTruthPaths := []string{
 		"docs/specs/units/candidate/c_unit_assistant.md",
 		"docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md",
@@ -145,6 +149,7 @@ func createReaderRepo(t *testing.T) string {
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
 		"|---|---|---|---|---|---|---|",
 		"| `unit` | `assistant` | `no` | `yes` | `candidate` | `unit_check` | note |",
+		"| `unit` | `memory` | `yes` | `yes` | `candidate` | `unit_plan` | repair candidate in progress |",
 		"| `unit` | `tool` | `yes` | `no` | `stable` | `unit_fork` | next fork must create candidate_intent=repair |",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), strings.Join([]string{
@@ -156,6 +161,8 @@ func createReaderRepo(t *testing.T) string {
 		"   - assistant prompt responsibility",
 		"2. `tool`",
 		"   - tool execution responsibility",
+		"3. `memory`",
+		"   - memory responsibility",
 		"",
 		"### 2.3 Current Rules",
 		"",
@@ -197,6 +204,19 @@ func createReaderRepo(t *testing.T) string {
 		"---",
 		"",
 		"# Tool",
+	}, "\n")+"\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_memory.md"), strings.Join([]string{
+		"---",
+		"id: memory",
+		"layer: candidate",
+		"version: 0.1.1",
+		"candidate_intent: repair",
+		"repair_basis: s_unit_memory@0.1.0",
+		"source_basis: new_design",
+		"evidence_appendix_ref: none",
+		"---",
+		"",
+		"# Memory",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md"), strings.Join([]string{
 		"# Assistant Evidence",

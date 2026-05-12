@@ -168,6 +168,10 @@ func buildObjectFromStatus(status statusfile.ObjectStatus, mapping repositoryMap
 		if object.Version == "" {
 			object.Version = doc.Frontmatter.Scalars["version"]
 		}
+		if object.NextIntent == "" {
+			object.NextIntent = nextIntentFromDoc(status, doc)
+			object.NextIntentLabel = humanNextIntent(object.NextIntent)
+		}
 		object.RuleRefs = appendUnique(object.RuleRefs, extractRuleIDs(doc.Text)...)
 		object.TruthPaths = appendSourceUnique(object.TruthPaths, appendixRefsForDoc(doc, docs)...)
 	}
@@ -412,6 +416,17 @@ func nextIntentFromStatus(status statusfile.ObjectStatus) string {
 		return ""
 	}
 	return match[1]
+}
+
+func nextIntentFromDoc(status statusfile.ObjectStatus, doc markdownDoc) string {
+	if status.ObjectType != "unit" || status.ActiveLayer != "candidate" {
+		return ""
+	}
+	intent := strings.ToLower(strings.TrimSpace(doc.Frontmatter.Scalars["candidate_intent"]))
+	if intent == "repair" || intent == "change" {
+		return intent
+	}
+	return ""
 }
 
 func humanNextIntent(intent string) string {
