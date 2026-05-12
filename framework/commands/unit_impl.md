@@ -79,6 +79,8 @@ Before reading `_check_result/unit/{unit}.md` or `_plans/active/{unit}.md` as us
    - if implementation is ready for verification -> `Next Command=unit_verify`
    - if implementation is still blocked -> keep `Next Command=unit_impl`
    - if candidate truth or formal global baseline drift means closure must restart -> `Next Command=unit_check`
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_impl --object-type unit --object {unit} --outcome <ready_for_verify|blocked|plan_fallback|gate_fallback> --notes <status-note> --apply`
+   - for `truth_fallback`, execute `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_impl --object-type unit --object {unit} --outcome truth_fallback --reason <fallback_reason_code> --notes <status-note> --apply`
 
 ## 5. Stop Conditions
 

@@ -257,9 +257,11 @@ The default scope includes:
    - `specflow/framework/*.md`
 2. command rules
    - `specflow/framework/commands/*.md`
-3. guidance skill rules
+3. candidate intent standard rules
+   - `specflow/framework/candidate_intents/*.md`
+4. guidance skill rules
    - `specflow/framework/skills/*/SKILL.md`
-4. template-side process and state contracts
+5. template-side process and state contracts
    - `specflow/templates/docs/specs/_status.md`
    - `specflow/templates/docs/specs/_check_result/README.md`
    - `specflow/templates/docs/specs/_plans/README.md`
@@ -267,22 +269,22 @@ The default scope includes:
    - `specflow/templates/docs/specs/_plans/active/README.md`
    - `specflow/templates/docs/specs/_verify_result/README.md`
    - `specflow/templates/docs/specs/_governance_review/README.md`
-5. template entry files
+6. template entry files
    - `specflow/templates/AGENTS.md`
    - `specflow/templates/GEMINI.md`
    - `specflow/templates/CLAUDE.md`
-6. project entry files
+7. project entry files
    - `AGENTS.md`
    - `GEMINI.md`
    - `CLAUDE.md`
-7. entry registry and project-standard governance files
+8. entry registry and project-standard governance files
    - `specflow/framework/entry_index_registry.md`
    - `specflow/framework/project_standards_policy.md`
    - `specflow/framework/project_standard_create.md`
    - `specflow/templates/docs/project_standards/_registry.md`
    - `docs/project_standards/_registry.md`
    - the active registered project-local standards in scope
-8. tooling contract, tooling source input, and reader runtime input
+9. tooling contract, tooling source input, and reader runtime input
    - `specflow/framework/tooling_execution_policy.md`
    - `specflow/tooling/README.md`
    - `specflow/tooling/cmd/**/*.go`
@@ -326,7 +328,7 @@ The active full-scope run-state file is governed by the run-state procedure in S
 Default scope must explicitly include:
 
 1. the onboarding source decision rule set
-   - at minimum `natural_language_routing.md` where it enters onboarding source decision, `onboarding_decision_policy.md`, `spec_policy.md`, `implementation_change_policy.md`, `unit_new.md`, `unit_check.md`, `unit_plan.md`, `unit_impl.md`, `unit_promote.md`, `scenario_new.md`, `scenario_check.md`, `scenario_promote.md`, and `candidate_handoff_contract.md`
+   - at minimum `natural_language_routing.md` where it enters onboarding source decision, `onboarding_decision_policy.md`, `spec_policy.md`, `implementation_change_policy.md`, `unit_new.md`, `unit_check.md`, `unit_plan.md`, `unit_impl.md`, `unit_promote.md`, `scenario_new.md`, `scenario_check.md`, `scenario_promote.md`, `candidate_handoff_contract.md`, `candidate_intent_policy.md`, and `candidate_intents/*.md`
 2. the rule-governance rule set
    - at minimum `natural_language_routing.md` only where it defines the rule-governance branch, `rule_new.md`, `rule_extract.md`, `rule_bind.md`, `rule_topology.md`, `rule_sync.md`, and `rule_escape.md`
 3. the guidance-skill rule set
@@ -336,9 +338,9 @@ Default scope must explicitly include:
 5. the tooling execution contract set
    - at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, the in-scope tooling source files, and the runtime reader web files
 6. the agent-operability standard
-   - at minimum `agent_operability_standard.md`, entry files, routing policy files, onboarding source decision files, command policy files, command files, rule-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
+   - at minimum `agent_operability_standard.md`, entry files, routing policy files, onboarding source decision files, command policy files, command files, candidate intent policy and standards, rule-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
 7. the state-space closure check
-   - at minimum routing policy, command policy, command files, implementation permission rules, process-state contracts, recovery rules, impact-sync rules, migration rules, and project-instance compatibility inputs needed to prove important non-success transitions
+   - at minimum routing policy, command policy, command files, candidate intent policy and standards, implementation permission rules, process-state contracts, recovery rules, impact-sync rules, migration rules, and project-instance compatibility inputs needed to prove important non-success transitions
 8. the project-instance compatibility check
    - at minimum project-instance status, repository mapping, global rules, existing process files, and existing formal truth files under `docs/specs/`, limited by Section 2.10
 9. the project-instance migration flow
@@ -368,10 +370,10 @@ Local slices review one owner area for internal closure, side effects, contract 
    - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `severity_policy.md`, and `checkpoint_protocol.md`
    - verifies review entry meaning, output contracts, finding contracts, and stop behavior
 3. `routing_and_command_policy`
-   - reviews `natural_language_routing.md`, `onboarding_decision_policy.md`, `command_policy.md`, `scenario_policy.md`, `spec_flow_migrate.md`, `commands/*.md`, and `skills/*/SKILL.md`
+   - reviews `natural_language_routing.md`, `onboarding_decision_policy.md`, `command_policy.md`, `scenario_policy.md`, `spec_flow_migrate.md`, `candidate_intent_policy.md`, `candidate_intents/*.md`, `commands/*.md`, and `skills/*/SKILL.md`
    - verifies exact command routing, exact project-instance migration routing, natural-language routing, onboarding source routing, unit command progression, scenario command progression, and guidance entry behavior
 4. `truth_and_implementation_gates`
-   - reviews `spec_policy.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `onboarding_decision_policy.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, and `recovery_policy.md`
+   - reviews `spec_policy.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `onboarding_decision_policy.md`, `candidate_intent_policy.md`, `candidate_intents/*.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, and `recovery_policy.md`
    - verifies truth ownership, candidate source fields, evidence appendix ownership, implementation diversion, handoff, fallback, and recovery rules
 5. `shared_governance`
    - reviews `natural_language_routing.md` only where it defines the rule-governance branch
@@ -382,7 +384,7 @@ Local slices review one owner area for internal closure, side effects, contract 
 7. `project_instance_contract_compatibility`
    - reviews the current project-instance files under `docs/specs/` only for format and contract compatibility with current framework rules
    - reviews `spec_flow_migrate.md` as the migration owner for old project-instance shape discovered by this slice
-   - verifies status shape, repository mapping shape, global rules shape, process-file shape, formal object file shape, candidate source metadata shape, evidence appendix reference shape, evidence appendix file shape, reference format, status values, command names, rule binding format, migration writeback boundary, migration state invalidation, migration checkpoint handling, and migration output closure
+   - verifies status shape, repository mapping shape, global rules shape, process-file shape, formal object file shape, candidate source metadata shape, candidate intent standard shape, evidence appendix reference shape, evidence appendix file shape, reference format, status values, command names, rule binding format, migration writeback boundary, migration state invalidation, migration checkpoint handling, and migration output closure
    - must not judge unit, scenario, rule, or evidence-appendix business truth correctness
 8. `entry_and_project_extension`
    - reviews `entry_index_registry.md`, `project_standards_policy.md`, `project_standard_create.md`, registered entry files, template entry files, template project-standard registry, project registry, and active project-local standards in scope
@@ -391,7 +393,7 @@ Local slices review one owner area for internal closure, side effects, contract 
    - verifies tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness, reader runtime coverage, and document/source/runtime agreement
 10. `agent_operability_local`
    - reviews the agent-operability result recorded by each local slice against `agent_operability_standard.md`
-   - verifies that local slice conclusions did not rely on prior conversation, ordinary term meanings, or avoidable repeated reading
+   - verifies that local slice conclusions, including candidate intent policy and standard consumption, did not rely on prior conversation, ordinary term meanings, or avoidable repeated reading
 
 ### 4.2 Cross-Convergence Baseline Slices
 

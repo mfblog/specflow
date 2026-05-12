@@ -81,7 +81,7 @@ This file states only `unit_new`-local entry, output, and stop rules.
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=unit_check`
-   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable no --candidate yes --active-layer candidate --next-command unit_check --notes <status-note> --create`
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_new --object-type unit --object {unit} --outcome candidate_created --notes <status-note> --apply`
 15. if the round changed any unit `rule_refs` value or any file under `docs/specs/rules/**`, run `rule_sync` after `_status.md` has been updated, even when no additional affected object is known yet
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule sync-impact --rule-refs <rule-ref> --units {unit}` or the corresponding `--rule-ids` form, and at least one rule trigger input must already be known before this deterministic execution starts
 

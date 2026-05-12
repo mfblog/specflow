@@ -103,7 +103,7 @@ Before execution:
 13. rewrite every additional writeback-required involved consumer unit candidate-side reference and behavior explanation required by the extraction result
    - any written `rule_refs` must use the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1
 14. do not write consumer metadata into the target Rule file; the target Rule file must omit `bound_objects`
-15. if the target rule file now has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
+15. if the target rule file now has one or more formal consumers in the current-layer `unit` and `scenario` `rule_refs` graph after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 16. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
 17. if any involved unit that should now consume the extracted truth was not fully reviewed and rewritten where required, stop and report consumer-coverage failure
 18. after any write to `docs/specs/rules/**` or any unit `rule_refs`, execute `rule_sync` before claiming closure

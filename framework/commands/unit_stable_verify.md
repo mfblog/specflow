@@ -68,7 +68,7 @@ Stable binding and fingerprint comparisons must use `specflow/framework/process_
 8. classify deviations with the shared severity meanings defined by `specflow/framework/severity_policy.md`
 9. conclude:
    - if explicitly referenced stable appendix truth changed enough that the current stable-alignment claim must be re-judged, the result can only be "stable truth drift exists; rerun stable verification against the current stable truth"
-   - if any `fail` exists, the result can only be "drift exists; return to stable first"
+   - if any `fail` exists, stable alignment cannot be claimed; continue to Step 10 and classify the smallest legal next action instead of defaulting to a same-command rerun
    - `partial`, `not_checked`, and `not_runnable_yet` are non-blocking only when `specflow/framework/downgrade_policy.md` allows downgrade for the current evidence state
    - if tests pass but do not prove the stable acceptance item, report the evidence gap instead of treating the test result as stable-alignment evidence
    - if key deviations are cleared and evidence is complete, the result is "still aligned with stable"
@@ -84,7 +84,9 @@ Stable binding and fingerprint comparisons must use `specflow/framework/process_
    - if still aligned -> `Next Command=unit_fork`
    - if small repair, evidence, baseline, rule, or stable-truth re-judgment is still required -> keep `Next Command=unit_stable_verify`
    - if controlled candidate work is required -> `Next Command=unit_fork`
-   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable yes --candidate no --active-layer stable --next-command <unit_fork-or-unit_stable_verify> --notes <status-note>`
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_stable_verify --object-type unit --object {unit} --outcome <aligned|small_repair_required|evidence_incomplete|truth_rejudge_required|controlled_repair_required|controlled_change_required> --notes <status-note> --apply`
+   - `controlled_repair_required` requires `--candidate-intent repair`
+   - `controlled_change_required` requires `--candidate-intent change`
 
 ## 5. Stop Conditions
 

@@ -79,14 +79,14 @@ This file states only `unit_fork`-local entry, output, and stop rules.
    - reject closure if neither deletion nor explicit keep-writeback has happened for a touched now-unbound Rule file
    - if a touched Rule file still has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
    - do not write consumer metadata into touched Rule files; every remaining touched Rule file must omit `bound_objects`
-14. delete old `_check_result/unit/{unit}.md`, `_verify_result/unit/{unit}.md`, `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and previous-round candidate appendix files
-   - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --object-type unit --object {unit} --mode unit_fork`
-15. update `_status.md`:
+14. close the command with the `candidate_created` outcome:
    - `Stable=yes`
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=unit_check`
-   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable yes --candidate yes --active-layer candidate --next-command unit_check --notes <status-note>`
+   - old `_check_result/unit/{unit}.md`, `_verify_result/unit/{unit}.md`, `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and previous-round candidate appendix files are deleted by the command close success cleanup
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_fork --object-type unit --object {unit} --outcome candidate_created --notes <status-note> --apply`
+15. do not separately call `status set-object` for normal command closure; that subcommand is a low-level status tool, not the standard `unit_fork` closing entry
 16. do not update `docs/specs/repository_mapping.md` only because this fork changed the active layer from `stable` to `candidate`; the current unit main Spec path is resolved from `_status.md` plus the `unit_default` truth-surface rule
 17. if the round changed any unit `rule_refs` value or any file under `docs/specs/rules/**`, run `rule_sync` only after `_status.md` already reflects `Active Layer=candidate` for this unit, even when no additional affected object is known yet
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule sync-impact --rule-refs <rule-ref> --units {unit}` or the corresponding `--rule-ids` form, and at least one rule trigger input must already be known before this deterministic execution starts

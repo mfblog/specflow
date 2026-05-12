@@ -106,6 +106,8 @@ Before reading `_check_result/unit/{unit}.md` or `_plans/active/{unit}.md` as us
    - if implementation has deviations but candidate truth still stands -> `Next Command=unit_impl`
    - if candidate truth or formal global baseline must be re-closed -> `Next Command=unit_check`
    - if verification evidence is still incomplete but no upstream truth drift exists -> `Next Command=unit_verify`
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_verify --object-type unit --object {unit} --outcome <ready_to_promote|implementation_deviation|evidence_incomplete|human_verify> --notes <status-note> --apply`
+   - for `truth_fallback`, execute `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_verify --object-type unit --object {unit} --outcome truth_fallback --reason <fallback_reason_code> --notes <status-note> --apply`
 
 ## 5. Stop Conditions
 

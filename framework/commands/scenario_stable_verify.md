@@ -68,6 +68,7 @@ Stable binding and fingerprint comparisons must use `specflow/framework/process_
 14. update `_status.md`:
    - if still aligned with stable -> `Next Command=scenario_fork`
    - if stable alignment cannot be claimed -> keep `Next Command=scenario_stable_verify`
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command scenario_stable_verify --object-type scenario --object {scenario} --outcome <aligned|not_aligned|evidence_incomplete> --notes <status-note> --apply`
 15. do not write `docs/specs/_verify_result/scenario/{scenario}.md`
 16. do not write or update `docs/specs/_verify_result/stable/scenario/{scenario}.md`
 

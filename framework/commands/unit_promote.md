@@ -102,6 +102,7 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
      - if the existing `_check_result/unit/{unit}.md` and `_plans/active/{unit}.md` still match the current candidate truth and acceptance item set, fall back to `unit_verify`
      - otherwise delete `_check_result/unit/{unit}.md`, `_plans/draft/{unit}.md`, and `_plans/active/{unit}.md`, then fall back to `unit_check`
      - use `fallback_reason_code=evidence_incomplete` when only verification coverage is stale, or `fallback_reason_code=truth_drift` when candidate truth changed
+   - the deterministic command closure for these fallback cases may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_promote --object-type unit --object {unit} --outcome <verify_invalid_truth|verify_invalid_binding|verify_invalid_baseline|verify_invalid_rule|verify_invalid_plan|verify_invalid_implementation|verify_invalid_gate|verify_invalid_evidence> --notes <status-note> --apply`
 7. continue only when bindings, coverage, and gate fields all remain valid
 8. before the first file mutation, capture the recovery baseline required by `recovery_policy.md`
    - when promotion dependency reference retargeting may occur, the baseline must include every referencing Spec file, every affected `_status.md` row, and every candidate-side process file that may be deleted because of the retarget
@@ -158,12 +159,13 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
    - delete evidence appendix files by default because they are current-round evidence, not stable behavior truth
    - absorb only the small amount of background needed for stable readers into the stable main Spec; do not migrate evidence appendix files as stable appendix files unless a command-specific rule explicitly makes them stable supporting truth
 15. do not delete `docs/specs/units/candidate/c_unit_{unit}.md` until `_status.md` has already been updated to `Candidate=no`
-16. update `_status.md` to the promoted stable state:
+16. record the promoted stable state that final command closure must write:
    - `Stable=yes`
    - `Candidate=no`
    - `Active Layer=stable`
    - `Next Command=unit_fork`
-   - the deterministic row writeback may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> status set-object --type unit --object {unit} --stable yes --candidate no --active-layer stable --next-command unit_fork --notes <status-note>`
+   - do not execute the `promoted` command close yet
+   - final command closure must wait until stable acceptance summary writeback, required appendix handling, Rule release-version work, and promotion dependency reference retargeting are complete
 17. do not update `docs/specs/repository_mapping.md` only because this promotion changed the active layer from `candidate` to `stable`; the current unit main Spec path is resolved from `_status.md` plus the `unit_default` truth-surface rule
 18. if the round lands a new stable Rule version or changes a stable Rule `rule_version`, do not hand-edit consumer `rule_refs`; execute `specflow/tooling/bin/specflowctl-<os>-<arch> rule release-version --rule-id <rule-id> --from-ref <old-stable-rule-ref> --to-ref <new-stable-rule-ref>` after the stable Rule file exists and before claiming promotion closure
    - `release-version` is the only command allowed to retarget stable current-layer consumers; it auto-forks those consumers and rewrites only the candidate `rule_refs`
@@ -186,14 +188,16 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
      - if the promoted unit's own newly written stable file still contains a mechanically retargetable reference to its just-promoted candidate file, retarget that reference as part of the promoted stable landing and keep the promoted unit's successful follow-up state at `Next Command=unit_fork`
      - if a non-current-layer historical Spec file is retargeted, record the retarget but do not update `_status.md` for that object only because the historical file changed
      - record every retargeted file, every status-row update, every deleted process file, and every non-retargeted blocking reference in the output contract
-19. only after that update may physical deletion happen:
+19. after Step 18a completes or proves that no retargeting is needed, close the command with the `promoted` outcome:
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_promote --object-type unit --object {unit} --outcome promoted --notes <status-note> --apply`
+   - command close writes the promoted stable state from Step 16 before it deletes:
    - `docs/specs/units/candidate/c_unit_{unit}.md`
    - current-round candidate appendix files
    - `_check_result/unit/{unit}.md`
    - `_plans/draft/{unit}.md`
    - `_plans/active/{unit}.md`
    - `_verify_result/unit/{unit}.md`
-   - the deterministic cleanup part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> process cleanup-success --object-type unit --object {unit} --mode unit_promote`
+   - `process cleanup-success` is a low-level cleanup tool and is not the standard `unit_promote` closing entry
 20. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
 21. if the round changed any unit `rule_refs` value or any file under `docs/specs/rules/**`, run `rule_sync` only after `_status.md` already reflects the promoted stable layer and Step 18 has completed any required `release-version`, even when no additional affected object is known yet
    - this post-promotion `rule_sync` closes external affected-object fallout and Rule-state reconciliation; it must not overturn the promoted unit's own successful stable landing merely because the same promotion round also wrote the stable Rule file or stable binding that the promoted unit now legally uses

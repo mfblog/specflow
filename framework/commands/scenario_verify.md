@@ -49,6 +49,10 @@ Before reading `_check_result/scenario/{scenario}.md` as a usable verification i
    - if the non-pass state is caused by affected unit work, stop as `blocked_by_affected_units`
    - otherwise stop as `evidence_incomplete` with `failure_layer=evidence_layer`, keep or set the scenario row to `Next Command=scenario_verify`, delete any stale `_verify_result/scenario/{scenario}.md`, and report `fallback_reason_code=evidence_incomplete`
 10. if pass, write `_verify_result/scenario/{scenario}.md` so it satisfies the `scenario_verify -> scenario_promote` handoff, including the acceptance-item evidence matrix and covered `id` set, then advance `Next Command=scenario_promote`
+11. close the command after the result is selected:
+   - use `pass` only after `_verify_result/scenario/{scenario}.md` has been written and validates
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command scenario_verify --object-type scenario --object {scenario} --outcome <pass|gate_fallback|evidence_incomplete|blocked_by_affected_units> --notes <status-note> --apply`
+   - for `truth_fallback`, execute `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command scenario_verify --object-type scenario --object {scenario} --outcome truth_fallback --reason <fallback_reason_code> --notes <status-note> --apply`
 
 ## 5. Stop Conditions
 

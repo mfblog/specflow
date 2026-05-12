@@ -174,6 +174,8 @@ Before reading `_check_result/unit/{unit}.md` as a usable pass gate, run `specfl
    - if research preflight is blocked on implementation-critical unknowns but no truth rewrite is pending -> keep `Next Command=unit_plan`
    - if the result is `decision-checkpoint` and no truth writeback is pending -> keep `Next Command=unit_plan`
    - if a `decision` checkpoint stopped planning and no truth writeback is pending -> keep `Next Command=unit_plan`
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_plan --object-type unit --object {unit} --outcome <plan_ready|blocked|decision_checkpoint> --notes <status-note> --apply`
+   - for `truth_fallback`, execute `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_plan --object-type unit --object {unit} --outcome truth_fallback --reason truth_incomplete --notes <status-note> --apply`
 
 ## 5. Stop Conditions
 

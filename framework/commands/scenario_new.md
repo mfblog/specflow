@@ -43,6 +43,7 @@ This file states only `scenario_new`-local entry, output, and stop rules.
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=scenario_check`
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command scenario_new --object-type scenario --object {scenario} --outcome candidate_created --notes <status-note> --apply`
 
 ## 5. Stop Conditions
 

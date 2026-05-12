@@ -99,14 +99,14 @@ Before execution:
    - if the topology plan needs new or changed stable-layer rule semantics, do not write that stable-layer file directly in this flow; write or update the corresponding candidate-layer rule file first, carry the intended next stable `rule_version` there, and let a later legal promotion produce the stable-layer file
 8. rewrite every affected unit or scenario candidate-side `rule_refs` and body-level consumption explanation required by the topology plan
    - any written `rule_refs` must use the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1
-9. for each touched rule file that has no formal bound units after Step 8:
+9. for each touched rule file that has no formal consumers in the current-layer `unit` and `scenario` `rule_refs` graph after Step 8:
    - delete it in the same round when the topology plan treats it as retired and cleanup is legal under `spec_policy.md`
    - otherwise keep it only when the current round writes that same Rule file with the fixed intentional-unbound retention frontmatter from `spec_policy.md`:
      - `unbound_retention: intentional`
      - `unbound_retention_reason: <why this unbound state is intentional now>`
      - `unbound_retention_owner: rule_topology`
    - reject closure if neither deletion nor explicit keep-writeback has happened
-10. for each touched rule file that still has one or more formal bound units after Step 8, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
+10. for each touched rule file that still has one or more formal consumers in the current-layer `unit` and `scenario` `rule_refs` graph after Step 8, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 11. do not write consumer metadata into Rule files; every remaining touched Rule file must omit `bound_objects`, and consumers are derived from current-layer frontmatter `rule_refs`
 12. if the topology plan created, removed, renamed, split, merged, replaced, retired, or otherwise changed the current rule object map, update `docs/specs/repository_mapping.md` in the same round before executing `rule_sync`:
    - record every remaining current `rule` ID and one-line responsibility that changed because of this topology plan

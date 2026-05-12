@@ -156,7 +156,7 @@ Checkpoint fields must follow `specflow/framework/checkpoint_protocol.md`.
 For checkpoints raised by this flow:
 
 1. `command` must be `spec_flow_migrate`
-2. `unit` must be `none`
+2. `target_objects` must name every migrated command-target object affected by the checkpoint using `unit:{unit}` or `scenario:{scenario}`, or `none` when the checkpoint is not bound to any command-target object
 3. `required_writeback_target` must name the concrete project truth, support file, or upstream action target when the answer affects durable state
 4. `resume_next_step` must be rerunning `spec_flow_migrate` from current repository truth unless a more specific prerequisite action is named
 

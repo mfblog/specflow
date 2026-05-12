@@ -67,6 +67,9 @@ Scoped confirmation of the repaired fragment must not write `_check_result/scena
    - delete an old `_check_result/scenario/{scenario}.md` when it no longer covers the current candidate scenario, repository mapping, bound units, bound Rule files, or formal global baseline state
    - keep `_status.md` at `Next Command=scenario_check`
    - report the standardized `fallback_reason_code` first, then the natural-language explanation
+10. close the command after the result is selected:
+   - use `pass` only after `_check_result/scenario/{scenario}.md` has been written and validates
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command scenario_check --object-type scenario --object {scenario} --outcome <pass|blocked|fix_required> --notes <status-note> --apply`
 
 ## 5. Stop Conditions
 

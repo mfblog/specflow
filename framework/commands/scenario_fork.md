@@ -32,6 +32,8 @@ This file states only `scenario_fork`-local entry, output, and stop rules.
    - `Candidate=yes`
    - `Active Layer=candidate`
    - `Next Command=scenario_check`
+   - outdated candidate-side scenario process files are deleted by command close success cleanup
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command scenario_fork --object-type scenario --object {scenario} --outcome candidate_created --notes <status-note> --apply`
 
 ## 5. Stop Conditions
 

@@ -120,7 +120,7 @@ The output must include at least:
    - `entry=natural_language_routing`
    - `branch=shared_governance`
    - `routed_flow=rule_escape`
-   - `unit` or `none`; use `none` when the checkpoint is scenario-only or cross-object, and name the scenario in `required_writeback_target`
+   - `target_objects`; use `unit:{unit}` and `scenario:{scenario}` entries for every command-target object the checkpoint is about, or `none` when no command-target object is involved
    - `question_or_action`
    - `why_blocking`
    - `required_writeback_target`

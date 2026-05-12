@@ -74,9 +74,13 @@ The allowed action families are:
    - delete or reset process artifacts when a command-defined cleanup rule already says that cleanup must happen
 7. preflight
    - verify command entry facts that are already mechanically determined by `_status.md` and process snapshot contracts
-8. sync
+8. transition
+   - close a standard command by applying a fixed transition table to an explicit caller-provided command outcome
+   - validate only mechanical prerequisites such as current `Next Command`, supported flag combinations, and required process snapshot files
+   - write `_status.md` or execute process cleanup only when the transition table already defines that action
+9. sync
    - align managed content or metadata when the source, target, and writeback contract are already explicit
-9. render
+10. render
    - expose a read-only local view derived from already-written truth files without creating, editing, or promoting truth
 
 Writeback rule:
@@ -113,6 +117,8 @@ Additional rule:
 1. ordinary branching, parsing guards, and shape checks inside code do not become forbidden merely because they use `if`
 2. the forbidden case is semantic decision-making that substitutes for governance judgment
 3. command preflight tooling may report whether the current status row and required process snapshots mechanically allow a command to continue, but it must not decide whether candidate truth is complete, whether evidence is sufficient, whether downgrade is allowed, or whether a promotion should happen
+4. command close tooling may accept explicit standardized flags such as `--outcome`, `--reason`, `--failure-layer`, and `--candidate-intent`, but it must not choose those values, repair contradictory values, or infer a semantic outcome from repository content
+5. command close tooling may reject an unsupported state combination and may apply the one legal transition for a supported combination, but it must not create a second lifecycle rule outside the command-owned transition table
 
 ## 6. Relationship To `spec_flow_review`
 

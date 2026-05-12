@@ -101,7 +101,7 @@ Before execution:
      - delete `_verify_result/unit/{unit}.md`
      - record each cleanup target that was already absent as absent, not as a different fallback state
    - no metadata-only Rule exception may suppress this target-unit invalidation because the target unit candidate main file changed
-14. if Step 3 recorded a previous bound Rule file and `rule_sync` shows that no unit still binds it after this round:
+14. if Step 3 recorded a previous bound Rule file and `rule_sync` shows that no formal consumer in the current-layer `unit` and `scenario` `rule_refs` graph still binds it after this round:
    - if the current round can safely prove that the previous file has been replaced by the new target and cleanup is legal under `spec_policy.md`, delete that now-unbound previous rule file in the same round
    - otherwise, stop and return control to `rule_escape` through rule-governance routing so rule governance can decide whether stable decomposition exists or whether follow-up must route to `rule_topology`, checkpoint, or another legal next step
    - after a deletion in this step, rerun `rule_sync` before claiming closure

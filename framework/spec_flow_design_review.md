@@ -38,6 +38,7 @@ That default scope includes:
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
    - `scenario_policy.md`
+   - `spec_writing_guide.md`
    - `checkpoint_protocol.md`
    - `natural_language_routing.md` only where it defines the rule-governance branch
 2. lifecycle and gate-shape rules
@@ -98,6 +99,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
    - `scenario_policy.md`
+   - `spec_writing_guide.md`
    - `natural_language_routing.md` only where it defines the rule-governance branch
    - `AGENTS.md`
    - `GEMINI.md`

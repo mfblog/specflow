@@ -34,12 +34,14 @@ Before reading `_verify_result/scenario/{scenario}.md` as a usable promotion inp
    - if candidate truth, repository mapping snapshot, required unit bindings, bound Rule snapshots, or formal global baseline snapshots drifted, delete current-round scenario `_check_result/scenario/{scenario}.md` and `_verify_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_check`, and use the matching standardized code: `truth_drift`, `binding_drift`, `rule_drift`, or `baseline_drift`
    - if only the scenario check gate process shape is malformed while current scenario truth and bindings still match, delete `_check_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_check`, and use `failure_layer=gate_layer`
    - if only verification coverage is stale, malformed, or incomplete while the check gate still covers current truth, delete `_verify_result/scenario/{scenario}.md`, update `_status.md` to `Next Command=scenario_verify`, and use `fallback_reason_code=evidence_incomplete` with `failure_layer=evidence_layer`
+   - the deterministic command closure for these fallback cases may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command scenario_promote --object-type scenario --object {scenario} --outcome <verify_invalid_truth|verify_invalid_binding|verify_invalid_baseline|verify_invalid_rule|verify_invalid_gate|verify_invalid_evidence> --notes <status-note> --apply`
 6. before the first truth-file mutation, resolve every current `unit_refs` and `rule_refs` entry in the candidate scenario:
    - each `unit_refs` entry must resolve to existing stable-layer unit truth
    - each `rule_refs` entry must resolve to existing stable-layer Rule truth
    - `rule_refs=none` is valid only when the candidate scenario formally binds no Rule
    - do not treat `unit_snapshot`, `rule_snapshot`, `bound_objects`, repository history, or directory shape as a replacement for the formal refs
    - if any dependency is candidate-layer, missing, or not safely resolvable, stop before stable writeback, keep candidate semantics, report the affected dependency and its current legal next step from `_status.md` when present, use `fallback_reason_code=stable_dependency_not_ready` with `failure_layer=dependency_readiness_layer`, and keep `Next Command=scenario_promote`
+   - the deterministic command closure for dependency readiness failure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command scenario_promote --object-type scenario --object {scenario} --outcome dependency_not_ready --reason stable_dependency_not_ready --notes <status-note> --apply`
    - after dependency landing, retry `scenario_promote` by revalidating the current verify handoff and stable dependency readiness; require fresh `scenario_check` and `scenario_verify` only when scenario truth, scenario bindings, repository mapping, Rule bindings, baseline, acceptance item ids, or verification evidence changed
 7. continue only when candidate truth, verification coverage, required bindings, and stable dependency readiness still remain valid
 8. before the first truth-file mutation, capture the recovery baseline required by `recovery_policy.md`
@@ -54,11 +56,14 @@ Before reading `_verify_result/scenario/{scenario}.md` as a usable promotion inp
    - `Candidate=no`
    - `Active Layer=stable`
    - `Next Command=scenario_fork`
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command scenario_promote --object-type scenario --object {scenario} --outcome promoted --notes <status-note> --apply`
+   - command close writes `Candidate=no` before it deletes the candidate main file and current process files through success cleanup
 12. only after `_status.md` has already been updated to `Candidate=no`, delete:
    - `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
    - current-round scenario evidence appendix files
    - current-round scenario `_check_result/scenario/{scenario}.md`
    - current-round scenario `_verify_result/scenario/{scenario}.md`
+   - command close performs this success cleanup for the `promoted` outcome
 13. if the command is interrupted after promotion internals started but before final cleanup finished, run incomplete promotion recovery according to `recovery_policy.md` instead of claiming success
 
 ## 5. Stop Conditions

@@ -233,6 +233,7 @@ Project-local review extension contract:
 24. update `_status.md`:
    - if pass -> `Next Command=unit_plan`
    - otherwise -> `Next Command=unit_check`
+   - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_check --object-type unit --object {unit} --outcome <pass|blocked|fix_required|checkpoint> --notes <status-note> --apply`
 
 ## 5. Stop Conditions
 

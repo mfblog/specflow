@@ -63,7 +63,7 @@ Every checkpoint must include all of the following fields:
 1. `type`
 2. `blocking`
 3. `command`
-4. `unit`
+4. `target_objects`
 5. `question_or_action`
 6. `why_blocking`
 7. `required_writeback_target`
@@ -78,9 +78,12 @@ Field meanings:
    - always records whether the current command is fully blocked pending user input
 3. `command`
    - the active command or governance flow that raised the checkpoint
-4. `unit`
-   - the formal unit identifier
-   - use literal `none` only when the active governance flow is not bound to exactly one formal unit, for example a cross-unit rule-governance checkpoint
+4. `target_objects`
+   - the command-target object set that the checkpoint is about
+   - use an ordered list of entries rendered as `unit:{unit}` or `scenario:{scenario}` when one or more command-target objects are involved
+   - use literal `none` only when the active governance flow is not bound to any command-target object
+   - for a standard command checkpoint, list exactly the command target object
+   - for a governance-flow checkpoint, list every unit or scenario whose truth, upstream command, or writeback target blocks resume
 5. `question_or_action`
    - the exact input or verification the user must provide
    - it must be phrased in ordinary user-goal language unless the user already chose the relevant internal specFlow term

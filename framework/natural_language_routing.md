@@ -811,14 +811,15 @@ Fixed rules:
 2. set `branch=shared_governance`
 3. set `routed_flow` to the internal rule flow that raised or owns the checkpoint
 4. set `command` to the same internal rule flow recorded in `routed_flow`
-5. set `unit` to the formal unit identifier only when the current stop is truly about exactly one unit
-6. otherwise set `unit=none`
-7. `required_writeback_target` may point to one or more rule files, unit candidate files, scenario candidate files, or appendix files when those are the truth targets that must be updated before resume
-8. `resume_next_step` must normally be rerunning natural language routing from current repository truth after the required truth writeback
-9. when the checkpoint exists because one or more target units or scenarios are still at `stable`, `required_writeback_target` must point to the future candidate main file set rather than the current stable file set
-10. when the current flow is blocked on an upstream command creating the legal writeback target first, use `type=prerequisite_action`
-11. when a routed internal rule flow raises a rule-governance checkpoint directly, the current rule-governance handling result is `blocked` rather than closed
-12. when Rule 11 applies, do not treat the routed internal flow as completed merely because it reached its own stop point; rule governance remains open until the checkpoint is answered and the required follow-up has been rerun from current repository truth
+5. set `target_objects` to the complete command-target object set that the checkpoint is about
+6. render each `target_objects` entry as `unit:{unit}` or `scenario:{scenario}`
+7. set `target_objects=none` only when the checkpoint is not bound to any command-target object
+8. `required_writeback_target` may point to one or more rule files, unit candidate files, scenario candidate files, or appendix files when those are the truth targets that must be updated before resume
+9. `resume_next_step` must normally be rerunning natural language routing from current repository truth after the required truth writeback
+10. when the checkpoint exists because one or more target units or scenarios are still at `stable`, `required_writeback_target` must point to the future candidate main file set rather than the current stable file set
+11. when the current flow is blocked on an upstream command creating the legal writeback target first, use `type=prerequisite_action`
+12. when a routed internal rule flow raises a rule-governance checkpoint directly, the current rule-governance handling result is `blocked` rather than closed
+13. when Rule 12 applies, do not treat the routed internal flow as completed merely because it reached its own stop point; rule governance remains open until the checkpoint is answered and the required follow-up has been rerun from current repository truth
 
 ---
 
