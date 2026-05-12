@@ -20,6 +20,10 @@ func TestBuildSnapshotConnectsUnitSpecAndRule(t *testing.T) {
 	if unit.NextLabel != "检查设计是否足够支撑开发" {
 		t.Fatalf("expected translated next command, got %q", unit.NextLabel)
 	}
+	repairUnit := findObject(t, snapshot.Objects, "unit", "tool")
+	if repairUnit.NextIntent != "repair" || repairUnit.NextIntentLabel != "修复基线" {
+		t.Fatalf("expected repair next intent, got intent=%q label=%q", repairUnit.NextIntent, repairUnit.NextIntentLabel)
+	}
 	expectedTruthPaths := []string{
 		"docs/specs/units/candidate/c_unit_assistant.md",
 		"docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md",
@@ -141,6 +145,7 @@ func createReaderRepo(t *testing.T) string {
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
 		"|---|---|---|---|---|---|---|",
 		"| `unit` | `assistant` | `no` | `yes` | `candidate` | `unit_check` | note |",
+		"| `unit` | `tool` | `yes` | `no` | `stable` | `unit_fork` | next fork must create candidate_intent=repair |",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), strings.Join([]string{
 		"# Repository Mapping",
@@ -149,6 +154,8 @@ func createReaderRepo(t *testing.T) string {
 		"",
 		"1. `assistant`",
 		"   - assistant prompt responsibility",
+		"2. `tool`",
+		"   - tool execution responsibility",
 		"",
 		"### 2.3 Current Rules",
 		"",
@@ -181,6 +188,15 @@ func createReaderRepo(t *testing.T) string {
 		"1. `rule_refs`:",
 		"   - `c_b_rule_runtime_model@0.1.0`",
 		"2. Prompt details live in [`c_unit_assistant_prompt.md`](./appendix/c_unit_assistant_prompt.md).",
+	}, "\n")+"\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_tool.md"), strings.Join([]string{
+		"---",
+		"id: tool",
+		"layer: stable",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Tool",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md"), strings.Join([]string{
 		"# Assistant Evidence",

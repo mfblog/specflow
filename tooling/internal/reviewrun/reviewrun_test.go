@@ -34,9 +34,25 @@ func TestInitCreatesValidRunState(t *testing.T) {
 	if !containsString(routingSlice.InputFiles, "specflow/framework/spec_flow_migrate.md") {
 		t.Fatalf("expected migration policy in routing slice, got %+v", routingSlice.InputFiles)
 	}
+	if !containsString(routingSlice.InputFiles, "specflow/framework/candidate_intent_policy.md") {
+		t.Fatalf("expected candidate intent policy in routing slice, got %+v", routingSlice.InputFiles)
+	}
+	if !containsString(routingSlice.InputFiles, "specflow/framework/candidate_intents/repair.md") {
+		t.Fatalf("expected repair intent standard in routing slice, got %+v", routingSlice.InputFiles)
+	}
 	truthSlice := findSlice(t, state, "truth_and_implementation_gates")
 	if !containsString(truthSlice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding policy in truth gate slice, got %+v", truthSlice.InputFiles)
+	}
+	if !containsString(truthSlice.InputFiles, "specflow/framework/candidate_intent_policy.md") {
+		t.Fatalf("expected candidate intent policy in truth gate slice, got %+v", truthSlice.InputFiles)
+	}
+	if !containsString(truthSlice.InputFiles, "specflow/framework/candidate_intents/change.md") {
+		t.Fatalf("expected change intent standard in truth gate slice, got %+v", truthSlice.InputFiles)
+	}
+	operabilitySlice := findSlice(t, state, "agent_operability_local")
+	if !containsString(operabilitySlice.InputFiles, "specflow/framework/candidate_intents/repair.md") {
+		t.Fatalf("expected repair intent standard in agent operability slice, got %+v", operabilitySlice.InputFiles)
 	}
 
 	validation := ValidateFile(repoRoot, FlowSpecFlowReview, result.File, now)
@@ -66,6 +82,8 @@ func TestInitIncludesStateSpaceClosureSlice(t *testing.T) {
 	for _, input := range []string{
 		"specflow/framework/command_policy.md",
 		"specflow/framework/implementation_change_policy.md",
+		"specflow/framework/candidate_intent_policy.md",
+		"specflow/framework/candidate_intents/repair.md",
 		"specflow/framework/process_snapshot_contract.md",
 		"docs/specs/_status.md",
 		"specflow/framework/commands/unit_check.md",
@@ -741,6 +759,12 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 	if !containsString(slice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding policy input for source field compatibility, got %+v", slice.InputFiles)
 	}
+	if !containsString(slice.InputFiles, "specflow/framework/candidate_intent_policy.md") {
+		t.Fatalf("expected candidate intent policy input for candidate metadata compatibility, got %+v", slice.InputFiles)
+	}
+	if !containsString(slice.InputFiles, "specflow/framework/candidate_intents/change.md") {
+		t.Fatalf("expected change intent standard input for candidate metadata compatibility, got %+v", slice.InputFiles)
+	}
 	if !containsString(slice.InputFiles, "specflow/framework/spec_flow_migrate.md") {
 		t.Fatalf("expected migration policy input for project-instance migration compatibility, got %+v", slice.InputFiles)
 	}
@@ -892,6 +916,7 @@ func createReviewRunRepo(t *testing.T) string {
 		"agent_operability_standard.md",
 		"natural_language_routing.md",
 		"onboarding_decision_policy.md",
+		"candidate_intent_policy.md",
 		"command_policy.md",
 		"implementation_change_policy.md",
 		"checkpoint_protocol.md",
@@ -918,6 +943,12 @@ func createReviewRunRepo(t *testing.T) string {
 	}
 	for _, name := range frameworkFiles {
 		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
+	}
+	for _, relPath := range []string{
+		"specflow/framework/candidate_intents/repair.md",
+		"specflow/framework/candidate_intents/change.md",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
 	for _, relPath := range []string{
 		"specflow/framework/skills/using-specflow-guidance/SKILL.md",

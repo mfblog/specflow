@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/buildrelease"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandclose"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/entrysync"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/install"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
@@ -111,6 +112,45 @@ func runCommand(args []string, stdout, stderr io.Writer) error {
 	}
 
 	switch args[0] {
+	case "close":
+		fs := flag.NewFlagSet("command close", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		command := fs.String("command", "", "standard command name")
+		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		object := fs.String("object", "", "formal object name")
+		outcome := fs.String("outcome", "", "standard command outcome")
+		reason := fs.String("reason", "", "fallback or diagnostic reason code")
+		failureLayer := fs.String("failure-layer", "", "explicit fallback layer")
+		candidateIntent := fs.String("candidate-intent", "", "controlled candidate intent: repair | change")
+		notes := fs.String("notes", "", "status notes")
+		stableBefore := fs.String("stable-before", "", "previous stable value for promotion recovery: yes | no")
+		apply := fs.Bool("apply", false, "write status and cleanup process files")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*command) == "" || strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" || strings.TrimSpace(*outcome) == "" {
+			writeCommandUsage(stderr)
+			return errors.New("command, object-type, object, and outcome are required")
+		}
+
+		result, err := commandclose.Close(commandclose.Options{
+			RepoRoot:        mustAbs(*repoRoot),
+			Command:         *command,
+			ObjectType:      *objectType,
+			Object:          *object,
+			Outcome:         *outcome,
+			Reason:          *reason,
+			FailureLayer:    *failureLayer,
+			CandidateIntent: *candidateIntent,
+			Notes:           *notes,
+			StableBefore:    *stableBefore,
+			Apply:           *apply,
+		})
+		if result.Command != "" {
+			writeCommandCloseResult(stdout, result)
+		}
+		return err
 	case "preflight":
 		fs := flag.NewFlagSet("command preflight", flag.ContinueOnError)
 		fs.SetOutput(stderr)
@@ -164,13 +204,6 @@ func runCommandPreflight(repoRoot, command, objectType, object string) commandPr
 		result.FailureLayer = "status_layer"
 		result.RecommendedNextCommand = status.NextCommand
 		result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("status next command mismatch: actual=%s expected=%s", status.NextCommand, result.Command))
-		return result
-	}
-	if diagnostics := rulesync.ValidateCurrentBindings(repoRoot, ""); len(diagnostics) > 0 {
-		result.MayContinue = false
-		result.FailureLayer = "truth_layer"
-		result.RecommendedNextCommand = checkCommandForObjectType(result.ObjectType)
-		result.Diagnostics = append(result.Diagnostics, diagnostics...)
 		return result
 	}
 
@@ -326,6 +359,47 @@ func writeCommandPreflightResult(stdout io.Writer, result commandPreflightResult
 		}
 	}
 	writeList(stdout, "diagnostics", result.Diagnostics)
+}
+
+func writeCommandCloseResult(stdout io.Writer, result commandclose.Result) {
+	closeResult := "dry_run"
+	if result.Applied {
+		closeResult = "applied"
+	}
+	fmt.Fprintf(stdout, "command_close_result: %s\n", closeResult)
+	fmt.Fprintf(stdout, "command: %s\n", result.Command)
+	fmt.Fprintf(stdout, "object_type: %s\n", result.ObjectType)
+	fmt.Fprintf(stdout, "object: %s\n", result.Object)
+	fmt.Fprintf(stdout, "outcome: %s\n", result.Outcome)
+	fmt.Fprintf(stdout, "apply: %t\n", result.Applied)
+	fmt.Fprintf(stdout, "validation_action: %s\n", noneIfEmpty(result.ValidationAction))
+	fmt.Fprintf(stdout, "cleanup_action: %s\n", noneIfEmpty(result.CleanupAction))
+	fmt.Fprintf(stdout, "status_updated: %t\n", result.StatusUpdated)
+	fmt.Fprintln(stdout, "status_before:")
+	if result.StatusBeforePresent {
+		writeCommandCloseStatus(stdout, result.StatusBefore)
+	} else {
+		fmt.Fprintln(stdout, "  present: false")
+	}
+	fmt.Fprintln(stdout, "status_after:")
+	writeCommandCloseStatus(stdout, result.StatusAfter)
+	writeList(stdout, "validation_mismatches", result.ValidationMismatches)
+	writeList(stdout, "fallback_deleted_files", result.FallbackCleanup.DeletedFiles)
+	writeList(stdout, "fallback_missing_files", result.FallbackCleanup.MissingFiles)
+	writeList(stdout, "success_deleted_files", result.SuccessCleanup.DeletedFiles)
+	writeList(stdout, "success_missing_files", result.SuccessCleanup.MissingFiles)
+}
+
+func writeCommandCloseStatus(stdout io.Writer, status statusfile.ObjectStatus) {
+	present := status.ObjectType != "" || status.Object != ""
+	fmt.Fprintf(stdout, "  present: %t\n", present)
+	fmt.Fprintf(stdout, "  object_type: %s\n", noneIfEmpty(status.ObjectType))
+	fmt.Fprintf(stdout, "  object: %s\n", noneIfEmpty(status.Object))
+	fmt.Fprintf(stdout, "  stable: %s\n", noneIfEmpty(status.Stable))
+	fmt.Fprintf(stdout, "  candidate: %s\n", noneIfEmpty(status.Candidate))
+	fmt.Fprintf(stdout, "  active_layer: %s\n", noneIfEmpty(status.ActiveLayer))
+	fmt.Fprintf(stdout, "  next_command: %s\n", noneIfEmpty(status.NextCommand))
+	fmt.Fprintf(stdout, "  notes: %s\n", noneIfEmpty(status.Notes))
 }
 
 func runInit(args []string, stdout, stderr io.Writer) error {
@@ -1091,7 +1165,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  doctor   Check installed specFlow structure")
 	fmt.Fprintln(w, "  upgrade  Refresh framework-managed files")
 	fmt.Fprintln(w, "  build-release Build platform binaries into specflow/tooling/bin")
-	fmt.Fprintln(w, "  command  Run standard-command mechanical preflight checks")
+	fmt.Fprintln(w, "  command  Run standard-command mechanical preflight checks and close commands")
 	fmt.Fprintln(w, "  entry    Check or sync registered entry-file managed blocks")
 	fmt.Fprintln(w, "  registry Validate docs/project_standards/_registry.md")
 	fmt.Fprintln(w, "  repository-mapping Validate docs/specs/repository_mapping.md")
@@ -1104,6 +1178,7 @@ func writeRootUsage(w io.Writer) {
 
 func writeCommandUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl command close --command COMMAND --object-type unit|scenario --object OBJECT --outcome OUTCOME [--reason CODE] [--failure-layer LAYER] [--candidate-intent repair|change] [--stable-before yes|no] [--notes TEXT] [--apply] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl command preflight --command COMMAND --object-type unit|scenario --object OBJECT [--repo-root PATH]")
 }
 
@@ -1152,6 +1227,7 @@ func writeReviewScope(stdout io.Writer, repoRoot, flow string) error {
 	fmt.Fprintf(stdout, "Review scenario: %s\n", scope.Scenario)
 	writeList(stdout, "Framework guideline files", scope.FrameworkGuidelineFiles)
 	writeList(stdout, "Command files", scope.CommandFiles)
+	writeList(stdout, "Candidate intent files", scope.CandidateIntentFiles)
 	writeList(stdout, "Guidance skill files", scope.GuidanceSkillFiles)
 	writeList(stdout, "Rule-governance minimum files", scope.RuleGovernanceFiles)
 	writeList(stdout, "Template governance files", scope.TemplateGovernanceFiles)

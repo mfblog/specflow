@@ -22,6 +22,7 @@ type markdownDoc struct {
 
 var sharedRefPattern = regexp.MustCompile("`?([cs]_[gb]_rule_[A-Za-z0-9_]+@[0-9]+\\.[0-9]+\\.[0-9]+)`?")
 var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+\.md(?:#[^)]+)?)\)`)
+var candidateIntentPattern = regexp.MustCompile(`\bcandidate[_-]intent\s*=?\s*(repair|change)\b`)
 
 func BuildSnapshot(repoRoot string) Snapshot {
 	repoRoot, _ = filepath.Abs(repoRoot)
@@ -131,18 +132,21 @@ func BuildSnapshot(repoRoot string) Snapshot {
 }
 
 func buildObjectFromStatus(status statusfile.ObjectStatus, mapping repositoryMapping, docs map[string]markdownDoc) ObjectView {
+	nextIntent := nextIntentFromStatus(status)
 	object := ObjectView{
-		ID:          status.Object,
-		Kind:        status.ObjectType,
-		Label:       status.Object,
-		Layer:       status.ActiveLayer,
-		HumanState:  humanLayer(status.ActiveLayer),
-		Stable:      status.Stable,
-		Candidate:   status.Candidate,
-		NextCommand: status.NextCommand,
-		NextLabel:   humanNextCommand(status.NextCommand),
-		Notes:       status.Notes,
-		Sources:     []SourceRef{{Path: "docs/specs/_status.md", Label: "Status"}},
+		ID:              status.Object,
+		Kind:            status.ObjectType,
+		Label:           status.Object,
+		Layer:           status.ActiveLayer,
+		HumanState:      humanLayer(status.ActiveLayer),
+		Stable:          status.Stable,
+		Candidate:       status.Candidate,
+		NextCommand:     status.NextCommand,
+		NextLabel:       humanNextCommand(status.NextCommand),
+		NextIntent:      nextIntent,
+		NextIntentLabel: humanNextIntent(nextIntent),
+		Notes:           status.Notes,
+		Sources:         []SourceRef{{Path: "docs/specs/_status.md", Label: "Status"}},
 	}
 	if status.ObjectType == "unit" {
 		if unit, ok := mapping.Units[status.Object]; ok {
@@ -396,6 +400,28 @@ func humanNextCommand(command string) string {
 		return "检查端到端流程是否仍符合已确认设计"
 	default:
 		return command
+	}
+}
+
+func nextIntentFromStatus(status statusfile.ObjectStatus) string {
+	if status.ObjectType != "unit" || status.NextCommand != "unit_fork" {
+		return ""
+	}
+	match := candidateIntentPattern.FindStringSubmatch(strings.ToLower(status.Notes))
+	if len(match) != 2 {
+		return ""
+	}
+	return match[1]
+}
+
+func humanNextIntent(intent string) string {
+	switch intent {
+	case "repair":
+		return "修复基线"
+	case "change":
+		return "开启变更轮次"
+	default:
+		return ""
 	}
 }
 

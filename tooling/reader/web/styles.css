@@ -868,6 +868,16 @@ button:hover {
   font-size: 12px;
 }
 
+.next-round-entry.intent-repair .lifecycle-step.current {
+  border-color: #d97706;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.next-round-entry.intent-repair .lifecycle-step.current code {
+  color: #92400e;
+}
+
 .todo-board {
   width: 100%;
   min-width: 720px;
@@ -912,9 +922,19 @@ button:hover {
   cursor: pointer;
 }
 
+.todo-card.intent-repair {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
 .todo-card.active {
   border-color: var(--accent);
   box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.todo-card.intent-repair.active {
+  border-color: #d97706;
+  box-shadow: inset 3px 0 0 #d97706;
 }
 
 .todo-card-head {
@@ -933,6 +953,37 @@ button:hover {
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
+}
+
+.todo-type.intent-repair {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.todo-intent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin: -2px 0 9px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #f1f5f9;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.todo-intent strong {
+  color: var(--ink);
+}
+
+.todo-intent.intent-repair {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.todo-intent.intent-repair strong {
+  color: #92400e;
 }
 
 .todo-command-row {

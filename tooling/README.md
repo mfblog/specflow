@@ -103,26 +103,30 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
 14. `command preflight`
    - mechanically verify a standard command's entry state from `_status.md` and required process snapshot validation results
    - this entry does not judge candidate completeness, evidence sufficiency, downgrade, or promotion readiness
-15. `snapshot rebuild`
+15. `command close`
+   - close one standard command from explicit standardized outcome flags
+   - default mode is dry-run; `--apply` is required before `_status.md` or process files are changed
+   - this entry validates fixed state combinations and process gates, but it does not choose outcomes, judge evidence, or repair contradictory caller input
+16. `snapshot rebuild`
    - rebuild current process snapshots from bound truth
-16. `snapshot validate-process`
+17. `snapshot validate-process`
    - compare one process file against rebuilt current truth
-17. `process cleanup-fallback`
+18. `process cleanup-fallback`
    - execute deterministic layered fallback cleanup for one unit or scenario
-18. `process cleanup-success`
+19. `process cleanup-success`
    - execute deterministic success cleanup for one unit or scenario
-19. `status set-unit`
-   - write one deterministic `unit` row in `_status.md`
-20. `status set-object`
-   - write one unified object row in `_status.md`
-21. `rule sync-impact`
+20. `status set-unit`
+   - write one deterministic `unit` row in `_status.md` as a low-level status tool
+21. `status set-object`
+   - write one unified object row in `_status.md` as a low-level status tool
+22. `rule sync-impact`
    - compute rule-specific scope, resolve rule-only exceptions into generic impact input, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
    - when stable landing self-exemption is needed, the caller must pass both `--stable-landing-unit` and exact `--stable-landing-rule-refs`
    - when the same stable landing round retargeted candidate units to those stable landing rule refs, the caller must pass those units through `--retargeted-units` and must select both the old candidate Rule refs and the new stable Rule refs through exact `--rule-refs`
    - the caller may narrow the derived unit subset with `--units`, but at least one rule trigger input must still be provided through `--rule-refs` or `--rule-ids`; retargeted stable landing requires exact `--rule-refs`
-22. `rule consumers`
+23. `rule consumers`
    - read current-layer `unit` and `scenario` frontmatter `rule_refs` and print the consumers for one `rule_id` or exact `rule_ref`
-23. `rule release-version`
+24. `rule release-version`
    - publish an already-existing stable Rule version by retargeting current-layer consumers from `--from-ref` to `--to-ref`
    - candidate current-layer objects are rewritten directly
    - stable current-layer objects are auto-forked to candidate before their candidate `rule_refs` are rewritten
@@ -267,9 +271,43 @@ They are not binary freshness inputs unless they change compiled binary behavior
 
 Rules:
 
-1. `status set-object` is the primary write surface for the unified table
-2. `status set-unit` remains available for unit-scoped deterministic writeback
-3. tooling must not infer the next command; callers must pass it explicitly
+1. `command close` is the standard command-closing surface for lifecycle state progression
+2. `status set-object` and `status set-unit` remain available only as low-level deterministic status write tools
+3. standard command files should use `command close` instead of directly calling `status set-object`
+4. `command close` may infer only the fixed state write defined by the command name and explicit `--outcome`; it must not infer the outcome itself
+5. dry-run is the default; callers must pass `--apply` before `_status.md` or process files are changed
+
+## Command Close
+
+`command close` moves one unit or scenario command from its current `_status.md` row to the one legal next state for an explicit outcome.
+It is deterministic state machinery, not a semantic judge.
+
+Required flags:
+
+1. `--command`
+2. `--object-type`
+3. `--object`
+4. `--outcome`
+
+Optional flags:
+
+1. `--reason`
+2. `--failure-layer`
+3. `--candidate-intent`
+4. `--notes`
+5. `--stable-before`
+6. `--apply`
+
+Execution rules:
+
+1. without `--apply`, the command prints `status_before`, `status_after`, `validation_action`, and `cleanup_action` without changing files
+2. with `--apply`, the command writes `_status.md` and executes the success or fallback cleanup required by the fixed transition table
+3. the current `_status.md` `Next Command` must equal `--command`, except for creation commands that register a missing object row
+4. pass outcomes for check, plan, and verify gates validate the required process file before status progression
+5. controlled stable-verify outcomes require the matching `--candidate-intent`
+6. promotion recovery requires `--stable-before yes|no`
+7. generic `truth_fallback` outcomes require an explicit `--reason`, because the command result owns the fallback reason code
+8. `unit_plan` `truth_fallback` requires `--reason truth_incomplete`
 
 ## Usage Examples
 
@@ -299,6 +337,8 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-refresh --flow spec_flow_design_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-touch --flow spec_flow_design_review
 ./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command unit_impl --object-type unit --object ai
+./specflow/tooling/bin/specflowctl-linux-amd64 command close --command unit_stable_verify --object-type unit --object ai --outcome controlled_repair_required --candidate-intent repair
+./specflow/tooling/bin/specflowctl-linux-amd64 command close --command unit_stable_verify --object-type unit --object ai --outcome controlled_repair_required --candidate-intent repair --apply
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --object-type unit --object ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot validate-process --object-type scenario --object task_execution --process verify
 ./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --object-type unit --object ai --from-command unit_promote --reason evidence_incomplete --failure-layer evidence_layer

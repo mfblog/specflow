@@ -142,7 +142,8 @@ const TRANSLATIONS = {
       lifecycleHeading: "本轮生命周期进度",
       lifecycleDescription: "进度条表示当前这一轮。若本轮已完成，下一步会作为下一轮入口单独显示。",
       lifecycleAria: "{label} 生命周期位置",
-      nextRoundEntry: "下一轮入口"
+      nextRoundEntry: "下一轮入口",
+      nextRepairEntry: "修复入口"
     },
     todo: {
       empty: "暂无待处理动作。",
@@ -152,6 +153,7 @@ const TRANSLATIONS = {
       boardDescription: "每张卡片都来自 _status.md 的 Next Command。点击卡片查看需要打开的材料。",
       actionType: "动作类型",
       command: "命令",
+      intent: "意图",
       materials: "可查看材料",
       references: "参考材料",
       implementation: "实现路径",
@@ -175,9 +177,14 @@ const TRANSLATIONS = {
         implementation: "实现执行",
         verify: "验证确认",
         promote: "沉淀基线",
-        fork: "开启新一轮",
+        repairFork: "修复基线",
+        fork: "开启变更轮次",
         new: "初始化 / 新建",
         other: "其他动作"
+      },
+      intents: {
+        repair: "修复基线",
+        change: "开启变更轮次"
       }
     },
     review: {
@@ -451,7 +458,8 @@ const TRANSLATIONS = {
       lifecycleHeading: "Current Round Progress",
       lifecycleDescription: "The progress bar represents the current round. When the round is complete, the next command is shown separately as the next-round entry.",
       lifecycleAria: "{label} lifecycle position",
-      nextRoundEntry: "Next-round entry"
+      nextRoundEntry: "Next-round entry",
+      nextRepairEntry: "Repair entry"
     },
     todo: {
       empty: "No pending actions.",
@@ -461,6 +469,7 @@ const TRANSLATIONS = {
       boardDescription: "Each card comes from the Next Command field in _status.md. Select a card to see the material to open.",
       actionType: "Action type",
       command: "Command",
+      intent: "Intent",
       materials: "Readable material",
       references: "Reference material",
       implementation: "Implementation paths",
@@ -484,9 +493,14 @@ const TRANSLATIONS = {
         implementation: "Implementation",
         verify: "Verification",
         promote: "Promote baseline",
-        fork: "Start new round",
+        repairFork: "Repair baseline",
+        fork: "Start change round",
         new: "Initialize / create",
         other: "Other action"
+      },
+      intents: {
+        repair: "Repair baseline",
+        change: "Start change round"
       }
     },
     review: {
@@ -1686,7 +1700,7 @@ function renderLifecycleCard(object) {
       </div>
       ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: object.label }))}
       <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
-      ${renderNextRoundEntry(view)}
+      ${renderNextRoundEntry(view, object)}
       <p>${escapeHTML(t("fallback.nextStep", { value: object.next_command || t("fallback.undeclared") }))}</p>
     </article>
   `;
@@ -1796,16 +1810,29 @@ function renderLifecycleTrack(view, ariaLabel) {
   `;
 }
 
-function renderNextRoundEntry(view) {
+function renderNextRoundEntry(view, object) {
   if (!view.nextRoundEntry) return "";
+  const intentClass = nextIntentClass(object);
+  const label = nextRoundEntryLabel(object);
+  const title = nextRoundEntryTitle(view.nextRoundEntry, object);
   return `
-    <div class="next-round-entry">
-      <span>${escapeHTML(t("statusBoard.nextRoundEntry"))}</span>
-      <span class="lifecycle-step current" title="${escapeAttr(view.nextRoundEntry.command + " · " + view.nextRoundEntry.label)}">
+    <div class="next-round-entry ${escapeAttr(intentClass)}">
+      <span>${escapeHTML(label)}</span>
+      <span class="lifecycle-step current" title="${escapeAttr(title)}">
         <code>${escapeHTML(view.nextRoundEntry.command)}</code>
       </span>
     </div>
   `;
+}
+
+function nextRoundEntryLabel(object) {
+  return nextIntent(object) === "repair" ? t("statusBoard.nextRepairEntry") : t("statusBoard.nextRoundEntry");
+}
+
+function nextRoundEntryTitle(step, object) {
+  const intent = nextIntent(object);
+  const label = intent ? todoIntentLabel(intent) : step.label;
+  return `${step.command} · ${label}`;
 }
 
 function lifecycleStep(command) {
@@ -1930,10 +1957,10 @@ function renderTodoBoard() {
 function renderTodoCard(item) {
   const view = lifecycleView(item.object, item.nextCommand);
   return `
-    <article class="todo-card ${item.id === selectedNodeID ? "active" : ""}" data-todo-card="${escapeAttr(item.id)}">
+    <article class="todo-card ${item.id === selectedNodeID ? "active" : ""} ${escapeAttr(nextIntentClass(item.object))}" data-todo-card="${escapeAttr(item.id)}">
       <div class="todo-card-head">
         <button class="card-object" type="button" data-todo="${escapeAttr(item.id)}">${escapeHTML(item.objectLabel)}</button>
-        <span class="todo-type">${escapeHTML(todoTypeLabel(item.type))}</span>
+        <span class="todo-type ${escapeAttr(nextIntentClass(item.object))}">${escapeHTML(todoTypeLabel(item.type))}</span>
       </div>
       <div class="todo-command-row">
         <span>${escapeHTML(t("todo.command"))}</span>
@@ -1941,11 +1968,23 @@ function renderTodoCard(item) {
           <code>${escapeHTML(item.commandText)}</code>
         </button>
       </div>
+      ${renderTodoIntentPill(item)}
       ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
       <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
-      ${renderNextRoundEntry(view)}
+      ${renderNextRoundEntry(view, item.object)}
       <p>${escapeHTML(item.object.notes || t("fallback.none"))}</p>
     </article>
+  `;
+}
+
+function renderTodoIntentPill(item) {
+  const intent = nextIntent(item.object);
+  if (!intent) return "";
+  return `
+    <div class="todo-intent ${escapeAttr(nextIntentClass(item.object))}">
+      <span>${escapeHTML(t("todo.intent"))}</span>
+      <strong>${escapeHTML(todoIntentLabel(intent))}</strong>
+    </div>
   `;
 }
 
@@ -1983,7 +2022,7 @@ function todoItems() {
     .filter((object) => (object.kind === "unit" || object.kind === "scenario") && String(object.next_command || "").trim())
     .map((object) => {
       const nextCommand = String(object.next_command || "").trim();
-      const type = todoTypeForCommand(nextCommand);
+      const type = todoTypeForObject(object, nextCommand);
       const sources = todoSourcesForObject(object, nextCommand);
       return {
         id: `todo:${object.kind}:${object.id}`,
@@ -2024,8 +2063,13 @@ function todoTypeForCommand(command) {
   return "other";
 }
 
+function todoTypeForObject(object, command) {
+  if (command === "unit_fork" && nextIntent(object) === "repair") return "repairFork";
+  return todoTypeForCommand(command);
+}
+
 function todoTypeOrder() {
-  return ["stableVerify", "designCheck", "plan", "implementation", "verify", "promote", "fork", "new", "other"];
+  return ["stableVerify", "repairFork", "designCheck", "plan", "implementation", "verify", "promote", "fork", "new", "other"];
 }
 
 function compareTodoItems(left, right) {
@@ -2036,6 +2080,19 @@ function compareTodoItems(left, right) {
 
 function todoTypeLabel(type) {
   return t(`todo.types.${type}`);
+}
+
+function nextIntent(object) {
+  return String(object && object.next_intent ? object.next_intent : "").trim();
+}
+
+function nextIntentClass(object) {
+  const intent = nextIntent(object);
+  return intent ? `intent-${intent}` : "";
+}
+
+function todoIntentLabel(intent) {
+  return t(`todo.intents.${intent}`);
 }
 
 function todoSourcesForObject(object, command) {
@@ -2298,7 +2355,7 @@ function renderReviewProgressHeader(path) {
         </div>
         ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
         <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
-        ${renderNextRoundEntry(view)}
+        ${renderNextRoundEntry(view, item.object)}
       </section>
     `;
   }
@@ -2310,7 +2367,7 @@ function renderReviewProgressHeader(path) {
       </div>
       ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
       <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
-      ${renderNextRoundEntry(view)}
+      ${renderNextRoundEntry(view, item.object)}
     </section>
   `;
 }
@@ -2651,6 +2708,7 @@ function renderTodoDetail(item) {
     <dl class="detail-grid">
       <dt>${escapeHTML(t("todo.actionType"))}</dt><dd>${escapeHTML(todoTypeLabel(item.type))}</dd>
       <dt>${escapeHTML(t("todo.command"))}</dt><dd><code>${escapeHTML(item.commandText)}</code></dd>
+      ${renderTodoIntentDetailRows(item)}
       <dt>${escapeHTML(t("inspector.fields.status"))}</dt><dd>${escapeHTML(item.object.human_state || item.object.layer || t("fallback.undeclared"))}</dd>
       <dt>${escapeHTML(t("todo.notes"))}</dt><dd>${escapeHTML(item.object.notes || t("fallback.none"))}</dd>
     </dl>
@@ -2658,7 +2716,7 @@ function renderTodoDetail(item) {
       <h2>${escapeHTML(t("review.progressTitle"))}</h2>
       ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
       <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
-      ${renderNextRoundEntry(view)}
+      ${renderNextRoundEntry(view, item.object)}
       <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(t("review.copyNextCommand"))}">
         <span>${escapeHTML(t("review.nextCommand"))}</span>
         <code>${escapeHTML(item.commandText)}</code>
@@ -2684,6 +2742,12 @@ function renderTodoDetail(item) {
   bindInspectorLinks();
   bindReviewProgressHeader();
   updateTruthTab(item.sources, item.id);
+}
+
+function renderTodoIntentDetailRows(item) {
+  const intent = nextIntent(item.object);
+  if (!intent) return "";
+  return `<dt>${escapeHTML(t("todo.intent"))}</dt><dd>${escapeHTML(todoIntentLabel(intent))}</dd>`;
 }
 
 function renderTodoEmptyDetail() {

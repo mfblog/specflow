@@ -14,6 +14,9 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/agent_operability_standard.md"), "# operability\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/natural_language_routing.md"), "# routing\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/onboarding_decision_policy.md"), "# onboarding\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intent_policy.md"), "# candidate intent\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/repair.md"), "# repair\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/change.md"), "# change\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/command_policy.md"), "# command policy\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/implementation_change_policy.md"), "# implementation policy\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/checkpoint_protocol.md"), "# checkpoint\n")
@@ -96,6 +99,21 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	}
 	if !containsString(scope.GuidanceSkillFiles, "specflow/framework/skills/using-specflow-guidance/SKILL.md") {
 		t.Fatalf("expected guidance skill files in scope, got %+v", scope.GuidanceSkillFiles)
+	}
+	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intent_policy.md") {
+		t.Fatalf("expected candidate intent policy in candidate intent scope, got %+v", scope.CandidateIntentFiles)
+	}
+	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intents/repair.md") {
+		t.Fatalf("expected repair intent standard in candidate intent scope, got %+v", scope.CandidateIntentFiles)
+	}
+	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intents/change.md") {
+		t.Fatalf("expected change intent standard in candidate intent scope, got %+v", scope.CandidateIntentFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/candidate_intent_policy.md") {
+		t.Fatalf("expected candidate intent policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/candidate_intents/repair.md") {
+		t.Fatalf("expected repair intent standard in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/skills/using-specflow-guidance/SKILL.md") {
 		t.Fatalf("expected guidance skill files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
@@ -182,6 +200,9 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/agent_operability_standard.md"), "# operability\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/natural_language_routing.md"), "# routing\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/onboarding_decision_policy.md"), "# onboarding\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intent_policy.md"), "# candidate intent\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/repair.md"), "# repair\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/change.md"), "# change\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/command_policy.md"), "# command policy\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/implementation_change_policy.md"), "# implementation policy\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/checkpoint_protocol.md"), "# checkpoint\n")

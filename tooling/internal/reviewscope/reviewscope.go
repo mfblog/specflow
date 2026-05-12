@@ -15,6 +15,7 @@ type SpecFlowScope struct {
 	Scenario                          string
 	FrameworkGuidelineFiles           []string
 	CommandFiles                      []string
+	CandidateIntentFiles              []string
 	GuidanceSkillFiles                []string
 	RuleGovernanceFiles               []string
 	TemplateGovernanceFiles           []string
@@ -44,11 +45,16 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	if err != nil {
 		return scope, err
 	}
+	candidateIntentStandardFiles, err := globRelative(repoRoot, "specflow/framework/candidate_intents/*.md")
+	if err != nil {
+		return scope, err
+	}
+	candidateIntentFiles := sortAndDedupe(append([]string{"specflow/framework/candidate_intent_policy.md"}, candidateIntentStandardFiles...))
 	guidanceSkillFiles, err := globRelative(repoRoot, "specflow/framework/skills/*/SKILL.md")
 	if err != nil {
 		return scope, err
 	}
-	if len(frameworkFiles) == 0 || len(commandFiles) == 0 || len(guidanceSkillFiles) == 0 {
+	if len(frameworkFiles) == 0 || len(commandFiles) == 0 || len(candidateIntentStandardFiles) == 0 || len(guidanceSkillFiles) == 0 {
 		return scope, fmt.Errorf("default governance files are incomplete")
 	}
 
@@ -105,7 +111,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/process_snapshot_contract.md",
 		"specflow/framework/recovery_policy.md",
 	}
-	agentOperabilityFiles := collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, guidanceSkillFiles, ruleFiles, processStateContractFiles, toolingContractFiles)
+	agentOperabilityFiles := collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, candidateIntentFiles, guidanceSkillFiles, ruleFiles, processStateContractFiles, toolingContractFiles)
 	projectInstanceCompatibilityFiles, err := collectProjectInstanceCompatibilityFiles(repoRoot)
 	if err != nil {
 		return scope, err
@@ -142,6 +148,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	}
 
 	required := append([]string{}, ruleFiles...)
+	required = append(required, candidateIntentFiles...)
 	required = append(required, minimumGuidanceSkillFiles...)
 	required = append(required, templateGovernanceFiles...)
 	required = append(required, templateEntryFiles...)
@@ -170,6 +177,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 
 	scope.FrameworkGuidelineFiles = frameworkFiles
 	scope.CommandFiles = commandFiles
+	scope.CandidateIntentFiles = sortAndDedupe(candidateIntentFiles)
 	scope.GuidanceSkillFiles = sortAndDedupe(guidanceSkillFiles)
 	scope.RuleGovernanceFiles = ruleFiles
 	scope.TemplateGovernanceFiles = templateGovernanceFiles
@@ -283,7 +291,7 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 	return scope, nil
 }
 
-func collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, guidanceSkillFiles, sharedGovernanceFiles, processStateContractFiles, toolingContractFiles []string) []string {
+func collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, candidateIntentFiles, guidanceSkillFiles, sharedGovernanceFiles, processStateContractFiles, toolingContractFiles []string) []string {
 	files := []string{
 		"specflow/framework/agent_operability_standard.md",
 		"specflow/framework/spec_flow_review.md",
@@ -298,6 +306,7 @@ func collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templat
 	files = append(files, projectEntryFiles...)
 	files = append(files, templateEntryFiles...)
 	files = append(files, commandFiles...)
+	files = append(files, candidateIntentFiles...)
 	files = append(files, guidanceSkillFiles...)
 	files = append(files, sharedGovernanceFiles...)
 	files = append(files, processStateContractFiles...)

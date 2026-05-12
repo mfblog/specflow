@@ -34,6 +34,8 @@ type ObjectView struct {
 	Candidate           string      `json:"candidate,omitempty"`
 	NextCommand         string      `json:"next_command,omitempty"`
 	NextLabel           string      `json:"next_label,omitempty"`
+	NextIntent          string      `json:"next_intent,omitempty"`
+	NextIntentLabel     string      `json:"next_intent_label,omitempty"`
 	Notes               string      `json:"notes,omitempty"`
 	TruthPaths          []SourceRef `json:"truth_paths"`
 	ImplementationPaths []SourceRef `json:"implementation_paths"`
