@@ -818,6 +818,8 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 		fmt.Fprintf(stdout, "Released rule version: %s from %s to %s\n", result.RuleID, result.FromRef, result.ToRef)
 		writeList(stdout, "Candidate current-layer objects updated", result.CandidateUpdated)
 		writeList(stdout, "Stable current-layer objects forked", result.StableForked)
+		writeList(stdout, "Appendix files retargeted", result.AppendixRetargeted)
+		writeList(stdout, "Candidate appendices removed", result.AppendixRemoved)
 		writeList(stdout, "Process files removed", result.ProcessFilesRemoved)
 		writeList(stdout, "Synced units", result.Sync.ScopedModules)
 		writeList(stdout, "Synced scenarios", result.Sync.ScopedFlows)

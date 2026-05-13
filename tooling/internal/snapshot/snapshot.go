@@ -170,6 +170,7 @@ var requiredScenarioProcessSnapshotFields = map[string][]string{
 		"truth_fingerprint",
 		"repository_mapping_snapshot",
 		"unit_snapshot",
+		"scenario_appendix_snapshot",
 		"rule_snapshot",
 		"acceptance_item_set",
 	},
@@ -188,6 +189,7 @@ var requiredScenarioProcessSnapshotFields = map[string][]string{
 		"truth_fingerprint",
 		"repository_mapping_snapshot",
 		"unit_snapshot",
+		"scenario_appendix_snapshot",
 		"verification_scope_ref",
 		"rule_snapshot",
 		"acceptance_item_set",
@@ -253,8 +255,8 @@ func RebuildCurrentObject(repoRoot, objectType, object string) (Snapshot, error)
 	}
 	result.SpecVersionRef = fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(mainSpecRef), ".md"), version)
 
-	if objectType == "unit" {
-		appendixEntries, err := buildAppendixSnapshot(repoRoot, mainSpecRef, body)
+	if objectType == "unit" || objectType == "scenario" {
+		appendixEntries, err := buildAppendixSnapshot(repoRoot, mainSpecRef, frontmatter, body)
 		if err != nil {
 			return Snapshot{}, err
 		}
@@ -403,6 +405,14 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 		}
 	}
 	if objectType == "scenario" {
+		if actual.scalars["scenario_appendix_snapshot"] != "" || actual.appendixPresent {
+			actualAppendix := normalizeAppendixList(actual.appendixEntries)
+			expectedAppendix := normalizeAppendixList(expected.ModuleAppendixSnapshot)
+			if actualAppendix != expectedAppendix {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("scenario_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
+			}
+		}
 		if actual.repositoryMappingPresent || actual.scalars["repository_mapping_snapshot"] != "" {
 			actualMapping := normalizeRepositoryMapping(actual.repositoryMapping)
 			expectedMapping := normalizeRepositoryMapping(expected.RepositoryMapping)
@@ -528,6 +538,8 @@ func Render(snapshot Snapshot) string {
 		lines = append(lines, renderAppendixLines(snapshot.ModuleAppendixSnapshot)...)
 	}
 	if objectType == "scenario" {
+		lines = append(lines, "scenario_appendix_snapshot:")
+		lines = append(lines, renderAppendixLines(snapshot.ModuleAppendixSnapshot)...)
 		lines = append(lines, "repository_mapping_snapshot:")
 		lines = append(lines, renderRepositoryMappingLines(snapshot.RepositoryMapping)...)
 		lines = append(lines, "unit_snapshot:")
@@ -606,15 +618,61 @@ func isStableMainSpecRef(mainSpecRef string) bool {
 		strings.HasPrefix(mainSpecRef, "docs/specs/scenarios/stable/")
 }
 
-func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry, error) {
+func buildAppendixSnapshot(repoRoot, mainSpecRef string, frontmatter map[string]string, body string) ([]AppendixEntry, error) {
 	mainDir := filepath.Dir(filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)))
 	currentLayer := mainSpecLayer(mainSpecRef)
-	currentModule, err := mainSpecModule(mainSpecRef)
+	currentObject, ownerKey, err := mainSpecObject(mainSpecRef)
 	if err != nil {
 		return nil, err
 	}
 	seen := map[string]bool{}
 	entries := []AppendixEntry{}
+	addAppendix := func(relPath string) error {
+		relPath = filepath.ToSlash(filepath.Clean(relPath))
+		if relPath == "." || filepath.IsAbs(relPath) || filepath.Ext(relPath) != ".md" {
+			return nil
+		}
+		if relPath == mainSpecRef {
+			return nil
+		}
+		if seen[relPath] {
+			return nil
+		}
+		seen[relPath] = true
+
+		absPath := filepath.Join(repoRoot, filepath.FromSlash(relPath))
+		content, err := os.ReadFile(absPath)
+		if err != nil {
+			return fmt.Errorf("read appendix %s: %w", relPath, err)
+		}
+		frontmatter, _, err := parseFrontmatter(string(content))
+		if err != nil {
+			return fmt.Errorf("%s: %w", relPath, err)
+		}
+		if layer := strings.TrimSpace(frontmatter["layer"]); layer != "" && layer != currentLayer {
+			return fmt.Errorf("%s: appendix layer %q does not match main spec layer %q", relPath, layer, currentLayer)
+		}
+		if owner := strings.TrimSpace(frontmatter[ownerKey]); owner != "" && owner != currentObject {
+			return fmt.Errorf("%s: appendix %s %q does not match main spec %s %q", relPath, ownerKey, owner, ownerKey, currentObject)
+		}
+		entries = append(entries, AppendixEntry{
+			FileRef:     relPath,
+			Fingerprint: hashNormalizedText(string(content)),
+		})
+		return nil
+	}
+	if evidenceRef := strings.TrimSpace(frontmatter["evidence_appendix_ref"]); evidenceRef != "" && evidenceRef != "none" {
+		relPath, err := resolveAppendixRef(repoRoot, mainDir, evidenceRef)
+		if err != nil {
+			return nil, err
+		}
+		if !strings.Contains(relPath, "/appendix/") {
+			return nil, fmt.Errorf("%s: evidence appendix ref %s is not under an appendix directory", mainSpecRef, relPath)
+		}
+		if err := addAppendix(relPath); err != nil {
+			return nil, err
+		}
+	}
 	for _, destination := range markdownLinkPattern.FindAllStringSubmatch(body, -1) {
 		if len(destination) != 2 {
 			continue
@@ -643,35 +701,41 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry,
 		if filepath.Dir(relWithinLayerRoot) == "." {
 			return nil, fmt.Errorf("%s: module-local supporting file %s remains in the layer root; this is directory drift", mainSpecRef, relPath)
 		}
-		if seen[relPath] {
-			continue
+		if err := addAppendix(relPath); err != nil {
+			return nil, err
 		}
-		seen[relPath] = true
-
-		content, err := os.ReadFile(absPath)
-		if err != nil {
-			return nil, fmt.Errorf("read appendix %s: %w", relPath, err)
-		}
-		frontmatter, _, err := parseFrontmatter(string(content))
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", relPath, err)
-		}
-		if layer := strings.TrimSpace(frontmatter["layer"]); layer != "" && layer != currentLayer {
-			return nil, fmt.Errorf("%s: appendix layer %q does not match main spec layer %q", relPath, layer, currentLayer)
-		}
-		if module := strings.TrimSpace(frontmatter["unit"]); module != "" && module != currentModule {
-			return nil, fmt.Errorf("%s: appendix module %q does not match main spec module %q", relPath, module, currentModule)
-		}
-		entries = append(entries, AppendixEntry{
-			FileRef:     relPath,
-			Fingerprint: hashNormalizedText(string(content)),
-		})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].FileRef < entries[j].FileRef
 	})
 	return entries, nil
+}
+
+func BuildAppendixSnapshot(repoRoot, mainSpecRef, body string) ([]AppendixEntry, error) {
+	return buildAppendixSnapshot(repoRoot, mainSpecRef, nil, body)
+}
+
+func resolveAppendixRef(repoRoot, mainDir, ref string) (string, error) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" || strings.HasPrefix(ref, "/") || strings.Contains(ref, "://") {
+		return "", fmt.Errorf("invalid appendix ref %q", ref)
+	}
+	var absPath string
+	if strings.HasPrefix(filepath.ToSlash(ref), "docs/") {
+		absPath = filepath.Join(repoRoot, filepath.FromSlash(ref))
+	} else {
+		absPath = filepath.Join(mainDir, filepath.FromSlash(ref))
+	}
+	relPath, err := filepath.Rel(repoRoot, filepath.Clean(absPath))
+	if err != nil {
+		return "", err
+	}
+	relPath = filepath.ToSlash(relPath)
+	if strings.HasPrefix(relPath, "../") || relPath == ".." {
+		return "", fmt.Errorf("appendix ref %q resolves outside repository", ref)
+	}
+	return relPath, nil
 }
 
 func buildRuleSnapshot(repoRoot, moduleLayer string, refs []string) ([]RuleEntry, error) {
@@ -997,15 +1061,19 @@ func mainSpecLayer(mainSpecRef string) string {
 	return "stable"
 }
 
-func mainSpecModule(mainSpecRef string) (string, error) {
+func mainSpecObject(mainSpecRef string) (string, string, error) {
 	base := strings.TrimSuffix(filepath.Base(mainSpecRef), ".md")
 	switch {
 	case strings.HasPrefix(base, "c_unit_"):
-		return strings.TrimPrefix(base, "c_unit_"), nil
+		return strings.TrimPrefix(base, "c_unit_"), "unit", nil
 	case strings.HasPrefix(base, "s_unit_"):
-		return strings.TrimPrefix(base, "s_unit_"), nil
+		return strings.TrimPrefix(base, "s_unit_"), "unit", nil
+	case strings.HasPrefix(base, "c_scenario_"):
+		return strings.TrimPrefix(base, "c_scenario_"), "scenario", nil
+	case strings.HasPrefix(base, "s_scenario_"):
+		return strings.TrimPrefix(base, "s_scenario_"), "scenario", nil
 	default:
-		return "", fmt.Errorf("unsupported main spec file ref %q", mainSpecRef)
+		return "", "", fmt.Errorf("unsupported main spec file ref %q", mainSpecRef)
 	}
 }
 
@@ -1059,7 +1127,7 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 			result.presentFields[key] = true
 			if value == "" {
 				switch key {
-				case "unit_appendix_snapshot":
+				case "unit_appendix_snapshot", "scenario_appendix_snapshot":
 					result.appendixPresent = true
 					currentList = key
 				case "repository_mapping_snapshot":
@@ -1097,9 +1165,9 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 			}
 			listItemStart := strings.HasPrefix(trimmed, "- ")
 			switch currentList {
-			case "unit_appendix_snapshot":
+			case "unit_appendix_snapshot", "scenario_appendix_snapshot":
 				if !allowedAppendixSnapshotField(key) {
-					result.invalidFields = append(result.invalidFields, fmt.Sprintf("unsupported field: unit_appendix_snapshot.%s", key))
+					result.invalidFields = append(result.invalidFields, fmt.Sprintf("unsupported field: %s.%s", currentList, key))
 					continue
 				}
 				if currentIndex < 0 || (listItemStart && key == "file_ref") {
@@ -1150,6 +1218,10 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 	}
 
 	if raw, ok := result.scalars["unit_appendix_snapshot"]; ok && raw == "none" {
+		result.appendixPresent = true
+		result.appendixEntries = nil
+	}
+	if raw, ok := result.scalars["scenario_appendix_snapshot"]; ok && raw == "none" {
 		result.appendixPresent = true
 		result.appendixEntries = nil
 	}
@@ -1635,6 +1707,8 @@ func classifyFailureLayer(objectType, processKind string, mismatches []string) s
 			strings.Contains(mismatch, "spec_version_ref mismatch"),
 			strings.Contains(mismatch, "spec_fingerprint mismatch"),
 			strings.Contains(mismatch, "acceptance_item_set mismatch"),
+			strings.Contains(mismatch, "scenario_appendix_snapshot mismatch"),
+			strings.Contains(mismatch, "unit_appendix_snapshot mismatch"),
 			strings.Contains(mismatch, "unit_snapshot mismatch"),
 			strings.Contains(mismatch, "repository_mapping_snapshot mismatch"),
 			strings.Contains(mismatch, "rule_snapshot mismatch"):

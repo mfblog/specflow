@@ -100,6 +100,49 @@ func TestInitIncludesStateSpaceClosureSlice(t *testing.T) {
 	}
 }
 
+func TestInitIncludesSupportingTruthLifecycleConvergenceSlice(t *testing.T) {
+	repoRoot, file, _ := createInitializedRun(t)
+	state := mustParse(t, file)
+	slice := findSlice(t, state, "supporting_truth_lifecycle_convergence")
+
+	if slice.SliceType != "cross_convergence" {
+		t.Fatalf("expected supporting_truth_lifecycle_convergence to be cross_convergence, got %s", slice.SliceType)
+	}
+	for _, dependency := range []string{
+		"routing_and_command_policy",
+		"truth_and_implementation_gates",
+		"process_and_impact_state",
+		"project_instance_contract_compatibility",
+		"tooling_execution",
+	} {
+		if !containsString(slice.DependsOn, dependency) {
+			t.Fatalf("expected supporting truth dependency %s, got %+v", dependency, slice.DependsOn)
+		}
+	}
+	for _, input := range []string{
+		"specflow/framework/commands/unit_fork.md",
+		"specflow/framework/commands/scenario_fork.md",
+		"specflow/framework/commands/unit_promote.md",
+		"specflow/framework/commands/scenario_promote.md",
+		"specflow/framework/recovery_policy.md",
+		"specflow/framework/rule_sync.md",
+		"docs/specs/_status.md",
+		"specflow/tooling/internal/processcleanup/processcleanup.go",
+		"specflow/tooling/internal/rulesync/release.go",
+	} {
+		if !containsString(slice.InputFiles, input) {
+			t.Fatalf("expected supporting truth input %s, got %+v", input, slice.InputFiles)
+		}
+	}
+	projectConvergence := findSlice(t, state, "project_instance_to_framework_convergence")
+	if !containsString(projectConvergence.DependsOn, "supporting_truth_lifecycle_convergence") {
+		t.Fatalf("expected project/framework convergence to depend on supporting truth lifecycle, got %+v", projectConvergence.DependsOn)
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "specflow/tooling/internal/rulesync/release.go")); err != nil {
+		t.Fatalf("expected release-version tooling fixture file: %v", err)
+	}
+}
+
 func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	repoRoot := createReviewRunRepo(t)
 	now := time.Date(2026, 4, 26, 10, 30, 0, 0, time.UTC)
@@ -837,6 +880,34 @@ func TestRefreshMarksToolingScriptSlicesStale(t *testing.T) {
 	}
 }
 
+func TestRefreshMarksSupportingTruthLifecycleAndDependentConvergenceStale(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	setSliceStatus(t, &state, "supporting_truth_lifecycle_convergence", slicePassed)
+	setSliceStatus(t, &state, "project_instance_to_framework_convergence", slicePassed)
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_fork.md"), "# unit_fork changed\n")
+
+	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if !containsString(result.StaleSlices, "supporting_truth_lifecycle_convergence") {
+		t.Fatalf("expected supporting_truth_lifecycle_convergence stale after command change, got %+v", result.StaleSlices)
+	}
+	if !containsString(result.StaleSlices, "project_instance_to_framework_convergence") {
+		t.Fatalf("expected dependent project/framework convergence stale after supporting truth change, got %+v", result.StaleSlices)
+	}
+
+	refreshed := mustParse(t, file)
+	if got := findSlice(t, refreshed, "supporting_truth_lifecycle_convergence").Status; got != sliceStale {
+		t.Fatalf("expected supporting truth lifecycle stale, got %s", got)
+	}
+	if got := findSlice(t, refreshed, "project_instance_to_framework_convergence").Status; got != sliceStale {
+		t.Fatalf("expected project/framework convergence stale, got %s", got)
+	}
+}
+
 func TestRefreshUpdatesBaselineInputFilesWhenScopeDefinitionChanges(t *testing.T) {
 	repoRoot, file, now := createInitializedRun(t)
 	state := mustParse(t, file)
@@ -870,6 +941,25 @@ func TestRefreshUpdatesBaselineInputFilesWhenScopeDefinitionChanges(t *testing.T
 	}
 	if got := findSlice(t, refreshed, "tooling_to_rule_convergence").Status; got != sliceStale {
 		t.Fatalf("expected tooling_to_rule_convergence stale after input list update, got %s", got)
+	}
+}
+
+func TestValidateRejectsRunStateMissingSupportingTruthLifecycleSlice(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	state := mustParse(t, file)
+	filtered := make([]sliceEntry, 0, len(state.Baseline)-1)
+	for _, slice := range state.Baseline {
+		if slice.SliceID == "supporting_truth_lifecycle_convergence" {
+			continue
+		}
+		filtered = append(filtered, slice)
+	}
+	state.Baseline = filtered
+	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
+
+	validation := ValidateFile(repoRoot, FlowSpecFlowReview, file, now)
+	if validation.Valid || !containsDiagnostic(validation.Diagnostics, "missing baseline slice: supporting_truth_lifecycle_convergence") {
+		t.Fatalf("expected missing supporting truth lifecycle baseline diagnostic, got %+v", validation.Diagnostics)
 	}
 }
 
@@ -967,7 +1057,15 @@ func createReviewRunRepo(t *testing.T) string {
 	} {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# skill\n")
 	}
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check\n")
+	for _, relPath := range []string{
+		"specflow/framework/commands/unit_check.md",
+		"specflow/framework/commands/unit_fork.md",
+		"specflow/framework/commands/unit_promote.md",
+		"specflow/framework/commands/scenario_fork.md",
+		"specflow/framework/commands/scenario_promote.md",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
+	}
 	for _, relPath := range []string{
 		"specflow/templates/docs/specs/_status.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
@@ -986,6 +1084,8 @@ func createReviewRunRepo(t *testing.T) string {
 		"specflow/tooling/README.md",
 		"specflow/tooling/cmd/specflowctl/main.go",
 		"specflow/tooling/internal/demo/demo.go",
+		"specflow/tooling/internal/processcleanup/processcleanup.go",
+		"specflow/tooling/internal/rulesync/release.go",
 		"specflow/tooling/scripts/tooling_fingerprint.sh",
 		"specflow/tooling/scripts/tooling_fingerprint.ps1",
 		"specflow/tooling/go.mod",

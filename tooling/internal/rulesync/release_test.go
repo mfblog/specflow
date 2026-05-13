@@ -53,7 +53,9 @@ func TestReleaseVersionUpdatesCandidateAndAutoForksStableConsumer(t *testing.T) 
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/stable"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/units/stable"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/units/stable/appendix"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/units/candidate"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/active"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
@@ -79,6 +81,8 @@ func TestReleaseVersionUpdatesCandidateAndAutoForksStableConsumer(t *testing.T) 
 		"",
 		"# agent",
 		"",
+		"Roles appendix: [`docs/specs/units/stable/appendix/s_unit_agent_roles.md`](./appendix/s_unit_agent_roles.md).",
+		"",
 		"## Testability / Acceptance Criteria",
 		"",
 		"acceptance_item_set:",
@@ -91,6 +95,20 @@ func TestReleaseVersionUpdatesCandidateAndAutoForksStableConsumer(t *testing.T) 
 		"    not_runnable_yet: no",
 		"",
 	}, "\n"))
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/appendix/s_unit_agent_roles.md"), strings.Join([]string{
+		"---",
+		"unit: agent",
+		"layer: stable",
+		"spec_version_ref: s_unit_agent@0.1.0",
+		"---",
+		"",
+		"# Agent Roles",
+		"",
+		"See [`s_unit_agent.md`](../s_unit_agent.md).",
+		"Non-reference text prefix_s_unit_agent.md_suffix stays unchanged.",
+		"",
+	}, "\n"))
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_agent_old.md"), "stale")
 	writeUnitSpecWithRuleRefs(t, repoRoot, "candidate", "trace", []string{"s_b_rule_demo@0.1.0"})
 	writeStableSharedFile(t, repoRoot, `---
 rule_id: shared_demo
@@ -119,6 +137,12 @@ rule_version: 0.2.0
 	if len(result.CandidateUpdated) != 1 || result.CandidateUpdated[0] != "unit:trace" {
 		t.Fatalf("expected candidate trace update, got %+v", result.CandidateUpdated)
 	}
+	if len(result.AppendixRetargeted) != 1 || result.AppendixRetargeted[0] != "docs/specs/units/candidate/appendix/c_unit_agent_roles.md" {
+		t.Fatalf("expected agent appendix retarget, got %+v", result.AppendixRetargeted)
+	}
+	if len(result.AppendixRemoved) != 1 || result.AppendixRemoved[0] != "docs/specs/units/candidate/appendix/c_unit_agent_old.md" {
+		t.Fatalf("expected stale agent appendix removal, got %+v", result.AppendixRemoved)
+	}
 
 	agentCandidate, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_agent.md"))
 	if err != nil {
@@ -129,6 +153,26 @@ rule_version: 0.2.0
 		!strings.Contains(string(agentCandidate), "candidate_intent: change") ||
 		!strings.Contains(string(agentCandidate), "  - s_b_rule_demo@0.2.0") {
 		t.Fatalf("candidate agent was not correctly forked:\n%s", string(agentCandidate))
+	}
+	if !strings.Contains(string(agentCandidate), "./appendix/c_unit_agent_roles.md") ||
+		strings.Contains(string(agentCandidate), "s_unit_agent_roles.md") {
+		t.Fatalf("candidate agent appendix link was not retargeted:\n%s", string(agentCandidate))
+	}
+	agentAppendix, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_agent_roles.md"))
+	if err != nil {
+		t.Fatalf("read candidate agent appendix: %v", err)
+	}
+	agentAppendixText := string(agentAppendix)
+	if !strings.Contains(agentAppendixText, "layer: candidate") ||
+		strings.Contains(agentAppendixText, "spec_version_ref:") ||
+		!strings.Contains(agentAppendixText, "../c_unit_agent.md") ||
+		strings.Contains(agentAppendixText, "../s_unit_agent.md") ||
+		strings.Contains(agentAppendixText, "`s_unit_agent.md`") ||
+		!strings.Contains(agentAppendixText, "prefix_s_unit_agent.md_suffix") {
+		t.Fatalf("candidate agent appendix was not correctly retargeted:\n%s", agentAppendixText)
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_agent_old.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected stale candidate appendix to be removed, stat err=%v", err)
 	}
 	agentStable, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_agent.md"))
 	if err != nil {
@@ -156,7 +200,9 @@ func TestReleaseVersionAutoForksStableScenarioWithoutCandidateIntent(t *testing.
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/stable"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/scenarios/stable"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/scenarios/stable/appendix"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/appendix"))
 
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
 		"# Spec Status",
@@ -178,6 +224,8 @@ func TestReleaseVersionAutoForksStableScenarioWithoutCandidateIntent(t *testing.
 		"",
 		"# checkout",
 		"",
+		"Notes appendix: [`docs/specs/scenarios/stable/appendix/s_scenario_checkout_notes.md`](./appendix/s_scenario_checkout_notes.md).",
+		"",
 		"repository_mapping_ref: repository_mapping@0.1.0",
 		"unit_refs: none",
 		"",
@@ -191,6 +239,18 @@ func TestReleaseVersionAutoForksStableScenarioWithoutCandidateIntent(t *testing.
 		"    verification_method: Scenario verification for checkout.",
 		"    pass_condition: The checkout scenario reaches the declared result.",
 		"    not_runnable_yet: no",
+		"",
+	}, "\n"))
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/scenarios/stable/appendix/s_scenario_checkout_notes.md"), strings.Join([]string{
+		"---",
+		"scenario: checkout",
+		"layer: stable",
+		"spec_version_ref: s_scenario_checkout@0.2.0",
+		"---",
+		"",
+		"# Checkout Notes",
+		"",
+		"See [`s_scenario_checkout.md`](../s_scenario_checkout.md).",
 		"",
 	}, "\n"))
 	writeStableSharedFile(t, repoRoot, `---
@@ -214,6 +274,9 @@ rule_version: 0.2.0
 	if len(result.StableForked) != 1 || result.StableForked[0] != "scenario:checkout" {
 		t.Fatalf("expected stable checkout scenario fork, got %+v", result.StableForked)
 	}
+	if len(result.AppendixRetargeted) != 1 || result.AppendixRetargeted[0] != "docs/specs/scenarios/candidate/appendix/c_scenario_checkout_notes.md" {
+		t.Fatalf("expected scenario appendix retarget, got %+v", result.AppendixRetargeted)
+	}
 
 	scenarioCandidate, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/scenarios/candidate/c_scenario_checkout.md"))
 	if err != nil {
@@ -229,6 +292,22 @@ rule_version: 0.2.0
 	}
 	if strings.Contains(candidateText, "candidate_intent:") || strings.Contains(candidateText, "repair_basis:") {
 		t.Fatalf("scenario candidate must not receive unit candidate intent fields:\n%s", candidateText)
+	}
+	if !strings.Contains(candidateText, "./appendix/c_scenario_checkout_notes.md") ||
+		strings.Contains(candidateText, "s_scenario_checkout_notes.md") {
+		t.Fatalf("candidate scenario appendix link was not retargeted:\n%s", candidateText)
+	}
+	scenarioAppendix, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/scenarios/candidate/appendix/c_scenario_checkout_notes.md"))
+	if err != nil {
+		t.Fatalf("read candidate scenario appendix: %v", err)
+	}
+	scenarioAppendixText := string(scenarioAppendix)
+	if !strings.Contains(scenarioAppendixText, "layer: candidate") ||
+		strings.Contains(scenarioAppendixText, "spec_version_ref:") ||
+		!strings.Contains(scenarioAppendixText, "../c_scenario_checkout.md") ||
+		strings.Contains(scenarioAppendixText, "../s_scenario_checkout.md") ||
+		strings.Contains(scenarioAppendixText, "`s_scenario_checkout.md`") {
+		t.Fatalf("candidate scenario appendix was not correctly retargeted:\n%s", scenarioAppendixText)
 	}
 
 	statusData, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/_status.md"))

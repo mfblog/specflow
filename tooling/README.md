@@ -98,6 +98,7 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - validate required run-state fields, timestamps, all fixed statuses including closed statuses, baseline slices, score state when present, and dynamic slice parent links
 12. `review run-refresh --flow <review_flow>`
    - recompute slice input fingerprints for an open run-state file, mark changed `passed` slices as `stale`, and refresh `last_updated_at`
+   - for `spec_flow_review`, the generated baseline includes `supporting_truth_lifecycle_convergence` so stable/candidate supporting truth paths are reviewed as an explicit cross-convergence slice
 13. `review run-touch --flow <review_flow>`
    - refresh only `last_updated_at`
 14. `command preflight`
@@ -130,6 +131,8 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - publish an already-existing stable Rule version by retargeting current-layer consumers from `--from-ref` to `--to-ref`
    - candidate current-layer objects are rewritten directly
    - stable current-layer objects are auto-forked to candidate before their candidate `rule_refs` are rewritten
+   - same-object stable appendices explicitly linked by the stable main Spec are retargeted into candidate appendices during the auto-fork, including Markdown link targets and direct same-object path literals
+   - stale same-object candidate appendices are removed before the auto-fork writes current candidate appendices
    - stable unit forks additionally write `candidate_intent=change`; scenario forks do not write `candidate_intent`
 
 ## Reader Command Surface
@@ -205,6 +208,7 @@ Rules:
    - more than seven days old: delete as expired and create a new run state
 12. after reusing an open run-state file, callers must run `review run-refresh` before continuing review work so changed inputs become stale slices instead of hidden drift
 13. `review run-refresh` is the authoritative command for updating `input_fingerprint`; callers must not write manual hash output into run-state files
+14. `spec_flow_review` baseline run state includes `supporting_truth_lifecycle_convergence` to force explicit review of fork, promote, cleanup, rule release, and tooling paths for stable and candidate supporting truth
 
 ## Command Preflight
 

@@ -724,6 +724,7 @@ func renderImpactScenarioCheckProcessSnapshot(snap snapshot.Snapshot) string {
 		"truth_version_ref: " + snap.SpecVersionRef,
 		"truth_fingerprint: " + snap.SpecFingerprint,
 	}
+	lines = append(lines, renderImpactAppendixSnapshot("scenario_appendix_snapshot", snap.ModuleAppendixSnapshot)...)
 	lines = append(lines, renderImpactRepositoryMappingSnapshot(snap.RepositoryMapping)...)
 	lines = append(lines, renderImpactObjectSnapshot("unit_snapshot", "unit", snap.UnitSnapshot)...)
 	lines = append(lines, renderImpactRuleSnapshot(snap.RuleSnapshot)...)
@@ -750,6 +751,7 @@ func renderImpactScenarioVerifyProcessSnapshot(snap snapshot.Snapshot, status st
 		"truth_version_ref: " + snap.SpecVersionRef,
 		"truth_fingerprint: " + snap.SpecFingerprint,
 	}
+	lines = append(lines, renderImpactAppendixSnapshot("scenario_appendix_snapshot", snap.ModuleAppendixSnapshot)...)
 	lines = append(lines, renderImpactRepositoryMappingSnapshot(snap.RepositoryMapping)...)
 	lines = append(lines, renderImpactObjectSnapshot("unit_snapshot", "unit", snap.UnitSnapshot)...)
 	lines = append(lines,
@@ -760,6 +762,20 @@ func renderImpactScenarioVerifyProcessSnapshot(snap snapshot.Snapshot, status st
 	lines = append(lines, renderImpactAcceptanceEvidence(snap.AcceptanceItemSet, status)...)
 	lines = append(lines, "```", "")
 	return strings.Join(lines, "\n")
+}
+
+func renderImpactAppendixSnapshot(fieldName string, entries []snapshot.AppendixEntry) []string {
+	if len(entries) == 0 {
+		return []string{fieldName + ": none"}
+	}
+	lines := []string{fieldName + ":"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - file_ref: "+entry.FileRef,
+			"    fingerprint: "+entry.Fingerprint,
+		)
+	}
+	return lines
 }
 
 func renderImpactRepositoryMappingSnapshot(entry snapshot.RepositoryMappingEntry) []string {

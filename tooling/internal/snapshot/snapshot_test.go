@@ -111,6 +111,70 @@ bound_objects: all_units
 	}
 }
 
+func TestRebuildCurrentCollectsEvidenceAppendixRef(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/stable"))
+
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+
+	mainSpec := `---
+id: demo
+layer: candidate
+version: 0.1.0
+candidate_intent: change
+source_basis: mixed
+evidence_appendix_ref: docs/specs/units/candidate/appendix/c_unit_demo_evidence.md
+---
+
+# Demo
+
+` + testAcceptanceSection + `
+## Rule Alignment
+
+2. rule_refs: none
+`
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), mainSpec)
+
+	appendix := `---
+unit: demo
+layer: candidate
+---
+
+# Evidence
+`
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_demo_evidence.md"), appendix)
+
+	system := `---
+rule_id: g_rule_repository_baseline
+rule_scope: global
+layer: stable
+rule_version: 1.1.0
+bound_objects: all_units
+---
+
+# Rule
+`
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), system)
+
+	result, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	if len(result.ModuleAppendixSnapshot) != 1 {
+		t.Fatalf("expected one evidence appendix snapshot entry, got %d", len(result.ModuleAppendixSnapshot))
+	}
+	if result.ModuleAppendixSnapshot[0].FileRef != "docs/specs/units/candidate/appendix/c_unit_demo_evidence.md" {
+		t.Fatalf("unexpected appendix file ref: %s", result.ModuleAppendixSnapshot[0].FileRef)
+	}
+}
+
 func TestRebuildCurrentAcceptsRepairCandidateIntent(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
@@ -840,6 +904,59 @@ func TestValidateScenarioVerifyProcessAcceptsScenarioSnapshots(t *testing.T) {
 	}
 }
 
+func TestValidateScenarioCheckRejectsAppendixSnapshotDrift(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupScenarioSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrentObject(repoRoot, "scenario", "checkout")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	if len(expected.ModuleAppendixSnapshot) != 1 {
+		t.Fatalf("expected one scenario appendix snapshot entry, got %+v", expected.ModuleAppendixSnapshot)
+	}
+	body := strings.Replace(renderScenarioCheckProcessBody(expected), expected.ModuleAppendixSnapshot[0].Fingerprint, "stale-fingerprint", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/scenario/checkout.md"), "# check\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFileForObject(repoRoot, "scenario", "checkout", "check")
+	if err != nil {
+		t.Fatalf("ValidateProcessFileForObject: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "scenario_appendix_snapshot mismatch: actual=docs/specs/scenarios/candidate/appendix/c_scenario_checkout_notes.md|stale-fingerprint expected="+normalizeAppendixList(expected.ModuleAppendixSnapshot)) {
+		t.Fatalf("expected scenario appendix mismatch, got %+v", result.Mismatches)
+	}
+	if result.FailureLayer != "truth_layer" || result.NextCommand != "scenario_check" {
+		t.Fatalf("expected truth_layer/scenario_check, got %s/%s", result.FailureLayer, result.NextCommand)
+	}
+}
+
+func TestValidateScenarioCheckRejectsUnsupportedAppendixSnapshotField(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupScenarioSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrentObject(repoRoot, "scenario", "checkout")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	unsupportedField := "label"
+	body := strings.Replace(renderScenarioCheckProcessBody(expected), "    fingerprint: "+expected.ModuleAppendixSnapshot[0].Fingerprint, "    "+unsupportedField+": checkout_notes\n    fingerprint: "+expected.ModuleAppendixSnapshot[0].Fingerprint, 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/scenario/checkout.md"), "# check\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFileForObject(repoRoot, "scenario", "checkout", "check")
+	if err != nil {
+		t.Fatalf("ValidateProcessFileForObject: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "unsupported field: scenario_appendix_snapshot."+unsupportedField) {
+		t.Fatalf("expected unsupported scenario appendix field mismatch, got %+v", result.Mismatches)
+	}
+}
+
 func TestValidateScenarioPlanIsUnsupported(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupScenarioSnapshotValidationRepo(t, repoRoot)
@@ -1197,6 +1314,7 @@ func setupScenarioSnapshotValidationRepo(t *testing.T, repoRoot string) {
 	t.Helper()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/appendix"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/units/stable"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/scenario"))
 
@@ -1227,6 +1345,8 @@ evidence_appendix_ref: none
 
 # Checkout Scenario
 
+See [notes](./appendix/c_scenario_checkout_notes.md).
+
 repository_mapping_ref: repository_mapping@0.1.0
 unit_refs:
   - s_unit_ai@1.0.0
@@ -1242,6 +1362,13 @@ acceptance_item_set:
     verification_method: Run the checkout trigger-to-outcome path.
     pass_condition: The checkout result is observed.
     not_runnable_yet: no
+`)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/appendix/c_scenario_checkout_notes.md"), `---
+scenario: checkout
+layer: candidate
+---
+
+# Checkout Notes
 `)
 }
 
@@ -1267,7 +1394,8 @@ func renderFormalCheckProcessBody(expected Snapshot) string {
 		"truth_fingerprint: " + expected.SpecFingerprint,
 		"acceptance_item_set:",
 		renderAcceptanceItemSetForTest(expected.AcceptanceItemSet),
-		"unit_appendix_snapshot: none",
+		"unit_appendix_snapshot:",
+		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
 		"rule_snapshot: none",
 	}, "\n")
 }
@@ -1277,7 +1405,8 @@ func renderFormalPlanProcessBody(expected Snapshot) string {
 		"spec_file_ref: " + expected.SpecFileRef,
 		"spec_version_ref: " + expected.SpecVersionRef,
 		"spec_fingerprint: " + expected.SpecFingerprint,
-		"unit_appendix_snapshot: none",
+		"unit_appendix_snapshot:",
+		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
 		"rule_snapshot: none",
 		"acceptance_item_plan_coverage:",
 		renderAcceptancePlanCoverageForTest(expected.AcceptanceItemSet),
@@ -1322,6 +1451,8 @@ func renderScenarioCheckProcessBody(expected Snapshot) string {
 		"truth_file_ref: " + expected.SpecFileRef,
 		"truth_version_ref: " + expected.SpecVersionRef,
 		"truth_fingerprint: " + expected.SpecFingerprint,
+		"scenario_appendix_snapshot:",
+		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
 		"repository_mapping_snapshot:",
 		renderRepositoryMappingLinesForTest(expected.RepositoryMapping),
 		"unit_snapshot:",
@@ -1347,6 +1478,8 @@ func renderScenarioVerifyProcessBody(expected Snapshot) string {
 		"truth_file_ref: " + expected.SpecFileRef,
 		"truth_version_ref: " + expected.SpecVersionRef,
 		"truth_fingerprint: " + expected.SpecFingerprint,
+		"scenario_appendix_snapshot:",
+		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
 		"repository_mapping_snapshot:",
 		renderRepositoryMappingLinesForTest(expected.RepositoryMapping),
 		"unit_snapshot:",
@@ -1367,6 +1500,20 @@ func renderRepositoryMappingLinesForTest(entry RepositoryMappingEntry) string {
 		"  version_ref: " + entry.VersionRef,
 		"  fingerprint: " + entry.Fingerprint,
 	}, "\n")
+}
+
+func renderAppendixLinesForTest(entries []AppendixEntry) string {
+	if len(entries) == 0 {
+		return "  none"
+	}
+	lines := []string{}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - file_ref: "+entry.FileRef,
+			"    fingerprint: "+entry.Fingerprint,
+		)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func renderObjectSnapshotLinesForTest(field string, entries []ObjectSnapshotEntry) string {

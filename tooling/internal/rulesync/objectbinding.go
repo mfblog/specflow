@@ -302,7 +302,7 @@ func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.Pro
 
 	requiredListFields := []string{"rule_snapshot", "unit_snapshot", "acceptance_item_set"}
 	if objectType == "scenario" {
-		requiredListFields = append(requiredListFields, "repository_mapping_snapshot")
+		requiredListFields = append(requiredListFields, "repository_mapping_snapshot", "scenario_appendix_snapshot")
 	}
 	if processKind == "verify" {
 		requiredListFields = append(requiredListFields, "acceptance_item_evidence_matrix")
@@ -363,6 +363,9 @@ func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.Pro
 		return false, nil
 	}
 	if objectType == "scenario" && !equalRepositoryMappingSnapshot(processSnapshot.RepositoryMapping, currentSnapshot.RepositoryMapping) {
+		return false, nil
+	}
+	if objectType == "scenario" && !equalAppendixEntries(processSnapshot.ModuleAppendixSnapshot, currentSnapshot.AppendixSnapshot) {
 		return false, nil
 	}
 	if !equalAcceptanceItemEntries(processSnapshot.AcceptanceItemSet, currentSnapshot.AcceptanceItemSet) {
@@ -585,6 +588,7 @@ type currentObjectSnapshot struct {
 	TruthFileRef      string
 	TruthVersionRef   string
 	TruthFingerprint  string
+	AppendixSnapshot  []snapshot.AppendixEntry
 	ModuleSnapshot    []snapshot.ObjectSnapshotEntry
 	FlowSnapshot      []snapshot.ObjectSnapshotEntry
 	RuleSnapshot      []snapshot.RuleEntry
@@ -615,6 +619,10 @@ func rebuildCurrentObjectSnapshot(repoRoot, objectType, object, activeLayer stri
 		TruthFingerprint: hashNormalizedText(string(content)),
 	}
 	result.AcceptanceItemSet, err = snapshot.BuildAcceptanceItemSetFromBody(mainSpecRef, body)
+	if err != nil {
+		return currentObjectSnapshot{}, err
+	}
+	result.AppendixSnapshot, err = snapshot.BuildAppendixSnapshot(repoRoot, mainSpecRef, body)
 	if err != nil {
 		return currentObjectSnapshot{}, err
 	}

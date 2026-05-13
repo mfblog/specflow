@@ -202,11 +202,6 @@ func successCleanupPaths(repoRoot, objectType, object, mode string) ([]string, e
 			return nil, fmt.Errorf("mode %q requires object type unit", mode)
 		}
 		paths = append(paths, filePathsForObject(objectType, object, []string{"check", "plan", "verify"})...)
-		appendixPaths, err := candidateAppendixPaths(repoRoot, objectType, object)
-		if err != nil {
-			return nil, err
-		}
-		paths = append(paths, appendixPaths...)
 	case "unit_promote":
 		if objectType != "unit" {
 			return nil, fmt.Errorf("mode %q requires object type unit", mode)

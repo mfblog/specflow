@@ -875,18 +875,25 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			InputFiles:     reviewDependencyFiles("tooling_execution", "process_and_impact_state", "review_entry_policy"),
 		},
 		{
+			ID:             "supporting_truth_lifecycle_convergence",
+			SliceType:      "cross_convergence",
+			ReviewQuestion: "Do supporting truth files stay layer-correct across fork, promote, cleanup, rule release, and tooling paths.",
+			DependsOn:      []string{"routing_and_command_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility", "tooling_execution"},
+			InputFiles:     reviewDependencyFiles("routing_and_command_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility", "tooling_execution"),
+		},
+		{
 			ID:             "project_instance_to_framework_convergence",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Does project-instance compatibility converge with routing, command, process-state, mapping, shared, and tooling rules without judging business truth.",
-			DependsOn:      []string{"project_instance_contract_compatibility", "routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates", "shared_governance", "tooling_execution"},
-			InputFiles:     reviewDependencyFiles("project_instance_contract_compatibility", "routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates", "shared_governance", "tooling_execution"),
+			DependsOn:      []string{"project_instance_contract_compatibility", "routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates", "shared_governance", "tooling_execution", "supporting_truth_lifecycle_convergence"},
+			InputFiles:     reviewDependencyFiles("project_instance_contract_compatibility", "routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates", "shared_governance", "tooling_execution", "supporting_truth_lifecycle_convergence"),
 		},
 		{
 			ID:             "agent_operability_path_walk",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Can an agent walk from entry instructions through routing, commands, and checkpoints without hidden decisions.",
-			DependsOn:      []string{"agent_operability_local", "routing_and_command_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state", "project_instance_contract_compatibility"},
-			InputFiles:     reviewDependencyFiles("agent_operability_local", "routing_and_command_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state", "project_instance_contract_compatibility"),
+			DependsOn:      []string{"agent_operability_local", "routing_and_command_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state", "project_instance_contract_compatibility", "supporting_truth_lifecycle_convergence"},
+			InputFiles:     reviewDependencyFiles("agent_operability_local", "routing_and_command_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state", "project_instance_contract_compatibility", "supporting_truth_lifecycle_convergence"),
 		},
 	}
 }

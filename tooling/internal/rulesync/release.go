@@ -3,7 +3,10 @@ package rulesync
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -45,9 +48,13 @@ type ReleaseVersionResult struct {
 	ToRef               string
 	CandidateUpdated    []string
 	StableForked        []string
+	AppendixRetargeted  []string
+	AppendixRemoved     []string
 	ProcessFilesRemoved []string
 	Sync                Result
 }
+
+var markdownLinkTargetPattern = regexp.MustCompile(`\]\(([^)\n]+)\)`)
 
 func Consumers(repoRoot string, options ConsumerOptions) (ConsumerResult, error) {
 	ruleID := strings.TrimSpace(options.RuleID)
@@ -224,6 +231,12 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 		if err != nil {
 			return ReleaseVersionResult{}, err
 		}
+		updated, appendixRetargeted, appendixRemoved, err := retargetStableAppendicesForFork(repoRoot, status.ObjectType, status.Object, fileRef, candidateRef, string(contentBytes), updated)
+		if err != nil {
+			return ReleaseVersionResult{}, err
+		}
+		result.AppendixRetargeted = append(result.AppendixRetargeted, appendixRetargeted...)
+		result.AppendixRemoved = append(result.AppendixRemoved, appendixRemoved...)
 		candidateAbs := filepath.Join(repoRoot, filepath.FromSlash(candidateRef))
 		if err := os.MkdirAll(filepath.Dir(candidateAbs), 0o755); err != nil {
 			return ReleaseVersionResult{}, fmt.Errorf("create candidate dir for %s: %w", candidateRef, err)
@@ -262,6 +275,8 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 	}
 	result.CandidateUpdated = normalizeStrings(result.CandidateUpdated)
 	result.StableForked = normalizeStrings(result.StableForked)
+	result.AppendixRetargeted = normalizeStrings(result.AppendixRetargeted)
+	result.AppendixRemoved = normalizeStrings(result.AppendixRemoved)
 	result.ProcessFilesRemoved = normalizeStrings(result.ProcessFilesRemoved)
 	return result, nil
 }
@@ -359,6 +374,307 @@ func removeProcessArtifacts(repoRoot, objectType, object string) ([]string, erro
 		}
 	}
 	return removed, nil
+}
+
+func retargetStableAppendicesForFork(repoRoot, objectType, object, stableMainRef, candidateMainRef, stableContent, candidateContent string) (string, []string, []string, error) {
+	stableAppendices := stableAppendixRefsFromContent(objectType, object, stableMainRef, stableContent)
+	refMap := map[string]string{
+		path.Clean(stableMainRef): path.Clean(candidateMainRef),
+	}
+	type preparedAppendix struct {
+		fileRef string
+		content string
+	}
+	prepared := []preparedAppendix{}
+	for _, stableAppendixRef := range stableAppendices {
+		candidateAppendixRef, err := candidateAppendixRefForStable(objectType, object, stableAppendixRef)
+		if err != nil {
+			return "", nil, nil, err
+		}
+		refMap[stableAppendixRef] = candidateAppendixRef
+	}
+	for _, stableAppendixRef := range stableAppendices {
+		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(stableAppendixRef)))
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("read %s: %w", stableAppendixRef, err)
+		}
+		candidateAppendixRef := refMap[stableAppendixRef]
+		appendixContent := rewriteCandidateAppendixFrontmatter(string(data), objectType, object)
+		appendixContent = rewriteMarkdownDocRefs(appendixContent, stableAppendixRef, candidateAppendixRef, refMap)
+		appendixContent = rewriteKnownDocRefLiterals(appendixContent, refMap)
+		prepared = append(prepared, preparedAppendix{fileRef: candidateAppendixRef, content: appendixContent})
+	}
+
+	removed, err := removeCandidateAppendices(repoRoot, objectType, object)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	if len(stableAppendices) == 0 {
+		return candidateContent, nil, removed, nil
+	}
+
+	nextCandidateContent := rewriteMarkdownDocRefs(candidateContent, stableMainRef, candidateMainRef, refMap)
+	nextCandidateContent = rewriteKnownDocRefLiterals(nextCandidateContent, refMap)
+	retargeted := []string{}
+	for _, appendix := range prepared {
+		candidateAppendixAbs := filepath.Join(repoRoot, filepath.FromSlash(appendix.fileRef))
+		if err := os.MkdirAll(filepath.Dir(candidateAppendixAbs), 0o755); err != nil {
+			return "", nil, nil, fmt.Errorf("create candidate appendix dir for %s: %w", appendix.fileRef, err)
+		}
+		if err := os.WriteFile(candidateAppendixAbs, []byte(appendix.content), 0o644); err != nil {
+			return "", nil, nil, fmt.Errorf("write %s: %w", appendix.fileRef, err)
+		}
+		retargeted = append(retargeted, appendix.fileRef)
+	}
+
+	return nextCandidateContent, normalizeStrings(retargeted), normalizeStrings(removed), nil
+}
+
+func stableAppendixRefsFromContent(objectType, object, fromRef, content string) []string {
+	matches := markdownLinkTargetPattern.FindAllStringSubmatch(content, -1)
+	refs := []string{}
+	for _, match := range matches {
+		target, _, ok := splitMarkdownTarget(match[1])
+		if !ok {
+			continue
+		}
+		ref, _, ok := resolveMarkdownDocRef(fromRef, target)
+		if !ok || !isOwnStableAppendixRef(objectType, object, ref) {
+			continue
+		}
+		refs = append(refs, ref)
+	}
+	return normalizeStrings(refs)
+}
+
+func candidateAppendixRefForStable(objectType, object, stableAppendixRef string) (string, error) {
+	stablePrefix, candidatePrefix, err := appendixPrefixes(objectType, object)
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasPrefix(stableAppendixRef, stablePrefix) || !strings.HasSuffix(stableAppendixRef, ".md") {
+		return "", fmt.Errorf("%s is not a same-%s stable appendix for %q", stableAppendixRef, objectType, object)
+	}
+	return candidatePrefix + strings.TrimPrefix(stableAppendixRef, stablePrefix), nil
+}
+
+func appendixPrefixes(objectType, object string) (string, string, error) {
+	switch objectType {
+	case "unit":
+		return fmt.Sprintf("docs/specs/units/stable/appendix/s_unit_%s_", object),
+			fmt.Sprintf("docs/specs/units/candidate/appendix/c_unit_%s_", object), nil
+	case "scenario":
+		return fmt.Sprintf("docs/specs/scenarios/stable/appendix/s_scenario_%s_", object),
+			fmt.Sprintf("docs/specs/scenarios/candidate/appendix/c_scenario_%s_", object), nil
+	default:
+		return "", "", fmt.Errorf("unsupported object type %q", objectType)
+	}
+}
+
+func isOwnStableAppendixRef(objectType, object, ref string) bool {
+	stablePrefix, _, err := appendixPrefixes(objectType, object)
+	if err != nil {
+		return false
+	}
+	return strings.HasPrefix(ref, stablePrefix) && strings.HasSuffix(ref, ".md")
+}
+
+func rewriteMarkdownDocRefs(content, resolveFromRef, outputFromRef string, refMap map[string]string) string {
+	return markdownLinkTargetPattern.ReplaceAllStringFunc(content, func(token string) string {
+		match := markdownLinkTargetPattern.FindStringSubmatch(token)
+		if len(match) != 2 {
+			return token
+		}
+		target, suffix, ok := splitMarkdownTarget(match[1])
+		if !ok {
+			return token
+		}
+		resolvedRef, anchor, ok := resolveMarkdownDocRef(resolveFromRef, target)
+		if !ok {
+			return token
+		}
+		nextRef, ok := refMap[resolvedRef]
+		if !ok {
+			return token
+		}
+		nextTarget := relativeDocRef(outputFromRef, nextRef) + anchor + suffix
+		return strings.Replace(token, "("+match[1]+")", "("+nextTarget+")", 1)
+	})
+}
+
+func rewriteKnownDocRefLiterals(content string, refMap map[string]string) string {
+	type refPair struct {
+		from string
+		to   string
+	}
+	pairs := make([]refPair, 0, len(refMap))
+	for from, to := range refMap {
+		pairs = append(pairs, refPair{from: from, to: to})
+	}
+	sort.Slice(pairs, func(left, right int) bool {
+		if len(pairs[left].from) == len(pairs[right].from) {
+			return pairs[left].from < pairs[right].from
+		}
+		return len(pairs[left].from) > len(pairs[right].from)
+	})
+	for _, pair := range pairs {
+		content = strings.ReplaceAll(content, pair.from, pair.to)
+		content = replaceDelimitedDocRefToken(content, path.Base(pair.from), path.Base(pair.to))
+	}
+	return content
+}
+
+func replaceDelimitedDocRefToken(content, from, to string) string {
+	if from == "" || from == to {
+		return content
+	}
+	pattern := regexp.MustCompile(`(^|[^A-Za-z0-9_-])` + regexp.QuoteMeta(from) + `($|[^A-Za-z0-9_-])`)
+	return pattern.ReplaceAllStringFunc(content, func(match string) string {
+		indexes := pattern.FindStringSubmatchIndex(match)
+		if len(indexes) != 6 {
+			return match
+		}
+		return match[indexes[2]:indexes[3]] + to + match[indexes[4]:indexes[5]]
+	})
+}
+
+func splitMarkdownTarget(raw string) (string, string, bool) {
+	target := strings.TrimSpace(raw)
+	if target == "" {
+		return "", "", false
+	}
+	if strings.HasPrefix(target, "<") {
+		end := strings.Index(target, ">")
+		if end <= 0 {
+			return "", "", false
+		}
+		return target[1:end], target[end+1:], true
+	}
+	if idx := strings.IndexAny(target, " \t\r\n"); idx >= 0 {
+		return target[:idx], target[idx:], true
+	}
+	return target, "", true
+}
+
+func resolveMarkdownDocRef(fromRef, target string) (string, string, bool) {
+	target = strings.TrimSpace(strings.ReplaceAll(target, "\\", "/"))
+	if target == "" ||
+		strings.HasPrefix(target, "#") ||
+		strings.Contains(target, "://") ||
+		strings.HasPrefix(target, "mailto:") {
+		return "", "", false
+	}
+
+	docTarget, anchor, hasAnchor := strings.Cut(target, "#")
+	if docTarget == "" {
+		return "", "", false
+	}
+	if hasAnchor {
+		anchor = "#" + anchor
+	} else {
+		anchor = ""
+	}
+
+	var ref string
+	if strings.HasPrefix(docTarget, "docs/") {
+		ref = path.Clean(docTarget)
+	} else {
+		ref = path.Clean(path.Join(path.Dir(fromRef), docTarget))
+	}
+	if !strings.HasPrefix(ref, "docs/specs/") {
+		return "", "", false
+	}
+	return ref, anchor, true
+}
+
+func relativeDocRef(fromRef, targetRef string) string {
+	rel, err := filepath.Rel(filepath.FromSlash(path.Dir(fromRef)), filepath.FromSlash(targetRef))
+	if err != nil {
+		return targetRef
+	}
+	rel = filepath.ToSlash(rel)
+	if strings.HasPrefix(rel, ".") {
+		return rel
+	}
+	return "./" + rel
+}
+
+func rewriteCandidateAppendixFrontmatter(content, objectType, object string) string {
+	ownerKey := objectType
+	lines := strings.Split(content, "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return fmt.Sprintf("---\n%s: %s\nlayer: candidate\n---\n\n%s", ownerKey, object, content)
+	}
+
+	end := -1
+	for idx := 1; idx < len(lines); idx++ {
+		if strings.TrimSpace(lines[idx]) == "---" {
+			end = idx
+			break
+		}
+	}
+	if end == -1 {
+		return fmt.Sprintf("---\n%s: %s\nlayer: candidate\n---\n\n%s", ownerKey, object, content)
+	}
+
+	nextFrontmatter := []string{"---"}
+	ownerWritten := false
+	layerWritten := false
+	for _, line := range lines[1:end] {
+		trimmed := strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(trimmed, ownerKey+":"):
+			nextFrontmatter = append(nextFrontmatter, fmt.Sprintf("%s: %s", ownerKey, object))
+			ownerWritten = true
+		case strings.HasPrefix(trimmed, "layer:"):
+			nextFrontmatter = append(nextFrontmatter, "layer: candidate")
+			layerWritten = true
+		case strings.HasPrefix(trimmed, "spec_version_ref:"):
+			continue
+		default:
+			nextFrontmatter = append(nextFrontmatter, line)
+		}
+	}
+	if !ownerWritten {
+		nextFrontmatter = append(nextFrontmatter, fmt.Sprintf("%s: %s", ownerKey, object))
+	}
+	if !layerWritten {
+		nextFrontmatter = append(nextFrontmatter, "layer: candidate")
+	}
+	nextFrontmatter = append(nextFrontmatter, "---")
+
+	body := strings.Join(lines[end+1:], "\n")
+	if body == "" {
+		return strings.Join(nextFrontmatter, "\n") + "\n"
+	}
+	return strings.Join(nextFrontmatter, "\n") + "\n" + body
+}
+
+func removeCandidateAppendices(repoRoot, objectType, object string) ([]string, error) {
+	glob, err := specpaths.ObjectCandidateAppendixGlob(objectType, object)
+	if err != nil {
+		return nil, err
+	}
+	matches, err := filepath.Glob(filepath.Join(repoRoot, filepath.FromSlash(glob)))
+	if err != nil {
+		return nil, err
+	}
+	removed := []string{}
+	for _, match := range matches {
+		relPath, err := filepath.Rel(repoRoot, match)
+		if err != nil {
+			return nil, err
+		}
+		fileRef := filepath.ToSlash(relPath)
+		if err := os.Remove(match); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, fmt.Errorf("remove %s: %w", fileRef, err)
+		}
+		removed = append(removed, fileRef)
+	}
+	return normalizeStrings(removed), nil
 }
 
 func checkCommandForObject(objectType string) string {

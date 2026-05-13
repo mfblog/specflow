@@ -284,6 +284,59 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 	}
 }
 
+func TestApplySuccessCleanupForUnitForkPreservesCurrentCandidateAppendix(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/active"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/draft"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+
+	status := strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `ai` | `yes` | `yes` | `candidate` | `unit_check` | forked |",
+	}, "\n") + "\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+	appendixRef := specpaths.CandidateAppendixDir + "/c_unit_ai_prompt.md"
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(appendixRef)), "appendix")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/ai.md"), "check")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/ai.md"), "plan")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/ai.md"), "draft plan")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/ai.md"), "verify")
+
+	result, err := ApplySuccessCleanup(repoRoot, "ai", "unit_fork")
+	if err != nil {
+		t.Fatalf("ApplySuccessCleanup: %v", err)
+	}
+	if len(result.DeletedFiles) != 4 {
+		t.Fatalf("expected 4 deleted process files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
+	}
+	for _, deleted := range result.DeletedFiles {
+		if deleted == appendixRef {
+			t.Fatalf("unit_fork cleanup must not delete current candidate appendix: %v", result.DeletedFiles)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(appendixRef))); err != nil {
+		t.Fatalf("expected candidate appendix to remain, stat err=%v", err)
+	}
+	for _, relPath := range []string{
+		"docs/specs/_check_result/unit/ai.md",
+		"docs/specs/_plans/active/ai.md",
+		"docs/specs/_plans/draft/ai.md",
+		"docs/specs/_verify_result/unit/ai.md",
+	} {
+		if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(relPath))); !os.IsNotExist(err) {
+			t.Fatalf("expected %s to be deleted, stat err=%v", relPath, err)
+		}
+	}
+}
+
 func mustMkdirAll(t *testing.T, path string) {
 	t.Helper()
 	if err := os.MkdirAll(path, 0o755); err != nil {

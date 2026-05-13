@@ -2357,6 +2357,7 @@ func renderFlowProcessSnapshotForTest(t *testing.T, repoRoot, processKind, objec
 		t.Fatalf("BuildRepositoryMappingSnapshot: %v", err)
 	}
 	lists := [][]string{
+		{"scenario_appendix_snapshot: none"},
 		append([]string{"repository_mapping_snapshot: "}, prefixNestedList(repositoryMappingSnapshotFixtureLines(repositoryMapping))...),
 		append([]string{"acceptance_item_set: "}, prefixNestedList(acceptanceItemSnapshotFixtureLines(object))...),
 		append([]string{"unit_snapshot: " + noneOrBlank(moduleLines)}, prefixNestedList(moduleLines)...),
