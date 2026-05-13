@@ -13,6 +13,7 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_migrate.md"), "# migrate\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/agent_operability_standard.md"), "# operability\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/natural_language_routing.md"), "# routing\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/advance_policy.md"), "# advance\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/onboarding_decision_policy.md"), "# onboarding\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intent_policy.md"), "# candidate intent\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/repair.md"), "# repair\n")
@@ -127,6 +128,9 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/spec_flow_migrate.md") {
 		t.Fatalf("expected migration policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/advance_policy.md") {
+		t.Fatalf("expected advance policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/rule_sync.md") {
 		t.Fatalf("expected rule-governance files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
@@ -199,6 +203,7 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_migrate.md"), "# migrate\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/agent_operability_standard.md"), "# operability\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/natural_language_routing.md"), "# routing\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/advance_policy.md"), "# advance\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/onboarding_decision_policy.md"), "# onboarding\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intent_policy.md"), "# candidate intent\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/repair.md"), "# repair\n")
@@ -285,6 +290,7 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 		"specflow/framework/spec_policy.md",
 		"specflow/framework/spec_writing_guide.md",
 		"specflow/framework/command_policy.md",
+		"specflow/framework/advance_policy.md",
 		"specflow/framework/natural_language_routing.md",
 		"specflow/framework/onboarding_decision_policy.md",
 		"specflow/framework/implementation_change_policy.md",
@@ -338,6 +344,9 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	}
 	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/spec_flow_migrate.md") {
 		t.Fatalf("expected migration policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/advance_policy.md") {
+		t.Fatalf("expected advance policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
 }
 

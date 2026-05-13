@@ -273,9 +273,10 @@ Rules:
 
 1. `command close` is the standard command-closing surface for lifecycle state progression
 2. `status set-object` and `status set-unit` remain available only as low-level deterministic status write tools
-3. standard command files should use `command close` instead of directly calling `status set-object`
+3. standard command files must use `command close` instead of directly calling `status set-object`
 4. `command close` may infer only the fixed state write defined by the command name and explicit `--outcome`; it must not infer the outcome itself
 5. dry-run is the default; callers must pass `--apply` before `_status.md` or process files are changed
+6. ordinary lifecycle progression must not bypass `command close` by editing `_status.md` manually or by using `status set-object` / `status set-unit`
 
 ## Command Close
 
@@ -300,7 +301,7 @@ Optional flags:
 
 Execution rules:
 
-1. without `--apply`, the command prints `status_before`, `status_after`, `validation_action`, and `cleanup_action` without changing files
+1. without `--apply`, the command prints `status_before`, `status_after`, `input_validation_action`, `validation_action`, and `cleanup_action` without changing files
 2. with `--apply`, the command writes `_status.md` and executes the success or fallback cleanup required by the fixed transition table
 3. the current `_status.md` `Next Command` must equal `--command`, except for creation commands that register a missing object row
 4. pass outcomes for check, plan, and verify gates validate the required process file before status progression
@@ -308,6 +309,10 @@ Execution rules:
 6. promotion recovery requires `--stable-before yes|no`
 7. generic `truth_fallback` outcomes require an explicit `--reason`, because the command result owns the fallback reason code
 8. `unit_plan` `truth_fallback` requires `--reason truth_incomplete`
+9. for commands that consume current process files, non-fallback close outcomes run `command preflight` internally before status progression, cleanup, or success reporting
+10. fallback and recovery close outcomes do not require currently valid input process files, because their purpose is to move the object back to the smallest legal recovery point
+11. `input_validation_action`, `input_validated_processes`, and `input_validation_mismatches` report the internal close-time preflight result separately from output process validation
+12. `command_close_result` is `dry_run`, `applied`, or `failed`; `failed` means the close operation returned an error, even when the caller passed `--apply`
 
 ## Usage Examples
 

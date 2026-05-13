@@ -153,6 +153,8 @@ const TRANSLATIONS = {
       boardDescription: "每张卡片都来自 _status.md 的 Next Command。点击卡片查看需要打开的材料。",
       actionType: "动作类型",
       command: "命令",
+      advanceEntry: "自动推进",
+      copyAdvanceEntry: "复制自动推进入口",
       intent: "模式",
       materials: "可查看材料",
       references: "参考材料",
@@ -469,6 +471,8 @@ const TRANSLATIONS = {
       boardDescription: "Each card comes from the Next Command field in _status.md. Select a card to see the material to open.",
       actionType: "Action type",
       command: "Command",
+      advanceEntry: "Auto advance",
+      copyAdvanceEntry: "Copy auto-advance entry",
       intent: "Mode",
       materials: "Readable material",
       references: "Reference material",
@@ -1964,9 +1968,12 @@ function renderTodoCard(item) {
       </div>
       <div class="todo-command-row">
         <span>${escapeHTML(t("todo.command"))}</span>
-        <button class="todo-copy-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(t("review.copyNextCommand"))}">
-          <code>${escapeHTML(item.commandText)}</code>
-        </button>
+        <div class="todo-command-actions">
+          <button class="todo-copy-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(t("review.copyNextCommand"))}">
+            <code>${escapeHTML(item.commandText)}</code>
+          </button>
+          ${renderAdvanceCommandButton(item, "todo-copy-command advance-entry")}
+        </div>
       </div>
       ${renderTodoIntentPill(item)}
       ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
@@ -2031,6 +2038,7 @@ function todoItems() {
         objectLabel: object.label || object.id || t("fallback.undeclared"),
         nextCommand,
         commandText: `${nextCommand}:${object.id}`,
+        advanceCommandText: advanceEntryCommandForObject(object, nextCommand),
         sources,
         primarySources: sources.filter((source) => source.group !== "references"),
         referenceSources: sources.filter((source) => source.group === "references"),
@@ -2076,6 +2084,31 @@ function compareTodoItems(left, right) {
   return todoTypeOrder().indexOf(left.type) - todoTypeOrder().indexOf(right.type)
     || String(left.objectLabel || "").localeCompare(String(right.objectLabel || ""))
     || String(left.nextCommand || "").localeCompare(String(right.nextCommand || ""));
+}
+
+function advanceEntryCommandForObject(object, nextCommand) {
+  const kind = String(object && object.kind ? object.kind : "").trim();
+  const objectID = String(object && object.id ? object.id : "").trim();
+  const command = String(nextCommand || "").trim();
+  if (!kind || !objectID || !command) return "";
+  if (kind === "unit" && ["unit_check", "unit_plan", "unit_impl", "unit_verify", "unit_promote"].includes(command)) {
+    return `unit_advance:${objectID}`;
+  }
+  if (kind === "scenario" && ["scenario_check", "scenario_verify", "scenario_promote"].includes(command)) {
+    return `scenario_advance:${objectID}`;
+  }
+  return "";
+}
+
+function renderAdvanceCommandButton(item, className) {
+  const command = String(item && item.advanceCommandText ? item.advanceCommandText : "").trim();
+  if (!command) return "";
+  return `
+    <button class="${escapeAttr(className)}" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(t("todo.copyAdvanceEntry"))}">
+      <span>${escapeHTML(t("todo.advanceEntry"))}</span>
+      <code>${escapeHTML(command)}</code>
+    </button>
+  `;
 }
 
 function todoTypeLabel(type) {
@@ -2343,15 +2376,21 @@ function renderReviewProgressHeader(path) {
   if (item.object.kind !== "unit" && item.object.kind !== "scenario") return "";
   const view = lifecycleView(item.object, item.nextCommand);
   const command = item.commandText || reviewNextCommandText(item);
+  const advanceItem = {
+    advanceCommandText: item.advanceCommandText || advanceEntryCommandForObject(item.object, item.nextCommand)
+  };
   if (command) {
     return `
       <section class="review-progress-panel">
         <div class="review-progress-head">
           <h2>${escapeHTML(t("review.progressTitle"))}</h2>
-          <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(t("review.copyNextCommand"))}">
-            <span>${escapeHTML(t("review.nextCommand"))}</span>
-            <code>${escapeHTML(command)}</code>
-          </button>
+          <div class="review-command-actions">
+            <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(t("review.copyNextCommand"))}">
+              <span>${escapeHTML(t("review.nextCommand"))}</span>
+              <code>${escapeHTML(command)}</code>
+            </button>
+            ${renderAdvanceCommandButton(advanceItem, "review-next-command advance-entry")}
+          </div>
         </div>
         ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
         <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
@@ -2717,10 +2756,13 @@ function renderTodoDetail(item) {
       ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
       <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
       ${renderNextRoundEntry(view, item.object)}
-      <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(t("review.copyNextCommand"))}">
-        <span>${escapeHTML(t("review.nextCommand"))}</span>
-        <code>${escapeHTML(item.commandText)}</code>
-      </button>
+      <div class="review-command-actions">
+        <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(t("review.copyNextCommand"))}">
+          <span>${escapeHTML(t("review.nextCommand"))}</span>
+          <code>${escapeHTML(item.commandText)}</code>
+        </button>
+        ${renderAdvanceCommandButton(item, "review-next-command advance-entry")}
+      </div>
     </section>
     <section class="todo-detail-section">
       <h2>${escapeHTML(t("todo.materials"))}</h2>

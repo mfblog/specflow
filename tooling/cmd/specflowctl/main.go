@@ -12,6 +12,7 @@ import (
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/buildrelease"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandclose"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandpreflight"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/entrysync"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/install"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
@@ -85,26 +86,6 @@ func run(args []string, stdout, stderr io.Writer) error {
 	}
 }
 
-type commandPreflightResult struct {
-	Command                string
-	ObjectType             string
-	Object                 string
-	MayContinue            bool
-	FailureLayer           string
-	RecommendedNextCommand string
-	Diagnostics            []string
-	ValidatedProcesses     []commandPreflightProcess
-}
-
-type commandPreflightProcess struct {
-	ProcessKind            string
-	ProcessFile            string
-	Result                 string
-	FailureLayer           string
-	RecommendedNextCommand string
-	Diagnostics            []string
-}
-
 func runCommand(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		writeCommandUsage(stderr)
@@ -148,7 +129,7 @@ func runCommand(args []string, stdout, stderr io.Writer) error {
 			Apply:           *apply,
 		})
 		if result.Command != "" {
-			writeCommandCloseResult(stdout, result)
+			writeCommandCloseResult(stdout, result, err)
 		}
 		return err
 	case "preflight":
@@ -166,7 +147,7 @@ func runCommand(args []string, stdout, stderr io.Writer) error {
 			return errors.New("command, object-type, and object are required")
 		}
 
-		result := runCommandPreflight(mustAbs(*repoRoot), *command, *objectType, *object)
+		result := commandpreflight.Run(mustAbs(*repoRoot), *command, *objectType, *object)
 		writeCommandPreflightResult(stdout, result)
 		if !result.MayContinue {
 			return errors.New("command preflight failed")
@@ -181,157 +162,7 @@ func runCommand(args []string, stdout, stderr io.Writer) error {
 	}
 }
 
-func runCommandPreflight(repoRoot, command, objectType, object string) commandPreflightResult {
-	result := commandPreflightResult{
-		Command:                strings.TrimSpace(command),
-		ObjectType:             strings.TrimSpace(objectType),
-		Object:                 strings.TrimSpace(object),
-		MayContinue:            true,
-		FailureLayer:           "none",
-		RecommendedNextCommand: "none",
-	}
-
-	status, err := statusfile.LookupObjectStatus(repoRoot, result.ObjectType, result.Object)
-	if err != nil {
-		result.MayContinue = false
-		result.FailureLayer = "status_layer"
-		result.Diagnostics = append(result.Diagnostics, err.Error())
-		result.RecommendedNextCommand = "none"
-		return result
-	}
-	if status.NextCommand != result.Command {
-		result.MayContinue = false
-		result.FailureLayer = "status_layer"
-		result.RecommendedNextCommand = status.NextCommand
-		result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("status next command mismatch: actual=%s expected=%s", status.NextCommand, result.Command))
-		return result
-	}
-
-	processKinds, err := preflightProcessKinds(result.ObjectType, result.Command)
-	if err != nil {
-		result.MayContinue = false
-		result.FailureLayer = "unsupported_command"
-		result.Diagnostics = append(result.Diagnostics, err.Error())
-		result.RecommendedNextCommand = status.NextCommand
-		return result
-	}
-
-	for _, processKind := range processKinds {
-		process := validatePreflightProcess(repoRoot, result.ObjectType, result.Object, processKind)
-		result.ValidatedProcesses = append(result.ValidatedProcesses, process)
-		if process.Result == "valid" {
-			continue
-		}
-		result.MayContinue = false
-		result.FailureLayer = process.FailureLayer
-		result.RecommendedNextCommand = noneIfEmpty(process.RecommendedNextCommand)
-		result.Diagnostics = append(result.Diagnostics, process.Diagnostics...)
-		break
-	}
-	return result
-}
-
-func preflightProcessKinds(objectType, command string) ([]string, error) {
-	switch objectType {
-	case "unit":
-		switch command {
-		case "unit_init", "unit_new", "unit_fork", "unit_stable_verify", "unit_check":
-			return nil, nil
-		case "unit_plan":
-			return []string{"check"}, nil
-		case "unit_impl":
-			return []string{"check", "plan"}, nil
-		case "unit_verify":
-			return []string{"check", "plan"}, nil
-		case "unit_promote":
-			return []string{"verify"}, nil
-		default:
-			return nil, fmt.Errorf("command %q is not supported for object type %q", command, objectType)
-		}
-	case "scenario":
-		switch command {
-		case "scenario_new", "scenario_fork", "scenario_stable_verify", "scenario_check":
-			return nil, nil
-		case "scenario_verify":
-			return []string{"check"}, nil
-		case "scenario_promote":
-			return []string{"verify"}, nil
-		default:
-			return nil, fmt.Errorf("command %q is not supported for object type %q", command, objectType)
-		}
-	default:
-		return nil, fmt.Errorf("object type %q is not supported", objectType)
-	}
-}
-
-func validatePreflightProcess(repoRoot, objectType, object, processKind string) commandPreflightProcess {
-	process := commandPreflightProcess{
-		ProcessKind:            processKind,
-		Result:                 "invalid",
-		FailureLayer:           "tooling_gap",
-		RecommendedNextCommand: "none",
-	}
-	processFile, err := snapshot.ProcessFilePath(objectType, object, processKind)
-	if err == nil {
-		process.ProcessFile = processFile
-	}
-
-	if processFile != "" {
-		processAbs := filepath.Join(repoRoot, filepath.FromSlash(processFile))
-		if _, err := os.Stat(processAbs); err != nil {
-			if os.IsNotExist(err) {
-				process.Diagnostics = append(process.Diagnostics, fmt.Sprintf("missing process file: %s", processFile))
-				layer, next := fallbackForMissingOrUnavailableProcess(objectType, processKind)
-				process.FailureLayer = layer
-				process.RecommendedNextCommand = next
-				return process
-			}
-			process.Diagnostics = append(process.Diagnostics, fmt.Sprintf("stat %s: %v", processFile, err))
-			return process
-		}
-	}
-
-	validation, err := snapshot.ValidateProcessFileForObject(repoRoot, objectType, object, processKind)
-	if err != nil {
-		process.Diagnostics = append(process.Diagnostics, err.Error())
-		return process
-	}
-	process.ProcessFile = validation.ProcessFile
-	if validation.Valid {
-		process.Result = "valid"
-		process.FailureLayer = "none"
-		process.RecommendedNextCommand = "none"
-		return process
-	}
-	process.Diagnostics = append(process.Diagnostics, validation.Mismatches...)
-	process.FailureLayer = noneIfEmpty(validation.FailureLayer)
-	process.RecommendedNextCommand = noneIfEmpty(validation.NextCommand)
-	return process
-}
-
-func fallbackForMissingOrUnavailableProcess(objectType, processKind string) (string, string) {
-	switch objectType {
-	case "unit":
-		switch processKind {
-		case "check":
-			return "gate_layer", "unit_check"
-		case "plan":
-			return "plan_layer", "unit_plan"
-		case "verify":
-			return "evidence_layer", "unit_verify"
-		}
-	case "scenario":
-		switch processKind {
-		case "check":
-			return "gate_layer", "scenario_check"
-		case "verify":
-			return "evidence_layer", "scenario_verify"
-		}
-	}
-	return "tooling_gap", "none"
-}
-
-func writeCommandPreflightResult(stdout io.Writer, result commandPreflightResult) {
+func writeCommandPreflightResult(stdout io.Writer, result commandpreflight.Result) {
 	preflightResult := "pass"
 	if !result.MayContinue {
 		preflightResult = "fail"
@@ -361,9 +192,11 @@ func writeCommandPreflightResult(stdout io.Writer, result commandPreflightResult
 	writeList(stdout, "diagnostics", result.Diagnostics)
 }
 
-func writeCommandCloseResult(stdout io.Writer, result commandclose.Result) {
+func writeCommandCloseResult(stdout io.Writer, result commandclose.Result, closeErr error) {
 	closeResult := "dry_run"
-	if result.Applied {
+	if closeErr != nil {
+		closeResult = "failed"
+	} else if result.Applied {
 		closeResult = "applied"
 	}
 	fmt.Fprintf(stdout, "command_close_result: %s\n", closeResult)
@@ -372,6 +205,7 @@ func writeCommandCloseResult(stdout io.Writer, result commandclose.Result) {
 	fmt.Fprintf(stdout, "object: %s\n", result.Object)
 	fmt.Fprintf(stdout, "outcome: %s\n", result.Outcome)
 	fmt.Fprintf(stdout, "apply: %t\n", result.Applied)
+	fmt.Fprintf(stdout, "input_validation_action: %s\n", noneIfEmpty(result.InputValidationAction))
 	fmt.Fprintf(stdout, "validation_action: %s\n", noneIfEmpty(result.ValidationAction))
 	fmt.Fprintf(stdout, "cleanup_action: %s\n", noneIfEmpty(result.CleanupAction))
 	fmt.Fprintf(stdout, "status_updated: %t\n", result.StatusUpdated)
@@ -383,11 +217,31 @@ func writeCommandCloseResult(stdout io.Writer, result commandclose.Result) {
 	}
 	fmt.Fprintln(stdout, "status_after:")
 	writeCommandCloseStatus(stdout, result.StatusAfter)
+	writeCommandCloseInputProcesses(stdout, result.InputValidatedProcesses)
+	writeList(stdout, "input_validation_mismatches", result.InputValidationMismatches)
 	writeList(stdout, "validation_mismatches", result.ValidationMismatches)
 	writeList(stdout, "fallback_deleted_files", result.FallbackCleanup.DeletedFiles)
 	writeList(stdout, "fallback_missing_files", result.FallbackCleanup.MissingFiles)
 	writeList(stdout, "success_deleted_files", result.SuccessCleanup.DeletedFiles)
 	writeList(stdout, "success_missing_files", result.SuccessCleanup.MissingFiles)
+}
+
+func writeCommandCloseInputProcesses(stdout io.Writer, processes []commandpreflight.Process) {
+	fmt.Fprintln(stdout, "input_validated_processes:")
+	if len(processes) == 0 {
+		fmt.Fprintln(stdout, "- none")
+		return
+	}
+	for _, process := range processes {
+		fmt.Fprintf(stdout, "- process: %s\n", process.ProcessKind)
+		fmt.Fprintf(stdout, "  file: %s\n", noneIfEmpty(process.ProcessFile))
+		fmt.Fprintf(stdout, "  result: %s\n", process.Result)
+		fmt.Fprintf(stdout, "  failure_layer: %s\n", noneIfEmpty(process.FailureLayer))
+		fmt.Fprintf(stdout, "  recommended_next_command: %s\n", noneIfEmpty(process.RecommendedNextCommand))
+		for _, diagnostic := range process.Diagnostics {
+			fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)
+		}
+	}
 }
 
 func writeCommandCloseStatus(stdout io.Writer, status statusfile.ObjectStatus) {

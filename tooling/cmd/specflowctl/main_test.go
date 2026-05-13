@@ -340,6 +340,44 @@ func TestCommandPreflightRejectsRawHashWithoutCleanupSideEffectsCLI(t *testing.T
 	}
 }
 
+func TestCommandCloseRejectsStaleCandidateInputWithoutStatusUpdateCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	stale := expected
+	stale.SpecFingerprint = "stale-fingerprint"
+	writeCLIUnitCheckProcess(t, repoRoot, stale)
+
+	statusPath := filepath.Join(repoRoot, "docs/specs/_status.md")
+	beforeStatus := mustReadCLITestFile(t, statusPath)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err = runCommand([]string{"close", "--command", "unit_plan", "--object-type", "unit", "--object", "demo", "--outcome", "blocked", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "command close input preflight failed") {
+		t.Fatalf("expected input preflight failure, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	for _, expectedText := range []string{
+		"command_close_result: failed",
+		"apply: true",
+		"input_validation_action: command_preflight",
+		"input_validated_processes:",
+		"- process: check",
+		"result: invalid",
+		"input_validation_mismatches",
+	} {
+		if !strings.Contains(output, expectedText) {
+			t.Fatalf("expected %q in output, got %s", expectedText, output)
+		}
+	}
+	if afterStatus := mustReadCLITestFile(t, statusPath); afterStatus != beforeStatus {
+		t.Fatalf("stale input must not rewrite status\nbefore=%s\nafter=%s", beforeStatus, afterStatus)
+	}
+}
+
 func TestCommandPreflightReportsMissingProcessFileAsCommandLayerCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
 
@@ -526,10 +564,16 @@ func TestCommandCloseUnitCheckPassRejectsInvalidGateCLI(t *testing.T) {
 
 func TestCommandCloseUnitVerifyReadyToPromoteRejectsInvalidVerifyCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_verify")
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeCLIUnitCheckProcess(t, repoRoot, expected)
+	writeCLIUnitPlanProcess(t, repoRoot, expected)
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := runCommand([]string{"close", "--command", "unit_verify", "--object-type", "unit", "--object", "demo", "--outcome", "ready_to_promote", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
+	err = runCommand([]string{"close", "--command", "unit_verify", "--object-type", "unit", "--object", "demo", "--outcome", "ready_to_promote", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
 	if err == nil || !strings.Contains(err.Error(), "read docs/specs/_verify_result/unit/demo.md") {
 		t.Fatalf("expected invalid verify result failure, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
@@ -569,6 +613,10 @@ func TestCommandCloseUnitPromoteDryRunKeepsCandidateAndProcessFilesCLI(t *testin
 	output := stdout.String()
 	for _, expectedText := range []string{
 		"command_close_result: dry_run",
+		"input_validation_action: command_preflight",
+		"input_validated_processes:",
+		"- process: verify",
+		"result: valid",
 		"validation_action: validate_process:verify",
 		"cleanup_action: success:unit_promote",
 		"  candidate: no",
@@ -589,7 +637,7 @@ func TestCommandCloseUnitPromoteDryRunKeepsCandidateAndProcessFilesCLI(t *testin
 	}
 }
 
-func TestCommandCloseScenarioPromoteDependencyNotReadyKeepsProcessFilesCLI(t *testing.T) {
+func TestCommandCloseScenarioPromoteDependencyNotReadyRejectsInvalidVerifyCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_impl")
 	writeCLIStatusRows(t, repoRoot, ""+
 		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_impl` | test |\n"+
@@ -600,18 +648,18 @@ func TestCommandCloseScenarioPromoteDependencyNotReadyKeepsProcessFilesCLI(t *te
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err := runCommand([]string{"close", "--command", "scenario_promote", "--object-type", "scenario", "--object", "demo_flow", "--outcome", "dependency_not_ready", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err != nil {
-		t.Fatalf("scenario dependency close failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	if err == nil || !strings.Contains(err.Error(), "command close input preflight failed") {
+		t.Fatalf("expected invalid scenario verify input failure, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "cleanup_action: none") {
-		t.Fatalf("dependency_not_ready must not cleanup, got %s", stdout.String())
+	if !strings.Contains(stdout.String(), "input_validation_action: command_preflight") || !strings.Contains(stdout.String(), "- process: verify") {
+		t.Fatalf("expected input validation output, got %s", stdout.String())
 	}
 	status, err := statusfile.LookupObjectStatus(repoRoot, "scenario", "demo_flow")
 	if err != nil {
 		t.Fatalf("LookupObjectStatus: %v", err)
 	}
 	if status.NextCommand != "scenario_promote" {
-		t.Fatalf("dependency_not_ready must keep scenario_promote, got %+v", status)
+		t.Fatalf("invalid verify must keep scenario_promote, got %+v", status)
 	}
 	if content, err := os.ReadFile(verifyPath); err != nil || string(content) != "verify must stay\n" {
 		t.Fatalf("verify file must remain unchanged, content=%q err=%v", string(content), err)
@@ -661,6 +709,7 @@ func createCLITestRepo(t *testing.T) string {
 		"spec_flow_migrate.md",
 		"agent_operability_standard.md",
 		"natural_language_routing.md",
+		"advance_policy.md",
 		"onboarding_decision_policy.md",
 		"candidate_intent_policy.md",
 		"command_policy.md",

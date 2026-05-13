@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandpreflight"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
@@ -30,20 +31,23 @@ type Options struct {
 }
 
 type Result struct {
-	Command              string
-	ObjectType           string
-	Object               string
-	Outcome              string
-	Applied              bool
-	StatusBeforePresent  bool
-	StatusBefore         statusfile.ObjectStatus
-	StatusAfter          statusfile.ObjectStatus
-	ValidationAction     string
-	CleanupAction        string
-	FallbackCleanup      processcleanup.CleanupResult
-	SuccessCleanup       processcleanup.SuccessCleanupResult
-	StatusUpdated        bool
-	ValidationMismatches []string
+	Command                   string
+	ObjectType                string
+	Object                    string
+	Outcome                   string
+	Applied                   bool
+	StatusBeforePresent       bool
+	StatusBefore              statusfile.ObjectStatus
+	StatusAfter               statusfile.ObjectStatus
+	InputValidationAction     string
+	InputValidatedProcesses   []commandpreflight.Process
+	InputValidationMismatches []string
+	ValidationAction          string
+	CleanupAction             string
+	FallbackCleanup           processcleanup.CleanupResult
+	SuccessCleanup            processcleanup.SuccessCleanupResult
+	StatusUpdated             bool
+	ValidationMismatches      []string
 }
 
 type transition struct {
@@ -84,16 +88,26 @@ func Close(opts Options) (Result, error) {
 	}
 
 	result := Result{
-		Command:             opts.Command,
-		ObjectType:          opts.ObjectType,
-		Object:              opts.Object,
-		Outcome:             opts.Outcome,
-		Applied:             opts.Apply,
-		StatusBeforePresent: present,
-		StatusBefore:        before,
-		StatusAfter:         trans.Status,
-		ValidationAction:    validationAction(trans.ValidationProcess),
-		CleanupAction:       cleanupAction(trans),
+		Command:               opts.Command,
+		ObjectType:            opts.ObjectType,
+		Object:                opts.Object,
+		Outcome:               opts.Outcome,
+		Applied:               opts.Apply,
+		StatusBeforePresent:   present,
+		StatusBefore:          before,
+		StatusAfter:           trans.Status,
+		InputValidationAction: inputValidationAction(opts.Command, trans),
+		ValidationAction:      validationAction(trans.ValidationProcess),
+		CleanupAction:         cleanupAction(trans),
+	}
+
+	if shouldValidateInput(opts.Command, trans) {
+		preflight := commandpreflight.Run(opts.RepoRoot, opts.Command, opts.ObjectType, opts.Object)
+		result.InputValidatedProcesses = preflight.ValidatedProcesses
+		if !preflight.MayContinue {
+			result.InputValidationMismatches = collectPreflightDiagnostics(preflight)
+			return result, fmt.Errorf("command close input preflight failed for %s %s/%s: %s", opts.Command, opts.ObjectType, opts.Object, strings.Join(result.InputValidationMismatches, "; "))
+		}
 	}
 
 	if trans.ValidationProcess != "" {
@@ -564,6 +578,41 @@ func validateProcess(repoRoot, objectType, object, process string) ([]string, er
 		return result.Mismatches, fmt.Errorf("required %s process is invalid for %s %s: %s", process, objectType, object, strings.Join(result.Mismatches, "; "))
 	}
 	return nil, nil
+}
+
+func shouldValidateInput(command string, trans transition) bool {
+	if trans.CleanupKind == cleanupFallback {
+		return false
+	}
+	switch command {
+	case "unit_plan", "unit_impl", "unit_verify", "unit_promote", "scenario_verify", "scenario_promote":
+		return true
+	default:
+		return false
+	}
+}
+
+func inputValidationAction(command string, trans transition) string {
+	if !shouldValidateInput(command, trans) {
+		return "none"
+	}
+	return "command_preflight"
+}
+
+func collectPreflightDiagnostics(result commandpreflight.Result) []string {
+	var diagnostics []string
+	for _, process := range result.ValidatedProcesses {
+		for _, diagnostic := range process.Diagnostics {
+			diagnostics = append(diagnostics, fmt.Sprintf("%s: %s", process.ProcessKind, diagnostic))
+		}
+	}
+	if len(diagnostics) == 0 {
+		diagnostics = append(diagnostics, result.Diagnostics...)
+	}
+	if len(diagnostics) == 0 && result.FailureLayer != "" {
+		diagnostics = append(diagnostics, "failure_layer="+result.FailureLayer)
+	}
+	return diagnostics
 }
 
 func validationAction(process string) string {

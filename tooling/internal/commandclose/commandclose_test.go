@@ -6,7 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/testfixtures"
 )
 
 func TestDetermineTransitionCoversStandardOutcomes(t *testing.T) {
@@ -198,6 +200,116 @@ func TestCloseApplyInvokesSuccessCleanup(t *testing.T) {
 	}
 }
 
+func TestCloseRejectsUnitPlanReadyWhenInputCheckMissing(t *testing.T) {
+	repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | test |\n")
+	_, err := Close(Options{
+		RepoRoot:   repoRoot,
+		Command:    "unit_plan",
+		ObjectType: "unit",
+		Object:     "demo",
+		Outcome:    "plan_ready",
+		Apply:      true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "command close input preflight failed") || !strings.Contains(err.Error(), "missing process file") {
+		t.Fatalf("expected input preflight failure for missing check, got %v", err)
+	}
+	status, err := statusfile.LookupObjectStatus(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("LookupObjectStatus: %v", err)
+	}
+	if status.NextCommand != "unit_plan" {
+		t.Fatalf("missing input check must not advance status, got %+v", status)
+	}
+}
+
+func TestCloseRejectsUnitImplReadyWhenInputPlanMissing(t *testing.T) {
+	repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_impl` | test |\n")
+	snap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeCommandCloseUnitCheckProcess(t, repoRoot, snap)
+
+	_, err = Close(Options{
+		RepoRoot:   repoRoot,
+		Command:    "unit_impl",
+		ObjectType: "unit",
+		Object:     "demo",
+		Outcome:    "ready_for_verify",
+		Apply:      true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "plan: missing process file") {
+		t.Fatalf("expected input preflight failure for missing plan, got %v", err)
+	}
+	status, err := statusfile.LookupObjectStatus(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("LookupObjectStatus: %v", err)
+	}
+	if status.NextCommand != "unit_impl" {
+		t.Fatalf("missing input plan must not advance status, got %+v", status)
+	}
+}
+
+func TestCloseRejectsUnitVerifyReadyWhenInputCheckOrPlanMissing(t *testing.T) {
+	t.Run("missing check", func(t *testing.T) {
+		repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | test |\n")
+		_, err := Close(Options{
+			RepoRoot:   repoRoot,
+			Command:    "unit_verify",
+			ObjectType: "unit",
+			Object:     "demo",
+			Outcome:    "ready_to_promote",
+			Apply:      true,
+		})
+		if err == nil || !strings.Contains(err.Error(), "check: missing process file") {
+			t.Fatalf("expected input preflight failure for missing check, got %v", err)
+		}
+	})
+
+	t.Run("missing plan", func(t *testing.T) {
+		repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | test |\n")
+		snap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+		if err != nil {
+			t.Fatalf("RebuildCurrentObject: %v", err)
+		}
+		writeCommandCloseUnitCheckProcess(t, repoRoot, snap)
+
+		_, err = Close(Options{
+			RepoRoot:   repoRoot,
+			Command:    "unit_verify",
+			ObjectType: "unit",
+			Object:     "demo",
+			Outcome:    "ready_to_promote",
+			Apply:      true,
+		})
+		if err == nil || !strings.Contains(err.Error(), "plan: missing process file") {
+			t.Fatalf("expected input preflight failure for missing plan, got %v", err)
+		}
+	})
+}
+
+func TestCloseRejectsScenarioPromoteDependencyNotReadyWhenVerifyMissing(t *testing.T) {
+	repoRoot := commandCloseSnapshotRepo(t, "| `scenario` | `checkout` | `no` | `yes` | `candidate` | `scenario_promote` | test |\n")
+	_, err := Close(Options{
+		RepoRoot:   repoRoot,
+		Command:    "scenario_promote",
+		ObjectType: "scenario",
+		Object:     "checkout",
+		Outcome:    "dependency_not_ready",
+		Apply:      true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "verify: missing process file") {
+		t.Fatalf("expected input preflight failure for missing scenario verify, got %v", err)
+	}
+	status, err := statusfile.LookupObjectStatus(repoRoot, "scenario", "checkout")
+	if err != nil {
+		t.Fatalf("LookupObjectStatus: %v", err)
+	}
+	if status.NextCommand != "scenario_promote" {
+		t.Fatalf("missing scenario verify must not advance status, got %+v", status)
+	}
+}
+
 func TestValidateOutcomeFlagsForControlledCandidateIntent(t *testing.T) {
 	err := validateOutcomeFlags(Options{Command: "unit_stable_verify", Outcome: "controlled_repair_required"})
 	if err == nil || !strings.Contains(err.Error(), "requires --candidate-intent repair") {
@@ -256,8 +368,89 @@ func commandCloseTestRepo(t *testing.T, rows string) string {
 	return repoRoot
 }
 
+func commandCloseSnapshotRepo(t *testing.T, rows string) string {
+	t.Helper()
+	repoRoot := commandCloseTestRepo(t, rows)
+	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), `---
+id: demo
+layer: candidate
+version: 0.1.0
+---
+
+# Demo
+
+rule_refs: none
+
+## Testability / Acceptance Criteria
+
+acceptance_item_set:
+  - id: demo.core
+    target: Demo behavior is accepted.
+    verification_surface: internal_flow
+    implementation_surface: AgentCore/internal/demo
+    verification_method: Go test for the demo behavior.
+    pass_condition: The demo behavior passes under the declared checks.
+    not_runnable_yet: no
+`)
+	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/c_scenario_checkout.md"), `---
+id: checkout
+layer: candidate
+version: 0.1.0
+---
+
+# Checkout
+
+unit_refs: none
+rule_refs: none
+
+## Testability / Acceptance Criteria
+
+acceptance_item_set:
+  - id: checkout.e2e
+    target: Checkout flow is accepted.
+    verification_surface: integration
+    implementation_surface: AgentCore/runtime
+    verification_method: Run the checkout flow.
+    pass_condition: The checkout result is observed.
+    not_runnable_yet: no
+`)
+	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), `---
+id: repository_mapping
+version: 0.1.0
+---
+
+# Repository Mapping
+`)
+	return repoRoot
+}
+
+func writeCommandCloseUnitCheckProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot) {
+	t.Helper()
+	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md"), "# check\n\n```yaml\n"+strings.Join([]string{
+		"object_type: unit",
+		"object_ref: demo",
+		"gate: unit_check",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: unit_plan",
+		"blocking_summary: none",
+		"coverage_summary: demo",
+		"truth_layer_ref: " + snap.TruthLayerRef,
+		"truth_file_ref: " + snap.SpecFileRef,
+		"truth_version_ref: " + snap.SpecVersionRef,
+		"truth_fingerprint: " + snap.SpecFingerprint,
+		"unit_appendix_snapshot: none",
+		"rule_snapshot: none",
+		"acceptance_item_set:",
+		"  - id: demo.core",
+		"    verification_surface: internal_flow",
+		"    not_runnable_yet: no",
+	}, "\n")+"\n```\n")
+}
+
 func writeCommandCloseTestFile(t *testing.T, path, content string) {
 	t.Helper()
+	content = testfixtures.NormalizeSpecFlowContent(path, content)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", path, err)
 	}

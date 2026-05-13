@@ -34,6 +34,9 @@ func TestInitCreatesValidRunState(t *testing.T) {
 	if !containsString(routingSlice.InputFiles, "specflow/framework/spec_flow_migrate.md") {
 		t.Fatalf("expected migration policy in routing slice, got %+v", routingSlice.InputFiles)
 	}
+	if !containsString(routingSlice.InputFiles, "specflow/framework/advance_policy.md") {
+		t.Fatalf("expected advance policy in routing slice, got %+v", routingSlice.InputFiles)
+	}
 	if !containsString(routingSlice.InputFiles, "specflow/framework/candidate_intent_policy.md") {
 		t.Fatalf("expected candidate intent policy in routing slice, got %+v", routingSlice.InputFiles)
 	}
@@ -135,6 +138,9 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	}
 	if !containsString(designFoundation.InputFiles, "specflow/framework/spec_flow_migrate.md") {
 		t.Fatalf("expected migration policy in design foundation input files, got %+v", designFoundation.InputFiles)
+	}
+	if !containsString(designFoundation.InputFiles, "specflow/framework/advance_policy.md") {
+		t.Fatalf("expected advance policy in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
 
 	validation := ValidateFile(repoRoot, FlowSpecFlowDesignReview, result.File, now)
@@ -915,6 +921,7 @@ func createReviewRunRepo(t *testing.T) string {
 		"spec_flow_migrate.md",
 		"agent_operability_standard.md",
 		"natural_language_routing.md",
+		"advance_policy.md",
 		"onboarding_decision_policy.md",
 		"candidate_intent_policy.md",
 		"command_policy.md",
