@@ -1,14 +1,15 @@
 package reader
 
 type Snapshot struct {
-	Version     int64        `json:"version"`
-	GeneratedAt string       `json:"generated_at"`
-	Project     ProjectInfo  `json:"project"`
-	Objects     []ObjectView `json:"objects"`
-	Nodes       []GraphNode  `json:"nodes"`
-	Edges       []GraphEdge  `json:"edges"`
-	Sources     []SourceRef  `json:"sources"`
-	Diagnostics []Diagnostic `json:"diagnostics"`
+	Version     int64          `json:"version"`
+	GeneratedAt string         `json:"generated_at"`
+	Project     ProjectInfo    `json:"project"`
+	Objects     []ObjectView   `json:"objects"`
+	Registry    []RegistryItem `json:"registry"`
+	Nodes       []GraphNode    `json:"nodes"`
+	Edges       []GraphEdge    `json:"edges"`
+	Sources     []SourceRef    `json:"sources"`
+	Diagnostics []Diagnostic   `json:"diagnostics"`
 }
 
 type ProjectInfo struct {
@@ -42,6 +43,28 @@ type ObjectView struct {
 	RuleRefs            []string    `json:"rule_refs"`
 	BoundObjects        []string    `json:"bound_objects"`
 	Sources             []SourceRef `json:"sources"`
+}
+
+type RegistryItem struct {
+	ID                       string      `json:"id"`
+	Kind                     string      `json:"kind"`
+	Label                    string      `json:"label"`
+	RuleScope                string      `json:"rule_scope,omitempty"`
+	RegistrationState        string      `json:"registration_state,omitempty"`
+	Result                   string      `json:"result"`
+	MappingRegistered        bool        `json:"mapping_registered"`
+	StatusRegistered         bool        `json:"status_registered"`
+	TruthRegistered          bool        `json:"truth_registered"`
+	ImplementationRegistered bool        `json:"implementation_registered"`
+	MappingSource            *SourceRef  `json:"mapping_source,omitempty"`
+	StatusSource             *SourceRef  `json:"status_source,omitempty"`
+	TruthSources             []SourceRef `json:"truth_sources"`
+	ImplementationPaths      []SourceRef `json:"implementation_paths"`
+	RuleRefs                 []string    `json:"rule_refs"`
+	UnitRefs                 []string    `json:"unit_refs"`
+	BoundObjects             []string    `json:"bound_objects"`
+	Issues                   []string    `json:"issues"`
+	Sources                  []SourceRef `json:"sources"`
 }
 
 type GraphNode struct {

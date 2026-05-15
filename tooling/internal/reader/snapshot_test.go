@@ -36,7 +36,7 @@ func TestBuildSnapshotConnectsUnitSpecAndRule(t *testing.T) {
 	if !sourcePathsEqual(unit.TruthPaths, expectedTruthPaths) {
 		t.Fatalf("unexpected truth paths: %+v", unit.TruthPaths)
 	}
-	if len(unit.RuleRefs) != 1 || unit.RuleRefs[0] != "b_rule_runtime_model" {
+	if !stringSlicesEqual(unit.RuleRefs, []string{"b_rule_runtime_model", "b_rule_unregistered"}) {
 		t.Fatalf("unexpected rule refs: %+v", unit.RuleRefs)
 	}
 
@@ -58,6 +58,49 @@ func TestBuildSnapshotConnectsUnitSpecAndRule(t *testing.T) {
 	}
 	if !hasEdge(snapshot.Edges, "unit:assistant", "shared:b_rule_runtime_model", "uses_shared") {
 		t.Fatalf("expected unit uses_shared edge, got %+v", snapshot.Edges)
+	}
+	registryUnit := findRegistryItem(t, snapshot.Registry, "unit", "assistant")
+	if !registryUnit.MappingRegistered || !registryUnit.StatusRegistered || !registryUnit.TruthRegistered || !registryUnit.ImplementationRegistered {
+		t.Fatalf("expected assistant registry to be complete, got %+v", registryUnit)
+	}
+	if registryUnit.Result != "landed" || len(registryUnit.Issues) != 0 {
+		t.Fatalf("expected assistant registry landed result, got %+v", registryUnit)
+	}
+	registryScenario := findRegistryItem(t, snapshot.Registry, "scenario", "demo_flow")
+	if !registryScenario.MappingRegistered || !registryScenario.StatusRegistered || !registryScenario.TruthRegistered {
+		t.Fatalf("expected demo_flow registry to connect mapping, status, and truth, got %+v", registryScenario)
+	}
+	if registryScenario.Result != "planned" {
+		t.Fatalf("expected demo_flow to be planned because it has no direct implementation path, got %+v", registryScenario)
+	}
+	if len(registryScenario.UnitRefs) != 1 || registryScenario.UnitRefs[0] != "assistant" {
+		t.Fatalf("unexpected scenario unit refs: %+v", registryScenario.UnitRefs)
+	}
+	registryRule := findRegistryItem(t, snapshot.Registry, "rule", "b_rule_runtime_model")
+	if !registryRule.MappingRegistered || !registryRule.TruthRegistered || registryRule.StatusRegistered {
+		t.Fatalf("expected runtime rule registry without status registration, got %+v", registryRule)
+	}
+	if registryRule.RuleScope != "bound" || len(registryRule.BoundObjects) != 2 {
+		t.Fatalf("expected runtime rule to be bound by current specs, got %+v", registryRule)
+	}
+	registryGlobalRule := findRegistryItem(t, snapshot.Registry, "rule", "g_rule_repository_baseline")
+	if !registryGlobalRule.MappingRegistered || !registryGlobalRule.TruthRegistered || registryGlobalRule.StatusRegistered {
+		t.Fatalf("expected global rule registry without status registration, got %+v", registryGlobalRule)
+	}
+	if registryGlobalRule.RuleScope != "global" || registryGlobalRule.Result != "planned" {
+		t.Fatalf("expected global rule to be planned global registry item without direct code path, got %+v", registryGlobalRule)
+	}
+	registryPlannedRule := findRegistryItem(t, snapshot.Registry, "rule", "b_rule_future")
+	if registryPlannedRule.Result != "planned" || registryPlannedRule.TruthRegistered {
+		t.Fatalf("expected planned future rule without Spec file, got %+v", registryPlannedRule)
+	}
+	registryMissingScenario := findRegistryItem(t, snapshot.Registry, "scenario", "missing_flow")
+	if registryMissingScenario.Result != "missing_file" {
+		t.Fatalf("expected missing scenario implementation path, got %+v", registryMissingScenario)
+	}
+	registryUnregisteredRule := findRegistryItem(t, snapshot.Registry, "rule", "b_rule_unregistered")
+	if registryUnregisteredRule.Result != "unregistered_file" {
+		t.Fatalf("expected unregistered rule file, got %+v", registryUnregisteredRule)
 	}
 	truthNode := findNode(t, snapshot.Nodes, "file:docs/specs/units/candidate/c_unit_assistant.md")
 	if truthNode.Label != "assistant (candidate)" {
@@ -119,10 +162,31 @@ func findNode(t *testing.T, nodes []GraphNode, id string) GraphNode {
 	return GraphNode{}
 }
 
+func findRegistryItem(t *testing.T, items []RegistryItem, kind, id string) RegistryItem {
+	t.Helper()
+	for _, item := range items {
+		if item.Kind == kind && item.ID == id {
+			return item
+		}
+	}
+	t.Fatalf("registry item %s/%s not found in %+v", kind, id, items)
+	return RegistryItem{}
+}
+
 func countObjects(objects []ObjectView, kind, id string) int {
 	count := 0
 	for _, object := range objects {
 		if object.Kind == kind && object.ID == id {
+			count++
+		}
+	}
+	return count
+}
+
+func countRegistryItems(items []RegistryItem, kind, id string) int {
+	count := 0
+	for _, item := range items {
+		if item.Kind == kind && item.ID == id {
 			count++
 		}
 	}
@@ -151,28 +215,23 @@ func createReaderRepo(t *testing.T) string {
 		"| `unit` | `assistant` | `no` | `yes` | `candidate` | `unit_check` | note |",
 		"| `unit` | `memory` | `yes` | `yes` | `candidate` | `unit_plan` | repair candidate in progress |",
 		"| `unit` | `tool` | `yes` | `no` | `stable` | `unit_fork` | next fork must create candidate_intent=repair |",
+		"| `scenario` | `demo_flow` | `no` | `yes` | `candidate` | `scenario_check` | note |",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), strings.Join([]string{
 		"# Repository Mapping",
 		"",
-		"### 2.1 Current Units",
+		"## 2. Object Registry",
 		"",
-		"1. `assistant`",
-		"   - assistant prompt responsibility",
-		"2. `tool`",
-		"   - tool execution responsibility",
-		"3. `memory`",
-		"   - memory responsibility",
-		"",
-		"### 2.3 Current Rules",
-		"",
-		"1. `b_rule_runtime_model`",
-		"   - runtime model rule",
-		"",
-		"### 4.5 Rule Truth Paths",
-		"",
-		"1. `runtime_model`",
-		"   - `docs/specs/rules/candidate/c_b_rule_runtime_model.md`",
+		"| kind | id | scope | registration_state | implementation_paths | spec_files | responsibility |",
+		"|---|---|---|---|---|---|---|",
+		"| unit | assistant | capability | landed | `CLI/internal/assistant/**` | `docs/specs/units/candidate/c_unit_assistant.md` | assistant prompt responsibility |",
+		"| unit | tool | capability | planned | none | `docs/specs/units/stable/s_unit_tool.md` | tool execution responsibility |",
+		"| unit | memory | capability | planned | none | `docs/specs/units/candidate/c_unit_memory.md` | memory responsibility |",
+		"| scenario | demo_flow | flow | planned | none | `docs/specs/scenarios/candidate/c_scenario_demo_flow.md` | demo flow responsibility |",
+		"| scenario | missing_flow | flow | landed | `CLI/internal/missing/**` | none | missing flow responsibility |",
+		"| rule | g_rule_repository_baseline | global | planned | none | `docs/specs/rules/stable/s_g_rule_repository_baseline.md` | global baseline |",
+		"| rule | b_rule_runtime_model | bound | planned | none | `docs/specs/rules/candidate/c_b_rule_runtime_model.md` | runtime model rule |",
+		"| rule | b_rule_future | bound | planned | none | none | future shared rule |",
 		"",
 		"### 4.6 Unit Truth Rules And Implementation Paths",
 		"",
@@ -180,8 +239,25 @@ func createReaderRepo(t *testing.T) string {
 		"   - `truth_surface_rule`: `unit_default`",
 		"   - `implementation_surface`",
 		"     - `CLI/internal/assistant/**`",
+		"",
+		"## 5. Rule Alignment",
+		"",
+		"1. `s_g_rule_repository_baseline@0.1.0`",
+		"2. `c_b_rule_runtime_model@0.1.0`",
+		"",
+		"## 6. Drift Handling",
 	}, "\n")+"\n")
-	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# Global Rules\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), strings.Join([]string{
+		"---",
+		"rule_id: g_rule_repository_baseline",
+		"rule_scope: global",
+		"layer: stable",
+		"rule_version: 0.1.0",
+		"---",
+		"",
+		"# Global Rules",
+	}, "\n")+"\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "CLI/internal/assistant/prompt.go"), "package assistant\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_assistant.md"), strings.Join([]string{
 		"---",
 		"id: assistant",
@@ -194,6 +270,7 @@ func createReaderRepo(t *testing.T) string {
 		"",
 		"1. `rule_refs`:",
 		"   - `c_b_rule_runtime_model@0.1.0`",
+		"   - `c_b_rule_unregistered@0.1.0`",
 		"2. Prompt details live in [`c_unit_assistant_prompt.md`](./appendix/c_unit_assistant_prompt.md).",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_tool.md"), strings.Join([]string{
@@ -228,6 +305,22 @@ func createReaderRepo(t *testing.T) string {
 		"",
 		"Prompt notes.",
 	}, "\n")+"\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/c_scenario_demo_flow.md"), strings.Join([]string{
+		"---",
+		"id: demo_flow",
+		"layer: candidate",
+		"version: 0.1.0",
+		"source_basis: new_design",
+		"evidence_appendix_ref: none",
+		"repository_mapping_ref: repository_mapping@0.1.0",
+		"unit_refs:",
+		"  - c_unit_assistant@0.1.0",
+		"rule_refs:",
+		"  - c_b_rule_runtime_model@0.1.0",
+		"---",
+		"",
+		"# Demo Flow",
+	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/rules/candidate/c_b_rule_runtime_model.md"), strings.Join([]string{
 		"---",
 		"rule_id: b_rule_runtime_model",
@@ -240,6 +333,16 @@ func createReaderRepo(t *testing.T) string {
 		"",
 		"# Shared Runtime Model",
 	}, "\n")+"\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/rules/candidate/c_b_rule_unregistered.md"), strings.Join([]string{
+		"---",
+		"rule_id: b_rule_unregistered",
+		"rule_scope: bound",
+		"layer: candidate",
+		"rule_version: 0.1.0",
+		"---",
+		"",
+		"# Unregistered Rule",
+	}, "\n")+"\n")
 	return repoRoot
 }
 
@@ -249,6 +352,18 @@ func sourcePathsEqual(refs []SourceRef, expected []string) bool {
 	}
 	for idx, expectedPath := range expected {
 		if refs[idx].Path != expectedPath {
+			return false
+		}
+	}
+	return true
+}
+
+func stringSlicesEqual(values []string, expected []string) bool {
+	if len(values) != len(expected) {
+		return false
+	}
+	for idx, expectedValue := range expected {
+		if values[idx] != expectedValue {
 			return false
 		}
 	}

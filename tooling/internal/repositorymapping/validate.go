@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
-const unitDefaultRule = "unit_default"
+const registryHeader = "kind|id|scope|registration_state|implementation_paths|spec_files|responsibility"
 
 type Result struct {
 	Diagnostics []string
@@ -21,24 +20,20 @@ func (r Result) Valid() bool {
 	return len(r.Diagnostics) == 0
 }
 
+type registryEntry struct {
+	Kind                string
+	ID                  string
+	Scope               string
+	RegistrationState   string
+	ImplementationPaths []string
+	SpecFiles           []string
+	Line                int
+}
+
 type mappingData struct {
-	Units       map[string]mappingUnit
-	SharedPaths []mappingPath
+	Entries     map[string]registryEntry
 	Diagnostics []string
 }
-
-type mappingUnit struct {
-	ID      string
-	Rule    string
-	RuleSet bool
-}
-
-type mappingPath struct {
-	Path string
-	Line int
-}
-
-var numberedCodeSpanPattern = regexp.MustCompile("^\\s*\\d+\\.\\s+`([^`]+)`\\s*$")
 
 func Validate(repoRoot string) (Result, error) {
 	mapping, err := loadMapping(repoRoot)
@@ -51,30 +46,49 @@ func Validate(repoRoot string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-
+	statusRows := map[string]statusfile.ObjectStatus{}
 	for _, status := range statuses {
-		if status.ObjectType != "unit" && status.ObjectType != "scenario" {
-			continue
+		if status.ObjectType == "unit" || status.ObjectType == "scenario" {
+			statusRows[status.ObjectType+":"+status.Object] = status
 		}
-		if status.ObjectType == "unit" {
-			unit, ok := mapping.Units[status.Object]
-			if !ok {
-				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("unit %q is present in _status.md but missing from repository_mapping.md", status.Object))
-			} else {
-				if !unit.RuleSet {
-					result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("unit %q must declare truth_surface_rule: %s", status.Object, unitDefaultRule))
-				} else if unit.Rule != unitDefaultRule {
-					result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("unit %q uses unsupported truth_surface_rule %q", status.Object, unit.Rule))
+	}
+
+	for key, entry := range mapping.Entries {
+		switch entry.RegistrationState {
+		case "planned":
+			if len(entry.ImplementationPaths) > 0 {
+				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("planned object %s %q must use implementation_paths=none", entry.Kind, entry.ID))
+			}
+		case "landed":
+			if len(entry.ImplementationPaths) == 0 {
+				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("landed object %s %q must declare implementation_paths", entry.Kind, entry.ID))
+			}
+			for _, implementationPath := range entry.ImplementationPaths {
+				if !implementationPathExists(repoRoot, implementationPath) {
+					result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("registered implementation path does not exist: %s", implementationPath))
 				}
 			}
 		}
-		validateStatusTruthFiles(&result, repoRoot, status)
+		for _, specFile := range entry.SpecFiles {
+			if !exists(repoRoot, specFile) {
+				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("registered spec file does not exist: %s", specFile))
+			}
+		}
+		if entry.RegistrationState == "landed" {
+			if entry.Kind == "unit" || entry.Kind == "scenario" {
+				if _, ok := statusRows[key]; !ok {
+					result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("landed %s %q is missing from _status.md", entry.Kind, entry.ID))
+				}
+			}
+		}
 	}
 
-	for _, sharedPath := range mapping.SharedPaths {
-		if !exists(repoRoot, sharedPath.Path) {
-			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("rule path does not exist: %s", sharedPath.Path))
+	for key, status := range statusRows {
+		if _, ok := mapping.Entries[key]; !ok {
+			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s %q is present in _status.md but missing from Object Registry", status.ObjectType, status.Object))
+			continue
 		}
+		validateStatusTruthFiles(&result, repoRoot, status)
 	}
 
 	return result, nil
@@ -113,76 +127,152 @@ func loadMapping(repoRoot string) (mappingData, error) {
 		return mappingData{}, fmt.Errorf("read %s: %w", relPath, err)
 	}
 
-	result := mappingData{Units: map[string]mappingUnit{}}
+	result := mappingData{Entries: map[string]registryEntry{}}
 	lines := strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n")
-	section := ""
-	currentUnit := ""
+	inRegistrySection := false
+	headerSeen := false
 	for idx, line := range lines {
 		lineNo := idx + 1
 		trimmed := strings.TrimSpace(line)
 		switch {
-		case strings.HasPrefix(trimmed, "### 2.1 "):
-			section = "unit_map"
-			currentUnit = ""
+		case strings.HasPrefix(trimmed, "## 2. Object Registry"):
+			inRegistrySection = true
+			headerSeen = false
 			continue
-		case strings.HasPrefix(trimmed, "### 2.2 "):
-			section = ""
-			currentUnit = ""
-			continue
-		case strings.HasPrefix(trimmed, "### 4.5 "):
-			section = "shared_paths"
-			currentUnit = ""
-			continue
-		case strings.HasPrefix(trimmed, "### 4.6 "):
-			section = "unit_paths"
-			currentUnit = ""
-			continue
-		case strings.HasPrefix(trimmed, "### 4.7 ") || strings.HasPrefix(trimmed, "## 5."):
-			section = ""
-			currentUnit = ""
+		case inRegistrySection && strings.HasPrefix(trimmed, "## ") && !strings.HasPrefix(trimmed, "## 2. Object Registry"):
+			inRegistrySection = false
 			continue
 		}
+		if !inRegistrySection || !strings.HasPrefix(trimmed, "|") {
+			continue
+		}
+		cells := splitMarkdownTableRow(trimmed)
+		if len(cells) == 0 || isMarkdownSeparatorRow(cells) {
+			continue
+		}
+		if !headerSeen {
+			if normalizeHeader(cells) != registryHeader {
+				result.Diagnostics = append(result.Diagnostics, "Object Registry header must be: | kind | id | scope | registration_state | implementation_paths | spec_files | responsibility |")
+				return result, nil
+			}
+			headerSeen = true
+			continue
+		}
+		entry, diagnostics := parseRegistryEntry(cells, lineNo)
+		result.Diagnostics = append(result.Diagnostics, diagnostics...)
+		if len(diagnostics) == 0 {
+			result.Entries[entry.Kind+":"+entry.ID] = entry
+		}
+	}
+	if !headerSeen {
+		result.Diagnostics = append(result.Diagnostics, "repository_mapping.md must contain ## 2. Object Registry with the fixed registry table")
+	}
+	return result, nil
+}
 
-		switch section {
-		case "unit_map":
-			if id, ok := parseNumberedCodeSpan(trimmed); ok {
-				unit := result.Units[id]
-				unit.ID = id
-				result.Units[id] = unit
-			}
-		case "shared_paths":
-			if strings.HasPrefix(trimmed, "- `") {
-				if path := firstCodeSpan(trimmed); strings.HasPrefix(path, "docs/specs/rules/") {
-					result.SharedPaths = append(result.SharedPaths, mappingPath{Path: path, Line: lineNo})
-				}
-			}
-		case "unit_paths":
-			if id, ok := parseNumberedCodeSpan(trimmed); ok {
-				if _, known := result.Units[id]; known {
-					currentUnit = id
-				} else {
-					currentUnit = ""
-				}
-				continue
-			}
-			if currentUnit == "" {
-				continue
-			}
-			if strings.Contains(trimmed, "`truth_surface`") && !strings.Contains(trimmed, "truth_surface_rule") {
-				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s:%d uses deprecated truth_surface; use truth_surface_rule: %s", relPath, lineNo, unitDefaultRule))
-			}
-			if strings.Contains(trimmed, "docs/specs/units/candidate/") || strings.Contains(trimmed, "docs/specs/units/stable/") {
-				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s:%d lists a concrete unit truth path; use truth_surface_rule: %s", relPath, lineNo, unitDefaultRule))
-			}
-			if strings.Contains(trimmed, "truth_surface_rule") {
-				unit := result.Units[currentUnit]
-				unit.Rule = parseRuleValue(trimmed)
-				unit.RuleSet = unit.Rule != ""
-				result.Units[currentUnit] = unit
+func parseRegistryEntry(cells []string, line int) (registryEntry, []string) {
+	entry := registryEntry{Line: line}
+	if len(cells) != 7 {
+		return entry, []string{fmt.Sprintf("Object Registry row %d must have 7 columns", line)}
+	}
+	entry.Kind = cleanCell(cells[0])
+	entry.ID = cleanCell(cells[1])
+	entry.Scope = cleanCell(cells[2])
+	entry.RegistrationState = cleanCell(cells[3])
+	entry.ImplementationPaths = parsePathList(cells[4])
+	entry.SpecFiles = parsePathList(cells[5])
+
+	diagnostics := []string{}
+	if entry.Kind != "unit" && entry.Kind != "scenario" && entry.Kind != "rule" {
+		diagnostics = append(diagnostics, fmt.Sprintf("Object Registry row %d has invalid kind %q", line, entry.Kind))
+	}
+	if entry.ID == "" {
+		diagnostics = append(diagnostics, fmt.Sprintf("Object Registry row %d has empty id", line))
+	}
+	if !validScope(entry.Kind, entry.Scope) {
+		diagnostics = append(diagnostics, fmt.Sprintf("Object Registry row %d has invalid scope %q for kind %q", line, entry.Scope, entry.Kind))
+	}
+	if entry.RegistrationState != "planned" && entry.RegistrationState != "landed" {
+		diagnostics = append(diagnostics, fmt.Sprintf("Object Registry row %d has invalid registration_state %q", line, entry.RegistrationState))
+	}
+	if entry.RegistrationState == "planned" && len(entry.ImplementationPaths) > 0 {
+		diagnostics = append(diagnostics, fmt.Sprintf("Object Registry row %d planned object must use implementation_paths=none", line))
+	}
+	if entry.RegistrationState == "landed" && len(entry.ImplementationPaths) == 0 {
+		diagnostics = append(diagnostics, fmt.Sprintf("Object Registry row %d landed object must declare implementation_paths", line))
+	}
+	return entry, diagnostics
+}
+
+func splitMarkdownTableRow(line string) []string {
+	line = strings.TrimSpace(line)
+	line = strings.TrimPrefix(line, "|")
+	line = strings.TrimSuffix(line, "|")
+	raw := strings.Split(line, "|")
+	cells := make([]string, 0, len(raw))
+	for _, cell := range raw {
+		cells = append(cells, strings.TrimSpace(cell))
+	}
+	return cells
+}
+
+func normalizeHeader(cells []string) string {
+	normalized := make([]string, 0, len(cells))
+	for _, cell := range cells {
+		normalized = append(normalized, cleanCell(cell))
+	}
+	return strings.Join(normalized, "|")
+}
+
+func isMarkdownSeparatorRow(cells []string) bool {
+	for _, cell := range cells {
+		cell = strings.TrimSpace(cell)
+		if cell == "" {
+			return false
+		}
+		for _, char := range cell {
+			if char != '-' && char != ':' {
+				return false
 			}
 		}
 	}
-	return result, nil
+	return len(cells) > 0
+}
+
+func validScope(kind, scope string) bool {
+	switch kind {
+	case "unit":
+		return scope == "capability"
+	case "scenario":
+		return scope == "flow"
+	case "rule":
+		return scope == "bound" || scope == "global"
+	default:
+		return false
+	}
+}
+
+func parsePathList(cell string) []string {
+	cell = cleanCell(cell)
+	if cell == "" || cell == "none" {
+		return nil
+	}
+	parts := strings.Split(cell, ";")
+	paths := []string{}
+	for _, part := range parts {
+		path := cleanCell(part)
+		if path == "" || path == "none" {
+			continue
+		}
+		paths = append(paths, filepath.ToSlash(path))
+	}
+	return paths
+}
+
+func cleanCell(cell string) string {
+	cell = strings.TrimSpace(cell)
+	cell = strings.Trim(cell, "` ")
+	return strings.TrimSpace(cell)
 }
 
 func exists(repoRoot, relPath string) bool {
@@ -190,47 +280,19 @@ func exists(repoRoot, relPath string) bool {
 	return err == nil
 }
 
-func parseNumberedCodeSpan(line string) (string, bool) {
-	matches := numberedCodeSpanPattern.FindStringSubmatch(line)
-	if len(matches) != 2 {
-		return "", false
+func implementationPathExists(repoRoot, relPath string) bool {
+	relPath = strings.TrimSpace(filepath.ToSlash(relPath))
+	if relPath == "" || relPath == "none" {
+		return false
 	}
-	return strings.TrimSpace(matches[1]), true
-}
-
-func parseRuleValue(line string) string {
-	spans := codeSpans(line)
-	if len(spans) >= 2 {
-		return spans[1]
+	if strings.HasSuffix(relPath, "/**") {
+		base := strings.TrimSuffix(relPath, "/**")
+		info, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(base)))
+		return err == nil && info.IsDir()
 	}
-	if idx := strings.Index(line, ":"); idx >= 0 {
-		return strings.Trim(strings.TrimSpace(line[idx+1:]), "` ")
+	if strings.ContainsAny(relPath, "*?[") {
+		matches, err := filepath.Glob(filepath.Join(repoRoot, filepath.FromSlash(relPath)))
+		return err == nil && len(matches) > 0
 	}
-	return ""
-}
-
-func firstCodeSpan(line string) string {
-	spans := codeSpans(line)
-	if len(spans) == 0 {
-		return ""
-	}
-	return spans[0]
-}
-
-func codeSpans(line string) []string {
-	spans := []string{}
-	rest := line
-	for {
-		start := strings.Index(rest, "`")
-		if start < 0 {
-			return spans
-		}
-		rest = rest[start+1:]
-		end := strings.Index(rest, "`")
-		if end < 0 {
-			return spans
-		}
-		spans = append(spans, strings.TrimSpace(rest[:end]))
-		rest = rest[end+1:]
-	}
+	return exists(repoRoot, relPath)
 }

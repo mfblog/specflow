@@ -21,6 +21,7 @@ type markdownDoc struct {
 }
 
 var sharedRefPattern = regexp.MustCompile("`?([cs]_[gb]_rule_[A-Za-z0-9_]+@[0-9]+\\.[0-9]+\\.[0-9]+)`?")
+var unitRefPattern = regexp.MustCompile("`?[cs]_unit_([A-Za-z0-9_]+)@[0-9]+\\.[0-9]+\\.[0-9]+`?")
 var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+\.md(?:#[^)]+)?)\)`)
 var candidateIntentPattern = regexp.MustCompile(`\bcandidate[_-]intent\s*=?\s*(repair|change)\b`)
 
@@ -123,6 +124,7 @@ func BuildSnapshot(repoRoot string) Snapshot {
 	}
 
 	snapshot.Project.TruthFileCount = len(docs)
+	snapshot.Registry = buildRegistryItems(repoRoot, mapping, statuses, docs, snapshot.Objects)
 	snapshot.Nodes = builder.nodes()
 	snapshot.Edges = builder.edges()
 	snapshot.Sources = sortedSources(sourceSet)
@@ -244,7 +246,7 @@ func buildSharedObjects(mapping repositoryMapping, docs []markdownDoc) []ObjectV
 	}
 	for _, doc := range docs {
 		id := doc.Frontmatter.Scalars["rule_id"]
-		if id == "" {
+		if id == "" || strings.HasPrefix(id, "g_rule_") {
 			continue
 		}
 		object := objects[id]
@@ -349,6 +351,18 @@ func extractRuleIDs(text string) []string {
 	return ids
 }
 
+func extractUnitIDs(text string) []string {
+	matches := unitRefPattern.FindAllStringSubmatch(text, -1)
+	ids := []string{}
+	for _, match := range matches {
+		if len(match) != 2 {
+			continue
+		}
+		ids = appendUnique(ids, strings.TrimSpace(match[1]))
+	}
+	return ids
+}
+
 func sharedRefToID(ref string) string {
 	ref = strings.TrimSpace(ref)
 	if before, _, ok := strings.Cut(ref, "@"); ok {
@@ -357,6 +371,224 @@ func sharedRefToID(ref string) string {
 	ref = strings.TrimPrefix(ref, "c_")
 	ref = strings.TrimPrefix(ref, "s_")
 	return ref
+}
+
+func buildRegistryItems(repoRoot string, mapping repositoryMapping, statuses []statusfile.ObjectStatus, docs []markdownDoc, objects []ObjectView) []RegistryItem {
+	items := map[string]*RegistryItem{}
+	ensure := func(kind, id string) *RegistryItem {
+		key := kind + ":" + id
+		if item, ok := items[key]; ok {
+			return item
+		}
+		item := &RegistryItem{ID: id, Kind: kind, Label: id}
+		items[key] = item
+		return item
+	}
+
+	for _, invalid := range mapping.InvalidRows {
+		id := invalid.ID
+		if id == "" {
+			id = "invalid_registry_row"
+		}
+		item := ensure("registry", id)
+		item.Label = id
+		item.Result = "invalid_registry_row"
+		item.Issues = appendUnique(item.Issues, invalid.Message)
+		item.Sources = appendSourceUnique(item.Sources, invalid.Source)
+	}
+
+	for _, entry := range mapping.Registry {
+		item := ensure(entry.Kind, entry.ID)
+		item.RuleScope = inferredRuleScope(entry.ID, entry.Scope)
+		item.RegistrationState = entry.RegistrationState
+		item.MappingRegistered = true
+		item.MappingSource = ptr(entry.Source)
+		item.TruthSources = appendSourceUnique(item.TruthSources, entry.SpecFiles...)
+		item.ImplementationPaths = appendSourceUnique(item.ImplementationPaths, entry.ImplementationPaths...)
+		item.ImplementationRegistered = len(item.ImplementationPaths) > 0
+		item.Sources = appendSourceUnique(item.Sources, entry.Source)
+		item.Sources = appendSourceUnique(item.Sources, entry.SpecFiles...)
+		if entry.RegistrationState == "landed" {
+			for _, implementationPath := range entry.ImplementationPaths {
+				if !registeredImplementationPathExists(repoRoot, implementationPath.Path) {
+					item.Issues = appendUnique(item.Issues, "missing implementation path: "+implementationPath.Path)
+				}
+			}
+		}
+	}
+
+	for _, status := range statuses {
+		if status.ObjectType != "unit" && status.ObjectType != "scenario" {
+			continue
+		}
+		item := ensure(status.ObjectType, status.Object)
+		item.StatusRegistered = true
+		statusSource := SourceRef{Path: "docs/specs/_status.md", Label: "Status"}
+		item.StatusSource = ptr(statusSource)
+		item.Sources = appendSourceUnique(item.Sources, statusSource)
+	}
+
+	for _, doc := range docs {
+		if isAppendixPath(doc.RelPath) {
+			continue
+		}
+		kind := ""
+		id := ""
+		switch {
+		case strings.Contains(doc.RelPath, "/units/"):
+			kind = "unit"
+			id = strings.TrimSpace(doc.Frontmatter.Scalars["id"])
+		case strings.Contains(doc.RelPath, "/scenarios/"):
+			kind = "scenario"
+			id = strings.TrimSpace(doc.Frontmatter.Scalars["id"])
+		case strings.Contains(doc.RelPath, "/rules/"):
+			kind = "rule"
+			id = strings.TrimSpace(doc.Frontmatter.Scalars["rule_id"])
+		}
+		if kind == "" || id == "" {
+			continue
+		}
+		item, exists := items[kind+":"+id]
+		if !exists {
+			continue
+		}
+		ref := SourceRef{Path: doc.RelPath, Label: doc.Title}
+		if !item.MappingRegistered {
+			item.TruthSources = appendSourceUnique(item.TruthSources, ref)
+			item.Sources = appendSourceUnique(item.Sources, ref)
+		}
+		if sourceListContainsPath(item.TruthSources, doc.RelPath) {
+			item.TruthRegistered = true
+		}
+		switch kind {
+		case "unit":
+			item.RuleRefs = appendUnique(item.RuleRefs, extractRuleIDs(doc.Text)...)
+		case "scenario":
+			item.RuleRefs = appendUnique(item.RuleRefs, extractRuleIDs(doc.Text)...)
+			item.UnitRefs = appendUnique(item.UnitRefs, extractUnitIDs(doc.Text)...)
+		case "rule":
+			item.RuleScope = inferredRuleScope(id, strings.TrimSpace(doc.Frontmatter.Scalars["rule_scope"]))
+		}
+	}
+
+	bindings := []struct {
+		rule   string
+		bound  string
+		source SourceRef
+	}{}
+	for _, item := range items {
+		if item.Kind != "unit" && item.Kind != "scenario" {
+			continue
+		}
+		for _, rule := range item.RuleRefs {
+			if rule == "" {
+				continue
+			}
+			source := firstSource(item.TruthSources)
+			if source == nil {
+				source = firstSource(item.Sources)
+			}
+			bindings = append(bindings, struct {
+				rule   string
+				bound  string
+				source SourceRef
+			}{rule: rule, bound: item.Kind + ":" + item.ID, source: valueSource(source)})
+		}
+	}
+	for _, binding := range bindings {
+		ruleItem := ensure("rule", binding.rule)
+		ruleItem.RuleScope = inferredRuleScope(binding.rule, ruleItem.RuleScope)
+		ruleItem.BoundObjects = appendUnique(ruleItem.BoundObjects, binding.bound)
+		ruleItem.Sources = appendSourceUnique(ruleItem.Sources, binding.source)
+	}
+
+	result := make([]RegistryItem, 0, len(items))
+	for _, item := range items {
+		item.RuleRefs = sortedStrings(item.RuleRefs)
+		item.UnitRefs = sortedStrings(item.UnitRefs)
+		item.BoundObjects = sortedStrings(item.BoundObjects)
+		item.Result = registryResult(*item)
+		result = append(result, *item)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Kind != result[j].Kind {
+			return result[i].Kind < result[j].Kind
+		}
+		return result[i].ID < result[j].ID
+	})
+	return result
+}
+
+func registryResult(item RegistryItem) string {
+	if item.Result == "invalid_registry_row" {
+		return "invalid_registry_row"
+	}
+	if !item.MappingRegistered {
+		return "unregistered_file"
+	}
+	if item.RegistrationState == "planned" {
+		return "planned"
+	}
+	if hasIssuePrefix(item.Issues, "missing implementation path:") {
+		return "missing_file"
+	}
+	return "landed"
+}
+
+func registeredImplementationPathExists(repoRoot, relPath string) bool {
+	relPath = strings.TrimSpace(filepath.ToSlash(relPath))
+	if relPath == "" || relPath == "none" {
+		return false
+	}
+	if strings.HasSuffix(relPath, "/**") {
+		base := strings.TrimSuffix(relPath, "/**")
+		info, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(base)))
+		return err == nil && info.IsDir()
+	}
+	if strings.ContainsAny(relPath, "*?[") {
+		matches, err := filepath.Glob(filepath.Join(repoRoot, filepath.FromSlash(relPath)))
+		return err == nil && len(matches) > 0
+	}
+	_, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(relPath)))
+	return err == nil
+}
+
+func sourceListContainsPath(refs []SourceRef, relPath string) bool {
+	for _, ref := range refs {
+		if ref.Path == relPath {
+			return true
+		}
+	}
+	return false
+}
+
+func hasIssuePrefix(issues []string, prefix string) bool {
+	for _, issue := range issues {
+		if strings.HasPrefix(issue, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func inferredRuleScope(id, declared string) string {
+	declared = strings.TrimSpace(declared)
+	if declared == "global" || declared == "bound" {
+		return declared
+	}
+	if strings.HasPrefix(id, "g_rule_") {
+		return "global"
+	}
+	if strings.HasPrefix(id, "b_rule_") {
+		return "bound"
+	}
+	return declared
+}
+
+func sortedStrings(values []string) []string {
+	result := append([]string(nil), values...)
+	sort.Strings(result)
+	return result
 }
 
 func humanLayer(layer string) string {
@@ -500,9 +732,19 @@ func firstSource(sources []SourceRef) *SourceRef {
 	return &sources[0]
 }
 
+func valueSource(source *SourceRef) SourceRef {
+	if source == nil {
+		return SourceRef{}
+	}
+	return *source
+}
+
 func normalizeSnapshotSlices(snapshot *Snapshot) {
 	if snapshot.Objects == nil {
 		snapshot.Objects = []ObjectView{}
+	}
+	if snapshot.Registry == nil {
+		snapshot.Registry = []RegistryItem{}
 	}
 	if snapshot.Nodes == nil {
 		snapshot.Nodes = []GraphNode{}
@@ -532,6 +774,30 @@ func normalizeSnapshotSlices(snapshot *Snapshot) {
 		}
 		if object.Sources == nil {
 			object.Sources = []SourceRef{}
+		}
+	}
+	for idx := range snapshot.Registry {
+		item := &snapshot.Registry[idx]
+		if item.TruthSources == nil {
+			item.TruthSources = []SourceRef{}
+		}
+		if item.ImplementationPaths == nil {
+			item.ImplementationPaths = []SourceRef{}
+		}
+		if item.RuleRefs == nil {
+			item.RuleRefs = []string{}
+		}
+		if item.UnitRefs == nil {
+			item.UnitRefs = []string{}
+		}
+		if item.BoundObjects == nil {
+			item.BoundObjects = []string{}
+		}
+		if item.Issues == nil {
+			item.Issues = []string{}
+		}
+		if item.Sources == nil {
+			item.Sources = []SourceRef{}
 		}
 	}
 }

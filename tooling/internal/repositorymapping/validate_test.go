@@ -7,16 +7,22 @@ import (
 	"testing"
 )
 
-func TestValidateAcceptsRuleBasedUnitTruthPaths(t *testing.T) {
+func TestValidateAcceptsObjectRegistry(t *testing.T) {
 	repoRoot := t.TempDir()
-	writeTestRepo(t, repoRoot, []statusRow{
-		{objectType: "unit", object: "candidate_demo", stable: "no", candidate: "yes", activeLayer: "candidate", nextCommand: "unit_check"},
-		{objectType: "unit", object: "stable_demo", stable: "yes", candidate: "no", activeLayer: "stable", nextCommand: "unit_fork"},
+	writeStatus(t, repoRoot, []statusRow{
+		{objectType: "unit", object: "demo", stable: "no", candidate: "yes", activeLayer: "candidate", nextCommand: "unit_check"},
+		{objectType: "scenario", object: "demo_flow", stable: "no", candidate: "yes", activeLayer: "candidate", nextCommand: "scenario_check"},
 	})
-	writeMapping(t, repoRoot, "unit_default", nil)
-	writeFile(t, repoRoot, "docs/specs/units/candidate/c_unit_candidate_demo.md", "# Candidate\n")
-	writeFile(t, repoRoot, "docs/specs/units/stable/s_unit_stable_demo.md", "# Stable\n")
-	writeFile(t, repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md", "# Shared\n")
+	writeMapping(t, repoRoot, []string{
+		"| unit | demo | capability | landed | `AgentCore/internal/demo/**` | `docs/specs/units/candidate/c_unit_demo.md` | demo unit |",
+		"| scenario | demo_flow | flow | planned | none | `docs/specs/scenarios/candidate/c_scenario_demo_flow.md` | demo flow |",
+		"| rule | b_rule_future | bound | planned | none | none | future rule |",
+		"| rule | b_rule_demo | bound | planned | none | `docs/specs/rules/stable/s_b_rule_demo.md` | demo rule |",
+	})
+	writeFile(t, repoRoot, "AgentCore/internal/demo/service.go", "package demo\n")
+	writeFile(t, repoRoot, "docs/specs/units/candidate/c_unit_demo.md", "# Demo\n")
+	writeFile(t, repoRoot, "docs/specs/scenarios/candidate/c_scenario_demo_flow.md", "# Demo Flow\n")
+	writeFile(t, repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md", "# Rule\n")
 
 	result, err := Validate(repoRoot)
 	if err != nil {
@@ -27,64 +33,69 @@ func TestValidateAcceptsRuleBasedUnitTruthPaths(t *testing.T) {
 	}
 }
 
-func TestValidateRejectsLegacyConcreteTruthSurface(t *testing.T) {
+func TestValidateRejectsMissingLandedImplementationPath(t *testing.T) {
 	repoRoot := t.TempDir()
-	writeTestRepo(t, repoRoot, []statusRow{
-		{objectType: "unit", object: "demo", stable: "no", candidate: "yes", activeLayer: "candidate", nextCommand: "unit_check"},
+	writeStatus(t, repoRoot, nil)
+	writeMapping(t, repoRoot, []string{
+		"| rule | b_rule_missing | bound | landed | `AgentCore/internal/missing/**` | none | missing rule |",
 	})
-	writeMapping(t, repoRoot, "legacy", nil)
-	writeFile(t, repoRoot, "docs/specs/units/candidate/c_unit_demo.md", "# Demo\n")
-	writeFile(t, repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md", "# Shared\n")
 
 	result, err := Validate(repoRoot)
 	if err != nil {
 		t.Fatalf("Validate returned error: %v", err)
 	}
-	if result.Valid() {
-		t.Fatal("expected legacy truth_surface diagnostics")
-	}
-	if !containsDiagnostic(result.Diagnostics, "deprecated truth_surface") || !containsDiagnostic(result.Diagnostics, "concrete unit truth path") {
-		t.Fatalf("expected legacy diagnostics, got %v", result.Diagnostics)
+	if result.Valid() || !containsDiagnostic(result.Diagnostics, "registered implementation path does not exist") {
+		t.Fatalf("expected missing implementation diagnostic, got %v", result.Diagnostics)
 	}
 }
 
-func TestValidateRejectsMissingStableTruthFile(t *testing.T) {
+func TestValidateRejectsPlannedImplementationPath(t *testing.T) {
 	repoRoot := t.TempDir()
-	writeTestRepo(t, repoRoot, []statusRow{
-		{objectType: "unit", object: "demo", stable: "yes", candidate: "no", activeLayer: "stable", nextCommand: "unit_fork"},
+	writeStatus(t, repoRoot, nil)
+	writeMapping(t, repoRoot, []string{
+		"| rule | b_rule_future | bound | planned | `AgentCore/internal/future/**` | none | future rule |",
 	})
-	writeMapping(t, repoRoot, "unit_default", nil)
-	writeFile(t, repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md", "# Shared\n")
 
 	result, err := Validate(repoRoot)
 	if err != nil {
 		t.Fatalf("Validate returned error: %v", err)
 	}
-	if result.Valid() {
-		t.Fatal("expected missing stable file diagnostics")
-	}
-	if !containsDiagnostic(result.Diagnostics, "stable truth file does not exist") {
-		t.Fatalf("expected missing stable diagnostic, got %v", result.Diagnostics)
+	if result.Valid() || !containsDiagnostic(result.Diagnostics, "planned object must use implementation_paths=none") {
+		t.Fatalf("expected planned implementation diagnostic, got %v", result.Diagnostics)
 	}
 }
 
-func TestValidateRejectsMissingRulePath(t *testing.T) {
+func TestValidateRejectsInvalidRegistryRow(t *testing.T) {
 	repoRoot := t.TempDir()
-	writeTestRepo(t, repoRoot, []statusRow{
+	writeStatus(t, repoRoot, nil)
+	writeMapping(t, repoRoot, []string{
+		"| feature | demo | capability | landed | `AgentCore/internal/demo/**` | none | invalid kind |",
+		"| unit | planned_demo | capability | waiting | none | none | invalid state |",
+	})
+
+	result, err := Validate(repoRoot)
+	if err != nil {
+		t.Fatalf("Validate returned error: %v", err)
+	}
+	if result.Valid() || !containsDiagnostic(result.Diagnostics, "invalid kind") || !containsDiagnostic(result.Diagnostics, "invalid registration_state") {
+		t.Fatalf("expected invalid row diagnostics, got %v", result.Diagnostics)
+	}
+}
+
+func TestValidateRejectsStatusWithoutRegistry(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeStatus(t, repoRoot, []statusRow{
 		{objectType: "unit", object: "demo", stable: "no", candidate: "yes", activeLayer: "candidate", nextCommand: "unit_check"},
 	})
-	writeMapping(t, repoRoot, "unit_default", []string{"docs/specs/rules/stable/s_b_rule_missing.md"})
+	writeMapping(t, repoRoot, nil)
 	writeFile(t, repoRoot, "docs/specs/units/candidate/c_unit_demo.md", "# Demo\n")
 
 	result, err := Validate(repoRoot)
 	if err != nil {
 		t.Fatalf("Validate returned error: %v", err)
 	}
-	if result.Valid() {
-		t.Fatal("expected missing rule diagnostics")
-	}
-	if !containsDiagnostic(result.Diagnostics, "rule path does not exist") {
-		t.Fatalf("expected missing shared diagnostic, got %v", result.Diagnostics)
+	if result.Valid() || !containsDiagnostic(result.Diagnostics, "missing from Object Registry") {
+		t.Fatalf("expected missing registry diagnostic, got %v", result.Diagnostics)
 	}
 }
 
@@ -97,7 +108,7 @@ type statusRow struct {
 	nextCommand string
 }
 
-func writeTestRepo(t *testing.T, repoRoot string, rows []statusRow) {
+func writeStatus(t *testing.T, repoRoot string, rows []statusRow) {
 	t.Helper()
 	lines := []string{
 		"# Spec Status",
@@ -113,69 +124,18 @@ func writeTestRepo(t *testing.T, repoRoot string, rows []statusRow) {
 	writeFile(t, repoRoot, "docs/specs/_status.md", strings.Join(lines, "\n")+"\n")
 }
 
-func writeMapping(t *testing.T, repoRoot, mode string, sharedPaths []string) {
+func writeMapping(t *testing.T, repoRoot string, rows []string) {
 	t.Helper()
-	if sharedPaths == nil {
-		sharedPaths = []string{"docs/specs/rules/stable/s_b_rule_demo.md"}
-	}
-	unitBlock := []string{
-		"1. `demo`",
-		"   - `truth_surface_rule`: `unit_default`",
-	}
-	if mode == "legacy" {
-		unitBlock = []string{
-			"1. `demo`",
-			"   - `truth_surface`",
-			"     - `docs/specs/units/candidate/c_unit_demo.md`",
-		}
-	}
 	content := []string{
 		"# Repository Mapping",
 		"",
-		"### 2.1 Current Units",
+		"## 2. Object Registry",
 		"",
-		"1. `demo`",
-		"   - demo unit",
-		"2. `candidate_demo`",
-		"   - candidate demo unit",
-		"3. `stable_demo`",
-		"   - stable demo unit",
-		"",
-		"### 2.3 Current Rules",
-		"",
-		"1. `demo`",
-		"   - demo shared",
-		"",
-		"### 4.5 Rule Truth Paths",
-		"",
-		"1. `demo`",
+		"| kind | id | scope | registration_state | implementation_paths | spec_files | responsibility |",
+		"|---|---|---|---|---|---|---|",
 	}
-	for _, sharedPath := range sharedPaths {
-		content = append(content, "   - `"+sharedPath+"`")
-	}
-	content = append(content,
-		"",
-		"### 4.6 Unit Truth Rules And Implementation Paths",
-		"",
-		"1. `stable` -> `docs/specs/units/stable/s_unit_{unit}.md`",
-		"2. `candidate` -> `docs/specs/units/candidate/c_unit_{unit}.md`",
-		"",
-	)
-	content = append(content, unitBlock...)
-	content = append(content,
-		"   - `implementation_surface`",
-		"     - 当前未声明独占实现路径，后续结构真相更新时再绑定。",
-		"2. `candidate_demo`",
-		"   - `truth_surface_rule`: `unit_default`",
-		"   - `implementation_surface`",
-		"     - 当前未声明独占实现路径，后续结构真相更新时再绑定。",
-		"3. `stable_demo`",
-		"   - `truth_surface_rule`: `unit_default`",
-		"   - `implementation_surface`",
-		"     - 当前未声明独占实现路径，后续结构真相更新时再绑定。",
-		"",
-		"### 4.7 Conflict Rules",
-	)
+	content = append(content, rows...)
+	content = append(content, "", "## 3. Boundary Rules", "")
 	writeFile(t, repoRoot, "docs/specs/repository_mapping.md", strings.Join(content, "\n")+"\n")
 }
 
