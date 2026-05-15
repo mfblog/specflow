@@ -9,10 +9,12 @@ let mermaidReady = false;
 let activeSpecflowNavGroup = "unit";
 let activeReviewNavGroup = "candidate";
 let activeTodoNavGroup = "stableVerify";
+let activeRegistryNavGroup = "problem";
 let snapshotRequestInFlight = false;
 let snapshotDataSignature = "";
 let activeSourceHeadings = [];
 let docGuideOpen = false;
+let lastGraphView = "";
 
 const LANGUAGE_STORAGE_KEY = "specflow-reader-language";
 const SUPPORTED_LANGUAGES = ["zh-CN", "en"];
@@ -37,6 +39,7 @@ const TRANSLATIONS = {
       todo: { title: "待处理", subtitle: "下一步" },
       spec: { title: "Spec 查看", subtitle: "文档入口" },
       status: { title: "状态", subtitle: "进度对齐" },
+      registry: { title: "结构映射", subtitle: "实施路径" },
       project: { title: "项目结构", subtitle: "仓库路径" },
       specflow: { subtitle: "治理层级" }
     },
@@ -50,6 +53,10 @@ const TRANSLATIONS = {
         tooltip: "场景是一条从触发到结果的完整使用链路，用来说明多个责任块怎样一起完成一个结果。"
       },
       rule: {
+        label: "规则",
+        tooltip: "规则是多个单元或场景共同复用的一段规则，避免同一规则在不同地方重复写。"
+      },
+      shared: {
         label: "规则",
         tooltip: "规则是多个单元或场景共同复用的一段规则，避免同一规则在不同地方重复写。"
       },
@@ -94,6 +101,11 @@ const TRANSLATIONS = {
         title: "状态",
         summary: "从状态索引看当前进度：先看每个对象的状态事实，再看生命周期下一步。",
         nav: "状态对象"
+      },
+      registry: {
+        title: "结构映射",
+        summary: "查看 unit、scenario 和 rule 是否已经写入 repository_mapping，以及有没有可用实施路径。",
+        nav: "映射结果"
       }
     },
     counts: {
@@ -153,7 +165,8 @@ const TRANSLATIONS = {
       boardDescription: "每张卡片都来自 _status.md 的 Next Command。点击卡片查看需要打开的材料。",
       actionType: "动作类型",
       command: "命令",
-      advanceEntry: "自动推进",
+      nextEntry: "下一步入口",
+      advanceEntry: "推进入口",
       copyAdvanceEntry: "复制自动推进入口",
       intent: "模式",
       materials: "可查看材料",
@@ -189,6 +202,74 @@ const TRANSLATIONS = {
         change: "开启变更轮次"
       }
     },
+    registry: {
+      boardHeading: "结构映射面板",
+      boardDescription: "查看每个对象是否已经写入 repository_mapping，以及是否已经声明实施路径，避免执行时才发现映射缺口。",
+      knownUnits: "已知单元",
+      missingMapping: "未写入 repository_mapping",
+      mappedWithoutPath: "已映射但无实施路径",
+      mappedWithPath: "已映射且有实施路径",
+      missingMappingHeading: "未写入 repository_mapping",
+      missingMappingDescription: "这些对象已经出现在状态或 Spec 文件里，但还没有进入项目结构映射，执行前需要先补清归属。",
+      mappedNoPathHeading: "已映射，但没有可用实施路径",
+      mappedNoPathDescription: "这些对象已经进入项目结构映射，但还没有声明实施路径，或者声明的路径在当前仓库里不存在。",
+      mappedWithPathHeading: "已映射，且已有实施路径",
+      mappedWithPathDescription: "这些对象已经进入项目结构映射，并且有可用实施路径。",
+      result: "映射状态",
+      mapping: "repository_mapping",
+      status: "状态登记",
+      truth: "Spec 文档",
+      implementation: "实施路径",
+      refs: "引用",
+      evidence: "发现依据",
+      relation: "当前关系",
+      attention: "需要关注",
+      issues: "缺口",
+      complete: "无断链",
+      gap: "有断链",
+      planned: "已映射，无实施路径",
+      landed: "已映射，有实施路径",
+      missingFile: "实施路径不存在",
+      unregisteredFile: "未写入映射",
+      invalidRegistryRow: "映射表错误",
+      all: "全部",
+      yes: "有",
+      no: "缺失",
+      optional: "未登记",
+      declared: "已登记",
+      notApplicable: "不适用",
+      noIssues: "暂无缺口",
+      sourceChain: "映射链",
+      mappingSource: "项目结构来源",
+      statusSource: "状态来源",
+      truthSources: "Spec 文件",
+      unitRefs: "单元引用",
+      ruleRefs: "规则引用",
+      boundObjects: "绑定对象",
+      globalActive: "全局生效",
+      unboundRule: "未绑定",
+      noMissingMapping: "没有未映射对象。",
+      noMappedNoPath: "没有实施路径缺口。",
+      noMappedWithPath: "没有已落实施路径对象。",
+      noPlanned: "没有已映射但无实施路径的对象。",
+      noLanded: "没有已映射且有实施路径的对象。",
+      noProblems: "没有映射问题。",
+      unmappedAttention: "未进入 repository_mapping",
+      mappedAttention: "已纳入 repository_mapping",
+      ruleScope: {
+        global: "全局规则",
+        bound: "绑定规则",
+        unknown: "规则"
+      },
+      filters: {
+        problem: "映射缺口",
+        planned: "已映射无路径",
+        landed: "已映射有路径",
+        unit: "单元",
+        scenario: "场景",
+        rule: "规则"
+      }
+    },
     review: {
       empty: "暂无可查看 Spec。",
       emptyNav: "暂无 Spec 文档。",
@@ -202,7 +283,7 @@ const TRANSLATIONS = {
       relationships: "相关关系",
       relationEmpty: "暂无相关关系快照。",
       progressTitle: "本轮进度",
-      nextCommand: "下一步",
+      nextCommand: "下一步入口",
       noNextCommand: "当前没有登记下一步",
       copyNextCommand: "复制下一步命令",
       copied: "已复制",
@@ -355,6 +436,7 @@ const TRANSLATIONS = {
       todo: { title: "To Do", subtitle: "Next steps" },
       spec: { title: "Spec View", subtitle: "Documents" },
       status: { title: "Status", subtitle: "Progress" },
+      registry: { title: "Mapping", subtitle: "Implementation paths" },
       project: { title: "Project", subtitle: "Repository paths" },
       specflow: { subtitle: "Governance layers" }
     },
@@ -368,6 +450,10 @@ const TRANSLATIONS = {
         tooltip: "A scenario is a complete trigger-to-result usage chain that shows how multiple responsibilities produce one outcome."
       },
       rule: {
+        label: "Rule",
+        tooltip: "A rule is reused by multiple units or scenarios so the same rule is not duplicated in different places."
+      },
+      shared: {
         label: "Rule",
         tooltip: "A rule is reused by multiple units or scenarios so the same rule is not duplicated in different places."
       },
@@ -412,6 +498,11 @@ const TRANSLATIONS = {
         title: "Status",
         summary: "Shows current progress from the status index: object state facts first, then the next lifecycle step.",
         nav: "Status objects"
+      },
+      registry: {
+        title: "Structure Mapping",
+        summary: "Shows whether units, scenarios, and rules are recorded in repository_mapping and whether they have usable implementation paths.",
+        nav: "Mapping results"
       }
     },
     counts: {
@@ -471,7 +562,8 @@ const TRANSLATIONS = {
       boardDescription: "Each card comes from the Next Command field in _status.md. Select a card to see the material to open.",
       actionType: "Action type",
       command: "Command",
-      advanceEntry: "Auto advance",
+      nextEntry: "Next entry",
+      advanceEntry: "Advance entry",
       copyAdvanceEntry: "Copy auto-advance entry",
       intent: "Mode",
       materials: "Readable material",
@@ -507,6 +599,74 @@ const TRANSLATIONS = {
         change: "Start change round"
       }
     },
+    registry: {
+      boardHeading: "Structure Mapping Panel",
+      boardDescription: "Shows whether each object is recorded in repository_mapping and whether it already declares implementation paths, so mapping gaps are visible before execution.",
+      knownUnits: "Known units",
+      missingMapping: "Not in repository_mapping",
+      mappedWithoutPath: "Mapped without paths",
+      mappedWithPath: "Mapped with paths",
+      missingMappingHeading: "Not in repository_mapping",
+      missingMappingDescription: "These objects appear in status or Spec files, but are not recorded in repository_mapping yet. Their ownership should be clarified before execution.",
+      mappedNoPathHeading: "Mapped, but no usable implementation path",
+      mappedNoPathDescription: "These objects are recorded in repository_mapping, but either have no implementation path or point to a path that does not exist in this repository.",
+      mappedWithPathHeading: "Mapped with implementation paths",
+      mappedWithPathDescription: "These objects are recorded in repository_mapping and have usable implementation paths.",
+      result: "Mapping state",
+      mapping: "repository_mapping",
+      status: "Status registration",
+      truth: "Spec files",
+      implementation: "Implementation paths",
+      refs: "References",
+      evidence: "Evidence",
+      relation: "Current relation",
+      attention: "Needs attention",
+      issues: "Gaps",
+      complete: "No broken links",
+      gap: "Broken links",
+      planned: "Mapped, no paths",
+      landed: "Mapped with paths",
+      missingFile: "Path does not exist",
+      unregisteredFile: "Not mapped",
+      invalidRegistryRow: "Mapping row error",
+      all: "All",
+      yes: "Yes",
+      no: "Missing",
+      optional: "Not registered",
+      declared: "Registered",
+      notApplicable: "N/A",
+      noIssues: "No gaps",
+      sourceChain: "Mapping chain",
+      mappingSource: "Structure source",
+      statusSource: "Status source",
+      truthSources: "Spec files",
+      unitRefs: "Unit refs",
+      ruleRefs: "Rule refs",
+      boundObjects: "Bound objects",
+      globalActive: "Global active",
+      unboundRule: "Unbound",
+      noMissingMapping: "No unmapped objects.",
+      noMappedNoPath: "No implementation path gaps.",
+      noMappedWithPath: "No objects with implementation paths.",
+      noPlanned: "No mapped objects without implementation paths.",
+      noLanded: "No mapped objects with implementation paths.",
+      noProblems: "No mapping problems.",
+      unmappedAttention: "Not in repository_mapping",
+      mappedAttention: "In repository_mapping",
+      ruleScope: {
+        global: "Global rule",
+        bound: "Bound rule",
+        unknown: "Rule"
+      },
+      filters: {
+        problem: "Mapping gaps",
+        planned: "Mapped no paths",
+        landed: "Mapped with paths",
+        unit: "Units",
+        scenario: "Scenarios",
+        rule: "Rules"
+      }
+    },
     review: {
       empty: "No Specs to view.",
       emptyNav: "No Spec documents.",
@@ -520,7 +680,7 @@ const TRANSLATIONS = {
       relationships: "Relationships",
       relationEmpty: "No relationship snapshot.",
       progressTitle: "Current round progress",
-      nextCommand: "Next",
+      nextCommand: "Next entry",
       noNextCommand: "No next command is registered",
       copyNextCommand: "Copy next command",
       copied: "Copied",
@@ -679,6 +839,7 @@ languageSelect.value = currentLanguage;
 languageSelect.addEventListener("change", () => setLanguage(languageSelect.value));
 document.querySelectorAll(".tab").forEach((button) => {
   button.addEventListener("click", () => {
+    if (currentView === button.dataset.view) return;
     currentView = button.dataset.view;
     document.querySelectorAll(".tab").forEach((item) => item.classList.toggle("active", item === button));
     render();
@@ -796,6 +957,7 @@ function render() {
   document.body.classList.toggle("todo-view-active", currentView === "todo");
   document.body.classList.toggle("spec-view-active", currentView === "spec");
   document.body.classList.toggle("status-view-active", currentView === "status");
+  document.body.classList.toggle("registry-view-active", currentView === "registry");
   const objects = list(snapshot.objects);
   projectMeta.textContent = `${snapshot.project.repo_root} · version ${snapshot.version} · ${t("counts.objects", { count: objects.length })}`;
   const graph = graphForCurrentView();
@@ -867,6 +1029,11 @@ function renderNav() {
     return;
   }
 
+  if (currentView === "registry") {
+    renderRegistryNav();
+    return;
+  }
+
   if (currentView === "spec") {
     renderReviewNav();
     return;
@@ -877,7 +1044,7 @@ function renderNav() {
       const button = document.createElement("button");
       button.className = objectNodeID(object) === selectedNodeID ? "nav-item active" : "nav-item";
       button.type = "button";
-      button.innerHTML = `<strong>${escapeHTML(object.label)}</strong><span>${escapeHTML(navSubtitle(object))}</span>`;
+      button.innerHTML = `${renderNavItemTitle(object.label, object.kind)}<span>${escapeHTML(navSubtitle(object))}</span>`;
       button.addEventListener("click", () => focusObject(object));
       navPanel.appendChild(button);
     });
@@ -964,9 +1131,9 @@ function renderReviewNavSection(type, items) {
   if (expanded) {
     items.forEach((item) => {
       const button = document.createElement("button");
-      button.className = item.id === selectedNodeID ? "nav-item active" : "nav-item";
+      button.className = `nav-item ${objectKindClass(item.object.kind)}${item.id === selectedNodeID ? " active" : ""}`;
       button.type = "button";
-      button.innerHTML = `<strong>${escapeHTML(item.fileLabel)}</strong><span>${escapeHTML(reviewNavSubtitle(item))}</span>`;
+      button.innerHTML = `${renderNavItemTitle(item.fileLabel, item.object.kind)}<span>${escapeHTML(reviewNavSubtitle(item))}</span>`;
       button.addEventListener("click", () => focusReviewItem(item.id));
       section.appendChild(button);
     });
@@ -1101,16 +1268,27 @@ function renderGraph() {
     renderStatusBoard();
     return;
   }
+  if (currentView === "registry") {
+    if (cy) {
+      cy.destroy();
+      cy = null;
+    }
+    renderRegistryBoard();
+    return;
+  }
   if (typeof cytoscape !== "function") {
     graphView.textContent = t("fallback.cytoscapeMissing");
     return;
   }
+  const graph = graphForCurrentView();
+  const preserveGraphViewport = cy && lastGraphView === currentView
+    ? { pan: { ...cy.pan() }, zoom: cy.zoom(), selectedNodeID }
+    : null;
   if (cy) {
     cy.destroy();
     cy = null;
   }
   graphView.innerHTML = "";
-  const graph = graphForCurrentView();
   const positions = readablePositions(graph.nodes, graph.edges);
   const elements = [];
   graph.nodes.forEach((node) => {
@@ -1190,8 +1368,15 @@ function renderGraph() {
     layout: { name: "preset", fit: false }
   });
   cy.ready(() => {
+    if (preserveGraphViewport && nodeExistsForGraph(preserveGraphViewport.selectedNodeID, graph)) {
+      cy.zoom(preserveGraphViewport.zoom);
+      cy.pan(preserveGraphViewport.pan);
+      highlightConnected(selectedNodeID);
+      return;
+    }
     focusGraphNode(selectedNodeID || firstNodeIDForView(graph.nodes), 0.85);
   });
+  lastGraphView = currentView;
   cy.on("tap", "node", (event) => {
     const data = event.target.data();
     selectedNodeID = data.id;
@@ -1211,6 +1396,7 @@ function graphForCurrentView() {
   if (currentView === "project") return graphForProjectView();
   if (currentView === "specflow") return graphForSpecflowView();
   if (currentView === "status") return graphForStatusView();
+  if (currentView === "registry") return graphForRegistryView();
 
   const nodes = list(snapshot.nodes);
   const edges = list(snapshot.edges);
@@ -1238,6 +1424,19 @@ function graphForStatusView() {
       label: object.label,
       group: object.kind,
       source: firstSourceRef(object.sources)
+    })),
+    edges: []
+  };
+}
+
+function graphForRegistryView() {
+  return {
+    nodes: registryItems().map((item) => ({
+      id: registryNodeID(item),
+      kind: item.kind,
+      label: item.label || item.id,
+      group: item.result || "gap",
+      source: firstSourceRef(item.sources)
     })),
     edges: []
   };
@@ -1618,6 +1817,9 @@ function firstNodeIDForView(nodes) {
   if (currentView === "status") {
     return (nodes[0] || {}).id || null;
   }
+  if (currentView === "registry") {
+    return (nodes[0] || {}).id || null;
+  }
   const domainNode = nodes.find((node) => node.group === "unit" || node.group === "scenario");
   return (domainNode || nodes[0] || {}).id || null;
 }
@@ -1645,6 +1847,7 @@ function renderStatusBoard() {
           <table class="status-table">
             <thead>
               <tr>
+                <th>${escapeHTML(t("inspector.fields.type"))}</th>
                 <th>${escapeHTML(t("statusBoard.table.object"))}</th>
                 <th>${escapeHTML(t("statusBoard.table.layer"))}</th>
                 <th>Stable</th>
@@ -1684,6 +1887,7 @@ function statusOverview(objects) {
 function renderStatusRow(object) {
   return `
     <tr>
+      <td>${renderKindBadge(object.kind)}</td>
       <td><button class="table-object" type="button" data-node="${escapeAttr(objectNodeID(object))}">${escapeHTML(object.label)}</button></td>
       <td>${escapeHTML(object.human_state || object.layer || t("fallback.undeclared"))}</td>
       <td>${renderFlag(object.stable)}</td>
@@ -1699,7 +1903,10 @@ function renderLifecycleCard(object) {
   return `
     <article class="lifecycle-card">
       <div class="lifecycle-head">
-        <button class="card-object" type="button" data-node="${escapeAttr(objectNodeID(object))}">${escapeHTML(object.label)}</button>
+        <div class="lifecycle-title">
+          ${renderKindBadge(object.kind)}
+          <button class="card-object" type="button" data-node="${escapeAttr(objectNodeID(object))}">${escapeHTML(object.label)}</button>
+        </div>
         <span>${escapeHTML(object.human_state || object.layer || t("fallback.statusUnknown"))}</span>
       </div>
       ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: object.label }))}
@@ -1883,6 +2090,325 @@ function bindStatusBoardLinks() {
   });
 }
 
+function registryItems() {
+  return list(snapshot.registry).slice().sort((left, right) => {
+    const resultOrder = registryResultOrder(left.result) - registryResultOrder(right.result);
+    if (resultOrder !== 0) return resultOrder;
+    if (left.kind !== right.kind) return String(left.kind || "").localeCompare(String(right.kind || ""));
+    return String(left.id || "").localeCompare(String(right.id || ""));
+  });
+}
+
+function registryResultOrder(result) {
+  if (registryProblemResult(result)) return 0;
+  if (result === "planned") return 1;
+  if (result === "landed") return 2;
+  return 3;
+}
+
+function registryNodeID(item) {
+  return `registry:${item.kind}:${item.id}`;
+}
+
+function registryItemByID(itemID) {
+  return registryItems().find((item) => registryNodeID(item) === itemID) || null;
+}
+
+function renderRegistryNav() {
+  const items = registryItems();
+  const sections = [
+    { key: "problem", items: items.filter((item) => registryProblemResult(item.result)) },
+    { key: "planned", items: items.filter((item) => item.result === "planned") },
+    { key: "landed", items: items.filter((item) => item.result === "landed") },
+    { key: "unit", items: items.filter((item) => item.kind === "unit") },
+    { key: "scenario", items: items.filter((item) => item.kind === "scenario") },
+    { key: "rule", items: items.filter((item) => item.kind === "rule") }
+  ].filter((section) => section.items.length > 0);
+  if (sections.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "nav-empty";
+    empty.textContent = t("fallback.noObject");
+    navPanel.appendChild(empty);
+    return;
+  }
+  if (!sections.some((section) => section.key === activeRegistryNavGroup)) {
+    activeRegistryNavGroup = (sections[0] || {}).key || "problem";
+  }
+  sections.forEach((section) => renderRegistryNavSection(section.key, section.items));
+}
+
+function renderRegistryNavSection(sectionKey, items) {
+  const expanded = sectionKey === activeRegistryNavGroup;
+  const section = document.createElement("section");
+  section.className = expanded ? "nav-section expanded" : "nav-section";
+
+  const header = document.createElement("button");
+  header.className = "nav-section-title";
+  header.type = "button";
+  header.setAttribute("aria-expanded", String(expanded));
+  header.innerHTML = `<span>${escapeHTML(t(`registry.filters.${sectionKey}`))}</span><em>${items.length}</em>`;
+  header.addEventListener("click", () => {
+    activeRegistryNavGroup = sectionKey;
+    renderNav();
+  });
+  section.appendChild(header);
+
+  if (expanded) {
+    items.forEach((item) => {
+      const button = document.createElement("button");
+      button.className = `nav-item ${objectKindClass(item.kind)}${registryNodeID(item) === selectedNodeID ? " active" : ""}`;
+      button.type = "button";
+      button.innerHTML = `
+        <span class="nav-item-title">
+          ${renderRegistryKindBadge(item)}
+          <strong>${escapeHTML(item.label || item.id)}</strong>
+        </span>
+        <span>${escapeHTML(registryResultLabel(item.result))}</span>
+      `;
+      button.addEventListener("click", () => focusNode(registryNodeID(item)));
+      section.appendChild(button);
+    });
+  }
+  navPanel.appendChild(section);
+}
+
+function renderRegistryBoard() {
+  const items = registryItems();
+  const missingMappingItems = items.filter((item) => item.result === "unregistered_file");
+  const mappedNoPathItems = items.filter((item) => item.result === "planned" || item.result === "missing_file" || item.result === "invalid_registry_row");
+  const mappedWithPathItems = items.filter((item) => item.result === "landed");
+  graphView.innerHTML = `
+    <section class="registry-board status-board">
+      <section class="status-section">
+        <div class="status-section-heading">
+          <div>
+            <h3>${escapeHTML(t("registry.boardHeading"))}</h3>
+            <p>${escapeHTML(t("registry.boardDescription"))}</p>
+          </div>
+          ${renderSourceButton(snapshot.project.mapping_file, t("registry.mappingSource"))}
+        </div>
+        ${renderRegistryMetrics(items, missingMappingItems, mappedNoPathItems, mappedWithPathItems)}
+        ${renderRegistrySection(t("registry.missingMappingHeading"), t("registry.missingMappingDescription"), missingMappingItems, t("registry.noMissingMapping"))}
+        ${renderRegistrySection(t("registry.mappedNoPathHeading"), t("registry.mappedNoPathDescription"), mappedNoPathItems, t("registry.noMappedNoPath"))}
+        ${renderRegistrySection(t("registry.mappedWithPathHeading"), t("registry.mappedWithPathDescription"), mappedWithPathItems, t("registry.noMappedWithPath"))}
+      </section>
+    </section>
+  `;
+  bindRegistryBoardLinks();
+}
+
+function renderRegistryMetrics(items, missingMappingItems, mappedNoPathItems, mappedWithPathItems) {
+  const knownUnits = items.filter((item) => item.kind === "unit").length;
+  const metrics = [
+    { value: knownUnits, label: t("registry.knownUnits") },
+    { value: missingMappingItems.length, label: t("registry.missingMapping") },
+    { value: mappedNoPathItems.length, label: t("registry.mappedWithoutPath") },
+    { value: mappedWithPathItems.length, label: t("registry.mappedWithPath") }
+  ];
+  return `
+    <div class="metric-grid registry-metric-grid">
+      ${metrics.map((metric) => `
+        <div class="metric">
+          <strong>${escapeHTML(metric.value)}</strong>
+          <span>${escapeHTML(metric.label)}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderRegistrySection(title, description, items, emptyText) {
+  return `
+    <section class="registry-section">
+      <div class="registry-section-title">
+        <div>
+          <h4>${escapeHTML(title)}</h4>
+          <p>${escapeHTML(description)}</p>
+        </div>
+        <em>${escapeHTML(items.length)}</em>
+      </div>
+      ${items.length > 0 ? renderRegistryTable(items) : `<p class="empty-copy registry-empty">${escapeHTML(emptyText)}</p>`}
+    </section>
+  `;
+}
+
+function renderRegistryTable(items) {
+  return `
+    <div class="status-table-wrap">
+      <table class="status-table registry-table">
+        <thead>
+          <tr>
+            <th>${escapeHTML(t("inspector.fields.type"))}</th>
+            <th>${escapeHTML(t("statusBoard.table.object"))}</th>
+            <th>${escapeHTML(t("registry.result"))}</th>
+            <th>${escapeHTML(t("registry.implementation"))}</th>
+            <th>${escapeHTML(t("registry.relation"))}</th>
+            <th>${escapeHTML(t("registry.attention"))}</th>
+          </tr>
+        </thead>
+        <tbody>${items.map(renderRegistryRow).join("")}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderRegistryRow(item) {
+  return `
+    <tr class="registry-row ${escapeAttr(item.result || "gap")}">
+      <td>${renderRegistryKindBadge(item)}</td>
+      <td><button class="table-object" type="button" data-registry="${escapeAttr(registryNodeID(item))}">${escapeHTML(item.label || item.id)}</button></td>
+      <td>${renderRegistryResult(item.result)}</td>
+      <td>${renderRegistryImplementationPaths(item)}</td>
+      <td>${escapeHTML(registryRefSummary(item))}</td>
+      <td>${escapeHTML(registryAttentionSummary(item))}</td>
+    </tr>
+  `;
+}
+
+function renderRegistryResult(result) {
+  const normalized = String(result || "invalid_registry_row");
+  return `<span class="registry-result ${escapeAttr(normalized)}">${escapeHTML(registryResultLabel(normalized))}</span>`;
+}
+
+function registryResultLabel(result) {
+  switch (result) {
+    case "planned":
+      return t("registry.planned");
+    case "landed":
+      return t("registry.landed");
+    case "missing_file":
+      return t("registry.missingFile");
+    case "unregistered_file":
+      return t("registry.unregisteredFile");
+    case "invalid_registry_row":
+      return t("registry.invalidRegistryRow");
+    default:
+      return result || t("registry.invalidRegistryRow");
+  }
+}
+
+function registryProblemResult(result) {
+  return result === "missing_file" || result === "unregistered_file" || result === "invalid_registry_row";
+}
+
+function renderRegistryPresence(registered, source) {
+  const label = registered ? t("registry.yes") : t("registry.no");
+  const className = registered ? "flag-yes" : "flag-no";
+  if (registered && source && source.path) {
+    return `<button class="flag ${className} source-flag" type="button" data-source="${escapeAttr(source.path)}">${escapeHTML(label)}</button>`;
+  }
+  return `<span class="flag ${className}">${escapeHTML(label)}</span>`;
+}
+
+function renderRegistryMappingPresence(item) {
+  if (item.kind === "rule") {
+    if (item.mapping_registered && item.mapping_source && item.mapping_source.path) {
+      return `<button class="flag flag-yes source-flag" type="button" data-source="${escapeAttr(item.mapping_source.path)}" ${item.mapping_source.line ? `data-source-line="${escapeAttr(item.mapping_source.line)}"` : ""}>${escapeHTML(t("registry.declared"))}</button>`;
+    }
+    return `<span class="flag">${escapeHTML(t("registry.optional"))}</span>`;
+  }
+  return renderRegistryPresence(item.mapping_registered, item.mapping_source);
+}
+
+function renderRegistryStatusPresence(item) {
+  if (item.kind === "rule") {
+    return `<span class="flag">${escapeHTML(t("registry.notApplicable"))}</span>`;
+  }
+  return renderRegistryPresence(item.status_registered, item.status_source);
+}
+
+function registryRefSummary(item) {
+  const parts = [];
+  if (item.kind === "rule") {
+    if (item.rule_scope === "global") return t("registry.globalActive");
+    const boundObjects = list(item.bound_objects).length;
+    return boundObjects > 0 ? `${t("registry.boundObjects")} ${boundObjects}` : t("registry.unboundRule");
+  }
+  const unitRefs = list(item.unit_refs).length;
+  const ruleRefs = list(item.rule_refs).length;
+  if (unitRefs > 0) parts.push(`${t("registry.unitRefs")} ${unitRefs}`);
+  if (ruleRefs > 0) parts.push(`${t("registry.ruleRefs")} ${ruleRefs}`);
+  return parts.length > 0 ? parts.join(" · ") : t("fallback.none");
+}
+
+function registryImplementationSummary(item) {
+  const count = list(item.implementation_paths).length;
+  return count > 0 ? t("counts.paths", { count }) : t("registry.no");
+}
+
+function registryEvidenceSummary(item) {
+  const parts = [];
+  if (item.status_registered) parts.push(t("registry.status"));
+  if (item.truth_registered) {
+    const truthCount = list(item.truth_sources).length;
+    parts.push(truthCount > 1 ? t("counts.truth", { count: truthCount }) : t("registry.truth"));
+  }
+  if (item.kind === "unit" && list(item.implementation_paths).length > 0) {
+    parts.push(t("counts.paths", { count: list(item.implementation_paths).length }));
+  }
+  if (item.mapping_registered) parts.push(t("registry.mapping"));
+  return parts.length > 0 ? parts.join(" · ") : t("fallback.none");
+}
+
+function registryTruthSummary(item) {
+  const count = list(item.truth_sources).length;
+  if (count === 0) return t("registry.no");
+  if (count === 1) return list(item.truth_sources)[0].path || t("registry.truth");
+  return t("counts.truth", { count });
+}
+
+function registryImplementationPathSummary(item) {
+  const paths = list(item.implementation_paths).map((ref) => ref.path).filter(Boolean);
+  if (paths.length === 0) return t("fallback.none");
+  if (paths.length === 1) return paths[0];
+  return t("counts.paths", { count: paths.length });
+}
+
+function renderRegistryImplementationPaths(item) {
+  const refs = list(item.implementation_paths).filter((ref) => ref && ref.path);
+  if (refs.length === 0) return `<span class="registry-path-empty">${escapeHTML(t("fallback.none"))}</span>`;
+  return `
+    <div class="registry-path-list">
+      ${refs.map((ref) => {
+        const source = sourceForImplementationRef(ref);
+        if (source && isReadableOriginalPath(source.path)) {
+          return `
+            <button class="registry-path" type="button" data-source="${escapeAttr(source.path)}" ${source.line ? `data-source-line="${escapeAttr(source.line)}"` : ""}>
+              ${escapeHTML(ref.path)}
+            </button>
+          `;
+        }
+        return `<span class="registry-path">${escapeHTML(ref.path)}</span>`;
+      }).join("")}
+    </div>
+  `;
+}
+
+function registryIssueSummary(item) {
+  const issues = list(item.issues);
+  return issues.length > 0 ? issues.join("; ") : t("registry.noIssues");
+}
+
+function registryAttentionSummary(item) {
+  const issues = list(item.issues);
+  if (issues.length > 0) return issues.join("; ");
+  if (item.result === "planned") return t("registry.planned");
+  return t("registry.landed");
+}
+
+function bindRegistryBoardLinks() {
+  graphView.querySelectorAll("[data-source]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      const line = Number(button.dataset.sourceLine || 0);
+      openSource(button.dataset.source, line > 0 ? { line } : {});
+    });
+  });
+  graphView.querySelectorAll("[data-registry]").forEach((button) => {
+    button.addEventListener("click", () => focusNode(button.dataset.registry));
+  });
+}
+
 function renderTodoNav() {
   const items = todoItems();
   const sections = todoTypeOrder()
@@ -1920,9 +2446,9 @@ function renderTodoNavSection(type, items) {
   if (expanded) {
     items.forEach((item) => {
       const button = document.createElement("button");
-      button.className = item.id === selectedNodeID ? "nav-item active" : "nav-item";
+      button.className = `nav-item ${objectKindClass(item.object.kind)}${item.id === selectedNodeID ? " active" : ""}`;
       button.type = "button";
-      button.innerHTML = `<strong>${escapeHTML(item.objectLabel)}</strong><span>${escapeHTML(item.commandText)}</span>`;
+      button.innerHTML = `${renderNavItemTitle(item.objectLabel, item.object.kind)}<span>${escapeHTML(item.commandText)}</span>`;
       button.addEventListener("click", () => focusTodoItem(item.id));
       section.appendChild(button);
     });
@@ -1961,16 +2487,19 @@ function renderTodoBoard() {
 function renderTodoCard(item) {
   const view = lifecycleView(item.object, item.nextCommand);
   return `
-    <article class="todo-card ${item.id === selectedNodeID ? "active" : ""} ${escapeAttr(nextIntentClass(item.object))}" data-todo-card="${escapeAttr(item.id)}">
+    <article class="todo-card ${escapeAttr(objectKindClass(item.object.kind))} ${item.id === selectedNodeID ? "active" : ""} ${escapeAttr(nextIntentClass(item.object))}" data-todo-card="${escapeAttr(item.id)}">
       <div class="todo-card-head">
-        <button class="card-object" type="button" data-todo="${escapeAttr(item.id)}">${escapeHTML(item.objectLabel)}</button>
+        <div class="todo-card-title">
+          ${renderKindBadge(item.object.kind)}
+          <button class="card-object" type="button" data-todo="${escapeAttr(item.id)}">${escapeHTML(item.objectLabel)}</button>
+        </div>
         <span class="todo-type ${escapeAttr(nextIntentClass(item.object))}">${escapeHTML(todoTypeLabel(item.type))}</span>
       </div>
       <div class="todo-command-row">
         <span>${escapeHTML(t("todo.command"))}</span>
         <div class="todo-command-actions">
-          <button class="todo-copy-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(t("review.copyNextCommand"))}">
-            <code>${escapeHTML(item.commandText)}</code>
+          <button class="todo-copy-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(`${t("todo.nextEntry")}: ${item.commandText}`)}">
+            <span>${escapeHTML(t("todo.nextEntry"))}</span>
           </button>
           ${renderAdvanceCommandButton(item, "todo-copy-command advance-entry")}
         </div>
@@ -2104,9 +2633,8 @@ function renderAdvanceCommandButton(item, className) {
   const command = String(item && item.advanceCommandText ? item.advanceCommandText : "").trim();
   if (!command) return "";
   return `
-    <button class="${escapeAttr(className)}" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(t("todo.copyAdvanceEntry"))}">
+    <button class="${escapeAttr(className)}" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(`${t("todo.advanceEntry")}: ${command}`)}">
       <span>${escapeHTML(t("todo.advanceEntry"))}</span>
-      <code>${escapeHTML(command)}</code>
     </button>
   `;
 }
@@ -2385,9 +2913,8 @@ function renderReviewProgressHeader(path) {
         <div class="review-progress-head">
           <h2>${escapeHTML(t("review.progressTitle"))}</h2>
           <div class="review-command-actions">
-            <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(t("review.copyNextCommand"))}">
+            <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(`${t("review.nextCommand")}: ${command}`)}">
               <span>${escapeHTML(t("review.nextCommand"))}</span>
-              <code>${escapeHTML(command)}</code>
             </button>
             ${renderAdvanceCommandButton(advanceItem, "review-next-command advance-entry")}
           </div>
@@ -2490,7 +3017,7 @@ function renderReviewDetail(item) {
     <h2>${escapeHTML(item.fileLabel)}</h2>
     <dl class="detail-grid">
       <dt>${escapeHTML(t("review.fileType"))}</dt><dd>${escapeHTML(reviewTypeLabel(item.reviewType))}</dd>
-      <dt>${escapeHTML(t("review.object"))}</dt><dd>${escapeHTML(item.objectLabel)}</dd>
+      <dt>${escapeHTML(t("review.object"))}</dt><dd class="detail-kind">${renderKindBadge(item.object.kind)}<span>${escapeHTML(item.objectLabel)}</span></dd>
       <dt>${escapeHTML(t("inspector.fields.status"))}</dt><dd>${escapeHTML(item.stateLabel || reviewTypeLabel(item.reviewType))}</dd>
       <dt>${escapeHTML(t("inspector.fields.file"))}</dt><dd>${escapeHTML(item.path)}</dd>
     </dl>
@@ -2623,7 +3150,7 @@ function renderDetail(object) {
   detailPanel.innerHTML = `
     <h2>${escapeHTML(object.label)}</h2>
     <dl class="detail-grid">
-      <dt>${escapeHTML(t("inspector.fields.type"))}</dt><dd>${escapeHTML(object.kind)}</dd>
+      <dt>${escapeHTML(t("inspector.fields.type"))}</dt><dd class="detail-kind">${renderKindBadge(object.kind)}<span>${escapeHTML(object.kind)}</span></dd>
       <dt>${escapeHTML(t("inspector.fields.status"))}</dt><dd>${escapeHTML(object.human_state || t("fallback.undeclared"))}</dd>
       <dt>${escapeHTML(t("inspector.fields.version"))}</dt><dd>${escapeHTML(object.version || t("fallback.undeclared"))}</dd>
       <dt>${escapeHTML(t("inspector.fields.next"))}</dt><dd>${escapeHTML(object.next_label || object.next_command || t("fallback.none"))}</dd>
@@ -2656,6 +3183,15 @@ function renderDetailForNode(nodeID) {
       return;
     }
     renderReviewEmptyDetail();
+    return;
+  }
+  if (currentView === "registry") {
+    const item = registryItemByID(nodeID);
+    if (item) {
+      renderRegistryDetail(item);
+      return;
+    }
+    renderRegistryEmptyDetail();
     return;
   }
   const object = objectFromNode(nodeID);
@@ -2740,6 +3276,70 @@ function renderProjectRootDetail(node, graph) {
   updateTruthTab(truthRefs, node.id);
 }
 
+function renderRegistryDetail(item) {
+  const truthRefs = uniqueSources(list(item.truth_sources).concat(list(item.sources)));
+  detailPanel.innerHTML = `
+    <h2>${escapeHTML(item.label || item.id)}</h2>
+    <dl class="detail-grid">
+      <dt>${escapeHTML(t("inspector.fields.type"))}</dt><dd class="detail-kind">${renderRegistryKindBadge(item)}<span>${escapeHTML(registryKindText(item))}</span></dd>
+      <dt>${escapeHTML(t("registry.result"))}</dt><dd>${renderRegistryResult(item.result)}</dd>
+      <dt>${escapeHTML(t("registry.mapping"))}</dt><dd>${renderRegistryMappingPresence(item)}</dd>
+      <dt>${escapeHTML(t("registry.status"))}</dt><dd>${renderRegistryStatusPresence(item)}</dd>
+      <dt>${escapeHTML(t("registry.truth"))}</dt><dd>${renderRegistryPresence(item.truth_registered, firstSourceRef(item.truth_sources))}</dd>
+      <dt>${escapeHTML(t("registry.implementation"))}</dt><dd>${escapeHTML(registryImplementationSummary(item))}</dd>
+    </dl>
+    <section class="review-detail-section">
+      <h2>${escapeHTML(t("registry.sourceChain"))}</h2>
+      ${renderRegistrySourceChain(item)}
+    </section>
+    ${renderTextChips(t("registry.unitRefs"), item.unit_refs)}
+    ${renderTextChips(t("registry.ruleRefs"), item.rule_refs)}
+    ${renderTextChips(t("registry.boundObjects"), item.bound_objects)}
+    ${renderImplementationPathGroup(t("registry.implementation"), item.implementation_paths)}
+    ${renderRegistryIssues(item)}
+  `;
+  bindInspectorLinks();
+  updateTruthTab(truthRefs, registryNodeID(item));
+}
+
+function renderRegistrySourceChain(item) {
+  const groups = [];
+  if (item.mapping_source && item.mapping_source.path) {
+    groups.push({ label: t("registry.mappingSource"), refs: [item.mapping_source] });
+  }
+  if (item.status_source && item.status_source.path) {
+    groups.push({ label: t("registry.statusSource"), refs: [item.status_source] });
+  }
+  if (list(item.truth_sources).length > 0) {
+    groups.push({ label: t("registry.truthSources"), refs: item.truth_sources });
+  }
+  if (groups.length === 0) return `<p class="empty-copy">${escapeHTML(t("fallback.none"))}</p>`;
+  return groups.map((group) => `
+    <h3 class="review-relation-title">${escapeHTML(group.label)}</h3>
+    <div class="chips">
+      ${list(group.refs).map((ref) => `<button class="chip" type="button" data-source="${escapeAttr(ref.path)}" ${ref.line ? `data-source-line="${escapeAttr(ref.line)}"` : ""}>${escapeHTML(ref.path)}${ref.line ? `:${escapeHTML(ref.line)}` : ""}</button>`).join("")}
+    </div>
+  `).join("");
+}
+
+function renderRegistryIssues(item) {
+  const issues = list(item.issues);
+  if (issues.length === 0) {
+    return `<h2>${escapeHTML(t("registry.issues"))}</h2><p class="empty-copy">${escapeHTML(t("registry.noIssues"))}</p>`;
+  }
+  return `
+    <h2>${escapeHTML(t("registry.issues"))}</h2>
+    <ul class="review-focus-points">
+      ${issues.map((issue) => `<li>${escapeHTML(issue)}</li>`).join("")}
+    </ul>
+  `;
+}
+
+function renderRegistryEmptyDetail() {
+  detailPanel.innerHTML = `<h2>${escapeHTML(t("fallback.noObject"))}</h2>`;
+  updateTruthTab([], "registry-empty");
+}
+
 function renderTodoDetail(item) {
   const view = lifecycleView(item.object, item.nextCommand);
   detailPanel.innerHTML = `
@@ -2757,9 +3357,8 @@ function renderTodoDetail(item) {
       <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
       ${renderNextRoundEntry(view, item.object)}
       <div class="review-command-actions">
-        <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(t("review.copyNextCommand"))}">
+        <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(`${t("review.nextCommand")}: ${item.commandText}`)}">
           <span>${escapeHTML(t("review.nextCommand"))}</span>
-          <code>${escapeHTML(item.commandText)}</code>
         </button>
         ${renderAdvanceCommandButton(item, "review-next-command advance-entry")}
       </div>
@@ -2931,6 +3530,49 @@ function labelForKind(kind) {
     ?? lookupTranslation(TRANSLATIONS["zh-CN"], `kind.${kind}`);
   if (translated) return translated;
   return kind;
+}
+
+function objectKindLabel(kind) {
+  const translated = lookupTranslation(TRANSLATIONS[currentLanguage], `legend.${kind}.label`)
+    ?? lookupTranslation(TRANSLATIONS["zh-CN"], `legend.${kind}.label`);
+  if (translated) return translated;
+  return labelForKind(kind);
+}
+
+function objectKindClass(kind) {
+  const normalized = String(kind || "").trim();
+  if (normalized === "unit" || normalized === "scenario" || normalized === "rule") return `kind-${normalized}`;
+  return "";
+}
+
+function renderKindBadge(kind) {
+  const className = objectKindClass(kind);
+  if (!className) return "";
+  return `<span class="object-kind-badge ${escapeAttr(className)}">${escapeHTML(objectKindLabel(kind))}</span>`;
+}
+
+function registryKindText(item) {
+  if (item.kind === "rule") {
+    if (item.rule_scope === "global") return t("registry.ruleScope.global");
+    if (item.rule_scope === "bound") return t("registry.ruleScope.bound");
+    return t("registry.ruleScope.unknown");
+  }
+  return objectKindLabel(item.kind);
+}
+
+function renderRegistryKindBadge(item) {
+  const className = objectKindClass(item.kind);
+  if (!className) return "";
+  return `<span class="object-kind-badge ${escapeAttr(className)}">${escapeHTML(registryKindText(item))}</span>`;
+}
+
+function renderNavItemTitle(label, kind) {
+  return `
+    <span class="nav-item-title">
+      ${renderKindBadge(kind)}
+      <strong>${escapeHTML(label)}</strong>
+    </span>
+  `;
 }
 
 function renderImplementationPathGroup(title, refs) {

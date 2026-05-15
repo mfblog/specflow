@@ -8,6 +8,7 @@
   --accent: #2563eb;
   --unit: #2563eb;
   --scenario: #db2777;
+  --rule: #0f766e;
   --shared: #0f766e;
   --truth: #7c3aed;
   --path: #b45309;
@@ -172,7 +173,7 @@ button:hover {
 
 .view-nav .tab {
   position: relative;
-  min-width: 118px;
+  min-width: 108px;
   border: 1px solid var(--line);
   border-radius: 0;
   padding: 8px 14px;
@@ -309,6 +310,7 @@ button:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .nav-item span {
@@ -319,6 +321,21 @@ button:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.nav-item .object-kind-badge {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+.nav-item .nav-item-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 0;
+  color: inherit;
+  font-size: inherit;
 }
 
 .nav-empty {
@@ -597,6 +614,20 @@ button:hover {
   background: transparent;
 }
 
+.registry-view-active .layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.registry-view-active .sidebar,
+.registry-view-active .resize-bar,
+.registry-view-active .inspector-panel {
+  display: none;
+}
+
+.registry-view-active .workspace {
+  border-radius: 8px;
+}
+
 .todo-view-active .graph-legend {
   display: none;
 }
@@ -635,16 +666,12 @@ button:hover {
 }
 
 .status-board .status-section:last-child {
-  display: flex;
-  flex: 1 0 320px;
-  flex-direction: column;
-  min-height: 320px;
+  min-height: 0;
 }
 
 .status-board .status-section:last-child .lifecycle-list {
   align-content: start;
-  flex: 1;
-  overflow: auto;
+  overflow: visible;
 }
 
 .status-section {
@@ -778,6 +805,131 @@ button:hover {
   color: var(--muted);
 }
 
+.source-flag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+}
+
+.registry-table td {
+  vertical-align: top;
+}
+
+.registry-path-list {
+  display: grid;
+  gap: 4px;
+  min-width: 240px;
+  max-width: 520px;
+}
+
+.registry-path {
+  display: block;
+  width: 100%;
+  border: 1px solid #dbe3ef;
+  border-radius: 5px;
+  padding: 3px 6px;
+  background: #f8fafc;
+  color: #334155;
+  font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+button.registry-path {
+  color: var(--accent);
+}
+
+button.registry-path:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.registry-path-empty {
+  color: var(--muted);
+}
+
+.registry-section {
+  border-top: 1px solid var(--line);
+  padding: 12px 0 4px;
+}
+
+.registry-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.registry-section-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 12px 10px;
+}
+
+.registry-section-title h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.registry-section-title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.registry-section-title em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.registry-empty {
+  padding: 0 12px 12px;
+}
+
+.registry-result {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.registry-result.complete,
+.registry-result.landed {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.registry-result.planned {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.registry-result.gap,
+.registry-result.missing_file,
+.registry-result.unregistered_file,
+.registry-result.invalid_registry_row {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
 .lifecycle-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -798,6 +950,25 @@ button:hover {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+.lifecycle-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.lifecycle-title .card-object {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lifecycle-title .object-kind-badge {
+  flex: 0 0 auto;
+  font-size: 11px;
 }
 
 .lifecycle-head span,
@@ -923,18 +1094,18 @@ button:hover {
 }
 
 .todo-card.intent-repair {
-  border-color: #f59e0b;
+  border-color: var(--line);
   background: #fffbeb;
 }
 
 .todo-card.active {
   border-color: var(--accent);
-  box-shadow: inset 3px 0 0 var(--accent);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22);
 }
 
 .todo-card.intent-repair.active {
-  border-color: #d97706;
-  box-shadow: inset 3px 0 0 #d97706;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22);
 }
 
 .todo-card-head {
@@ -943,6 +1114,51 @@ button:hover {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+.todo-card-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.todo-card-title .card-object {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.object-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.object-kind-badge.kind-unit {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: var(--unit);
+}
+
+.object-kind-badge.kind-scenario {
+  border-color: #fbcfe8;
+  background: #fdf2f8;
+  color: var(--scenario);
+}
+
+.object-kind-badge.kind-rule {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: var(--rule);
 }
 
 .todo-type {
@@ -1014,9 +1230,10 @@ button:hover {
   align-items: center;
   justify-content: center;
   gap: 5px;
+  flex: 0 0 auto;
   max-width: 100%;
   border-color: #bfdbfe;
-  padding: 3px 7px;
+  padding: 4px 9px;
   background: #eff6ff;
   color: var(--accent);
   font-weight: 700;
@@ -1113,6 +1330,7 @@ button:hover {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  flex: 0 0 auto;
   max-width: 100%;
   border-color: #bfdbfe;
   padding: 5px 9px;
@@ -1172,6 +1390,12 @@ button:hover {
 .detail-grid dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.detail-kind {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .chips {
