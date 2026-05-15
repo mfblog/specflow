@@ -109,9 +109,11 @@ Before execution:
 10. for each touched rule file that still has one or more formal consumers in the current-layer `unit` and `scenario` `rule_refs` graph after Step 8, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 11. do not write consumer metadata into Rule files; every remaining touched Rule file must omit `bound_objects`, and consumers are derived from current-layer frontmatter `rule_refs`
 12. if the topology plan created, removed, renamed, split, merged, replaced, retired, or otherwise changed the current rule object map, update `docs/specs/repository_mapping.md` in the same round before executing `rule_sync`:
-   - record every remaining current `rule` ID and one-line responsibility that changed because of this topology plan
-   - remove retired rule IDs from the current object map only when the topology plan has legally resolved their terminal state
-   - keep rule truth-path rules consistent with the resulting rule file locations
+   - add, update, or remove the affected `Object Registry` rule rows according to the topology result
+   - every remaining current rule row must use `kind=rule`, `scope=bound`, and the current one-line responsibility
+   - rows for rules with concrete rule files must list those files in `spec_files`
+   - rows for rules with no direct implementation path must use `registration_state=planned` and `implementation_paths=none`
+   - remove retired rule rows only when the topology plan has legally resolved their terminal state
    - if current repository truth is insufficient to write the exact mapping update without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
 13. after any write to `docs/specs/rules/**` or any unit or scenario `rule_refs`, execute `rule_sync` before claiming closure
 14. if `rule_sync` stops because repository truth is insufficient to continue safely, return control to `rule_escape` through rule-governance routing instead of inventing a flow-local checkpoint

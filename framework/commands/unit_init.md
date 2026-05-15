@@ -44,7 +44,7 @@ Before execution:
 5. read `specflow/framework/onboarding_decision_policy.md`
 6. read `specflow/framework/repository_mapping_policy.md`
 7. read `docs/specs/repository_mapping.md`
-8. confirm the target unit is not already present in the Governed Object Map and does not conflict with any current `unit`, `scenario`, `rule`, support-surface, or ignore rule
+8. confirm the target unit is not already present in `Object Registry` and does not conflict with any current `unit`, `scenario`, `rule`, support-surface, or ignore rule
 9. direct first-stable onboarding is allowed only when `onboarding_decision_policy.md` proves that the accepted behavior baseline is complete, conflicts are closed, material unknowns are closed or irrelevant, and shared/global truth is resolved
 10. if the target only has raw implementation evidence, incomplete evidence, unresolved conflicts, or retained behavior that still needs business confirmation, do not start `unit_init`; route to candidate creation with the required `source_basis` and evidence appendix
 11. if onboarding current truth would create duplicated formal truth across units, or if the shared/unit boundary is still unstable, do not start `unit_init`; resolve that rule-truth boundary through natural-language rule governance first
@@ -61,8 +61,11 @@ Before execution:
 3. confirm that first-stable onboarding is allowed by `onboarding_decision_policy.md`; if not, stop before writing stable truth and route to candidate creation
 4. if onboarding current truth shows that one or more existing formal units already depend on the same formal truth and that truth is not yet formalized as one stable rule object, stop and reroute through natural-language rule governance from current repository truth instead of writing duplicated unit-local `stable` truth
 5. prepare the `docs/specs/repository_mapping.md` writeback for the historical unit before stable truth or `_status.md` mutation:
-   - add the target unit ID and one-line responsibility to the Governed Object Map
-   - record the unit truth-surface rule for the fixed unit truth path template
+   - add or update one `Object Registry` row for the target unit
+   - set `kind=unit`, `id={unit}`, `scope=capability`, and the one-line responsibility
+   - set `spec_files=docs/specs/units/stable/s_unit_{unit}.md` after the stable file is created in this same round
+   - set `registration_state=landed` only when concrete implementation paths are declared
+   - if no implementation path is declared yet, set `registration_state=planned` and `implementation_paths=none`
    - record any implementation surface, support surface, governed root, ignore rule, or conflict rule that this first stable onboarding round already needs
    - if current repository truth is insufficient to write the exact mapping update without guessing, stop before stable truth and `_status.md` writeback
 6. create `docs/specs/units/stable/s_unit_{unit}.md`
@@ -97,7 +100,7 @@ Before execution:
 ## 5. Stop Conditions
 
 1. the first `stable` exists
-2. `docs/specs/repository_mapping.md` includes the unit in the Governed Object Map and contains the truth-surface or path-ownership entries required by this first stable onboarding round
+2. `docs/specs/repository_mapping.md` includes the unit in `Object Registry` with its implementation registration state, the created stable Spec file, and any path-ownership entries required by this first stable onboarding round
 3. `_status.md` registration is complete
 4. Rule side effects, if any, are closed
 5. if onboarding discovered unresolved cross-unit rule truth, the command stopped and rerouted through natural-language rule governance instead of writing duplicated unit-local `stable` truth
@@ -114,7 +117,7 @@ Before execution:
 5. whether `Rule Alignment` was required and why
 6. whether the command had to stop and reroute through natural-language rule governance because rule-truth boundary closure was required before onboarding could continue
 7. whether the command had to stop and route to candidate creation because evidence was not sufficient for direct stable onboarding
-8. `docs/specs/repository_mapping.md` writeback result, including the new Governed Object Map entry and any truth-surface or path-ownership entries written in this round
+8. `docs/specs/repository_mapping.md` writeback result, including the new `Object Registry` row and any path-ownership entries written in this round
 9. `_status.md` update result
 10. Rule reconciliation result when the round changed rule truth or bindings
 11. next-step suggestion

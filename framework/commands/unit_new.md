@@ -38,7 +38,7 @@ This file states only `unit_new`-local entry, output, and stop rules.
 4. the goal is future design first, not capturing current truth first
 5. read `specflow/framework/repository_mapping_policy.md`
 6. read `docs/specs/repository_mapping.md`
-7. confirm the target unit is not already present in the Governed Object Map and does not conflict with any current `unit`, `scenario`, `rule`, support-surface, or ignore rule
+7. confirm the target unit is not already present in `Object Registry` and does not conflict with any current `unit`, `scenario`, `rule`, support-surface, or ignore rule
 8. read `specflow/framework/onboarding_decision_policy.md` and decide the first candidate's `source_basis` and `evidence_appendix_ref`
 9. read `specflow/framework/candidate_intent_policy.md`; first candidates use `candidate_intent=change`
 10. if the first candidate uses `source_basis=existing_implementation` or `source_basis=mixed`, prepare the required evidence appendix in the same round
@@ -55,8 +55,11 @@ This file states only `unit_new`-local entry, output, and stop rules.
    - if yes, the round must bind that rule truth explicitly in the first candidate instead of using `none`
 3. define the new unit's goals, boundaries, protocols, and main flow
 4. prepare the `docs/specs/repository_mapping.md` writeback for the new unit before candidate or `_status.md` mutation:
-   - add the target unit ID and one-line responsibility to the Governed Object Map
-   - record the unit truth-surface rule for the fixed unit truth path template
+   - add or update one `Object Registry` row for the target unit
+   - set `kind=unit`, `id={unit}`, `scope=capability`, and the one-line responsibility
+   - set `spec_files=docs/specs/units/candidate/c_unit_{unit}.md` after the candidate file is created in this same round
+   - set `registration_state=landed` only when concrete implementation paths are declared
+   - if no implementation path is declared yet, set `registration_state=planned` and `implementation_paths=none`
    - record any implementation surface, support surface, governed root, ignore rule, or conflict rule that this first unit round already needs
    - if current repository truth is insufficient to write the exact mapping update without guessing, stop before candidate and `_status.md` writeback
 5. create `docs/specs/units/candidate/c_unit_{unit}.md`
@@ -88,7 +91,7 @@ This file states only `unit_new`-local entry, output, and stop rules.
 ## 5. Stop Conditions
 
 1. the first `candidate` exists
-2. `docs/specs/repository_mapping.md` includes the new unit in the Governed Object Map and contains the truth-surface or path-ownership entries required by this first unit round
+2. `docs/specs/repository_mapping.md` includes the new unit in `Object Registry` with its implementation registration state, the created candidate Spec file, and any implementation paths required by this first unit round
 3. `_status.md` registration is complete
 4. any first-round rule binding required by the candidate has been written explicitly instead of being left as placeholder `none`
 5. Rule side effects, if any, are closed
@@ -108,7 +111,7 @@ This file states only `unit_new`-local entry, output, and stop rules.
 8. initialized acceptance-item structure result
 9. initialized explicit Rule binding set or confirmed `rule_refs=none`
 10. whether the command had to stop and reroute through natural-language rule governance because repository truth was insufficient to close rule-truth binding metadata safely
-11. `docs/specs/repository_mapping.md` writeback result, including the new Governed Object Map entry and any truth-surface or path-ownership entries written in this round
+11. `docs/specs/repository_mapping.md` writeback result, including the new `Object Registry` row and any path-ownership entries written in this round
 12. `_status.md` update result
 13. Rule reconciliation result when the round changed rule truth or bindings
 14. remaining closure items

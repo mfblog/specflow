@@ -96,8 +96,11 @@ Before execution:
    - if Step 6 updated an already-existing candidate-layer file with a stable-layer sibling, preserve or rewrite `promotion_owner_unit` so the resulting file still names one formal unit from the writeback-required involved-unit subset for this round
    - if current repository truth is insufficient to keep one stable owner from that subset without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
 11. if this round created the first file for a brand-new `rule_id` or otherwise changed the current rule object map, update `docs/specs/repository_mapping.md` in the same round before executing `rule_sync`:
-   - record the new or changed `rule` ID and one-line responsibility in the Governed Object Map
-   - keep rule truth-path rules consistent with the resulting rule file location
+   - add or update one `Object Registry` row for the changed `rule`
+   - set `kind=rule`, `id={rule_id}`, `scope=bound`, and the one-line responsibility
+   - list the concrete rule file in `spec_files`
+   - set `registration_state=landed` only when the rule has concrete implementation paths
+   - if the rule has no direct implementation path, set `registration_state=planned` and `implementation_paths=none`
    - if current repository truth is insufficient to write the exact mapping update without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
 12. rewrite every source unit candidate side so the extracted truth is no longer duplicated as unit-local formal truth
 13. rewrite every additional writeback-required involved consumer unit candidate-side reference and behavior explanation required by the extraction result

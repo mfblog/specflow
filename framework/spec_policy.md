@@ -219,7 +219,7 @@ It answers these mandatory sections:
    - what this repository is for
    - the main delivery surface
    - the shortest useful reading path
-2. `Governed Object Map`
+2. `Object Registry`
    - current `unit` IDs and one-line responsibilities
    - current `scenario` IDs and one-line responsibilities, or `none`
    - current `rule` IDs and one-line responsibilities

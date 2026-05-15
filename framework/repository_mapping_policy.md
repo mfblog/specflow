@@ -27,10 +27,16 @@ It must answer these sections:
    - what this repository is for
    - the main delivery surface of the repository
    - the shortest useful reading path for a human or agent entering the repository
-2. `Governed Object Map`
-   - current `unit` IDs and one-line responsibilities
-   - current `scenario` IDs and one-line responsibilities, or `none`
-   - current `rule` IDs and one-line responsibilities
+2. `Object Registry`
+   - one fixed Markdown table that registers every current or planned `unit`, `scenario`, and `rule`
+   - the table is the only machine-readable registry that connects those objects to implementation paths
+   - the fixed header is `| kind | id | scope | registration_state | implementation_paths | spec_files | responsibility |`
+   - `kind` must be `unit`, `scenario`, or `rule`
+   - `scope` must be `capability` for `unit`, `flow` for `scenario`, and `bound` or `global` for `rule`
+   - `registration_state` must be `planned` or `landed`
+   - `planned` rows must use `implementation_paths=none`
+   - `landed` rows must list concrete implementation paths
+   - `spec_files` records the related Spec or rule documents and does not decide the registration state
 3. `Boundary Rules`
    - what qualifies as a formal `unit`
    - what must become `rule`
@@ -102,6 +108,7 @@ At minimum, drift includes:
 5. a declared support surface has moved without the mapping being updated
 6. a consuming command's target path is outside the ownership declared for that target object
 7. a command-target object still lists a concrete current-layer truth file under its mapping entry instead of naming a truth-surface rule
+8. an `Object Registry` row is malformed, uses an unsupported field value, declares a missing landed implementation path, or omits a formal object that must be registered
 
 Handling rules:
 
@@ -166,6 +173,8 @@ The default procedure is:
    - a rule-governance flow may operate on declared rule truth and binding metadata, but must not silently rewrite unit behavior truth
    - support-surface edits may continue only when the current task explicitly targets that support surface or a governance flow owns it
 4. check existence of declared files that are relevant to the current task
+   - landed `Object Registry` implementation paths must exist
+   - declared `Object Registry` spec files must exist
    - target object truth files must exist when `_status.md` and the mapping's truth-surface rule resolve to them
    - selected rule truth files must exist when they are part of the current binding or current shared scope
    - selected support-surface files or directories must exist when the task depends on them
@@ -188,9 +197,10 @@ Full repository checks must additionally:
 
 1. enumerate all governed roots declared by the mapping
 2. classify all tracked paths under those roots, excluding ignore rules
-3. verify that every declared formal object has its declared current truth files
+3. verify that every declared formal object has its declared implementation paths when its registry state is `landed`
 4. verify that no tracked governed path is both unmapped and relevant to governance
 5. verify that no tracked governed path maps to multiple command-target objects
+6. verify that every `_status.md` object has an `Object Registry` row
 
 ## 8. Non-Goals
 

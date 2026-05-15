@@ -15,19 +15,26 @@ It is read by `unit`, `scenario`, rule-governance, review, and implementation fl
 
 Record the repository's purpose, main technology stack, runtime entry points, and any major repository conventions that a human or agent must know before changing governed files.
 
-## 2. Governed Object Map
+## 2. Object Registry
 
-Record the current formal objects that exist in this repository.
+This table is the only structured registry that connects current `unit`, `scenario`, and `rule` objects to implementation paths in this repository.
 
-At minimum, keep this map aligned with:
+The table header is fixed:
 
-1. `docs/specs/_status.md`
-2. `docs/specs/units/stable/`
-3. `docs/specs/units/candidate/`
-4. `docs/specs/scenarios/stable/`
-5. `docs/specs/scenarios/candidate/`
-6. `docs/specs/rules/stable/`
-7. `docs/specs/rules/candidate/`
+| kind | id | scope | registration_state | implementation_paths | spec_files | responsibility |
+|---|---|---|---|---|---|---|
+| unit | example_unit | capability | planned | none | none | Replace this row with the first registered unit. |
+
+Rules:
+
+1. `kind` must be `unit`, `scenario`, or `rule`.
+2. `id` must be the formal object ID.
+3. `scope` must be `capability` for `unit`, `flow` for `scenario`, and `bound` or `global` for `rule`.
+4. `registration_state` must be `planned` or `landed`.
+5. `planned` rows must use `implementation_paths=none`.
+6. `landed` rows must list the concrete implementation path or paths.
+7. `spec_files` lists the related Spec or rule documents, or `none` when no document file exists yet.
+8. Multiple paths in `implementation_paths` or `spec_files` must be separated with `;`.
 
 ## 3. Boundary Rules
 
