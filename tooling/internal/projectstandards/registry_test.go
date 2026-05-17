@@ -100,7 +100,7 @@ func TestValidateRegistryPassesForSpecFlowResponseOutputStandard(t *testing.T) {
 	}
 }
 
-func TestValidateRegistryRejectsUnsupportedScenarioForCandCheck(t *testing.T) {
+func TestValidateRegistryRejectsUnsupportedProfileForCandCheck(t *testing.T) {
 	repoRoot := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(repoRoot, "docs/project_standards"), 0o755); err != nil {
 		t.Fatalf("mkdir project standards: %v", err)
@@ -129,7 +129,7 @@ func TestValidateRegistryRejectsUnsupportedScenarioForCandCheck(t *testing.T) {
 		"",
 		"| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule | notes |",
 		"|---|---|---|---|---|---|---|---|---|---|",
-		"| `prompt_rule` | `review_standard` | `candidate_closure_review` | `docs/project_standards/prompt_guidelines.md` | `unit_check` | `review_scenario:default_governance_baseline` | `tighten` | `framework_wins` | note |",
+		"| `prompt_rule` | `review_standard` | `candidate_closure_review` | `docs/project_standards/prompt_guidelines.md` | `unit_check` | `review_profile:default_governance_baseline` | `tighten` | `framework_wins` | note |",
 	}, "\n") + "\n"
 	if err := os.WriteFile(filepath.Join(repoRoot, "docs/project_standards/_registry.md"), []byte(registry), 0o644); err != nil {
 		t.Fatalf("write registry: %v", err)

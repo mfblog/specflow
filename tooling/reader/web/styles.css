@@ -7,7 +7,6 @@
   --line: #d8dee8;
   --accent: #2563eb;
   --unit: #2563eb;
-  --scenario: #db2777;
   --rule: #0f766e;
   --shared: #0f766e;
   --truth: #7c3aed;
@@ -464,10 +463,6 @@ button:hover {
 
 .legend-unit {
   background: var(--unit);
-}
-
-.legend-scenario {
-  background: var(--scenario);
 }
 
 .legend-shared {
@@ -1147,12 +1142,6 @@ button.registry-path:hover {
   border-color: #bfdbfe;
   background: #eff6ff;
   color: var(--unit);
-}
-
-.object-kind-badge.kind-scenario {
-  border-color: #fbcfe8;
-  background: #fdf2f8;
-  color: var(--scenario);
 }
 
 .object-kind-badge.kind-rule {

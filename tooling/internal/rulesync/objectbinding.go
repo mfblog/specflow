@@ -147,12 +147,10 @@ func processSnapshotContainsSelectedShared(repoRoot, objectType, object, activeL
 		if err != nil {
 			return false, err
 		}
-		validEvidence := false
-		if objectType == "unit" {
-			validEvidence, err = isValidModuleRemovedBindingEvidence(repoRoot, object, activeLayer, processKind, processSnapshot, scopedRefs, scopedIDs, sharedFilesByID)
-		} else {
-			validEvidence, err = isValidRemovedBindingEvidence(repoRoot, processSnapshot, objectType, object, activeLayer, processKind, scopedRefs, scopedIDs, sharedFilesByID)
+		if objectType != "unit" {
+			return false, fmt.Errorf("unsupported object type %q", objectType)
 		}
+		validEvidence, err := isValidModuleRemovedBindingEvidence(repoRoot, object, activeLayer, processKind, processSnapshot, scopedRefs, scopedIDs, sharedFilesByID)
 		if err != nil {
 			return false, err
 		}
@@ -198,7 +196,7 @@ func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processK
 			return false, nil
 		}
 	}
-	requiredListFields := []string{"unit_appendix_snapshot", "rule_snapshot", "acceptance_item_set"}
+	requiredListFields := []string{"unit_appendix_snapshot", "unit_snapshot", "rule_snapshot", "acceptance_item_set"}
 	if processKind == "verify" {
 		requiredListFields = append(requiredListFields, "acceptance_item_evidence_matrix")
 	}
@@ -257,115 +255,7 @@ func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processK
 	if !equalAppendixEntries(processSnapshot.ModuleAppendixSnapshot, currentSnapshot.ModuleAppendixSnapshot) {
 		return false, nil
 	}
-	if !equalAcceptanceItemEntries(processSnapshot.AcceptanceItemSet, currentSnapshot.AcceptanceItemSet) {
-		return false, nil
-	}
-	if processKind == "verify" && !acceptanceEvidenceMatrixCovers(processSnapshot.AcceptanceEvidence, currentSnapshot.AcceptanceItemSet) {
-		return false, nil
-	}
-
-	return sharedSnapshotMatchesRemovedBindingEvidence(
-		processSnapshot.RuleSnapshot,
-		currentSnapshot.RuleSnapshot,
-		scopedRefs,
-		scopedIDs,
-		sharedFilesByID,
-	)
-}
-
-func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.ProcessSnapshotData, objectType, object, activeLayer, processKind string, scopedRefs, scopedIDs []string, sharedFilesByID map[string][]sharedFile) (bool, error) {
-	requiredScalars := []string{
-		"object_type",
-		"object_ref",
-		"gate",
-		"decision",
-		"allow_next",
-		"next_command",
-		"blocking_summary",
-		"coverage_summary",
-		"truth_layer_ref",
-		"truth_file_ref",
-		"truth_version_ref",
-		"truth_fingerprint",
-	}
-	if processKind == "verify" {
-		requiredScalars = append(requiredScalars, "verification_scope_ref")
-	}
-	for _, field := range requiredScalars {
-		if !processSnapshot.PresentFields[field] {
-			return false, nil
-		}
-		if strings.TrimSpace(processSnapshot.Scalars[field]) == "" {
-			return false, nil
-		}
-	}
-
-	requiredListFields := []string{"rule_snapshot", "unit_snapshot", "acceptance_item_set"}
-	if objectType == "scenario" {
-		requiredListFields = append(requiredListFields, "repository_mapping_snapshot", "scenario_appendix_snapshot")
-	}
-	if processKind == "verify" {
-		requiredListFields = append(requiredListFields, "acceptance_item_evidence_matrix")
-	}
-	for _, field := range requiredListFields {
-		if !processSnapshot.PresentFields[field] {
-			return false, nil
-		}
-	}
-	if !allSharedSnapshotEntriesComplete(processSnapshot.RuleSnapshot) {
-		return false, nil
-	}
-	if objectType == "scenario" && !repositoryMappingSnapshotComplete(processSnapshot.RepositoryMapping) {
-		return false, nil
-	}
-
-	expectedGate, expectedNextCommand, ok := expectedObjectProcessRouting(objectType, processKind)
-	if !ok {
-		return false, nil
-	}
-	currentSnapshot, err := rebuildCurrentObjectSnapshot(repoRoot, objectType, object, activeLayer)
-	if err != nil {
-		return false, err
-	}
-	currentTruthContent, err := readCurrentObjectTruthContent(repoRoot, objectType, object, activeLayer)
-	if err != nil {
-		return false, err
-	}
-	if processSnapshot.Scalars["object_type"] != objectType {
-		return false, nil
-	}
-	if processSnapshot.Scalars["object_ref"] != object {
-		return false, nil
-	}
-	if processSnapshot.Scalars["truth_layer_ref"] != activeLayer {
-		return false, nil
-	}
-	truthMatches, err := matchesRemovedBindingTruth(processSnapshot, currentSnapshot.TruthFileRef, currentTruthContent, processSnapshot.RuleSnapshot)
-	if err != nil {
-		return false, err
-	}
-	if !truthMatches {
-		return false, nil
-	}
-	if processSnapshot.Scalars["gate"] != expectedGate {
-		return false, nil
-	}
-	if processSnapshot.Scalars["decision"] != "pass" {
-		return false, nil
-	}
-	if processSnapshot.Scalars["allow_next"] != "true" {
-		return false, nil
-	}
-	if processSnapshot.Scalars["next_command"] != expectedNextCommand {
-		return false, nil
-	}
-	if !equalObjectSnapshotEntries(processSnapshot.ModuleSnapshot, currentSnapshot.ModuleSnapshot) {
-		return false, nil
-	}
-	if objectType == "scenario" && !equalRepositoryMappingSnapshot(processSnapshot.RepositoryMapping, currentSnapshot.RepositoryMapping) {
-		return false, nil
-	}
-	if objectType == "scenario" && !equalAppendixEntries(processSnapshot.ModuleAppendixSnapshot, currentSnapshot.AppendixSnapshot) {
+	if !equalObjectSnapshotEntries(processSnapshot.ModuleSnapshot, currentSnapshot.UnitSnapshot) {
 		return false, nil
 	}
 	if !equalAcceptanceItemEntries(processSnapshot.AcceptanceItemSet, currentSnapshot.AcceptanceItemSet) {
@@ -374,6 +264,7 @@ func isValidRemovedBindingEvidence(repoRoot string, processSnapshot snapshot.Pro
 	if processKind == "verify" && !acceptanceEvidenceMatrixCovers(processSnapshot.AcceptanceEvidence, currentSnapshot.AcceptanceItemSet) {
 		return false, nil
 	}
+
 	return sharedSnapshotMatchesRemovedBindingEvidence(
 		processSnapshot.RuleSnapshot,
 		currentSnapshot.RuleSnapshot,
@@ -397,16 +288,6 @@ func allSharedSnapshotEntriesComplete(entries []snapshot.RuleEntry) bool {
 		}
 	}
 	return true
-}
-
-func repositoryMappingSnapshotComplete(entry snapshot.RepositoryMappingEntry) bool {
-	return strings.TrimSpace(entry.FileRef) != "" &&
-		strings.TrimSpace(entry.VersionRef) != "" &&
-		strings.TrimSpace(entry.Fingerprint) != ""
-}
-
-func equalRepositoryMappingSnapshot(actual, expected snapshot.RepositoryMappingEntry) bool {
-	return actual == expected
 }
 
 func equalObjectSnapshotEntries(actual, expected []snapshot.ObjectSnapshotEntry) bool {
@@ -589,10 +470,8 @@ type currentObjectSnapshot struct {
 	TruthVersionRef   string
 	TruthFingerprint  string
 	AppendixSnapshot  []snapshot.AppendixEntry
-	ModuleSnapshot    []snapshot.ObjectSnapshotEntry
-	FlowSnapshot      []snapshot.ObjectSnapshotEntry
+	UnitSnapshot      []snapshot.ObjectSnapshotEntry
 	RuleSnapshot      []snapshot.RuleEntry
-	RepositoryMapping snapshot.RepositoryMappingEntry
 	AcceptanceItemSet []snapshot.AcceptanceItemEntry
 }
 
@@ -627,20 +506,14 @@ func rebuildCurrentObjectSnapshot(repoRoot, objectType, object, activeLayer stri
 		return currentObjectSnapshot{}, err
 	}
 
-	if objectType == "scenario" {
-		result.RepositoryMapping, err = snapshot.BuildRepositoryMappingSnapshot(repoRoot)
+	moduleRefs, hasField, err := parseNamedRefList(string(content), "unit_refs")
+	if err != nil {
+		return currentObjectSnapshot{}, err
+	}
+	if hasField {
+		result.UnitSnapshot, err = buildObjectDependencySnapshot(repoRoot, "unit", moduleRefs)
 		if err != nil {
 			return currentObjectSnapshot{}, err
-		}
-		moduleRefs, hasField, err := parseNamedRefList(body, "unit_refs")
-		if err != nil {
-			return currentObjectSnapshot{}, err
-		}
-		if hasField {
-			result.ModuleSnapshot, err = buildObjectDependencySnapshot(repoRoot, "unit", moduleRefs)
-			if err != nil {
-				return currentObjectSnapshot{}, err
-			}
 		}
 	}
 	sharedRefs, err := rulerefs.ParseObjectRuleRefs(mainSpecRef, string(content))
@@ -746,6 +619,9 @@ func resolveObjectVersionRef(repoRoot, expectedObjectType, ref string) (snapshot
 	if objectType != expectedObjectType {
 		return snapshot.ObjectSnapshotEntry{}, fmt.Errorf("%s ref %q resolves to object type %q", expectedObjectType, ref, objectType)
 	}
+	if expectedObjectType == "unit" && layer != "stable" {
+		return snapshot.ObjectSnapshotEntry{}, fmt.Errorf("unit_refs must reference stable units; got %q", ref)
+	}
 	fileRef, err := specpaths.ObjectMainSpecFileRef(objectType, layer, object)
 	if err != nil {
 		return snapshot.ObjectSnapshotEntry{}, err
@@ -781,10 +657,6 @@ func parseObjectVersionRefPrefix(prefix string) (string, string, string, error) 
 		return "unit", "candidate", strings.TrimPrefix(prefix, "c_unit_"), nil
 	case strings.HasPrefix(prefix, "s_unit_"):
 		return "unit", "stable", strings.TrimPrefix(prefix, "s_unit_"), nil
-	case strings.HasPrefix(prefix, "c_scenario_"):
-		return "scenario", "candidate", strings.TrimPrefix(prefix, "c_scenario_"), nil
-	case strings.HasPrefix(prefix, "s_scenario_"):
-		return "scenario", "stable", strings.TrimPrefix(prefix, "s_scenario_"), nil
 	default:
 		return "", "", "", fmt.Errorf("unsupported object version ref prefix %q", prefix)
 	}
@@ -814,7 +686,13 @@ func parseNamedRefList(body, fieldName string) ([]string, bool, error) {
 			if nextTrimmed == "" {
 				continue
 			}
+			if nextTrimmed == "---" {
+				break
+			}
 			if strings.HasPrefix(nextTrimmed, "## ") || regexp.MustCompile(`^\d+\.`).MatchString(nextTrimmed) {
+				break
+			}
+			if strings.Contains(nextTrimmed, ":") && !strings.HasPrefix(nextTrimmed, "- ") {
 				break
 			}
 			if !strings.HasPrefix(nextTrimmed, "- ") {
@@ -1091,22 +969,11 @@ func expectedModuleProcessRouting(processKind string) (string, string, bool) {
 	switch processKind {
 	case "check":
 		return "unit_check", "unit_plan", true
+	case "plan":
+		return "unit_plan", "unit_impl", true
 	case "verify":
 		return "unit_verify", "unit_promote", true
 	default:
 		return "", "", false
 	}
-}
-
-func expectedObjectProcessRouting(objectType, processKind string) (string, string, bool) {
-	switch objectType {
-	case "scenario":
-		switch processKind {
-		case "check":
-			return "scenario_check", "scenario_verify", true
-		case "verify":
-			return "scenario_verify", "scenario_promote", true
-		}
-	}
-	return "", "", false
 }

@@ -16,11 +16,11 @@ Before any lifecycle action or file edit, choose the owning policy file and foll
 
 ### 1. First Read
 
-1. If the request exactly matches `unit_advance:{unit}` or `scenario_advance:{scenario}`, read `specflow/framework/advance_policy.md` directly.
+1. If the request exactly matches `unit_advance:{unit}`, read `specflow/framework/advance_policy.md` directly.
 2. If the request is an exact standard command, read `specflow/framework/command_policy.md`, then the matching file under `specflow/framework/commands/`.
 3. If the request is exactly `spec_flow_review` or `spec_flow_design_review`, with or without a narrowing phrase, read the matching review policy directly.
 4. If the request is exactly `spec_flow_migrate`, with or without a narrowing phrase, read `specflow/framework/spec_flow_migrate.md` directly.
-5. If the request only asks for implementation-side edits and does not ask for truth, boundary, shared, system, scenario, governance, migration, or guidance work, read `specflow/framework/implementation_change_policy.md` first.
+5. If the request only asks for implementation-side edits and does not ask for truth, boundary, shared, system, governance, migration, or guidance work, read `specflow/framework/implementation_change_policy.md` first.
 6. For every other `specFlow` request, read `specflow/framework/natural_language_routing.md` first.
 
 After the first policy file routes the request, continue only through the routed policy, command, governance flow, or checkpoint path.
@@ -30,7 +30,7 @@ After the first policy file routes the request, continue only through the routed
 1. Do not edit implementation-side files until `specflow/framework/implementation_change_policy.md` proves the change is `implementation_only` or the routed command explicitly allows implementation.
 2. Do not change behavior truth, acceptance truth, object ownership, rule truth, global rules, lifecycle state, or process files unless the active policy or command explicitly allows that write.
 3. Resolve path ownership and object boundaries from `docs/specs/repository_mapping.md` when they matter; do not guess from directories.
-4. Resolve existing `unit` or `scenario` state from `docs/specs/_status.md` before advancing any lifecycle step.
+4. Resolve existing `unit` state from `docs/specs/_status.md` before advancing any lifecycle step.
 5. Read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may affect repository-wide defaults, shared mechanisms, prohibitions, or explicit exceptions.
 6. Enter rule-governance only through `specflow/framework/natural_language_routing.md`.
 7. Keep registered entry index managed blocks consistent according to `specflow/framework/entry_index_registry.md`.
@@ -41,14 +41,13 @@ These project terms must be interpreted only through the policy files:
 
 1. `Spec`
 2. `unit`
-3. `scenario`
-4. `stable`
-5. `candidate`
-6. `_status.md`
-7. `repository_mapping.md`
-8. `rule`
-9. `checkpoint`
-10. `implementation_change_policy.md`
+3. `stable`
+4. `candidate`
+5. `_status.md`
+6. `repository_mapping.md`
+7. `rule`
+8. `checkpoint`
+9. `implementation_change_policy.md`
 
 ### 4. Hard Stops
 

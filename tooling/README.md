@@ -113,9 +113,9 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
 17. `snapshot validate-process`
    - compare one process file against rebuilt current truth
 18. `process cleanup-fallback`
-   - execute deterministic layered fallback cleanup for one unit or scenario
+   - execute deterministic layered fallback cleanup for one unit
 19. `process cleanup-success`
-   - execute deterministic success cleanup for one unit or scenario
+   - execute deterministic success cleanup for one unit
 20. `status set-unit`
    - write one deterministic `unit` row in `_status.md` as a low-level status tool
 21. `status set-object`
@@ -126,14 +126,14 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - when the same stable landing round retargeted candidate units to those stable landing rule refs, the caller must pass those units through `--retargeted-units` and must select both the old candidate Rule refs and the new stable Rule refs through exact `--rule-refs`
    - the caller may narrow the derived unit subset with `--units`, but at least one rule trigger input must still be provided through `--rule-refs` or `--rule-ids`; retargeted stable landing requires exact `--rule-refs`
 23. `rule consumers`
-   - read current-layer `unit` and `scenario` frontmatter `rule_refs` and print the consumers for one `rule_id` or exact `rule_ref`
+   - read current-layer `unit` frontmatter `rule_refs` and print the consumers for one `rule_id` or exact `rule_ref`
 24. `rule release-version`
    - publish an already-existing stable Rule version by retargeting current-layer consumers from `--from-ref` to `--to-ref`
    - candidate current-layer objects are rewritten directly
    - stable current-layer objects are auto-forked to candidate before their candidate `rule_refs` are rewritten
    - same-object stable appendices explicitly linked by the stable main Spec are retargeted into candidate appendices during the auto-fork, including Markdown link targets and direct same-object path literals
    - stale same-object candidate appendices are removed before the auto-fork writes current candidate appendices
-   - stable unit forks additionally write `candidate_intent=change`; scenario forks do not write `candidate_intent`
+   - stable unit forks additionally write `candidate_intent=change`
 
 ## Reader Command Surface
 
@@ -223,7 +223,6 @@ Usage:
 
 ```bash
 ./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command unit_plan --object-type unit --object assistant
-./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command scenario_promote --object-type scenario --object checkout_flow
 ```
 
 Output includes `preflight_result`, `validated_processes`, `failure_layer`, `recommended_next_command`, and `may_continue`.
@@ -240,7 +239,7 @@ The default `spec_flow_review` tooling review input set is:
 
 1. the framework tooling policy and this README
 2. the current tooling source input set listed below
-3. the release helper script input set listed below
+3. the tooling helper script input set listed below
 4. reader runtime files under `specflow/tooling/reader/web/**`
 
 The current tooling source input set is:
@@ -251,14 +250,15 @@ The current tooling source input set is:
 4. `specflow/tooling/manifest.tsv`
 5. `specflow/tooling/go.sum` when it exists
 
-The release helper script input set is:
+The tooling helper script input set is:
 
-1. `specflow/tooling/scripts/tooling_fingerprint.sh`
-2. `specflow/tooling/scripts/tooling_fingerprint.ps1`
+1. `specflow/tooling/scripts/build_release.sh`
+2. `specflow/tooling/scripts/tooling_fingerprint.sh`
+3. `specflow/tooling/scripts/tooling_fingerprint.ps1`
 
 The manifest is included because it controls which framework-managed and project-managed files `init`, `upgrade`, and `doctor` inspect or write.
 Reader front-end files under `specflow/tooling/reader/web/**` are runtime files, not binary freshness inputs.
-Release helper scripts are review inputs because they select release binaries for the installed tooling source.
+Tooling helper scripts are review inputs because they rebuild or select binaries for the installed tooling source.
 They are not binary freshness inputs unless they change compiled binary behavior.
 
 ## Unified Status Table
@@ -284,7 +284,7 @@ Rules:
 
 ## Command Close
 
-`command close` moves one unit or scenario command from its current `_status.md` row to the one legal next state for an explicit outcome.
+`command close` moves one unit command from its current `_status.md` row to the one legal next state for an explicit outcome.
 It is deterministic state machinery, not a semantic judge.
 
 Required flags:
@@ -349,9 +349,9 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 command close --command unit_stable_verify --object-type unit --object ai --outcome controlled_repair_required --candidate-intent repair
 ./specflow/tooling/bin/specflowctl-linux-amd64 command close --command unit_stable_verify --object-type unit --object ai --outcome controlled_repair_required --candidate-intent repair --apply
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --object-type unit --object ai
-./specflow/tooling/bin/specflowctl-linux-amd64 snapshot validate-process --object-type scenario --object task_execution --process verify
+./specflow/tooling/bin/specflowctl-linux-amd64 snapshot validate-process --object-type unit --object ai --process verify
 ./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --object-type unit --object ai --from-command unit_promote --reason evidence_incomplete --failure-layer evidence_layer
-./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type scenario --object task_execution --stable yes --candidate no --active-layer stable --next-command scenario_fork
+./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type unit --object ai --stable yes --candidate no --active-layer stable --next-command unit_fork
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_app_config_topology@0.2.0 --units ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_runtime_model@0.3.0,s_b_rule_runtime_model@0.3.0 --stable-landing-unit skill --stable-landing-rule-refs s_b_rule_runtime_model@0.3.0 --retargeted-units agent
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule consumers --rule-ref s_b_rule_runtime_model@0.4.0

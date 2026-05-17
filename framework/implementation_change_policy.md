@@ -45,7 +45,7 @@ This policy may be the first policy file for a natural-language request only whe
 3. object boundary or path ownership
 4. Rule truth or binding
 5. global rule truth
-6. scenario or end-to-end user-result truth
+6. end-to-end user-result truth that belongs in a unit Spec
 7. governance rules, project standards, or migration behavior
 8. guidance before formal truth writeback
 
@@ -55,7 +55,7 @@ Rules:
 
 1. if classification is `implementation_only`, this policy owns the first legal implementation-side action, subject to the current target's recorded `Next Command` and the post-action impact check in Section 3.4
 2. if classification is `truth_writeback_required` or `boundary_unclear`, implementation must stop and the executor must read `specflow/framework/natural_language_routing.md` using the classification result as routing evidence
-3. if the request contains one of the excluded truth, boundary, shared, system, scenario, governance, migration, or guidance fragments, this lightweight entry does not apply; route through `specflow/framework/natural_language_routing.md`
+3. if the request contains one of the excluded truth, boundary, shared, system, governance, migration, or guidance fragments, this lightweight entry does not apply; route through `specflow/framework/natural_language_routing.md`
 4. this entry is a smaller read path for one natural-language work shape; it does not create a new user-facing command or weaken any formal truth writeback gate
 
 ---
@@ -87,7 +87,7 @@ Before classification, read only the current truth needed to prove the target, s
 Required minimum reads:
 
 1. read the user request and any user-named paths, objects, commands, or implementation surfaces
-2. read `docs/specs/_status.md` when the request names an existing formal `unit` or `scenario`, or when the target object must be resolved before implementation permission can be judged
+2. read `docs/specs/_status.md` when the request names an existing formal `unit`, or when the target object must be resolved before implementation permission can be judged
 3. read `docs/specs/repository_mapping.md` only when path ownership, object boundary, support-surface ownership, or target-object resolution cannot be proven from the user request and `_status.md`
 4. read the current-layer main Spec sections needed to decide whether the requested change alters formal behavior truth
 5. read explicitly referenced appendix truth only when the current-layer main Spec makes that appendix relevant to the requested change

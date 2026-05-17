@@ -44,7 +44,7 @@ Before execution:
 5. read `specflow/framework/onboarding_decision_policy.md`
 6. read `specflow/framework/repository_mapping_policy.md`
 7. read `docs/specs/repository_mapping.md`
-8. confirm the target unit is not already present in `Object Registry` and does not conflict with any current `unit`, `scenario`, `rule`, support-surface, or ignore rule
+8. confirm the target unit is not already present in `Object Registry` and does not conflict with any current `unit`, `rule`, support-surface, or ignore rule
 9. direct first-stable onboarding is allowed only when `onboarding_decision_policy.md` proves that the accepted behavior baseline is complete, conflicts are closed, material unknowns are closed or irrelevant, and shared/global truth is resolved
 10. if the target only has raw implementation evidence, incomplete evidence, unresolved conflicts, or retained behavior that still needs business confirmation, do not start `unit_init`; route to candidate creation with the required `source_basis` and evidence appendix
 11. if onboarding current truth would create duplicated formal truth across units, or if the shared/unit boundary is still unstable, do not start `unit_init`; resolve that rule-truth boundary through natural-language rule governance first
@@ -52,7 +52,7 @@ Before execution:
 13. if the task also touches global baseline, shared mechanisms, or exceptions, read `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 14. if the unit involves technical choices, shared infrastructure, cross-unit reuse, global exceptions, or system-level constraint relationships, the first `stable` must include `Rule Alignment` or an equivalent section
 15. if the round creates, updates, or deletes any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `specflow/framework/rule_sync.md` first
-16. if the round may remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit or scenario main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
+16. if the round may remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
 
 ## 4. Procedure
 
@@ -62,7 +62,8 @@ Before execution:
 4. if onboarding current truth shows that one or more existing formal units already depend on the same formal truth and that truth is not yet formalized as one stable rule object, stop and reroute through natural-language rule governance from current repository truth instead of writing duplicated unit-local `stable` truth
 5. prepare the `docs/specs/repository_mapping.md` writeback for the historical unit before stable truth or `_status.md` mutation:
    - add or update one `Object Registry` row for the target unit
-   - set `kind=unit`, `id={unit}`, `scope=capability`, and the one-line responsibility
+   - set `kind=unit`, `id={unit}`, and the one-line `responsibility`
+   - do not write `scope`; `scope` is not an Object Registry column
    - set `spec_files=docs/specs/units/stable/s_unit_{unit}.md` after the stable file is created in this same round
    - set `registration_state=landed` only when concrete implementation paths are declared
    - if no implementation path is declared yet, set `registration_state=planned` and `implementation_paths=none`
@@ -75,14 +76,14 @@ Before execution:
    - `Data Structures / Protocols`
    - `State Machine / Business Flow`
    - `Edge Cases & Error Handling`
-   - `Testability / Acceptance Criteria` with explicit acceptance items that satisfy `spec_writing_guide.md` Section 5
+   - `Testability / Acceptance Criteria` with explicit acceptance items that satisfy `spec_writing_guide.md` Section 6
 8. if needed, add `Rule Alignment` with at least:
-   - `rule_refs` written in the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1
+   - `rule_refs` written according to the Rule References contract in `specflow/framework/spec_writing_guide.md` Section 4
    - `rule_reuse_summary`
    - `rule_exceptions`
 9. write the prepared `docs/specs/repository_mapping.md` update in the same round as the stable truth writeback and before `_status.md` mutation
 10. if the round changed Rule bindings or touched Rule files:
-   - derive the real repository-wide binding set of each touched Rule from current-layer unit and scenario `rule_refs` plus this round's prepared target-unit stable writeback
+   - derive the real repository-wide binding set of each touched Rule from current-layer unit `rule_refs` plus this round's prepared target-unit stable writeback
    - if current repository truth is insufficient to derive that touched real binding set safely, stop and reroute through natural-language rule governance from current repository truth instead of guessing
    - do not write consumer metadata into touched Rule files; every touched Rule file must omit `bound_objects` after this writeback
    - if a touched Rule file now has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round

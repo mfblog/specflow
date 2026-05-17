@@ -1,86 +1,22 @@
 # Command Policy
 
-## 1. Purpose
+This file defines supported specFlow command entry forms.
 
-This file defines how formal commands work in this repository.
+specFlow recognizes only unit lifecycle commands plus framework governance commands. `scenario_*` commands are unsupported and must be rejected.
 
-It answers seven questions:
+## 1. Standard Unit Commands
 
-1. what a command is
-2. which object families commands operate on
-3. which commands are standard lifecycle commands
-4. which objects are not command targets
-5. which shared gate rules every command must follow
-6. how natural-language requests enter the command and governance system
-7. how exact advance entries coordinate existing commands without becoming commands
-
-## 2. What A Command Is
-
-A command is the standard workflow entry for one formal command-target object family.
-
-In plain words:
-
-1. `Spec` is the truth
-2. `Command` is the action
-
-Commands are not the user's required vocabulary.
-Natural-language routing may translate an ordinary user goal into one or more command chains internally, but each command still owns only its own lifecycle boundary and may advance only by its own command rules.
-
-## 3. Command-Target Object Families
-
-This repository has two command-target object families:
-
-1. `unit`
-2. `scenario`
-
-Rule notes:
-
-1. both families write state into `docs/specs/_status.md`
-2. both families may use `stable` and `candidate`
-3. only `unit` owns direct implementation responsibility
-4. `scenario` is a command target, but it is not a unit
-
-Non-command objects:
-
-1. `rule` is not a standard command target
-2. stable `g_` rule is not a standard command target
-3. `repository_mapping` is not a standard command target
-4. `impact_sync` is an internal governance flow, not a user-facing standard command
-5. `spec_flow_migrate` is a project-instance migration governance entry, not a standard command target
-
-## 4. Command Forms
-
-This repository uses two user-facing command shapes:
-
-1. `unit` command form:
+Standard unit commands use this form:
 
 ```text
 {command}:{unit}
 ```
 
-1. `scenario` command form:
-
-```text
-{command}:{scenario}
-```
-
-Additional rules:
-
-1. stable `g_` rule is not a legal command target
-2. `rule` is not a legal standard command target
-3. `repository_mapping` is not a legal standard command target
-4. natural-language routing is the default user-facing entry for requests that do not use explicit command syntax
-5. `rule_new`, `rule_extract`, `rule_bind`, `rule_topology`, `rule_sync`, `rule_escape`, and `impact_sync` are internal governance flows, not direct user-facing standard commands
-6. `spec_flow_migrate` is entered by its exact name and is governed by `specflow/framework/spec_flow_migrate.md`; it must not be written as `{command}:{unit}` or `{command}:{scenario}`
-7. `unit_advance:{unit}` and `scenario_advance:{scenario}` are exact advance entries governed by `specflow/framework/advance_policy.md`; they are not standard commands and must not have command files under `specflow/framework/commands/`
-
-## 5. Standard Commands
-
-### 5.1 Unit Commands
+Supported unit commands are:
 
 1. `unit_init:{unit}`
-2. `unit_stable_verify:{unit}`
-3. `unit_new:{unit}`
+2. `unit_new:{unit}`
+3. `unit_stable_verify:{unit}`
 4. `unit_fork:{unit}`
 5. `unit_check:{unit}`
 6. `unit_plan:{unit}`
@@ -88,183 +24,98 @@ Additional rules:
 8. `unit_verify:{unit}`
 9. `unit_promote:{unit}`
 
-### 5.2 Scenario Commands
+No `scenario_*` command is supported. No command may treat `object-type=scenario` as a compatibility alias.
 
-1. `scenario_new:{scenario}`
-2. `scenario_stable_verify:{scenario}`
-3. `scenario_fork:{scenario}`
-4. `scenario_check:{scenario}`
-5. `scenario_verify:{scenario}`
-6. `scenario_promote:{scenario}`
+## 2. Unit Lifecycle
 
-### 5.3 Advance Entry
+The standard unit lifecycle is:
 
-Advance entries coordinate automatic progression through existing standard commands.
+```text
+new or fork -> unit_check -> unit_plan -> unit_impl -> unit_verify -> unit_promote -> stable
+```
 
-Supported forms:
+Stable units may be checked by:
 
-1. `unit_advance:{unit}`
-2. `scenario_advance:{scenario}`
+```text
+unit_stable_verify -> unit_fork
+```
+
+`unit_check` validates that unit truth is sufficient and internally consistent.
+
+`unit_plan` creates the implementation plan for the current candidate unit.
+
+`unit_impl` changes implementation files only after the required plan and check evidence exists.
+
+`unit_verify` validates the implementation against the current candidate unit truth.
+
+`unit_promote` writes stable unit truth after verification passes.
+
+## 3. Unit Dependency Rules
+
+Each unit may list stable unit dependencies in frontmatter `unit_refs`.
+
+Commands must apply these rules:
+
+1. `unit_check` must reject or route back when the unit body relies on another unit's formal behavior but `unit_refs` does not record that dependency.
+2. `unit_check` must reject candidate-layer `unit_refs`.
+3. `unit_promote` must resolve `unit_refs` before stable writeback.
+4. after a unit is promoted, tooling must find current-layer units that still reference the promoted unit's previous stable version and reroute them to the legal revalidation entry.
+5. `unit_refs` never grants write permission to the referenced unit.
+
+## 4. Rule Consumption
+
+Rule consumers are derived only from current-layer unit frontmatter `rule_refs`.
+
+Commands and governance flows must not read consumers from rule files. Rule files must not carry `bound_objects` as consumer truth.
+
+## 5. Framework Commands
+
+The following exact entries are not unit lifecycle commands:
+
+1. `spec_flow_review`
+2. `spec_flow_design_review`
+3. `spec_flow_migrate`
+4. `rule_new`
+5. `rule_extract`
+6. `rule_bind`
+7. `rule_topology`
+8. `rule_sync`
+9. `rule_escape`
+10. `project_standard_create`
+
+Each such entry is governed by its matching framework file.
+
+## 6. Rejection Rules
+
+The executor and tooling must reject:
+
+1. any `scenario_*` command
+2. `scenario_advance:{id}`
+3. `--object-type scenario`
+4. `docs/specs/scenarios/**` as a supported formal Spec path
+5. Object Registry rows whose `kind` is not `unit` or `rule`
+
+The rejection must be explicit. It must not silently convert a scenario request into a unit request.
+
+## 7. Shared Command Gate Rules
+
+Standard unit command files own their local preconditions, procedure, stop conditions, and output fields.
+
+This file owns only the shared command contracts that every standard unit command inherits.
 
 Rules:
-
-1. advance entries are user-facing exact entries, but they are not standard lifecycle commands
-2. advance entries must follow `specflow/framework/advance_policy.md`
-3. an advance entry may enter only existing standard commands named by the target object's current `Next Command`
-4. after every routed command closes, advance must re-read `docs/specs/_status.md` before deciding whether to continue
-5. advance must stop at stable completion, checkpoint, human-in-the-loop decision, rule-governance reroute, repository-mapping requirement, truth writeback requirement, unsupported next command, or loop guard
-6. advance must not write `_status.md`, process files, Spec truth, or implementation files directly; only the currently routed standard command may write within its own scope
-7. `unit_advance:{unit}` must stop after successful promotion at `Next Command=unit_fork` and must not open a new candidate round
-8. `scenario_advance:{scenario}` must stop after successful promotion at `Next Command=scenario_fork` and must not open a new candidate round
-
-### 5.4 Natural-Language Entry
-
-The default user-facing entry is natural language.
-
-Natural-language entry is a user-goal governance entry, not a command-alias system.
-It diagnoses the user's goal, reads the current repository truth needed for routing, chooses the legal specFlow route internally, and reports the current state and next action through user-goal language, project-structure language, and plain engineering action language.
-Internal routing names are trace details, not the user's required decision language.
-
-Natural-language requests must follow:
-
-1. `specflow/framework/natural_language_routing.md`
-2. the routed command or governance-flow file
-
-Rules:
-
-1. a natural-language request must first be diagnosed as a user goal before command ownership is chosen
-2. the executor must classify the work shape and resolve formal ownership from current repository truth
-3. the executor must read the current repository truth needed to prove the route
-4. if the request can be safely decomposed, only the first smallest legal step may be entered in the current handling round
-5. natural-language routing may assemble an internal chain across multiple existing command families or governance flows, but that chain is not permission to skip a command gate or continue after the first step without rerouting from current truth
-6. if the request is missing target, scope, success meaning, acceptance meaning, or boundary truth, the executor must stop through the checkpoint protocol instead of guessing
-7. checkpoint questions and ordinary user-facing route reports must not require the user to choose internal object-family names, command names, lifecycle state names, or internal rule-governance flow names
-8. if the request touches cross-unit rule truth, route into the rule-governance branch defined by `natural_language_routing.md`
-9. direct shared command shapes are not user-facing command forms
-10. natural-language requests to update old project-instance files to current `specFlow` framework contracts route to `specflow/framework/spec_flow_migrate.md`
-11. natural-language requests that clearly ask for automatic progression until completion or blocker may route to `specflow/framework/advance_policy.md`; generic "continue" wording remains a single-step natural-language route unless automatic progression is explicit
-
-### 5.5 Project-Instance Migration Entry
-
-`spec_flow_migrate` owns project-instance format migration after a framework update.
-
-Rules:
-
-1. exact input `spec_flow_migrate` routes directly to `specflow/framework/spec_flow_migrate.md`
-2. `spec_flow_migrate` is not a `unit` or `scenario` lifecycle command
-3. `spec_flow_migrate` may not advance a `unit` or `scenario` lifecycle gate
-4. `spec_flow_migrate` may invalidate stale process state only under the migration policy and the shared process-state rules it links
-5. `spec_flow_migrate` must stop instead of choosing business meaning, object ownership, acceptance meaning, rule-truth ownership, or global-rule meaning
-
-### 5.6 Rule Governance Internal Routing
-
-Rule governance is a branch of natural-language routing.
-
-Rules:
-
-1. users enter rule work by stating their rule intent in natural language
-2. natural-language routing decides whether rule governance owns the request
-3. the rule-governance branch routes directly into `rule_new`, `rule_extract`, `rule_bind`, `rule_topology`, `rule_sync`, or `rule_escape`
-4. executors must not ask users to choose among `rule_new`, `rule_extract`, `rule_bind`, `rule_topology`, `rule_sync`, or `rule_escape`
-
-## 6. Responsibilities By Family
-
-### 6.1 Unit
-
-`unit` commands own:
-
-1. unit truth authoring
-2. implementation planning
-3. implementation work
-4. implementation verification
-5. promotion into stable unit truth
-
-`unit` commands may be one part of a larger natural-language development chain, but they do not own end-to-end user-flow closure unless that closure is already represented as unit-local acceptance truth.
-
-### 6.2 Scenario
-
-`scenario` commands own:
-
-1. trigger-to-outcome chain truth authoring
-2. chain closure
-3. end-to-end verification
-4. promotion into stable scenario truth
-
-`scenario` commands do not own:
-
-1. implementation planning
-2. implementation editing
-3. unit-local repair
-
-When a scenario route discovers that implementation work is still required in affected units, those units must return to their own legal `unit` command chains.
-Scenario commands must not repair or advance unit implementation on behalf of those units.
-
-### 6.3 Repository Mapping
-
-`repository_mapping` is consumed by commands, but it is not a command family.
-
-It owns the current repository-structure truth:
-
-1. governed-unit definition
-2. support-surface rules
-3. topology mapping
-4. current formal object map
-5. repository-level global constraint alignment
-
-It does not own:
-
-1. command lifecycle state
-2. implementation planning
-3. implementation editing
-4. unit-local behavior authoring
-5. scenario verification
-
-Command-target truth file resolution is not stored as a current concrete path in `repository_mapping`.
-Commands must resolve the current main Spec file by combining:
-
-1. the object row in `docs/specs/_status.md`
-2. the stable or candidate path template defined in `specflow/framework/spec_policy.md`
-3. the object's `truth_surface_rule` in `docs/specs/repository_mapping.md`
-
-Changing only `Active Layer` through `unit_fork`, `unit_promote`, `scenario_fork`, or `scenario_promote` does not require a repository mapping update.
-Repository mapping changes are required only when the object map, truth-surface rule, implementation surface, rule path, support surface, governed root, ignore rule, or conflict rule changes.
-
-## 7. Default Lifecycle Order
-
-### 7.1 Unit
-
-1. `unit_init`
-2. `unit_stable_verify`
-3. `unit_fork`
-4. `unit_new`
-5. `unit_check`
-6. `unit_plan`
-7. `unit_impl`
-8. `unit_verify`
-9. `unit_promote`
-
-Note: `unit_init:{unit}` creates the initial stable Spec for a brand-new unit and bypasses `unit_stable_verify` because there is no prior stable truth to verify against. For later clean upgrade rounds, `unit_stable_verify` confirms the current stable layer before `unit_fork` opens a normal change candidate. When stable verification finds that current code is not aligned, `unit_stable_verify` may still route to `unit_fork` only to open a controlled unit candidate with `candidate_intent=repair` or `candidate_intent=change` as defined by `candidate_intent_policy.md`. After `unit_fork` writes the candidate layer, the next step is `unit_check`.
-
-### 7.2 Scenario
-
-1. `scenario_new`
-2. `scenario_stable_verify`
-3. `scenario_fork`
-4. `scenario_check`
-5. `scenario_verify`
-6. `scenario_promote`
-
-## 8. Rule Gate Rules
-
-These rules apply by default to every command family:
 
 1. do not execute a command if its prerequisite self-checks have not passed
 2. process files are not valid just because they exist; their bound truth refs, fingerprints, and command-required fields must also match
 3. a formal pass gate, formal verification pass, or lifecycle-state advance may be produced only by a new independent full-scope run of the corresponding command
 4. after a command ends with any non-pass result other than a resumable checkpoint explicitly allowed by that command file, later repair or scoped recheck is non-authoritative for lifecycle progression
 5. checkpoints are structured stops inside a command, not second lifecycles
-6. `rule`, stable `g_` rule, and `repository_mapping` are always upstream inputs, never the primary output of `scenario` commands
+6. `rule`, stable `g_` rule, and `repository_mapping` are upstream governance inputs, not standard lifecycle command targets
 7. commands that rely on repository path ownership must consume `docs/specs/repository_mapping.md`
+
+## 8. Rule Gate Rules
+
+These rules apply by default to every standard unit command.
 
 ### 8.1 Binding Drift
 
@@ -272,9 +123,8 @@ Candidate-side process files become invalid when any current required binding ch
 
 At minimum:
 
-1. truth or binding drift in `unit` candidate process files falls back to `unit_check`
-2. truth or binding drift in `scenario` candidate process files falls back to `scenario_check`
-3. process-shape, plan, evidence, implementation, and dependency-readiness failures follow the layered recovery targets in `specflow/framework/recovery_policy.md`
+1. truth or binding drift in unit candidate process files falls back to `unit_check`
+2. process-shape, plan, evidence, implementation, and dependency-readiness failures follow the layered recovery targets in `specflow/framework/recovery_policy.md`
 
 ### 8.2 Stable Drift
 
@@ -282,21 +132,25 @@ Stable-layer alignment claims become invalid when any current required binding c
 
 At minimum:
 
-1. `unit` stable alignment falls back to `unit_stable_verify`
-2. `scenario` stable alignment falls back to `scenario_stable_verify`
+1. unit stable alignment falls back to `unit_stable_verify`
 
 ### 8.3 Rule And Global Rule Inputs
+
+Rules:
 
 1. if a command depends on bound `rule` truth, it must read the exact currently bound rule files
 2. if a command depends on the formal global baseline, it must read `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 3. if a command depends on repository path ownership, it must read `docs/specs/repository_mapping.md`
-4. Rule consumers are derived only from current-layer `unit` and `scenario` frontmatter `rule_refs`; Rule files must not record `bound_objects`
+4. Rule consumers are derived only from current-layer unit frontmatter `rule_refs`
+5. Rule files must not record `bound_objects` as consumer truth
 
 ### 8.4 Impact Reconciliation
 
-1. when one object family's truth or binding change may invalidate downstream objects, the handling round must complete deterministic downstream reconciliation before claiming closure
+Rules:
+
+1. when unit truth or binding changes may invalidate downstream units, the handling round must complete deterministic downstream reconciliation before claiming closure
 2. `rule_sync` remains the rule-governance impact-discovery flow for rule changes
-3. `impact_sync` is the generic internal fallback-and-cleanup flow once the affected downstream object set is already fixed
+3. `impact_sync` is the generic internal fallback-and-cleanup flow once the affected downstream unit set is already fixed
 
 ### 8.4.1 Preflight Before Judgment
 
@@ -304,7 +158,7 @@ Commands must not make lifecycle, drift, fallback, cleanup, or promotion judgmen
 
 Rules:
 
-1. when a command consumes `_check_result`, `_plans/active`, or `_verify_result`, the first command-local judgment step must be `specflowctl command preflight` for the current command and object
+1. when a command consumes `_check_result`, `_plans/active`, or `_verify_result`, the first command-local judgment step must be `specflowctl command preflight` for the current command and unit
 2. if `command preflight` is not available, the command must run each required `snapshot validate-process` command explicitly before reading the process file as a usable gate, plan, or verification result
 3. a failed preflight may be used only as an entry stop or as input to the command's explicitly defined tool-backed fallback path
 4. before authoritative validation succeeds, the command must not delete process files, update `_status.md`, write an active plan, write a verify result, write a stable truth file, or promote stable acceptance coverage
@@ -323,8 +177,8 @@ Rules:
 1. only one new full-scope run of the current command may produce a formal pass gate, a formal verification pass, or an advancing `_status.md` result
 2. once a command has ended with a non-pass result, every later repair, local confirmation, scoped recheck, or follow-up assessment is non-authoritative unless that command file explicitly allows a checkpoint as a resumable stop
 3. a non-authoritative follow-up may report that local repair is complete, but it must not claim new lifecycle progression, write advancing `_status.md` updates, or repackage a local recheck as a new formal pass
-4. individual command files may tighten rerun conditions within their own boundary, but they must not weaken the authoritative / non-authoritative distinction defined here
-5. when a command enters recovery mode because repository mutation started but the command cannot safely close, the command must follow `specflow/framework/recovery_policy.md` for layered recovery (incomplete promotion recovery for promote commands, rule-governance recovery for rule flows) before any checkpoint answer can be processed or before the next command may enter
+4. individual command files may tighten rerun conditions within their own boundary, but they must not weaken the authoritative and non-authoritative distinction defined here
+5. when a command enters recovery mode because repository mutation started but the command cannot safely close, the command must follow `specflow/framework/recovery_policy.md` for layered recovery before any checkpoint answer can be processed or before the next command may enter
 
 ### 8.6 User-Facing Close-Out Block Contract
 
@@ -379,12 +233,3 @@ Rules:
 1. when a command advances `_status.md`, writes a formal pass gate, or writes a formal verification pass, that advancement is valid only from a new independent full-scope run of that command
 2. command-local follow-up checks after a non-pass result remain non-authoritative unless the command file explicitly defines a resumable checkpoint
 3. command files may tighten how a fresh full-scope rerun is recognized, but they must not allow a repair-only or scoped follow-up to advance lifecycle state
-
-## 9. Non-Goals
-
-This file does not:
-
-1. redefine object truth content in place of `spec_policy.md`
-2. create a separate lifecycle for `rule`
-3. create a separate lifecycle for stable `g_` rule
-4. replace project-local standards registration

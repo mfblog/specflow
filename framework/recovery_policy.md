@@ -1,335 +1,119 @@
 # Recovery Policy
 
-## 1. Purpose
+Recovery handles incomplete command cleanup or invalidated process evidence.
 
-This file defines the centralized recovery rules used when a Spec Flow round cannot safely continue after repository mutation or after downstream invalidation has already started.
+The only supported lifecycle object is `unit`.
 
-It answers five questions:
+## 1. Candidate Fallback
 
-1. what recovery means in this repository
-2. which object families use centralized recovery
-3. how candidate-side fallback cleanup works
-4. how incomplete promotion recovery works
-5. which repository state may be claimed after recovery
+Candidate unit fallback may delete current-round process files according to the failure layer:
 
-This file does not replace command-local stop conditions.
-It defines the shared repository-restoration baseline.
+1. `truth_layer` deletes check, plan, and verify process files and sets `Next Command=unit_check`
+2. `gate_layer` deletes check process files and sets `Next Command=unit_check`
+3. `plan_layer` deletes active plan, draft plan, and verify process files and sets `Next Command=unit_plan`
+4. `implementation_layer` deletes verify process files and sets `Next Command=unit_impl`
+5. `evidence_layer` deletes verify process files and sets `Next Command=unit_verify`
 
-## 2. Scope
+## 2. Success Cleanup
 
-This policy covers:
+Successful `unit_fork` and `unit_promote` cleanup may delete obsolete candidate process files only after `_status.md` has been updated to the correct legal state.
 
-1. candidate-side recovery for:
-   - `unit`
-   - `scenario`
-2. incomplete promotion recovery for:
-   - `unit_promote`
-   - `scenario_promote`
+## 3. Unit Dependency Recovery
 
-Boundary:
+If promotion changes a stable unit version, every dependent unit that still references the older stable ref must be rerouted before the round is closed.
 
-1. the active command still decides when recovery is entered
-2. `impact_sync` may execute deterministic fallback cleanup
-3. this file defines the repository state that recovery must restore
+## 4. Rejection
 
-## 3. Core Terms
+Recovery must reject:
 
-### 3.1 Recovery
+1. `object-type=scenario`
+2. `scenario_*` commands
+3. scenario process paths
+4. scenario truth paths
 
-`recovery` means:
+## 5. Post-Mutation Recovery Boundary
 
-1. stop claiming the current round succeeded
-2. restore the repository to a state that the next legal command can safely consume
-3. update `_status.md` so the next action is explicit
+Ordinary process invalidation uses the candidate fallback rules from Section 1.
 
-### 3.2 Recovery Baseline
+Post-mutation recovery is different.
 
-`recovery baseline` means the exact pre-mutation snapshot a command captures before it starts overwriting or deleting governance files.
-
-It is not:
-
-1. a truth file
-2. a process file
-3. a new lifecycle stage
-
-### 3.3 Incomplete Promotion Recovery
-
-`incomplete promotion recovery` means the special recovery path used when a promote command already mutated repository truth, but the round cannot be safely closed as a completed promotion.
-
-## 4. Candidate-Side Recovery Baseline
-
-For candidate-side invalidation:
-
-1. classify the failed surface before choosing a fallback target
-2. use the nearest command that owns rebuilding or reproving that failed surface
-3. update `_status.md` to the smallest legal next step
-4. delete only the failed process layer and process files downstream of that layer
-5. do not invent extra temporary states
-
-### 4.1 Failure Layers
-
-Candidate-side recovery uses these fixed layers:
-
-1. `truth_layer`
-   - candidate truth, acceptance item set, Rule snapshot, global baseline, repository mapping, or formal binding meaning changed
-   - fallback target:
-     - `unit -> unit_check`
-     - `scenario -> scenario_check`
-2. `gate_layer`
-   - the check gate is missing, malformed, or not tool-valid, while current truth and current bindings still match
-   - fallback target:
-     - `unit -> unit_check`
-     - `scenario -> scenario_check`
-3. `plan_layer`
-   - the unit active plan is missing, malformed, not tool-valid, or no longer covers the current acceptance item ids, while the unit check gate still covers current truth
-   - fallback target:
-     - `unit -> unit_plan`
-   - this layer does not apply to `scenario`
-4. `implementation_layer`
-   - implementation no longer satisfies the current unit truth and current active plan, while both upstream process layers remain valid
-   - fallback target:
-     - `unit -> unit_impl`
-   - this layer does not allow `scenario` to repair units; scenario verification must report affected units instead
-5. `evidence_layer`
-   - verification evidence is missing, stale, incomplete, or malformed, while truth, check gate, and any required plan still stand
-   - fallback target:
-     - `unit -> unit_verify`
-     - `scenario -> scenario_verify`
-6. `dependency_readiness_layer`
-   - `scenario_promote` found a required unit or Rule dependency that is candidate-layer, missing, or not safely resolvable as stable, while scenario truth and verification evidence still stand
-   - fallback target:
-     - `scenario -> scenario_promote`
-   - this layer waits for dependency landing or scenario binding writeback; it does not delete scenario check or verify process files by itself
-
-Layer rules:
-
-1. only `truth_layer` permits deleting every current candidate-side process artifact for the object
-2. `gate_layer` deletes the check gate only
-3. `plan_layer` deletes unit draft plan, unit active plan, and unit verify result
-4. `implementation_layer` deletes only verification results that can no longer remain current
-5. `evidence_layer` deletes only verification results
-6. `dependency_readiness_layer` deletes no scenario process files unless a separate truth or evidence layer is also proven
-
-### 4.2 Default Candidate Cleanup Map
-
-1. `unit truth_layer -> unit_check`
-   - delete `_check_result/unit/{unit}.md`
-   - delete `_plans/draft/{unit}.md`
-   - delete `_plans/active/{unit}.md`
-   - delete `_verify_result/unit/{unit}.md`
-2. `unit gate_layer -> unit_check`
-   - delete `_check_result/unit/{unit}.md`
-3. `unit plan_layer -> unit_plan`
-   - delete `_plans/draft/{unit}.md`
-   - delete `_plans/active/{unit}.md`
-   - delete `_verify_result/unit/{unit}.md`
-4. `unit implementation_layer -> unit_impl`
-   - delete `_verify_result/unit/{unit}.md`
-5. `unit evidence_layer -> unit_verify`
-   - delete `_verify_result/unit/{unit}.md`
-6. `scenario truth_layer -> scenario_check`
-   - delete `_check_result/scenario/{scenario}.md`
-   - delete `_verify_result/scenario/{scenario}.md`
-7. `scenario gate_layer -> scenario_check`
-   - delete `_check_result/scenario/{scenario}.md`
-8. `scenario evidence_layer -> scenario_verify`
-   - delete `_verify_result/scenario/{scenario}.md`
-9. `scenario dependency_readiness_layer -> scenario_promote`
-   - delete no process files
-
-Plain meaning:
-
-1. candidate-side drift does not create a second state machine
-2. recovery rewinds only to the nearest step that can rebuild or reprove the failed layer
-3. a process artifact format error is not automatically a truth error
-4. a command must not keep using a process file that failed its required tool validation
-
-### 4.3 Deterministic Cleanup Tool Contract
-
-When the repository provides deterministic cleanup tooling, candidate-side cleanup must use that tooling instead of ad hoc file deletion.
+It is required only when an active command or governance flow has already written, updated, or deleted truth files and can no longer safely close.
 
 Rules:
 
-1. the current cleanup entry is `specflowctl process cleanup-fallback --object-type unit|scenario --object <object> --from-command <command> --reason <code> --failure-layer <layer>`
-2. the cleanup tool must cover every failure layer listed in Section 4.1 for the object family it supports
-3. if the cleanup tool reports that no deterministic cleanup is defined for a command-declared failure layer, the executor must stop and report a specFlow tooling gap
-4. when Rule 3 applies, the executor must not manually delete process files, manually rewrite `_status.md`, or claim fallback cleanup complete
-5. success cleanup after fork or promotion must use `specflowctl process cleanup-success` when that deterministic entry exists; without that tool-backed cleanup result, the command must not claim deterministic cleanup closure
-6. a cleanup target that is already absent is a recorded missing cleanup target, not a different recovery decision
-
-## 5. Stable-Side Recovery Baseline
-
-For stable-side invalidation:
-
-1. do not generate candidate-side cleanup solely because stable alignment became stale
-2. update `_status.md` so the stable verification command becomes the next legal step
-
-Default stable fallback targets:
-
-1. invalid `unit` stable -> `unit_stable_verify`
-2. invalid `scenario` stable -> `scenario_stable_verify`
+1. do not claim the round succeeded
+2. restore repository truth to the captured pre-mutation state
+3. delete new files created only by the interrupted or unsafe round
+4. update `_status.md` to the smallest legal restart state for affected units
+5. rerun routing from current repository truth after recovery
 
 ## 6. Incomplete Promotion Recovery
 
-### 6.1 Required Recovery Baseline Before Mutation
+`unit_promote` must capture a recovery baseline before the first truth-file mutation.
 
-Before the first truth-file mutation, every promote command must capture a recovery baseline covering every file the round may overwrite or delete.
+The baseline must cover every file the round may overwrite, retarget, or delete.
 
-At minimum:
+At minimum it must cover:
 
-1. the target object row in `docs/specs/_status.md`
-2. the target object's candidate truth file
-3. the target object's stable truth file if it already existed
-4. the target object's current-round process files
-5. any appendix, shared, or global-rule file that the round may mutate, promote, absorb, or delete
-
-Object-specific minimums:
-
-1. `unit_promote`
-   - `docs/specs/units/candidate/c_unit_{unit}.md`
-   - `docs/specs/units/stable/s_unit_{unit}.md` when present
-   - `_check_result/unit/{unit}.md`
-   - `_plans/draft/{unit}.md`
-   - `_plans/active/{unit}.md`
-   - `_verify_result/unit/{unit}.md`
-   - every same-round stable landing retargeted unit candidate main file when `unit_promote` changes that unit's `rule_refs`
-   - every same-round stable landing retargeted unit candidate process file that may be deleted by post-promotion rule impact reconciliation
-   - every surviving candidate file that references `c_unit_{unit}.md` through a known candidate-to-candidate file reference, because unit_promote deletes that target file and must be able to restore the cross-referencing file's original reference if incomplete-promotion recovery is required
-   - every unit or scenario Spec file under `docs/specs/units/**` or `docs/specs/scenarios/**` that may be mechanically retargeted from `c_unit_{unit}` to `s_unit_{unit}` during promotion dependency reference retargeting
-   - every `_status.md` row that may be changed because a retargeted current-layer stable object must run stable verification or a retargeted current-layer candidate object must fall back to check
-   - every current-round process file that may be deleted because a retargeted candidate unit or scenario can no longer reuse process state written against the old candidate dependency reference
-2. `scenario_promote`
-   - `docs/specs/scenarios/candidate/c_scenario_{scenario}.md`
-   - `docs/specs/scenarios/stable/s_scenario_{scenario}.md` when present
-   - `_check_result/scenario/{scenario}.md`
-   - `_verify_result/scenario/{scenario}.md`
-
-Rules:
-
-1. the baseline must preserve exact file bytes
-2. the baseline may live in memory or an executor-owned temporary artifact
-3. it is not repository truth and must not be committed
-
-### 6.2 When Recovery Is Required
+1. the target unit row in `docs/specs/_status.md`
+2. `docs/specs/units/candidate/c_unit_{unit}.md`
+3. `docs/specs/units/stable/s_unit_{unit}.md` when it already exists
+4. current-round unit process files
+5. candidate appendix files for the target unit
+6. stable appendix files for the target unit when the round may update or delete them
+7. rule files and unit files that the promotion may retarget or rewrite in the same round
+8. every affected `_status.md` row when dependency retargeting may change another unit's legal next step
 
 Incomplete promotion recovery is required when both are true:
 
-1. the promote command already mutated at least one promotion target or deletion target
-2. the round can no longer safely complete
+1. `unit_promote` has already mutated at least one promotion target, retarget target, or deletion target
+2. the round can no longer safely complete promotion closure
 
-Examples:
-
-1. the command was interrupted after writing a new stable file
-2. downstream reconciliation became blocked after partial promotion writeback
-3. cleanup started but did not finish
-4. post-promotion `rule_sync` or `impact_sync` showed that the repository cannot yet claim a stable closed state
-
-### 6.3 Recovery Procedure
-
-When incomplete promotion recovery is triggered:
+Recovery procedure:
 
 1. stop claiming promotion success
-2. restore every mutated or deleted file covered by the recovery baseline to its exact pre-mutation state
-3. delete any new file created only by the interrupted round that did not exist in the recovery baseline
-4. restore `_status.md` for the target object to candidate semantics:
+2. restore every mutated or deleted file covered by the recovery baseline to its exact pre-mutation bytes
+3. delete every new file created only by the incomplete promotion round when that file did not exist in the baseline
+4. restore `_status.md` for the target unit to candidate semantics:
    - keep `Candidate=yes`
    - keep `Active Layer=candidate`
-   - set the smallest restart step to:
-     - `unit -> unit_check`
-     - `scenario -> scenario_check`
+   - set `Next Command=unit_check`
 5. keep `Stable=yes|no` consistent with the pre-round state from the recovery baseline
-6. after repository restoration, delete candidate-side process files for that target object because they are no longer safe for reuse
+6. delete the target unit's candidate-side process files because they are no longer safe for reuse
 
-### 6.4 Recovery Result
-
-After incomplete promotion recovery completes, the only safe claim is:
-
-1. promotion did not complete
-2. repository truth was restored to the pre-promotion candidate round
-3. the object must restart from its candidate closure step
-
-The command must not claim:
-
-1. that the new stable truth is active
-2. that old verify evidence is still reusable
-3. that the round can resume from a later step than the family restart step
+After incomplete promotion recovery completes, the only safe claim is that promotion did not complete and the unit must restart from `unit_check`.
 
 ### 6.5 Rule-Governance Recovery
 
-Required when a rule-governance flow (rule_new, rule_extract, rule_bind, rule_topology) has already mutated rule truth files, repository_mapping.md, or downstream unit/scenario candidate files, and rule_sync returns control to rule_escape before the flow can safely close.
+Rule-governance recovery applies to `rule_new`, `rule_extract`, `rule_bind`, and `rule_topology`.
 
-#### 6.5.1 Required Recovery Baseline Before Mutation
+It is required when both are true:
 
-Before the first file write in any rule-governance flow that may mutate:
+1. the rule-governance flow has already mutated rule truth files, `docs/specs/repository_mapping.md`, or downstream unit candidate files
+2. the flow can no longer safely close and must return control through `rule_escape` or natural-language routing
 
-1. the target candidate-layer Rule file(s)
-2. any stable-layer sibling Rule file that may be created, updated, or deleted
-3. any downstream unit or scenario candidate file that may be rewritten (rule_refs, body text)
-4. `docs/specs/repository_mapping.md` when the round may change the rule object map
-5. every other file under `docs/specs/rules/**` that may be touched by this round
-6. every candidate-side process file for each downstream unit or scenario candidate file that the round may rewrite or invalidate
-   - unit: `_check_result/unit/{unit}.md`, `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, `_verify_result/unit/{unit}.md`
-   - scenario: `_check_result/scenario/{scenario}.md`, `_verify_result/scenario/{scenario}.md`
+Before the first file mutation, a rule-governance flow must capture a recovery baseline for every file it may touch.
 
-#### 6.5.2 When Recovery Is Required
+The baseline must include:
 
-Rule-governance recovery is required when both are true:
+1. target rule files under `docs/specs/rules/**`
+2. stable sibling rule files when the flow may create, update, or delete them
+3. candidate unit files whose `rule_refs` or rule-reuse prose may be rewritten
+4. `docs/specs/repository_mapping.md` when the rule object map may change
+5. affected `_status.md` rows when downstream unit fallback may be written
 
-1. the rule flow already mutated at least one rule-truth file, repository_mapping.md file, or downstream unit/scenario file
-2. rule_sync returns control to rule_escape because repository truth is insufficient to continue safely
+Recovery procedure:
 
-#### 6.5.3 Recovery Procedure
+1. stop claiming the rule-governance flow succeeded
+2. restore every mutated file covered by the recovery baseline to its exact pre-mutation bytes
+3. delete every new file created only by the interrupted rule-governance round when that file did not exist in the baseline
+4. restore `docs/specs/repository_mapping.md` when it was modified
+5. if any downstream candidate unit was restored, rerun routing from current repository truth before claiming a new command entry
 
-1. stop claiming the rule flow succeeded
-2. restore every mutated file covered by the recovery baseline to its exact pre-mutation state
-3. delete any new file created only by the interrupted round that did not exist in the recovery baseline
-4. if `repository_mapping.md` was modified, restore it from the recovery baseline
-5. for every downstream unit or scenario candidate file restored by Step 2, handle candidate-side process files deterministically:
-   - restore each covered process file to its exact pre-mutation bytes when it existed in the recovery baseline
-   - delete each process file created after the recovery baseline
-   - delete each process file whose exact pre-mutation bytes cannot be proven from the recovery baseline
-   - use the Section 4 `truth_layer` cleanup target for that object when deletion is required
-   - do not keep any process file written against the interrupted rule-governance mutation
-
-#### 6.5.4 Recovery Result
-
-After rule-governance recovery completes:
-
-1. all rule-truth files are restored to pre-mutation state
-2. `repository_mapping.md` is restored to pre-mutation state when it was touched
-3. any downstream unit/scenario candidate file modified by the interrupted round is restored
-4. the next action is rerunning natural-language routing from current repository truth
+After rule-governance recovery completes, the next legal entry is natural-language routing from current repository truth.
 
 ## 7. Reason Codes
 
-This policy adds one standardized recovery code:
+Use `promotion_recovery` only when incomplete promotion recovery restored a unit promotion round.
 
-1. `promotion_recovery`
-   - use only when a promote command already mutated repository truth and the round had to be restored
-2. `rule_governance_recovery`
-   - use only when a rule-governance flow already mutated rule truth, repository_mapping, or downstream unit/scenario files and rule_sync returned control to rule_escape
-
-Other fallback or drift cases keep using the existing standardized handoff codes.
-
-## 8. Relationship To Other Files
-
-This policy works together with:
-
-1. `specflow/framework/command_policy.md`
-2. `specflow/framework/impact_sync_policy.md`
-3. `specflow/framework/checkpoint_protocol.md`
-4. the active promote command file
-
-Priority rules:
-
-1. the active command decides whether recovery is entered
-2. `impact_sync` may execute deterministic fallback cleanup
-3. this file defines the repository-restoration baseline once recovery is required
-
-## 9. Non-Goals
-
-This file does not:
-
-1. create new lifecycle stages
-2. define a general rollback system for arbitrary code edits outside the active command scope
-3. replace git-history policy
+Use `rule_governance_recovery` only when rule-governance recovery restored a rule-governance flow.

@@ -19,7 +19,7 @@ The design is still discussion-stage material. Only the approved direction writt
    - core idea
    - benefit
    - cost
-   - likely unit, scenario, rule, or global rule impact
+   - likely unit, rule, or global rule impact
    - verification implication
 4. Explain likely formal-object impact as an executor-facing consequence, not as terminology the user must already understand.
 5. Recommend one approach with the shortest path that satisfies the confirmed goal.

@@ -1,153 +1,93 @@
-# Rule Bind Flow
+# Rule Bind
 
-## 1. Purpose
+`rule_bind` is the internal rule-governance flow for binding one unit to an already-existing rule.
 
-`rule_bind` is the internal flow for binding a unit to an already-existing `rule`.
+The binding is real only when the unit frontmatter contains the exact rule ref and the unit body explains how that rule is consumed.
 
-It answers four questions:
+## 1. Scope
 
-1. whether the unit truly depends on the target rule truth
-2. which current-layer unit file should record that binding
-3. how the unit body must explain real consumption of the rule truth
-4. how the repository must be reconciled after the binding changes
+`rule_bind` may:
 
-This is not a user-facing command entry.
-The user reaches it through natural-language routing when that routing enters the rule-governance branch.
+1. add, remove, or retarget a rule ref in one candidate unit main Spec
+2. update that candidate unit's body-level rule consumption explanation
+3. validate `promotion_owner_unit` for a touched candidate rule that already has a stable sibling
+4. run `rule_sync` after a binding change
+5. invalidate the target unit candidate process state after the target unit main Spec changes
 
----
+`rule_bind` must not:
 
-## 2. Scope
+1. create new rule truth as the main action
+2. extract duplicated unit-local truth into a new rule
+3. redesign the target rule body
+4. modify stable unit truth directly
+5. write consumer lists or `bound_objects` into rule files
+6. allow a frontmatter-only binding with no body-level consumption explanation
 
-By default it handles requests where a `rule` already exists and a unit now needs to consume it.
+## 2. Required Reads
 
-It may:
+Before any write, read:
 
-1. update the unit candidate-layer `rule_refs`
-2. update unit candidate body text so the behavior chain explains how that rule truth is consumed
-3. when the round touches a candidate-layer Rule file that already has a stable-layer sibling, validate or rewrite that draft's `promotion_owner_unit` in the same round
-4. when the round retargets a unit away from one rule file to another and the previous rule file becomes unbound, resolve that previous file's terminal state or stop through rule governance instead of leaving orphaned rule truth
-5. trigger `rule_sync` after any binding change
-6. invalidate target unit candidate process state after any target unit candidate main-file writeback
-7. stop at a rule-governance checkpoint when the target unit is currently at `stable`
+1. `specflow/framework/spec_policy.md`
+2. `specflow/framework/spec_writing_guide.md`
+3. `specflow/framework/command_policy.md`
+4. `specflow/framework/impact_sync_policy.md`
+5. `specflow/framework/recovery_policy.md`
+6. `specflow/framework/rule_sync.md`
+7. `docs/specs/_status.md`
+8. the target unit current-layer main Spec
+9. the target rule file
+10. any currently bound rule file that may be replaced by this binding
+11. every current-layer unit main Spec needed to derive the repository-wide consumer set for each touched rule from `rule_refs`
+12. `specflow/framework/commands/unit_fork.md` when the target unit is currently stable
+13. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may affect a repository-wide default rule
 
-It does not:
+Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
-1. redesign the rule truth itself as the main task
-2. extract unit-local truth into a new rule object as the main task
-3. replace unit lifecycle commands
-4. allow a ref-only binding with no body-level consumption explanation
+## 3. Procedure
 
----
+1. Confirm that the target unit truly depends on the target rule truth.
+2. Resolve the target unit's current layer from `_status.md`.
+3. If the target unit is stable, stop before writeback and raise a prerequisite action requiring `unit_fork:{unit}`.
+4. Read the target unit's current `rule_refs` and record any previous rule ref that this round will remove or replace.
+5. Build the repository-wide consumer set for the target rule and every previous touched rule from current-layer unit `rule_refs`.
+6. Before the first file mutation, capture the recovery baseline required by `recovery_policy.md` Section 6.5.
+7. Rewrite the target candidate unit `rule_refs` using exact rule refs and the sorting rules from `spec_writing_guide.md`.
+8. Rewrite the target candidate unit body so the relevant behavior or acceptance chain explains the rule consumption.
+9. If a touched candidate rule has a stable sibling, validate that exactly one `promotion_owner_unit` remains correct after this binding change. If that cannot be proven from current truth, stop and return to `rule_escape`.
+10. If removing or retargeting the previous ref would leave a touched rule with no formal current consumers, do not leave its terminal state implicit:
+    - delete it only when cleanup is already proven legal by current repository truth
+    - otherwise write intentional unbound-retention fields when current truth proves the rule should remain independently authored
+    - otherwise stop and return to `rule_escape` so the terminal-state decision can route to `rule_topology`
+11. Remove unbound-retention fields from any touched rule that still has formal current consumers after the binding change.
+12. Do not write consumer lists or `bound_objects` into touched rule files.
+13. Run `rule_sync` after any unit `rule_refs` write or touched rule-file write.
+14. Ensure target unit candidate process state falls back after the candidate main Spec changes. If the `rule_sync` handoff does not include that target unit, use the candidate fallback rules from `impact_sync_policy.md` and `recovery_policy.md`.
 
-## 3. Preconditions
+If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `recovery_policy.md` Section 6.5 before returning to natural-language routing.
 
-Before execution:
+## 4. Stop Conditions
 
-1. read `specflow/framework/spec_policy.md`
-2. read `specflow/framework/command_policy.md`
-3. read `docs/specs/_status.md`
-4. resolve the target unit's current layer from `_status.md` before reading its main Spec
-5. read the target unit current-layer main Spec
-6. read the target `rule`
-7. if the target rule file is a candidate-layer Rule file that already has a stable-layer sibling, also read its current `promotion_owner_unit`
-8. if the target unit current-layer main Spec already binds another Rule file and this round may retarget that binding, also read that currently bound Rule file
-9. if the previously bound Rule file from Rule 8 is a candidate-layer Rule file that already has a stable-layer sibling, also read its current `promotion_owner_unit`
-10. if the round may validate or rewrite `promotion_owner_unit`, or resolve the terminal state of a touched Rule file, resolve the repository-wide real binding set of each touched Rule from current repository truth before writeback:
-   - start from the formal unit and scenario rows recorded in `_status.md`
-   - include the target rule file and any previous bound Rule file already identified for retarget review
-   - read every additional current-layer unit or scenario main file needed to judge which command-target objects currently bind those touched Rule files through `rule_refs`
-   - do not treat the target unit alone as sufficient when other units or scenarios may already bind the same rule truth
-11. read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may cross into project-wide default-rule promotion
-12. if the target unit is currently at `stable`, also read `specflow/framework/commands/unit_fork.md`
-13. if the round may create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `specflow/framework/rule_sync.md` first
-14. if the round may update the target unit candidate main file, including `rule_refs` or body-level consumption explanation text, read `specflow/framework/impact_sync_policy.md` and `specflow/framework/recovery_policy.md` first
+Stop when one of these is true:
 
----
+1. the candidate unit binding, body explanation, target unit fallback, touched rule terminal state, and `rule_sync` reconciliation are complete
+2. the request is not binding and must route to another rule flow or unit lifecycle work
+3. the target unit does not actually consume the rule truth
+4. the target unit is stable and must be forked before writeback can continue
+5. a touched candidate rule with a stable sibling cannot keep or receive exactly one valid `promotion_owner_unit`
+6. a touched rule would become unbound and its terminal state cannot be decided safely
 
-## 4. Procedure
+## 5. Output Contract
 
-1. confirm the target unit truly reuses the target rule truth rather than merely sharing a topic or naming style
-2. if the target unit current layer is `stable`, do not modify `stable` directly:
-   - raise a blocking rule-governance checkpoint with `type=prerequisite_action`
-   - require `unit_fork:{unit}` to create the target unit candidate first
-   - set `required_writeback_target` to that unit candidate main file because chat-only agreement does not create a legal binding target
-3. if the unit current-layer binding already points to another Rule file and this round is retargeting that binding, record the previous bound Rule file before writeback
-4. resolve the repository-wide real binding set of the target rule file and any previous bound Rule file from current repository truth before rule-state decisions:
-   - derive that set from current-layer unit and scenario frontmatter `rule_refs`
-   - if current repository truth is insufficient to determine those touched real binding sets safely, stop this flow and return control to `rule_escape` through rule-governance routing instead of guessing
-4.5. before any unit candidate-side `rule_refs` write or rule-file metadata update, capture the recovery baseline required by `specflow/framework/recovery_policy.md` Section 6.5.1:
-     - the target unit candidate main file
-     - the touched rule file(s) that may be updated in `promotion_owner_unit` or terminal-state fields
-     - `docs/specs/rules/**` files that may be created, updated, or deleted by this round
-5. update the unit candidate-layer `rule_refs` using the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1
-6. update unit candidate body text so the relevant behavior chain explains which behavior consumes the rule truth
-7. for each touched candidate-layer Rule file from the target rule file or the previous bound Rule file recorded in Step 3 that already has a stable-layer sibling, validate that resulting draft's `promotion_owner_unit` against current repository truth plus this round's prepared unit writeback:
-   - keep the current `promotion_owner_unit` only when that same formal unit still remains the one current repository truth leaves responsible for later legally adopting and promoting that draft
-   - rewrite `promotion_owner_unit` in that touched candidate-layer Rule file in the same round when this binding change clearly moves that later adoption-and-promotion responsibility to another formal unit
-   - if current repository truth is insufficient to keep or rewrite exactly one stable `promotion_owner_unit` without guessing, stop this flow and return control to `rule_escape` through rule-governance routing instead of claiming ordinary binding closure
-8. do not write consumer metadata into Rule files; Rule consumers are derived from current-layer frontmatter `rule_refs`
-9. for every touched rule file that still has one or more formal consumers after Step 4 and this round's prepared target-unit writeback, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-11. reject closure if the change is only a `rule_refs` edit with no body-level consumption explanation
-12. after any change to unit `rule_refs` or to any rule file metadata touched in Steps 7 and 9, execute `rule_sync` before claiming closure
-13. after any target unit candidate main-file writeback in Step 5 or Step 6, invalidate the target unit candidate process state before claiming closure:
-   - a target unit candidate main-file writeback includes any `rule_refs` write and any body-level consumption explanation write
-   - if the writeback also changed `rule_refs` or any touched rule file metadata, the Step 12 `rule_sync` run may satisfy this requirement only when its handoff to `impact_sync` includes the target unit and `impact_sync` reports the required target-unit fallback and cleanup result
-   - if the writeback changed only target unit candidate body text and did not change `rule_refs` or any touched rule file metadata, do not route through `rule_sync` as a fake rule change
-   - for that body-only writeback path, execute the candidate fallback defined by `impact_sync_policy.md` and `recovery_policy.md` for the target unit:
-     - update `_status.md` for the target unit to `Next Command=unit_check`
-     - delete `_check_result/unit/{unit}.md`
-     - delete `_plans/draft/{unit}.md`
-     - delete `_plans/active/{unit}.md`
-     - delete `_verify_result/unit/{unit}.md`
-     - record each cleanup target that was already absent as absent, not as a different fallback state
-   - no metadata-only Rule exception may suppress this target-unit invalidation because the target unit candidate main file changed
-14. if Step 3 recorded a previous bound Rule file and `rule_sync` shows that no formal consumer in the current-layer `unit` and `scenario` `rule_refs` graph still binds it after this round:
-   - if the current round can safely prove that the previous file has been replaced by the new target and cleanup is legal under `spec_policy.md`, delete that now-unbound previous rule file in the same round
-   - otherwise, stop and return control to `rule_escape` through rule-governance routing so rule governance can decide whether stable decomposition exists or whether follow-up must route to `rule_topology`, checkpoint, or another legal next step
-   - after a deletion in this step, rerun `rule_sync` before claiming closure
-
----
-
-## 5. Stop Conditions
-
-Stop when one of the following is true:
-
-1. the unit binding and body-level consumption explanation are complete, touched Rule files omit `bound_objects`, and `rule_sync` has finished reconciliation
-   - when the round retargeted away from a previous rule file, that previous file's terminal state must also be resolved before closure
-   - when the target unit candidate main file changed, target-unit candidate process invalidation and `_status.md` fallback must also be complete before closure
-2. the request is not really binding and must be re-routed to another rule flow
-3. the target unit does not actually depend on the rule truth
-4. the target unit is currently at `stable` and the flow has raised a rule-governance checkpoint for `unit_fork:{unit}` first
-5. a touched candidate-layer Rule file with a stable-layer sibling cannot keep or receive one stable `promotion_owner_unit` from current repository truth after this round's binding change
-
----
-
-## 6. Output Contract
-
-The output must include at least:
+The output must report:
 
 1. the target unit and target rule
-2. why the unit truly depends on that rule truth
-3. whether the target unit was already at `candidate` or first had to stop for `unit_fork:{unit}`
-4. the binding writeback result in the unit candidate-layer Spec, or the checkpoint result when candidate writeback could not start yet
-5. the body-level consumption explanation added or updated
-6. the repository-wide binding-set review result used for the target rule file and any previous rule file touched by retargeting, including unit and scenario bindings
-7. confirmation that the target Rule file omits `bound_objects`
-8. when the round retargeted the unit away from a previous rule file, confirmation that the previous Rule file omits `bound_objects`
-9. when a touched candidate-layer Rule file already had a stable-layer sibling, the `promotion_owner_unit` keep-or-rewrite result
-10. when the round retargeted the unit away from a previous rule file, the previous rule file terminal-state result, including any return-to-`rule_escape` result when direct cleanup was not yet safe
-11. the `rule_sync` result, including affected downstream objects and fallback if any
-12. the target unit candidate process invalidation result, including whether `rule_sync` handed the target unit to `impact_sync` or whether direct candidate fallback cleanup was executed for a body-only writeback
-
----
-
-## 7. Non-Goals
-
-`rule_bind` does not:
-
-1. allow ref-only binding without behavior explanation
-2. redesign the rule truth as the main task
-3. leave reconciliation for later after changing unit bindings
-4. modify unit `stable` truth directly
-5. absorb shared conclusions into stable `g_` rule
-6. leave target unit candidate process state reusable after changing the target unit candidate main file
+2. why the unit consumes that rule truth
+3. whether the target unit was candidate or stopped for a fork prerequisite
+4. the unit `rule_refs` writeback result
+5. the body-level consumption explanation result
+6. the consumer-set review result for each touched rule
+7. the `promotion_owner_unit` result when required
+8. any touched rule terminal-state result
+9. confirmation that touched rule files do not carry `bound_objects`
+10. the `rule_sync` result
+11. the target unit candidate fallback result or the recovery and rerouting result

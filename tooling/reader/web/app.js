@@ -48,17 +48,13 @@ const TRANSLATIONS = {
         label: "单元",
         tooltip: "单元是一块可独立说明、开发和验证的工程责任，例如 agent、memory 或 tool。"
       },
-      scenario: {
-        label: "场景",
-        tooltip: "场景是一条从触发到结果的完整使用链路，用来说明多个责任块怎样一起完成一个结果。"
-      },
       rule: {
         label: "规则",
-        tooltip: "规则是多个单元或场景共同复用的一段规则，避免同一规则在不同地方重复写。"
+        tooltip: "规则是多个单元共同复用的一段约束，避免同一规则在不同地方重复写。"
       },
       shared: {
         label: "规则",
-        tooltip: "规则是多个单元或场景共同复用的一段规则，避免同一规则在不同地方重复写。"
+        tooltip: "规则是多个单元共同复用的一段约束，避免同一规则在不同地方重复写。"
       },
       truth: {
         label: "Spec 文档",
@@ -104,13 +100,12 @@ const TRANSLATIONS = {
       },
       registry: {
         title: "结构映射",
-        summary: "查看 unit、scenario 和 rule 是否已经写入 repository_mapping，以及有没有可用实施路径。",
+        summary: "查看 unit 和 rule 是否已经写入 repository_mapping，以及 unit 有没有可用实施路径。",
         nav: "映射结果"
       }
     },
     counts: {
       unit: "{count} 单元",
-      scenario: "{count} 场景",
       rule: "{count} 规则",
       truth: "{count} Spec 文档",
       paths: "{count} 个路径或文件",
@@ -118,7 +113,6 @@ const TRANSLATIONS = {
     },
     specflowSections: {
       unit: "单元",
-      scenario: "场景",
       rule: "规则",
       truth: "Spec 文档",
       implementation: "实现路径",
@@ -266,7 +260,6 @@ const TRANSLATIONS = {
         planned: "已映射无路径",
         landed: "已映射有路径",
         unit: "单元",
-        scenario: "场景",
         rule: "规则"
       }
     },
@@ -304,7 +297,6 @@ const TRANSLATIONS = {
         stable: "已确认 stable",
         stableRule: "已确认规则",
         capability: "单元设计",
-        scenario: "端到端设计",
         rule: "规则",
         structure: "项目结构文件",
         system: "全局规则文件"
@@ -319,7 +311,6 @@ const TRANSLATIONS = {
         stable: "这是已经确认的正式 Spec，可作为当前正式基线查看。",
         stableRule: "这是已经确认的共享规则 Spec，可作为当前正式规则查看。",
         capability: "整份文件是否正确表达该能力的当前设计或规则。",
-        scenario: "整份文件是否正确表达从入口到最终结果的端到端链路。",
         rule: "整份文件是否正确表达这条规则及其复用边界。",
         structure: "整份文件是否正确表达当前项目结构、对象边界和路径归属。",
         system: "整份文件是否正确表达全仓库规则、默认选择和例外。"
@@ -329,19 +320,12 @@ const TRANSLATIONS = {
         stable: "正式设计、下一步动作、附录、证据、规则引用",
         stableRule: "规则正文、复用边界、绑定对象",
         capability: "责任边界、输入输出、错误处理、验收条件、规则引用",
-        scenario: "入口、经过的能力、最终结果、失败处理、验证方式",
         rule: "复用对象、规则正文、绑定关系、是否仍是局部规则",
-        structure: "能力列表、场景列表、规则列表、路径归属、支撑文件边界",
+        structure: "单元列表、规则列表、路径归属、支撑文件边界",
         system: "技术基线、默认选择、复用机制、禁止项、例外"
       }
     },
     lifecycle: {
-      scenario_new: "创建新的端到端流程设计",
-      scenario_stable_verify: "检查端到端流程是否仍符合已确认设计",
-      scenario_check: "检查流程设计是否足够支撑验证",
-      scenario_verify: "验证端到端流程",
-      scenario_promote: "把流程确认结果沉淀为正式基线",
-      scenario_fork: "从已确认流程开启新一轮设计",
       unit_init: "初始化能力真相",
       unit_stable_verify: "检查实现是否仍符合已确认设计",
       unit_new: "创建新的能力设计",
@@ -353,12 +337,6 @@ const TRANSLATIONS = {
       unit_fork: "从已确认基线开启新一轮设计"
     },
     lifecycleShort: {
-      scenario_new: "新建",
-      scenario_stable_verify: "稳定复核",
-      scenario_check: "检查",
-      scenario_verify: "验证",
-      scenario_promote: "沉淀",
-      scenario_fork: "开新轮",
       unit_init: "初始化",
       unit_stable_verify: "稳定复核",
       unit_new: "新建",
@@ -445,17 +423,13 @@ const TRANSLATIONS = {
         label: "Unit",
         tooltip: "A unit is an engineering responsibility that can be described, developed, and verified independently, such as agent, memory, or tool."
       },
-      scenario: {
-        label: "Scenario",
-        tooltip: "A scenario is a complete trigger-to-result usage chain that shows how multiple responsibilities produce one outcome."
-      },
       rule: {
         label: "Rule",
-        tooltip: "A rule is reused by multiple units or scenarios so the same rule is not duplicated in different places."
+        tooltip: "A rule is reused by multiple units so the same constraint is not duplicated in different places."
       },
       shared: {
         label: "Rule",
-        tooltip: "A rule is reused by multiple units or scenarios so the same rule is not duplicated in different places."
+        tooltip: "A rule is reused by multiple units so the same constraint is not duplicated in different places."
       },
       truth: {
         label: "Spec document",
@@ -501,13 +475,12 @@ const TRANSLATIONS = {
       },
       registry: {
         title: "Structure Mapping",
-        summary: "Shows whether units, scenarios, and rules are recorded in repository_mapping and whether they have usable implementation paths.",
+        summary: "Shows whether units and rules are recorded in repository_mapping and whether units have usable implementation paths.",
         nav: "Mapping results"
       }
     },
     counts: {
       unit: "{count} units",
-      scenario: "{count} scenarios",
       rule: "{count} rules",
       truth: "{count} Spec documents",
       paths: "{count} paths or files",
@@ -515,7 +488,6 @@ const TRANSLATIONS = {
     },
     specflowSections: {
       unit: "Units",
-      scenario: "Scenarios",
       rule: "Rules",
       truth: "Spec documents",
       implementation: "Implementation paths",
@@ -663,7 +635,6 @@ const TRANSLATIONS = {
         planned: "Mapped no paths",
         landed: "Mapped with paths",
         unit: "Units",
-        scenario: "Scenarios",
         rule: "Rules"
       }
     },
@@ -701,7 +672,6 @@ const TRANSLATIONS = {
         stable: "Accepted stable",
         stableRule: "Accepted rules",
         capability: "Unit design",
-        scenario: "End-to-end design",
         rule: "Rule",
         structure: "Project structure file",
         system: "Global rules file"
@@ -716,7 +686,6 @@ const TRANSLATIONS = {
         stable: "This Spec is already accepted and can be read as the current formal baseline.",
         stableRule: "This shared rule Spec is already accepted and can be read as the current formal rule.",
         capability: "Whether the whole file correctly expresses this capability's current design or rules.",
-        scenario: "Whether the whole file correctly expresses the end-to-end chain from entry to final outcome.",
         rule: "Whether the whole file correctly expresses this rule and its reuse boundary.",
         structure: "Whether the whole file correctly expresses current project structure, object boundaries, and path ownership.",
         system: "Whether the whole file correctly expresses repository-wide constraints, defaults, and exceptions."
@@ -726,19 +695,12 @@ const TRANSLATIONS = {
         stable: "Formal design, next action, appendices, evidence, rule references",
         stableRule: "Rule body, reuse boundary, bound objects",
         capability: "Responsibility boundary, inputs and outputs, error handling, acceptance conditions, rule references",
-        scenario: "Entry, participating capabilities, final outcome, failure handling, verification method",
         rule: "Reusing objects, rule body, binding relationships, whether it remains a local rule",
-        structure: "Capability list, scenario list, rule list, path ownership, support-file boundary",
+        structure: "Unit list, rule list, path ownership, support-file boundary",
         system: "Technical baseline, defaults, reusable mechanisms, prohibitions, exceptions"
       }
     },
     lifecycle: {
-      scenario_new: "Create a new end-to-end flow design",
-      scenario_stable_verify: "Check whether the flow still matches the confirmed design",
-      scenario_check: "Check whether the flow design is enough to support verification",
-      scenario_verify: "Verify the end-to-end flow",
-      scenario_promote: "Promote the confirmed flow result into the formal baseline",
-      scenario_fork: "Start a new design round from a confirmed flow",
       unit_init: "Initialize capability truth",
       unit_stable_verify: "Check whether implementation still matches the confirmed design",
       unit_new: "Create a new capability design",
@@ -750,12 +712,6 @@ const TRANSLATIONS = {
       unit_fork: "Start a new design round from a confirmed baseline"
     },
     lifecycleShort: {
-      scenario_new: "New",
-      scenario_stable_verify: "Stable check",
-      scenario_check: "Check",
-      scenario_verify: "Verify",
-      scenario_promote: "Promote",
-      scenario_fork: "Fork",
       unit_init: "Init",
       unit_stable_verify: "Stable check",
       unit_new: "New",
@@ -979,7 +935,6 @@ function renderViewSummary() {
     </div>
     <div class="view-counts">
       <span>${escapeHTML(t("counts.unit", { count: snapshot.project.unit_count || 0 }))}</span>
-      <span>${escapeHTML(t("counts.scenario", { count: snapshot.project.scenario_count || 0 }))}</span>
       <span>${escapeHTML(t("counts.rule", { count: snapshot.project.rule_count || 0 }))}</span>
       <span>${escapeHTML(t("counts.truth", { count: snapshot.project.truth_file_count || 0 }))}</span>
     </div>
@@ -1006,7 +961,7 @@ function renderNav() {
   if (currentView === "project") {
     const graph = graphForCurrentView();
     const objects = graph.nodes
-      .filter((node) => (node.group === "unit" || node.group === "scenario" || node.group === "rule") && list(node.raw_paths).length > 0)
+      .filter((node) => (node.group === "unit" || node.group === "rule") && list(node.raw_paths).length > 0)
       .sort(byLabel);
     objects.forEach((node) => {
       const button = document.createElement("button");
@@ -1066,7 +1021,6 @@ function renderSpecflowNav() {
   const graph = graphForSpecflowView();
   const objects = list(snapshot.objects);
   const units = objects.filter((item) => item.kind === "unit").sort(byLabel);
-  const scenarios = objects.filter((item) => item.kind === "scenario").sort(byLabel);
   const rules = objects.filter((item) => item.kind === "rule").sort(byLabel);
   const truthNodes = graph.nodes.filter((node) => node.group === "truth").sort(byLabel);
   const implementationNodes = graph.nodes.filter((node) => node.group === "implementation").sort(byLabel);
@@ -1075,7 +1029,6 @@ function renderSpecflowNav() {
 
   const sections = [
     { key: "unit", type: "objects", items: units },
-    { key: "scenario", type: "objects", items: scenarios },
     { key: "rule", type: "objects", items: rules },
     { key: "truth", type: "nodes", items: truthNodes },
     { key: "implementation", type: "nodes", items: implementationNodes },
@@ -1197,13 +1150,13 @@ function createNavSection(sectionKey, count) {
 function objectsForView() {
   const objects = list(snapshot.objects);
   if (currentView === "project") {
-    return objects.filter((item) => item.kind === "unit" || item.kind === "scenario");
+    return objects.filter((item) => item.kind === "unit");
   }
   if (currentView === "specflow") {
     return objects.filter((item) => item.kind === "rule").concat(objects.filter((item) => item.kind === "unit"));
   }
   if (currentView === "status") {
-    return objects.filter((item) => item.kind === "unit" || item.kind === "scenario");
+    return objects.filter((item) => item.kind === "unit");
   }
   return objects;
 }
@@ -1592,7 +1545,7 @@ function graphForSpecflowView() {
       source: firstSourceRef(object.sources)
     });
     addEdge({ id: `support:repository_mapping->${objectID}`, from: "support:repository_mapping", to: objectID, kind: "declares", label: "declares", source: { path: snapshot.project.mapping_file } });
-    if (object.kind === "unit" || object.kind === "scenario") {
+    if (object.kind === "unit") {
       addEdge({ id: `support:status->${objectID}`, from: "support:status", to: objectID, kind: "tracks_state", label: "tracks state", source: { path: snapshot.project.status_file } });
     }
     list(object.truth_paths).forEach((truth) => {
@@ -1666,7 +1619,7 @@ function specflowPositions(nodes, edges) {
   const groups = {
     system: nodes.filter((node) => node.group === "support"),
     rule: nodes.filter((node) => node.group === "rule"),
-    domain: nodes.filter((node) => node.group === "unit" || node.group === "scenario"),
+    domain: nodes.filter((node) => node.group === "unit"),
     truth: nodes.filter((node) => node.group === "truth")
   };
   const x = { system: 120, rule: 390, domain: 650, truth: 940 };
@@ -1690,7 +1643,7 @@ function relationshipPositions(nodes, edges) {
   const positions = {};
   const groups = {
     rule: nodes.filter((node) => node.group === "rule"),
-    domain: nodes.filter((node) => node.group === "unit" || node.group === "scenario"),
+    domain: nodes.filter((node) => node.group === "unit"),
     truth: nodes.filter((node) => node.group === "truth"),
     implementation: nodes.filter((node) => node.group === "implementation"),
     system: nodes.filter((node) => node.group === "support")
@@ -1774,7 +1727,6 @@ function highlightConnected(nodeID) {
 function colorForGroup(ele) {
   const group = ele.data("group");
   if (group === "unit") return "#2563eb";
-  if (group === "scenario") return "#db2777";
   if (group === "rule") return "#0f766e";
   if (group === "truth") return "#7c3aed";
   if (group === "implementation") return "#b45309";
@@ -1807,7 +1759,7 @@ function firstNodeIDForView(nodes) {
     return (nodes[0] || {}).id || null;
   }
   if (currentView === "project") {
-    const objectNode = nodes.find((node) => (node.group === "unit" || node.group === "scenario" || node.group === "rule") && list(node.raw_paths).length > 0);
+    const objectNode = nodes.find((node) => (node.group === "unit" || node.group === "rule") && list(node.raw_paths).length > 0);
     return (objectNode || nodes[0] || {}).id || null;
   }
   if (currentView === "specflow") {
@@ -1820,7 +1772,7 @@ function firstNodeIDForView(nodes) {
   if (currentView === "registry") {
     return (nodes[0] || {}).id || null;
   }
-  const domainNode = nodes.find((node) => node.group === "unit" || node.group === "scenario");
+  const domainNode = nodes.find((node) => node.group === "unit");
   return (domainNode || nodes[0] || {}).id || null;
 }
 
@@ -1942,7 +1894,6 @@ function lifecycleView(object, nextCommandOverride) {
 }
 
 function lifecycleRoundSteps(object, command) {
-  if (object.kind === "scenario") return scenarioRoundSteps(object, command);
   return unitRoundSteps(object, command);
 }
 
@@ -1981,29 +1932,9 @@ function unitRoundSteps(object, command) {
   ];
 }
 
-function scenarioRoundSteps(object, command) {
-  if (command === "scenario_stable_verify") {
-    return [lifecycleStep("scenario_stable_verify"), lifecycleStep("scenario_fork")];
-  }
-  if (isNextRoundEntry(object, command)) {
-    return [
-      lifecycleStep("scenario_check"),
-      lifecycleStep("scenario_verify"),
-      lifecycleStep("scenario_promote")
-    ];
-  }
-  const startCommand = command === "scenario_new" || !yesish(object.stable) ? "scenario_new" : "scenario_fork";
-  return [
-    lifecycleStep(startCommand),
-    lifecycleStep("scenario_check"),
-    lifecycleStep("scenario_verify"),
-    lifecycleStep("scenario_promote")
-  ];
-}
-
 function isNextRoundEntry(object, command) {
   if (!yesish(object.stable) || yesish(object.candidate) || object.layer !== "stable") return false;
-  return (object.kind === "unit" && command === "unit_fork") || (object.kind === "scenario" && command === "scenario_fork");
+  return object.kind === "unit" && command === "unit_fork";
 }
 
 function renderLifecycleTrack(view, ariaLabel) {
@@ -2121,7 +2052,6 @@ function renderRegistryNav() {
     { key: "planned", items: items.filter((item) => item.result === "planned") },
     { key: "landed", items: items.filter((item) => item.result === "landed") },
     { key: "unit", items: items.filter((item) => item.kind === "unit") },
-    { key: "scenario", items: items.filter((item) => item.kind === "scenario") },
     { key: "rule", items: items.filter((item) => item.kind === "rule") }
   ].filter((section) => section.items.length > 0);
   if (sections.length === 0) {
@@ -2555,7 +2485,7 @@ function focusTodoItem(itemID) {
 
 function todoItems() {
   return list(snapshot.objects)
-    .filter((object) => (object.kind === "unit" || object.kind === "scenario") && String(object.next_command || "").trim())
+    .filter((object) => object.kind === "unit" && String(object.next_command || "").trim())
     .map((object) => {
       const nextCommand = String(object.next_command || "").trim();
       const type = todoTypeForObject(object, nextCommand);
@@ -2589,14 +2519,14 @@ function todoItemForSource(path) {
 }
 
 function todoTypeForCommand(command) {
-  if (command === "unit_stable_verify" || command === "scenario_stable_verify") return "stableVerify";
-  if (command === "unit_check" || command === "scenario_check") return "designCheck";
+  if (command === "unit_stable_verify") return "stableVerify";
+  if (command === "unit_check") return "designCheck";
   if (command === "unit_plan") return "plan";
   if (command === "unit_impl") return "implementation";
-  if (command === "unit_verify" || command === "scenario_verify") return "verify";
-  if (command === "unit_promote" || command === "scenario_promote") return "promote";
-  if (command === "unit_fork" || command === "scenario_fork") return "fork";
-  if (command === "unit_init" || command === "unit_new" || command === "scenario_new") return "new";
+  if (command === "unit_verify") return "verify";
+  if (command === "unit_promote") return "promote";
+  if (command === "unit_fork") return "fork";
+  if (command === "unit_init" || command === "unit_new") return "new";
   return "other";
 }
 
@@ -2622,9 +2552,6 @@ function advanceEntryCommandForObject(object, nextCommand) {
   if (!kind || !objectID || !command) return "";
   if (kind === "unit" && ["unit_check", "unit_plan", "unit_impl", "unit_verify", "unit_promote"].includes(command)) {
     return `unit_advance:${objectID}`;
-  }
-  if (kind === "scenario" && ["scenario_check", "scenario_verify", "scenario_promote"].includes(command)) {
-    return `scenario_advance:${objectID}`;
   }
   return "";
 }
@@ -2672,14 +2599,14 @@ function todoSourcesForObject(object, command) {
   const evidence = uniqueSources(object.truth_paths).filter((ref) => isEvidenceReference(ref));
   const ruleSources = ruleSourcesForObject(object);
 
-  if (command === "unit_check" || command === "scenario_check") {
+  if (command === "unit_check") {
     activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
     appendices.forEach((ref) => addSource(ref, "appendix"));
     evidence.forEach((ref) => addSource(ref, "evidence", "references"));
     return sources;
   }
 
-  if (command === "unit_stable_verify" || command === "scenario_stable_verify") {
+  if (command === "unit_stable_verify") {
     activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
     appendices.forEach((ref) => addSource(ref, "appendix"));
     ruleSources.forEach((ref) => addSource(ref, "rule"));
@@ -2699,7 +2626,7 @@ function todoSourcesForObject(object, command) {
     return sources;
   }
 
-  if (command === "unit_fork" || command === "scenario_fork") {
+  if (command === "unit_fork") {
     activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
     appendices.forEach((ref) => addSource(ref, "appendix"));
     addSource(processSource(object, "verifyResult", "stable"), "verifyResult");
@@ -2774,7 +2701,7 @@ function reviewItems() {
   list(snapshot.objects).forEach((object) => {
     const targetType = reviewTargetTypeForObject(object);
     if (!targetType) return;
-    if ((object.kind === "unit" || object.kind === "scenario") && object.layer === "candidate") {
+    if (object.kind === "unit" && object.layer === "candidate") {
       uniqueSources(object.truth_paths).filter((source) => isPrimaryReviewSource(source, object, "candidate")).forEach((source) => {
         addItem({
           reviewType: "candidate",
@@ -2787,7 +2714,7 @@ function reviewItems() {
       });
       return;
     }
-    if ((object.kind === "unit" || object.kind === "scenario") && object.layer === "stable") {
+    if (object.kind === "unit" && object.layer === "stable") {
       uniqueSources(object.truth_paths).filter((source) => isPrimaryReviewSource(source, object, "stable")).forEach((source) => {
         addItem({
           reviewType: "stable",
@@ -2828,7 +2755,6 @@ function reviewItemByPath(path) {
 function reviewTargetTypeForObject(object) {
   if (!object) return "";
   if (object.kind === "unit") return "capability";
-  if (object.kind === "scenario") return "scenario";
   if (object.kind === "rule") return "rule";
   return "";
 }
@@ -2851,7 +2777,6 @@ function isPrimaryReviewSource(source, object, layer) {
   const name = fileName(path);
   const prefix = layer === "stable" ? "s" : "c";
   if (object.kind === "unit") return new RegExp(`^${prefix}_unit_[^/]+\\.md$`).test(name);
-  if (object.kind === "scenario") return new RegExp(`^${prefix}_scenario_[^/]+\\.md$`).test(name);
   if (object.kind === "rule") return new RegExp(`^${prefix}_[gb]_rule_[^/]+\\.md$`).test(name);
   return false;
 }
@@ -2901,7 +2826,7 @@ function reviewNextCommandText(item) {
 function renderReviewProgressHeader(path) {
   const item = currentView === "todo" ? todoItemForSource(path) : reviewItemByPath(path);
   if (!item || !item.object) return "";
-  if (item.object.kind !== "unit" && item.object.kind !== "scenario") return "";
+  if (item.object.kind !== "unit") return "";
   const view = lifecycleView(item.object, item.nextCommand);
   const command = item.commandText || reviewNextCommandText(item);
   const advanceItem = {
@@ -3120,7 +3045,7 @@ function edgeLabel(kind) {
 function nodeSize(ele) {
   const group = ele.data("group");
   if (group === "root") return 48;
-  if (group === "unit" || group === "scenario") return 42;
+  if (group === "unit") return 42;
   if (group === "rule") return 40;
   if (group === "truth") return 34;
   return 36;
@@ -3541,7 +3466,7 @@ function objectKindLabel(kind) {
 
 function objectKindClass(kind) {
   const normalized = String(kind || "").trim();
-  if (normalized === "unit" || normalized === "scenario" || normalized === "rule") return `kind-${normalized}`;
+  if (normalized === "unit" || normalized === "rule") return `kind-${normalized}`;
   return "";
 }
 

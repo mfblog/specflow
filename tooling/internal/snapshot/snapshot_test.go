@@ -111,6 +111,73 @@ bound_objects: all_units
 	}
 }
 
+func TestRebuildCurrentCollectsStableUnitRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir)))
+
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_auth.md"), `---
+id: auth
+layer: stable
+version: 1.0.0
+---
+
+# Auth
+`)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), `---
+id: demo
+layer: candidate
+version: 0.1.0
+unit_refs:
+  - s_unit_auth@1.0.0
+---
+
+# Demo
+
+2. rule_refs: none
+`+testAcceptanceSection)
+
+	result, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	if len(result.UnitSnapshot) != 1 {
+		t.Fatalf("expected one unit dependency snapshot, got %+v", result.UnitSnapshot)
+	}
+	if result.UnitSnapshot[0].ObjectRef != "auth" || result.UnitSnapshot[0].VersionRef != "s_unit_auth@1.0.0" {
+		t.Fatalf("unexpected unit dependency snapshot: %+v", result.UnitSnapshot[0])
+	}
+}
+
+func TestRebuildCurrentRejectsCandidateUnitRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
+
+	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), `---
+id: demo
+layer: candidate
+version: 0.1.0
+unit_refs:
+  - c_unit_auth@0.1.0
+---
+
+# Demo
+
+2. rule_refs: none
+`+testAcceptanceSection)
+
+	_, err := RebuildCurrent(repoRoot, "demo")
+	if err == nil || !strings.Contains(err.Error(), "unit_refs must reference stable units") {
+		t.Fatalf("expected candidate unit_refs rejection, got %v", err)
+	}
+}
+
 func TestRebuildCurrentCollectsEvidenceAppendixRef(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
@@ -837,133 +904,12 @@ func TestValidateProcessFileRejectsVerifyEvidenceGap(t *testing.T) {
 	}
 }
 
-func TestValidateScenarioCheckSchemaGapStaysAtScenarioCheck(t *testing.T) {
+func TestValidateProcessFileRejectsScenarioObjectType(t *testing.T) {
 	repoRoot := t.TempDir()
-	setupScenarioSnapshotValidationRepo(t, repoRoot)
-
-	expected, err := RebuildCurrentObject(repoRoot, "scenario", "checkout")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	body := strings.Replace(renderScenarioCheckProcessBody(expected), "coverage_summary: current candidate\n", "", 1)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/scenario/checkout.md"), "# check\n\n```yaml\n"+body+"\n```\n")
-
-	result, err := ValidateProcessFileForObject(repoRoot, "scenario", "checkout", "check")
-	if err != nil {
-		t.Fatalf("ValidateProcessFileForObject: %v", err)
-	}
-	if result.Valid {
-		t.Fatalf("expected invalid result, got valid")
-	}
-	if result.FailureLayer != "gate_layer" || result.NextCommand != "scenario_check" {
-		t.Fatalf("expected gate_layer/scenario_check, got %s/%s mismatches=%v", result.FailureLayer, result.NextCommand, result.Mismatches)
-	}
-}
-
-func TestValidateScenarioVerifyEvidenceGapStaysAtScenarioVerify(t *testing.T) {
-	repoRoot := t.TempDir()
-	setupScenarioSnapshotValidationRepo(t, repoRoot)
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/scenario"))
-
-	expected, err := RebuildCurrentObject(repoRoot, "scenario", "checkout")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	body := strings.Replace(renderScenarioVerifyProcessBody(expected), "status: pass", "status: skipped", 1)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/scenario/checkout.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
-
-	result, err := ValidateProcessFileForObject(repoRoot, "scenario", "checkout", "verify")
-	if err != nil {
-		t.Fatalf("ValidateProcessFileForObject: %v", err)
-	}
-	if result.Valid {
-		t.Fatalf("expected invalid result, got valid")
-	}
-	if result.FailureLayer != "evidence_layer" || result.NextCommand != "scenario_verify" {
-		t.Fatalf("expected evidence_layer/scenario_verify, got %s/%s mismatches=%v", result.FailureLayer, result.NextCommand, result.Mismatches)
-	}
-}
-
-func TestValidateScenarioVerifyProcessAcceptsScenarioSnapshots(t *testing.T) {
-	repoRoot := t.TempDir()
-	setupScenarioSnapshotValidationRepo(t, repoRoot)
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/scenario"))
-
-	expected, err := RebuildCurrentObject(repoRoot, "scenario", "checkout")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/scenario/checkout.md"), "# verify\n\n```yaml\n"+renderScenarioVerifyProcessBody(expected)+"\n```\n")
-
-	result, err := ValidateProcessFileForObject(repoRoot, "scenario", "checkout", "verify")
-	if err != nil {
-		t.Fatalf("ValidateProcessFileForObject: %v", err)
-	}
-	if !result.Valid {
-		t.Fatalf("expected valid scenario verify result, got mismatches %+v", result.Mismatches)
-	}
-}
-
-func TestValidateScenarioCheckRejectsAppendixSnapshotDrift(t *testing.T) {
-	repoRoot := t.TempDir()
-	setupScenarioSnapshotValidationRepo(t, repoRoot)
-
-	expected, err := RebuildCurrentObject(repoRoot, "scenario", "checkout")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	if len(expected.ModuleAppendixSnapshot) != 1 {
-		t.Fatalf("expected one scenario appendix snapshot entry, got %+v", expected.ModuleAppendixSnapshot)
-	}
-	body := strings.Replace(renderScenarioCheckProcessBody(expected), expected.ModuleAppendixSnapshot[0].Fingerprint, "stale-fingerprint", 1)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/scenario/checkout.md"), "# check\n\n```yaml\n"+body+"\n```\n")
-
-	result, err := ValidateProcessFileForObject(repoRoot, "scenario", "checkout", "check")
-	if err != nil {
-		t.Fatalf("ValidateProcessFileForObject: %v", err)
-	}
-	if result.Valid {
-		t.Fatalf("expected invalid result, got valid")
-	}
-	if !containsMismatch(result.Mismatches, "scenario_appendix_snapshot mismatch: actual=docs/specs/scenarios/candidate/appendix/c_scenario_checkout_notes.md|stale-fingerprint expected="+normalizeAppendixList(expected.ModuleAppendixSnapshot)) {
-		t.Fatalf("expected scenario appendix mismatch, got %+v", result.Mismatches)
-	}
-	if result.FailureLayer != "truth_layer" || result.NextCommand != "scenario_check" {
-		t.Fatalf("expected truth_layer/scenario_check, got %s/%s", result.FailureLayer, result.NextCommand)
-	}
-}
-
-func TestValidateScenarioCheckRejectsUnsupportedAppendixSnapshotField(t *testing.T) {
-	repoRoot := t.TempDir()
-	setupScenarioSnapshotValidationRepo(t, repoRoot)
-
-	expected, err := RebuildCurrentObject(repoRoot, "scenario", "checkout")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	unsupportedField := "label"
-	body := strings.Replace(renderScenarioCheckProcessBody(expected), "    fingerprint: "+expected.ModuleAppendixSnapshot[0].Fingerprint, "    "+unsupportedField+": checkout_notes\n    fingerprint: "+expected.ModuleAppendixSnapshot[0].Fingerprint, 1)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/scenario/checkout.md"), "# check\n\n```yaml\n"+body+"\n```\n")
-
-	result, err := ValidateProcessFileForObject(repoRoot, "scenario", "checkout", "check")
-	if err != nil {
-		t.Fatalf("ValidateProcessFileForObject: %v", err)
-	}
-	if result.Valid {
-		t.Fatalf("expected invalid result, got valid")
-	}
-	if !containsMismatch(result.Mismatches, "unsupported field: scenario_appendix_snapshot."+unsupportedField) {
-		t.Fatalf("expected unsupported scenario appendix field mismatch, got %+v", result.Mismatches)
-	}
-}
-
-func TestValidateScenarioPlanIsUnsupported(t *testing.T) {
-	repoRoot := t.TempDir()
-	setupScenarioSnapshotValidationRepo(t, repoRoot)
 
 	_, err := ValidateProcessFileForObject(repoRoot, "scenario", "checkout", "plan")
-	if err == nil || !strings.Contains(err.Error(), "process kind \"plan\" is not supported for object type \"scenario\"") {
-		t.Fatalf("expected unsupported scenario plan error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "object type \"scenario\" is not supported; only unit is supported") {
+		t.Fatalf("expected scenario rejection, got %v", err)
 	}
 }
 
@@ -1310,68 +1256,6 @@ acceptance_item_set:
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), mainSpec)
 }
 
-func setupScenarioSnapshotValidationRepo(t *testing.T, repoRoot string) {
-	t.Helper()
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/appendix"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/units/stable"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/scenario"))
-
-	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `ai` | `yes` | `no` | `stable` | `unit_fork` | note |\n| `scenario` | `checkout` | `no` | `yes` | `candidate` | `scenario_verify` | note |\n"
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), `---
-id: repository_mapping
-version: 0.1.0
----
-
-# Repository Mapping
-`)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_ai.md"), `---
-id: ai
-layer: stable
-version: 1.0.0
----
-
-# AI
-`)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/c_scenario_checkout.md"), `---
-id: checkout
-layer: candidate
-version: 0.1.0
-source_basis: new_design
-evidence_appendix_ref: none
----
-
-# Checkout Scenario
-
-See [notes](./appendix/c_scenario_checkout_notes.md).
-
-repository_mapping_ref: repository_mapping@0.1.0
-unit_refs:
-  - s_unit_ai@1.0.0
-rule_refs: none
-
-## Testability / Acceptance Criteria
-
-acceptance_item_set:
-  - id: checkout.e2e
-    target: Checkout path reaches the declared result.
-    verification_surface: integration
-    implementation_surface: AgentCore/runtime
-    verification_method: Run the checkout trigger-to-outcome path.
-    pass_condition: The checkout result is observed.
-    not_runnable_yet: no
-`)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/appendix/c_scenario_checkout_notes.md"), `---
-scenario: checkout
-layer: candidate
----
-
-# Checkout Notes
-`)
-}
-
 func writeCheckProcessFile(t *testing.T, repoRoot, yamlBody string) {
 	t.Helper()
 	content := "# check\n\n```yaml\n" + yamlBody + "\n```\n"
@@ -1437,71 +1321,6 @@ func renderFormalVerifyProcessBody(expected Snapshot) string {
 	}, "\n")
 }
 
-func renderScenarioCheckProcessBody(expected Snapshot) string {
-	return strings.Join([]string{
-		"object_type: scenario",
-		"object_ref: " + expected.Object,
-		"gate: scenario_check",
-		"decision: pass",
-		"allow_next: true",
-		"next_command: scenario_verify",
-		"blocking_summary: none",
-		"coverage_summary: current candidate",
-		"truth_layer_ref: " + expected.TruthLayerRef,
-		"truth_file_ref: " + expected.SpecFileRef,
-		"truth_version_ref: " + expected.SpecVersionRef,
-		"truth_fingerprint: " + expected.SpecFingerprint,
-		"scenario_appendix_snapshot:",
-		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
-		"repository_mapping_snapshot:",
-		renderRepositoryMappingLinesForTest(expected.RepositoryMapping),
-		"unit_snapshot:",
-		renderObjectSnapshotLinesForTest("unit", expected.UnitSnapshot),
-		"rule_snapshot:",
-		renderSharedLinesForTest(expected.RuleSnapshot),
-		"acceptance_item_set:",
-		renderAcceptanceItemSetForTest(expected.AcceptanceItemSet),
-	}, "\n")
-}
-
-func renderScenarioVerifyProcessBody(expected Snapshot) string {
-	return strings.Join([]string{
-		"object_type: scenario",
-		"object_ref: " + expected.Object,
-		"gate: scenario_verify",
-		"decision: pass",
-		"allow_next: true",
-		"next_command: scenario_promote",
-		"blocking_summary: none",
-		"coverage_summary: current candidate",
-		"truth_layer_ref: " + expected.TruthLayerRef,
-		"truth_file_ref: " + expected.SpecFileRef,
-		"truth_version_ref: " + expected.SpecVersionRef,
-		"truth_fingerprint: " + expected.SpecFingerprint,
-		"scenario_appendix_snapshot:",
-		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
-		"repository_mapping_snapshot:",
-		renderRepositoryMappingLinesForTest(expected.RepositoryMapping),
-		"unit_snapshot:",
-		renderObjectSnapshotLinesForTest("unit", expected.UnitSnapshot),
-		"verification_scope_ref: current candidate",
-		"rule_snapshot:",
-		renderSharedLinesForTest(expected.RuleSnapshot),
-		"acceptance_item_set:",
-		renderAcceptanceItemSetForTest(expected.AcceptanceItemSet),
-		"acceptance_item_evidence_matrix:",
-		renderAcceptanceEvidenceMatrixForTest(expected.AcceptanceItemSet),
-	}, "\n")
-}
-
-func renderRepositoryMappingLinesForTest(entry RepositoryMappingEntry) string {
-	return strings.Join([]string{
-		"  file_ref: " + entry.FileRef,
-		"  version_ref: " + entry.VersionRef,
-		"  fingerprint: " + entry.Fingerprint,
-	}, "\n")
-}
-
 func renderAppendixLinesForTest(entries []AppendixEntry) string {
 	if len(entries) == 0 {
 		return "  none"
@@ -1510,23 +1329,6 @@ func renderAppendixLinesForTest(entries []AppendixEntry) string {
 	for _, entry := range entries {
 		lines = append(lines,
 			"  - file_ref: "+entry.FileRef,
-			"    fingerprint: "+entry.Fingerprint,
-		)
-	}
-	return strings.Join(lines, "\n")
-}
-
-func renderObjectSnapshotLinesForTest(field string, entries []ObjectSnapshotEntry) string {
-	if len(entries) == 0 {
-		return "  none"
-	}
-	lines := []string{}
-	for _, entry := range sortObjectSnapshotEntries(entries) {
-		lines = append(lines,
-			"  - "+field+": "+entry.ObjectRef,
-			"    layer: "+entry.Layer,
-			"    file_ref: "+entry.FileRef,
-			"    version_ref: "+entry.VersionRef,
 			"    fingerprint: "+entry.Fingerprint,
 		)
 	}

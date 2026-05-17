@@ -93,11 +93,49 @@ func TestReviewCollectDefaultScopePrintsToolingScriptAndRuntimeFilesCLI(t *testi
 	if !strings.Contains(output, "specflow/tooling/scripts/tooling_fingerprint.ps1") {
 		t.Fatalf("expected PowerShell fingerprint script in collect-default-scope output, got %s", output)
 	}
+	if !strings.Contains(output, "specflow/tooling/scripts/build_release.sh") {
+		t.Fatalf("expected build release script in collect-default-scope output, got %s", output)
+	}
 	if !strings.Contains(output, "Tooling runtime files") {
 		t.Fatalf("expected tooling runtime heading, got %s", output)
 	}
 	if !strings.Contains(output, "specflow/tooling/reader/web/app.js") {
 		t.Fatalf("expected reader app.js in collect-default-scope output, got %s", output)
+	}
+	if !strings.Contains(output, "Template project-instance files") {
+		t.Fatalf("expected template project-instance heading, got %s", output)
+	}
+	if !strings.Contains(output, "specflow/templates/docs/specs/repository_mapping.md") {
+		t.Fatalf("expected repository mapping template in collect-default-scope output, got %s", output)
+	}
+	if !strings.Contains(output, "specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md") {
+		t.Fatalf("expected global rule template in collect-default-scope output, got %s", output)
+	}
+}
+
+func TestReviewCollectDefaultDesignScopePrintsCandidateIntentFilesCLI(t *testing.T) {
+	repoRoot := createCLITestRepo(t)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	if err := runReview([]string{"collect-default-scope", "--flow", "spec_flow_design_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("collect-default-scope failed: %v\nstderr=%s", err, stderr.String())
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "Candidate intent files") {
+		t.Fatalf("expected candidate intent heading, got %s", output)
+	}
+	if !strings.Contains(output, "specflow/framework/candidate_intent_policy.md") {
+		t.Fatalf("expected candidate intent policy in design collect-default-scope output, got %s", output)
+	}
+	if !strings.Contains(output, "specflow/framework/candidate_intents/repair.md") {
+		t.Fatalf("expected repair intent standard in design collect-default-scope output, got %s", output)
+	}
+	if !strings.Contains(output, "specflow/framework/candidate_intents/change.md") {
+		t.Fatalf("expected change intent standard in design collect-default-scope output, got %s", output)
+	}
+	if !strings.Contains(output, "specflow/framework/output_baseline.md") {
+		t.Fatalf("expected output baseline in design collect-default-scope output, got %s", output)
 	}
 }
 
@@ -111,15 +149,11 @@ func TestRepositoryMappingValidateCLI(t *testing.T) {
 		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | test |\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), ""+
 		"# Repository Mapping\n\n"+
-		"### 2.1 Current Units\n\n"+
-		"1. `demo`\n"+
-		"   - demo unit\n\n"+
-		"### 4.6 Unit Truth Rules And Implementation Paths\n\n"+
-		"1. `demo`\n"+
-		"   - `truth_surface_rule`: `unit_default`\n"+
-		"   - `implementation_surface`\n"+
-		"     - current no exclusive implementation surface\n\n"+
-		"### 4.7 Conflict Rules\n")
+		"## 2. Object Registry\n\n"+
+		"| kind | id | registration_state | implementation_paths | spec_files | responsibility |\n"+
+		"|---|---|---|---|---|---|\n"+
+		"| unit | demo | planned | none | `docs/specs/units/candidate/c_unit_demo.md` | demo unit |\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -190,8 +224,8 @@ func TestSnapshotValidateProcessRejectsScenarioPlanCLI(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err := runSnapshot([]string{"validate-process", "--object-type", "scenario", "--object", "demo_flow", "--process", "plan", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err == nil || !strings.Contains(err.Error(), "process kind \"plan\" is not supported for object type \"scenario\"") {
-		t.Fatalf("expected unsupported scenario plan error, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
+	if err == nil || !strings.Contains(err.Error(), "object type \"scenario\" is not supported; only unit is supported") {
+		t.Fatalf("expected scenario rejection, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
 }
 
@@ -637,32 +671,17 @@ func TestCommandCloseUnitPromoteDryRunKeepsCandidateAndProcessFilesCLI(t *testin
 	}
 }
 
-func TestCommandCloseScenarioPromoteDependencyNotReadyRejectsInvalidVerifyCLI(t *testing.T) {
+func TestCommandCloseRejectsScenarioObjectTypeCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_impl")
 	writeCLIStatusRows(t, repoRoot, ""+
 		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_impl` | test |\n"+
 		"| `scenario` | `demo_flow` | `no` | `yes` | `candidate` | `scenario_promote` | test |\n")
-	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/scenario/demo_flow.md")
-	writeCLITestFile(t, verifyPath, "verify must stay\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err := runCommand([]string{"close", "--command", "scenario_promote", "--object-type", "scenario", "--object", "demo_flow", "--outcome", "dependency_not_ready", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err == nil || !strings.Contains(err.Error(), "command close input preflight failed") {
-		t.Fatalf("expected invalid scenario verify input failure, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
-	}
-	if !strings.Contains(stdout.String(), "input_validation_action: command_preflight") || !strings.Contains(stdout.String(), "- process: verify") {
-		t.Fatalf("expected input validation output, got %s", stdout.String())
-	}
-	status, err := statusfile.LookupObjectStatus(repoRoot, "scenario", "demo_flow")
-	if err != nil {
-		t.Fatalf("LookupObjectStatus: %v", err)
-	}
-	if status.NextCommand != "scenario_promote" {
-		t.Fatalf("invalid verify must keep scenario_promote, got %+v", status)
-	}
-	if content, err := os.ReadFile(verifyPath); err != nil || string(content) != "verify must stay\n" {
-		t.Fatalf("verify file must remain unchanged, content=%q err=%v", string(content), err)
+	if err == nil || !strings.Contains(err.Error(), "object-type must be unit") {
+		t.Fatalf("expected scenario object type rejection, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
 }
 
@@ -715,9 +734,9 @@ func createCLITestRepo(t *testing.T) string {
 		"command_policy.md",
 		"implementation_change_policy.md",
 		"checkpoint_protocol.md",
+		"output_baseline.md",
 		"tooling_execution_policy.md",
 		"severity_policy.md",
-		"scenario_policy.md",
 		"spec_policy.md",
 		"spec_writing_guide.md",
 		"repository_mapping_policy.md",
@@ -764,6 +783,8 @@ func createCLITestRepo(t *testing.T) string {
 		"specflow/templates/docs/specs/_plans/active/README.md",
 		"specflow/templates/docs/specs/_verify_result/README.md",
 		"specflow/templates/docs/specs/_governance_review/README.md",
+		"specflow/templates/docs/specs/repository_mapping.md",
+		"specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
 		"specflow/templates/docs/project_standards/_registry.md",
 		"specflow/templates/AGENTS.md",
 		"specflow/templates/GEMINI.md",
@@ -774,6 +795,7 @@ func createCLITestRepo(t *testing.T) string {
 		"specflow/tooling/README.md",
 		"specflow/tooling/cmd/specflowctl/main.go",
 		"specflow/tooling/internal/demo/demo.go",
+		"specflow/tooling/scripts/build_release.sh",
 		"specflow/tooling/scripts/tooling_fingerprint.sh",
 		"specflow/tooling/scripts/tooling_fingerprint.ps1",
 		"specflow/tooling/go.mod",
@@ -810,8 +832,7 @@ func createCLISnapshotRepoWithStatus(t *testing.T, unitNextCommand string) strin
 		"## Formal Objects\n\n"+
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n"+
 		"|---|---|---|---|---|---|---|\n"+
-		"| `unit` | `demo` | `no` | `yes` | `candidate` | `"+unitNextCommand+"` | test |\n"+
-		"| `scenario` | `demo_flow` | `no` | `yes` | `candidate` | `scenario_verify` | test |\n")
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `"+unitNextCommand+"` | test |\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), `---
 id: demo
 layer: candidate
@@ -831,28 +852,6 @@ acceptance_item_set:
     implementation_surface: AgentCore/internal/demo
     verification_method: Go test for the demo behavior.
     pass_condition: The demo behavior passes under the declared checks.
-    not_runnable_yet: no
-`)
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/c_scenario_demo_flow.md"), `---
-id: demo_flow
-layer: candidate
-version: 0.1.0
----
-
-# Demo Flow
-
-unit_refs: none
-rule_refs: none
-
-## Testability / Acceptance Criteria
-
-acceptance_item_set:
-  - id: demo_flow.e2e
-    target: Demo flow is accepted.
-    verification_surface: integration
-    implementation_surface: AgentCore/runtime
-    verification_method: Run the demo flow.
-    pass_condition: The demo result is observed.
     not_runnable_yet: no
 `)
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), `---

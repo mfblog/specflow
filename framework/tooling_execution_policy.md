@@ -141,7 +141,8 @@ The required tooling-contract document set is:
    - `specflow/tooling/go.mod`
    - `specflow/tooling/manifest.tsv`
    - `specflow/tooling/go.sum` when it exists
-4. the release helper script files:
+4. the tooling helper script files:
+   - `specflow/tooling/scripts/build_release.sh`
    - `specflow/tooling/scripts/tooling_fingerprint.sh`
    - `specflow/tooling/scripts/tooling_fingerprint.ps1`
 5. the runtime reader web files:
@@ -178,9 +179,9 @@ Required rules:
 
 The tooling freshness fingerprint is separate from process snapshot fingerprints and review input fingerprints.
 It proves that a compiled tool matches the current tooling source input set.
-It must not be used as evidence that a unit, scenario, Rule, process file, or review slice is fresh.
+It must not be used as evidence that a unit, Rule, process file, or review slice is fresh.
 
-Release helper scripts under `specflow/tooling/scripts/` are default review inputs because they select release binaries for the installed tooling source.
+Tooling helper scripts under `specflow/tooling/scripts/` are default review inputs because they rebuild or select binaries for the installed tooling source.
 They are not binary freshness inputs unless they change compiled binary behavior.
 
 In plain words:

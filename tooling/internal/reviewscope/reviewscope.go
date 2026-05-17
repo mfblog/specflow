@@ -12,13 +12,14 @@ import (
 )
 
 type SpecFlowScope struct {
-	Scenario                          string
+	Profile                           string
 	FrameworkGuidelineFiles           []string
 	CommandFiles                      []string
 	CandidateIntentFiles              []string
 	GuidanceSkillFiles                []string
 	RuleGovernanceFiles               []string
 	TemplateGovernanceFiles           []string
+	TemplateProjectInstanceFiles      []string
 	TemplateEntryFiles                []string
 	ProjectEntryFiles                 []string
 	AgentOperabilityFiles             []string
@@ -34,7 +35,7 @@ type SpecFlowScope struct {
 
 func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	scope := SpecFlowScope{
-		Scenario: "default_governance_baseline",
+		Profile: "default_governance_baseline",
 	}
 
 	frameworkFiles, err := globRelative(repoRoot, "specflow/framework/*.md")
@@ -88,6 +89,10 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	templateGovernanceFiles = append(templateGovernanceFiles,
 		"specflow/templates/docs/project_standards/_registry.md",
 	)
+	templateProjectInstanceFiles := []string{
+		"specflow/templates/docs/specs/repository_mapping.md",
+		"specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
+	}
 	templateEntryFiles := []string{
 		"specflow/templates/AGENTS.md",
 		"specflow/templates/GEMINI.md",
@@ -136,6 +141,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		return scope, fmt.Errorf("default tooling source files are incomplete")
 	}
 	toolingScriptFiles := []string{
+		"specflow/tooling/scripts/build_release.sh",
 		"specflow/tooling/scripts/tooling_fingerprint.sh",
 		"specflow/tooling/scripts/tooling_fingerprint.ps1",
 	}
@@ -151,6 +157,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	required = append(required, candidateIntentFiles...)
 	required = append(required, minimumGuidanceSkillFiles...)
 	required = append(required, templateGovernanceFiles...)
+	required = append(required, templateProjectInstanceFiles...)
 	required = append(required, templateEntryFiles...)
 	required = append(required, projectEntryFiles...)
 	required = append(required, agentOperabilityFiles...)
@@ -181,6 +188,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	scope.GuidanceSkillFiles = sortAndDedupe(guidanceSkillFiles)
 	scope.RuleGovernanceFiles = ruleFiles
 	scope.TemplateGovernanceFiles = templateGovernanceFiles
+	scope.TemplateProjectInstanceFiles = templateProjectInstanceFiles
 	scope.TemplateEntryFiles = templateEntryFiles
 	scope.ProjectEntryFiles = projectEntryFiles
 	scope.AgentOperabilityFiles = agentOperabilityFiles
@@ -197,7 +205,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 
 func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 	scope := SpecFlowScope{
-		Scenario: "default_design_baseline",
+		Profile: "default_design_baseline",
 	}
 
 	commandFiles, err := globRelative(repoRoot, "specflow/framework/commands/*.md")
@@ -207,6 +215,14 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 	if len(commandFiles) == 0 {
 		return scope, fmt.Errorf("default design command files are incomplete")
 	}
+	candidateIntentStandardFiles, err := globRelative(repoRoot, "specflow/framework/candidate_intents/*.md")
+	if err != nil {
+		return scope, err
+	}
+	if len(candidateIntentStandardFiles) == 0 {
+		return scope, fmt.Errorf("default design candidate intent files are incomplete")
+	}
+	candidateIntentFiles := sortAndDedupe(append([]string{"specflow/framework/candidate_intent_policy.md"}, candidateIntentStandardFiles...))
 
 	designFoundationFiles := []string{
 		"specflow/framework/spec_flow_design_review.md",
@@ -220,9 +236,9 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/onboarding_decision_policy.md",
 		"specflow/framework/implementation_change_policy.md",
 		"specflow/framework/repository_mapping_policy.md",
-		"specflow/framework/scenario_policy.md",
 		"specflow/framework/checkpoint_protocol.md",
 	}
+	designFoundationFiles = append(designFoundationFiles, candidateIntentFiles...)
 	lifecycleContractFiles := []string{
 		"specflow/framework/candidate_handoff_contract.md",
 		"specflow/framework/downgrade_policy.md",
@@ -255,6 +271,7 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 	projectStandardPolicyFiles := []string{
 		"specflow/framework/entry_index_registry.md",
 		"specflow/framework/project_standards_policy.md",
+		"specflow/framework/output_baseline.md",
 		"specflow/framework/project_standard_create.md",
 	}
 
@@ -283,6 +300,7 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 
 	scope.FrameworkGuidelineFiles = sortAndDedupe(designFoundationFiles)
 	scope.CommandFiles = commandFiles
+	scope.CandidateIntentFiles = sortAndDedupe(candidateIntentFiles)
 	scope.TemplateGovernanceFiles = sortAndDedupe(append(lifecycleContractFiles, templateProcessStateFiles...))
 	scope.TemplateEntryFiles = templateEntryFiles
 	scope.ProjectEntryFiles = projectEntryFiles

@@ -1,191 +1,126 @@
-# Rule Sync Flow
+# Rule Sync
 
-## 1. Purpose
+`rule_sync` is the internal rule-governance flow that computes downstream unit impact after rule truth or rule binding changes.
 
-`rule_sync` is the internal rule-governance flow that resolves one question only:
+It is the rule-specific impact discovery layer. Once the affected unit set is fixed, generic fallback and cleanup are handed to `impact_sync`.
 
-1. after a `rule` change, which downstream formal objects are truly affected
+## 1. Scope
 
-It is not the generic cleanup engine.
-It is the rule-specific impact-discovery and exception-adaptation layer that runs before generic fallback execution.
+`rule_sync` may:
 
-This file answers five questions:
+1. resolve the changed or explicitly in-scope rule refs and rule ids
+2. rebuild the repository-wide rule consumer graph from current-layer unit `rule_refs`
+3. determine which current-layer units are affected by the rule change
+4. interpret rule-specific execution-local exceptions
+5. pass the fixed affected unit set and resolved exceptions to `impact_sync`
+6. use the deterministic tooling command `specflowctl rule sync-impact` after scope and exception inputs are known
 
-1. what `rule_sync` owns
-2. what it must read before it can decide scope
-3. when it must stop and return control to `rule_escape`
-4. what it passes to `impact_sync`
-5. which rule-specific exceptions it may interpret
+`rule_sync` must not:
 
-`rule_sync` is not a user-facing command.
-Users still enter rule work through natural-language routing.
-
-## 2. Scope
-
-`rule_sync` handles only rule-governance questions created by Rule change.
-
-It may:
-
-1. resolve which `rule` files changed or are explicitly in scope
-2. rebuild the repository-wide real binding set from downstream truth files
-3. determine the affected downstream command-object set for:
-   - `unit`
-   - `scenario`
-4. interpret rule-specific execution-local exceptions such as:
-   - `current_stable_landing_unit`
-   - `stable_landing_rule_refs`
-   - `retargeted_units`
-5. convert those exceptions into exception-resolved downstream impact input
-6. pass the final affected object set to `impact_sync`
-
-It does not:
-
-1. rewrite downstream truth files
-2. delete downstream process files directly
-3. update `_status.md` directly
-4. replace `impact_sync`
+1. rewrite rule truth
+2. rewrite unit truth
+3. update `docs/specs/repository_mapping.md`
+4. decide a rule boundary or topology plan
 5. replace `rule_escape`
-6. replace `docs/specs/repository_mapping.md`
+6. use `bound_objects` as consumer truth
 
-## 3. Preconditions
+## 2. Required Reads
 
-Before `rule_sync` runs:
+Before impact is computed, read:
 
-1. read `specflow/framework/spec_policy.md`
-2. read `specflow/framework/command_policy.md`
-3. read `specflow/framework/impact_sync_policy.md`
-4. read `docs/specs/repository_mapping.md`
-5. read `docs/specs/_status.md`
-6. read the current in-scope `rule` files under:
-   - `docs/specs/rules/stable/`
-   - `docs/specs/rules/candidate/`
-7. if the current task changed any current-layer truth file or binding source used to derive downstream scope, that writeback must already be present before `rule_sync` computes impact
-8. if the current task created, removed, renamed, split, merged, replaced, retired, or otherwise changed the current rule object map, the required `docs/specs/repository_mapping.md` writeback must already be present before `rule_sync` computes impact
+1. `specflow/framework/spec_policy.md`
+2. `specflow/framework/spec_writing_guide.md`
+3. `specflow/framework/command_policy.md`
+4. `specflow/framework/impact_sync_policy.md`
+5. `docs/specs/repository_mapping.md`
+6. `docs/specs/_status.md`
+7. every in-scope rule file
+8. every current-layer unit main Spec needed to rebuild the consumer graph from `rule_refs`
 
-Execution-local caller inputs may include:
+If the caller changed rule truth, unit bindings, or the rule object map, that writeback must already be present before `rule_sync` computes impact.
 
-1. `current_stable_landing_unit`
-   - use only when the same round has just landed stable truth and must not invalidate that same landing merely because the new stable rule file now exists
-   - this input declares only which stable unit may use the landing exception
-2. `stable_landing_rule_refs`
-   - use only when the caller can name the exact rule refs written by that same landing round
-   - this input is required whenever `current_stable_landing_unit` is present
-3. `retargeted_units`
-   - use only when the same stable landing round retargeted other candidate units from the old candidate Rule ref to the exact stable Rule refs listed in `stable_landing_rule_refs`
-   - the caller must select the old candidate Rule ref and the new stable Rule ref through exact `rule_refs`; `retargeted_units` must not rely on `rule_ids`
-   - each selected old candidate Rule ref must share the same `rule_id` and `rule_version` as the corresponding selected stable Rule ref
-   - every listed unit must currently be at `candidate`
-   - every listed unit must currently bind at least one exact ref from `stable_landing_rule_refs`
-   - every listed unit is included in explicit fallback scope so its current-round process files are not reused after the binding retarget
+If the rule object map changed, `docs/specs/repository_mapping.md` must already contain the intended current truth before `rule_sync` starts.
 
-`rule_sync` must not invent these inputs when the caller did not provide them.
+## 3. Consumer Source
 
-## 4. Procedure
+The only formal consumer source is current-layer unit frontmatter `rule_refs`.
 
-### 4.1 Build current rule view
+Rule files must not provide consumer truth. `bound_objects` is ignored as a consumer source and must not be reconciled.
 
-1. load the current `rule` files from repository truth
-2. record for each current file:
-   - `rule_id`
-   - `layer`
-   - `file_ref`
-   - `version_ref`
-   - current fingerprint
-   - compute `current fingerprint` only through the process snapshot fingerprint contract or deterministic specFlow tooling; manual hash output is diagnostic only
-3. fail if any Rule file records `bound_objects`
-4. verify `docs/specs/repository_mapping.md` against the in-scope rule files when the current task changed the rule object map or rule truth-path rules:
-   - every new or remaining current `rule_id` required by the current shared scope must be present in the mapping
-   - every retired rule ID resolved by the current round must no longer be listed as a current rule
-   - rule truth-path rules must still point to the resulting rule truth locations
-   - if the mapping is missing or conflicting, stop `rule_sync`, do not update the mapping here, and return control to `rule_escape`
+## 4. Execution-Local Inputs
 
-### 4.2 Rebuild Real Binding Set
+The caller may provide:
 
-1. read current object rows from `docs/specs/_status.md`
-2. rebuild the real binding set from downstream formal truth:
-   - current-layer `unit` frontmatter `rule_refs`
-   - current-layer `scenario` frontmatter `rule_refs`
-3. treat downstream `rule_refs` as the only formal source of which rule files are currently bound
-4. fail if a downstream truth file contains the formal `rule_refs` list in the body instead of frontmatter
+1. `rule_refs`
+   - exact changed or in-scope refs such as `s_b_rule_runtime_model@0.4.0`
+2. `rule_ids`
+   - changed or in-scope rule ids when exact refs are not enough by themselves
+3. `units`
+   - an optional narrowing set after at least one rule trigger is known
+4. `current_stable_landing_unit`
+   - the unit whose stable truth was written in the same round
+5. `stable_landing_rule_refs`
+   - the exact stable rule refs written by that same stable landing round
+6. `retargeted_units`
+   - candidate units retargeted in the same stable landing round from the old candidate rule ref to the listed stable rule refs
 
-### 4.3 Derive Affected Object Set
+`current_stable_landing_unit` is valid only together with `stable_landing_rule_refs`.
 
-1. include any downstream object whose current formal `rule_refs` bind:
-   - a changed rule file
-   - a changed layer of a named `rule_id`
-   - a changed rule binding introduced by the current task
-2. do not include a sibling layer only because it shares the same `rule_id`
-3. apply the dependency direction from `spec_policy.md`:
-   - `rule -> unit/scenario`
-4. if a rule change also changes the repository object map or path-ownership truth, verify that `docs/specs/repository_mapping.md` already contains the required current truth before handing off to `impact_sync`
-5. if repository mapping truth is missing, conflicts with the current shared scope, or is insufficient to determine the real binding set safely:
-   - stop `rule_sync`
-   - do not perform local fallback cleanup
-   - do not write `docs/specs/repository_mapping.md` from `rule_sync`
-   - return control to `rule_escape`
+`retargeted_units` may be used only when the caller selected exact old and new rule refs through `rule_refs`, and every retargeted unit is currently candidate.
 
-### 4.4 Interpret Rule-Specific Exceptions
+`rule_sync` must not invent execution-local inputs that the caller did not prove.
 
-`rule_sync` may apply only these rule-specific exception rules:
+## 5. Procedure
 
-1. current stable landing exception
-   - if `current_stable_landing_unit` is present, apply the exception only to the exact rule refs explicitly listed in `stable_landing_rule_refs`
-   - if any other selected shared ref still invalidates that same unit, do not suppress that invalidation
-2. same-round retargeted unit fallback
-   - if `retargeted_units` is present, validate each listed unit against `stable_landing_rule_refs`
-   - include each validated retargeted unit in explicit candidate fallback scope
-   - do not apply the current stable landing exception to any retargeted unit
+1. Load the in-scope rule files and record their exact refs.
+2. Validate that `docs/specs/repository_mapping.md` is current enough for the in-scope rule object map. If it is missing or conflicting, stop and return control to `rule_escape`.
+3. Read `_status.md` and every needed current-layer unit main Spec.
+4. Rebuild the real consumer graph from unit `rule_refs`.
+5. Derive the affected unit set:
+   - include units that currently bind a changed exact rule ref
+   - include units that currently bind a changed rule id when the change applies across that id's current relevant refs
+   - include units explicitly retargeted by a same-round stable landing
+   - do not include a sibling rule layer only because it has the same `rule_id`
+6. Apply only the proven execution-local exceptions:
+   - stable landing self-exemption for the exact `current_stable_landing_unit` and exact `stable_landing_rule_refs`
+   - explicit candidate fallback for validated `retargeted_units`
+7. Convert the final result into `impact_sync` input:
+   - final invalidating rule refs
+   - final affected candidate units
+   - final affected stable units
+   - final stable-landing exceptions
+8. Hand the fixed result to `impact_sync`.
+9. When using tooling, run `specflowctl rule sync-impact` with the exact `--rule-refs` or `--rule-ids` and any already-proven exception flags.
 
-`rule_sync` must not infer these exceptions from fingerprint difference alone.
+If repository truth is insufficient, return control to `rule_escape` without performing fallback cleanup. The caller that already mutated truth must then apply its rule-governance recovery baseline before rerouting.
 
-`rule_sync` must not use shell checksum output, editor display, conversation-derived values, or temporary scripts to decide that a Rule file changed, that a process snapshot is stale, or that downstream cleanup is required. Those values may be logged only as diagnostics after the formal rule view or process snapshot validation has supplied the authoritative input.
+## 6. Fallback Result
 
-### 4.5 Hand Off To `impact_sync`
+Affected candidate units fall back according to the reason proven by `impact_sync_policy.md`.
 
-After the affected downstream object set and exception set are fixed:
+For rule truth or binding drift, the candidate unit falls back to `unit_check`.
 
-1. convert rule-specific exceptions into already-resolved downstream impact input:
-   - final `invalidating_rule_refs`
-   - final `explicit_fallback_scope`
-   - final `allowed_shared_snapshot_mismatch_file_refs`
-2. pass that exception-resolved downstream object set to `impact_sync`
-3. let `impact_sync` perform:
-   - candidate-side process cleanup
-   - `_status.md` fallback writeback
-   - stable-side reroute to the correct verify command
+Affected stable units route to `unit_stable_verify`.
 
-`rule_sync` remains responsible for the scope and exception judgment.
-`impact_sync` remains responsible for the generic fallback execution.
-`impact_sync` must not receive raw `current_stable_landing_unit`, raw `stable_landing_rule_refs`, or raw `retargeted_units`.
+## 7. Rejection
 
-## 5. Output Contract
+`rule_sync` must reject:
 
-The output must report at least:
+1. scenario consumers
+2. scenario paths
+3. scenario commands
+4. `object-type=scenario`
+5. any attempt to use `bound_objects` as consumer truth
 
-1. which `rule` files or ids were treated as changed or in scope
-2. the affected downstream object set grouped by:
-   - `unit`
-   - `scenario`
-3. whether `docs/specs/repository_mapping.md` was current for the shared scope before impact handoff, or whether missing mapping truth caused return to `rule_escape`
-4. which execution-local shared exceptions were applied
-5. which same-round retargeted units were validated and passed to impact fallback
-6. whether control was passed to `impact_sync`
-7. whether control was returned to `rule_escape`
+## 8. Output Contract
 
-## 6. Stop Conditions
+The output must report:
 
-`rule_sync` stops only when one of these is true:
-
-1. the affected downstream object set is fully determined and passed to `impact_sync`
-2. no affected downstream object exists and all in-scope Rule files and current-layer `rule_refs` are valid
-3. repository truth is insufficient and control has been returned to `rule_escape`
-
-## 7. Non-Goals
-
-`rule_sync` does not:
-
-1. create an independent lifecycle for `rule`
-2. replace the rule-governance branch
-3. replace `impact_sync`
-4. write downstream truth files
-5. perform generic fallback execution by itself
+1. the rule refs or rule ids treated as changed or in scope
+2. the affected candidate units
+3. the affected stable units
+4. whether repository mapping truth was sufficient
+5. every execution-local exception applied
+6. every retargeted unit validated for explicit fallback
+7. whether control passed to `impact_sync`
+8. whether control returned to `rule_escape`

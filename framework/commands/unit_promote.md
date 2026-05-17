@@ -34,7 +34,7 @@ This file states only `unit_promote`-local entry, output, and stop rules.
 
 Process-file consumption for `_verify_result/unit/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for the current process kind, `snapshot validate-process --process verify` is the mandatory tool-backed validation step before treating `_verify_result/unit/{unit}.md` as consumable, reporting the promotion handoff as valid, or advancing lifecycle state.
 
-Stable acceptance summary writeback under `_verify_result/stable/unit/{unit}.md` must follow the stable summary field contract in `specflow/framework/process_snapshot_contract.md` Section 3.3. It is not validated with `snapshot validate-process` because that tooling command supports only `check`, `plan`, and `verify` process kinds.
+Stable acceptance summary writeback under `_verify_result/stable/unit/{unit}.md` must follow the stable summary field contract in `specflow/framework/process_snapshot_contract.md` Section 8. It is not validated with `snapshot validate-process` because that tooling command supports only `check`, `plan`, and `verify` process kinds.
 
 Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run `specflowctl command preflight --command unit_promote --object-type unit --object {unit}`. If command preflight is unavailable, run `snapshot validate-process --object-type unit --object {unit} --process verify` explicitly. Stable acceptance summary fingerprints must be computed under the process snapshot contract; shell checksums and manual hashes are not authoritative.
 
@@ -48,10 +48,10 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
    - if any touched candidate-layer Rule file already has a stable-layer sibling, also read that file's `promotion_owner_unit`
 7. read `specflow/framework/recovery_policy.md` before promotion
 8. if the round may create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `specflow/framework/rule_sync.md` before promotion
-9. if the unit candidate currently binds any candidate-layer Rule file, or if the round may change the layer, version, or terminal state of any touched Rule file, read `docs/specs/_status.md` and every affected unit or scenario current-layer main file needed to derive the real repository-wide binding set from `rule_refs` before file mutation starts
+9. if the unit candidate currently binds any candidate-layer Rule file, or if the round may change the layer, version, or terminal state of any touched Rule file, read `docs/specs/_status.md` and every affected unit current-layer main file needed to derive the real repository-wide binding set from `rule_refs` before file mutation starts
 10. if repository truth is insufficient to derive that real binding set safely, do not start file mutation; reroute through natural-language rule governance from current repository truth instead of guessing promotion-local topology
 11. if same-round stable landing retargeting may be required, read every candidate-layer unit main file that currently binds the landing candidate Rule ref and include those files and their current-round process files in the recovery baseline before mutation starts
-12. if deleting `docs/specs/units/candidate/c_unit_{unit}.md` may leave formal Spec references behind, scan `docs/specs/units/**` and `docs/specs/scenarios/**` before mutation starts and include every file and status row that may be mechanically retargeted in the recovery baseline
+12. if deleting `docs/specs/units/candidate/c_unit_{unit}.md` may leave formal Spec references behind, scan `docs/specs/units/**` before mutation starts and include every file and status row that may be mechanically retargeted in the recovery baseline
 13. read `specflow/framework/candidate_intent_policy.md` and the selected intent standard for the current candidate
 
 ## 4. Procedure
@@ -109,9 +109,9 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
 9. confirm that candidate `frontmatter.version` is the new `stable` version for this round
 10. if the round touches any Rule file, Rule layer/version target, or Rule terminal state, build the repository-wide real binding view for every touched shared item before deciding post-promotion topology:
    - start from `docs/specs/_status.md`
-   - read every affected unit or scenario current-layer main file needed to derive which command-target objects currently bind each touched Rule file or sibling layer through `rule_refs`
-   - interpret every unit-side and scenario-side `rule_refs` through the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1 before deriving that real binding view
-   - treat unit and scenario `rule_refs` as the formal source of the real binding set rather than `bound_objects`
+   - read every affected unit current-layer main file needed to derive which command-target objects currently bind each touched Rule file or sibling layer through `rule_refs`
+   - interpret every unit-side `rule_refs` through the Rule binding contract from `specflow/framework/spec_policy.md` before deriving that real binding view
+   - treat unit `rule_refs` as the formal source of the real binding set rather than `bound_objects`
    - if repository truth is insufficient to state the post-promotion topology safely, stop before file mutation and reroute through natural-language rule governance from current repository truth
 11. if the round touches any Rule file, Rule layer/version target, or Rule terminal state, decide for each touched shared item against that repository-wide binding view:
    - determine the post-promotion binding target for the promoted unit stable truth; a promoted stable unit must not keep binding a candidate-layer Rule file
@@ -171,7 +171,7 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
    - `release-version` is the only command allowed to retarget stable current-layer consumers; it auto-forks those consumers and rewrites only the candidate `rule_refs`
    - if a remaining touched Rule file now has one or more formal consumers after this promotion round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
 18a. before deleting the current-round candidate main file, perform promotion dependency reference retargeting:
-     - build the cross-reference scan set from existing main Spec and appendix files under `docs/specs/units/**` and `docs/specs/scenarios/**`
+     - build the cross-reference scan set from existing main Spec and appendix files under `docs/specs/units/**`
      - scan for references to the promoted candidate unit through:
        - `docs/specs/units/candidate/c_unit_{unit}.md`
        - relative paths that resolve to `docs/specs/units/candidate/c_unit_{unit}.md`, including `../candidate/c_unit_{unit}.md` and `./c_unit_{unit}.md`
@@ -182,9 +182,7 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
      - mechanical retargeting must not change behavior truth, acceptance meaning, Rule binding, ownership boundary, or any explanatory claim beyond the directly required path or version-ref wording
      - if a reference sentence depends on candidate-only meaning, such as saying the dependency is temporary, not formally accepted, or only valid while the target is candidate-layer truth, stop before deleting the candidate file and report a blocking prerequisite action with the affected file and reference text
      - if a current-layer candidate unit is retargeted, keep its candidate truth but set its next command to `unit_check`, and delete `_check_result/unit/{unit}.md`, `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and `_verify_result/unit/{unit}.md` for that retargeted unit when present
-     - if a current-layer candidate scenario is retargeted, keep its candidate truth but set its next command to `scenario_check`, and delete `_check_result/scenario/{scenario}.md` and `_verify_result/scenario/{scenario}.md` for that retargeted scenario when present
      - if a current-layer stable unit other than the promoted unit is retargeted, do not fork it and do not create candidate truth; preserve its stable state and set its next command to `unit_stable_verify`
-     - if a current-layer stable scenario is retargeted, do not fork it and do not create candidate truth; preserve its stable state and set its next command to `scenario_stable_verify`
      - if the promoted unit's own newly written stable file still contains a mechanically retargetable reference to its just-promoted candidate file, retarget that reference as part of the promoted stable landing and keep the promoted unit's successful follow-up state at `Next Command=unit_fork`
      - if a non-current-layer historical Spec file is retargeted, record the retarget but do not update `_status.md` for that object only because the historical file changed
      - record every retargeted file, every status-row update, every deleted process file, and every non-retargeted blocking reference in the output contract

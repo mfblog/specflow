@@ -124,7 +124,7 @@ Field meanings:
 5. `consumed_by`
    - which command, internal flow, or explicitly declared shared-output consumer must read it
 6. `applies_to`
-   - which units, flows, or review scenarios it applies to
+   - which units, flows, or review profiles it applies to
    - it must use one of the fixed selector forms below instead of project-invented prose
 7. `effect`
    - `tighten` or `clarify`
@@ -141,9 +141,9 @@ Fixed `applies_to` selector forms:
    - applies only to the listed formal units
    - unit names must use formal unit names from `docs/specs/_status.md`
    - no spaces are allowed inside the comma-separated list
-4. `review_scenario:<stable_name>`
-   - applies only to one command-defined review scenario name
-   - the consuming command, internal flow, or shared-output consumer must already define that scenario name formally before a registry entry may use it
+4. `review_profile:<stable_name>`
+   - applies only to one command-defined review profile name
+   - the consuming command, internal flow, or shared-output consumer must already define that profile name formally before a registry entry may use it
 
 Additional rules:
 
@@ -157,7 +157,7 @@ Additional rules:
 8. project-local standards may define project extension fields only when the consuming command explicitly allows those fields as project-side write-back
 9. project extension fields are not framework fixed fields
 10. `applies_to` is not a free-form note field
-11. if a registry entry uses an undefined selector form or an undefined scenario name, that entry is invalid governance input
+11. if a registry entry uses an undefined selector form or an undefined profile name, that entry is invalid governance input
 
 Applicable shape rule:
 

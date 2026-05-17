@@ -97,17 +97,6 @@ func ProcessKinds(objectType, command string) ([]string, error) {
 		default:
 			return nil, fmt.Errorf("command %q is not supported for object type %q", command, objectType)
 		}
-	case "scenario":
-		switch command {
-		case "scenario_new", "scenario_fork", "scenario_stable_verify", "scenario_check":
-			return nil, nil
-		case "scenario_verify":
-			return []string{"check"}, nil
-		case "scenario_promote":
-			return []string{"verify"}, nil
-		default:
-			return nil, fmt.Errorf("command %q is not supported for object type %q", command, objectType)
-		}
 	default:
 		return nil, fmt.Errorf("object type %q is not supported", objectType)
 	}
@@ -168,13 +157,6 @@ func fallbackForMissingOrUnavailableProcess(objectType, processKind string) (str
 			return "plan_layer", "unit_plan"
 		case "verify":
 			return "evidence_layer", "unit_verify"
-		}
-	case "scenario":
-		switch processKind {
-		case "check":
-			return "gate_layer", "scenario_check"
-		case "verify":
-			return "evidence_layer", "scenario_verify"
 		}
 	}
 	return "tooling_gap", "none"

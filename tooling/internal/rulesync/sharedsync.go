@@ -25,7 +25,6 @@ type Options struct {
 
 type Result struct {
 	ScopedModules                []string
-	ScopedFlows                  []string
 	ScopedRuleRefs               []string
 	ScopedRuleIDs                []string
 	StableLandingModule          string
@@ -33,12 +32,10 @@ type Result struct {
 	RetargetedUnits              []string
 	BoundObjectsOnlyRuleFileRefs []string
 	ModuleResults                []ModuleResult
-	FlowResults                  []ObjectResult
 	BoundObjectDrifts            []BoundObjectDrift
 }
 
 type ModuleResult = impactsync.ModuleResult
-type ObjectResult = impactsync.ObjectResult
 
 type BoundObjectDrift struct {
 	RuleID                string
@@ -107,12 +104,8 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	flowBindings, unresolvedFlowRefs, err := loadObjectBindings(repoRoot, "scenario")
-	if err != nil {
-		return Result{}, err
-	}
-	allUnresolvedRefs := normalizeStrings(append(unresolvedRuleRefs, unresolvedFlowRefs...))
-	referencedRuleRefs := allReferencedRuleRefs(moduleBindings, flowBindings)
+	allUnresolvedRefs := normalizeStrings(unresolvedRuleRefs)
+	referencedRuleRefs := allReferencedRuleRefs(moduleBindings)
 	for _, sharedID := range normalized.RuleIDs {
 		if len(allUnresolvedRefs) > 0 {
 			return Result{}, fmt.Errorf(
@@ -177,32 +170,19 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	removedBindingFlows, err := candidateObjectsWithRemovedSelectedBinding(repoRoot, flowBindings, normalized.RuleRefs, normalized.RuleIDs, sharedFilesByRef, sharedFilesByID)
-	if err != nil {
-		return Result{}, err
-	}
 	scopeModules, err := buildScopeModules(moduleBindings, sharedFilesByRef, sharedFilesByID, normalized, removedBindingModules)
 	if err != nil {
 		return Result{}, err
 	}
 	scopeModules = unionSortedStrings(scopeModules, normalized.RetargetedUnits)
-	scopeFlows, err := buildScopeObjects(flowBindings, sharedFilesByRef, sharedFilesByID, normalized.RuleRefs, normalized.RuleIDs, removedBindingFlows)
-	if err != nil {
-		return Result{}, err
-	}
 
 	moduleImpactScope, err := scopedModulesForImpact(scopeModules, moduleBindings, normalized, sharedFilesByRef, sharedFilesByID, boundObjectsOnlyFileRefs, removedBindingModules, retargetedUnitSet)
-	if err != nil {
-		return Result{}, err
-	}
-	flowImpactScope, err := scopedObjectsForImpact("scenario", scopeFlows, flowBindings, normalized.RuleRefs, normalized.RuleIDs, sharedFilesByRef, sharedFilesByID, boundObjectsOnlyFileRefs, removedBindingFlows)
 	if err != nil {
 		return Result{}, err
 	}
 
 	impactResult, err := impactsync.Apply(repoRoot, impactsync.Input{
 		Modules: moduleImpactScope,
-		Flows:   flowImpactScope,
 	})
 	if err != nil {
 		return Result{}, err
@@ -210,14 +190,12 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 
 	return Result{
 		ScopedModules:         scopeModules,
-		ScopedFlows:           scopeFlows,
 		ScopedRuleRefs:        normalized.RuleRefs,
 		ScopedRuleIDs:         normalized.RuleIDs,
 		StableLandingModule:   normalized.StableLandingModule,
 		StableLandingRuleRefs: normalized.StableLandingRuleRefs,
 		RetargetedUnits:       normalized.RetargetedUnits,
 		ModuleResults:         impactResult.ModuleResults,
-		FlowResults:           impactResult.FlowResults,
 	}, nil
 }
 
@@ -226,71 +204,7 @@ func ReconcileBoundModules(repoRoot string, options ReconcileBoundModulesOptions
 }
 
 func reconcileBoundModulesDeprecated(repoRoot string, options ReconcileBoundModulesOptions) (ReconcileBoundModulesResult, error) {
-	normalized := ReconcileBoundModulesOptions{
-		Modules:  normalizeStrings(options.Modules),
-		RuleRefs: normalizeStrings(options.RuleRefs),
-		RuleIDs:  normalizeStrings(options.RuleIDs),
-	}
-	if len(normalized.Modules) == 0 && len(normalized.RuleRefs) == 0 && len(normalized.RuleIDs) == 0 {
-		return ReconcileBoundModulesResult{}, fmt.Errorf("at least one of modules, rule refs, or rule ids is required")
-	}
-
-	sharedFilesByRef, err := loadSharedFiles(repoRoot)
-	if err != nil {
-		return ReconcileBoundModulesResult{}, err
-	}
-	sharedFilesByID := buildSharedFilesByID(sharedFilesByRef)
-	moduleBindings, actualModulesByRef, _, _, err := loadModuleBindings(repoRoot)
-	if err != nil {
-		return ReconcileBoundModulesResult{}, err
-	}
-	flowBindings, _, err := loadObjectBindings(repoRoot, "scenario")
-	if err != nil {
-		return ReconcileBoundModulesResult{}, err
-	}
-	for _, module := range normalized.Modules {
-		if _, ok := moduleBindings[module]; !ok {
-			return ReconcileBoundModulesResult{}, fmt.Errorf("module %q is not registered in docs/specs/_status.md", module)
-		}
-	}
-	for _, ref := range normalized.RuleRefs {
-		if _, ok := sharedFilesByRef[ref]; !ok {
-			return ReconcileBoundModulesResult{}, fmt.Errorf("rule ref %q is not present under docs/specs/rules/", ref)
-		}
-	}
-	for _, sharedID := range normalized.RuleIDs {
-		if _, ok := sharedFilesByID[sharedID]; !ok {
-			return ReconcileBoundModulesResult{}, fmt.Errorf("rule id %q is not present under docs/specs/rules/", sharedID)
-		}
-	}
-
-	touchedFiles := buildScopeSharedFiles(moduleBindings, sharedFilesByRef, sharedFilesByID, normalized)
-	result := ReconcileBoundModulesResult{
-		ScopedModules:  normalized.Modules,
-		ScopedRuleRefs: normalized.RuleRefs,
-		ScopedRuleIDs:  normalized.RuleIDs,
-		TouchedFiles:   touchedFiles,
-	}
-	actualBoundObjectsByRef, err := collectActualBoundObjectsByRef(repoRoot, actualModulesByRef, flowBindings)
-	if err != nil {
-		return ReconcileBoundModulesResult{}, err
-	}
-	sharedFilesByFileRef := buildSharedFilesByFileRef(sharedFilesByRef)
-	for _, fileRef := range touchedFiles {
-		shared := sharedFilesByFileRef[fileRef]
-		actualObjects := normalizeStrings(actualBoundObjectsByRef[shared.VersionRef])
-		if sameStringSlice(shared.BoundObjects, actualObjects) {
-			result.UnchangedFiles = append(result.UnchangedFiles, shared.FileRef)
-			continue
-		}
-		if err := rewriteSharedBoundObjects(repoRoot, shared.FileRef, actualObjects); err != nil {
-			return ReconcileBoundModulesResult{}, err
-		}
-		result.UpdatedFiles = append(result.UpdatedFiles, shared.FileRef)
-	}
-	result.UpdatedFiles = normalizeStrings(result.UpdatedFiles)
-	result.UnchangedFiles = normalizeStrings(result.UnchangedFiles)
-	return result, nil
+	return ReconcileBoundModules(repoRoot, options)
 }
 
 func collectBoundObjectDrifts(sharedFilesByRef map[string]sharedFile, actualBoundObjectsByRef map[string][]string, boundObjectsOnlyFileRefs map[string]bool) ([]BoundObjectDrift, error) {
@@ -320,7 +234,7 @@ func collectBoundObjectDrifts(sharedFilesByRef map[string]sharedFile, actualBoun
 	return drifts, nil
 }
 
-func collectActualBoundObjectsByRef(repoRoot string, actualUnitsByRef map[string][]string, flowBindings map[string]objectBinding) (map[string][]string, error) {
+func collectActualBoundObjectsByRef(repoRoot string, actualUnitsByRef map[string][]string) (map[string][]string, error) {
 	result := map[string][]string{}
 	appendTypedRefs := func(versionRef, objectType string, objects []string) {
 		for _, object := range objects {
@@ -330,15 +244,6 @@ func collectActualBoundObjectsByRef(repoRoot string, actualUnitsByRef map[string
 
 	for versionRef, units := range actualUnitsByRef {
 		appendTypedRefs(versionRef, "unit", units)
-	}
-	for object, binding := range flowBindings {
-		for _, ref := range binding.RuleRefs {
-			resolved, err := rulebinding.ResolveRef(repoRoot, binding.Status.ActiveLayer, ref)
-			if err != nil {
-				continue
-			}
-			result[resolved.VersionRef] = append(result[resolved.VersionRef], typedBoundObjectRef("scenario", object))
-		}
 	}
 	for versionRef := range result {
 		result[versionRef] = normalizeStrings(result[versionRef])
@@ -559,29 +464,6 @@ func hasSameVersionCandidateRuleRef(stable sharedFile, ruleRefs []string, shared
 	return false
 }
 
-func scopedObjectsForImpact(objectType string, scopeObjects []string, bindings map[string]objectBinding, scopedRefs, scopedIDs []string, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile, boundModulesOnlyFileRefs map[string]bool, removedBindingScope map[string]bool) ([]impactsync.ScopedObject, error) {
-	result := make([]impactsync.ScopedObject, 0, len(scopeObjects))
-	for _, object := range scopeObjects {
-		binding := bindings[object]
-		selectedRuleRefs, err := selectedRuleRefsForObject(binding.RuleRefs, scopedRefs, scopedIDs, sharedFilesByRef, sharedFilesByID)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, impactsync.ScopedObject{
-			Binding: impactsync.ObjectBinding{
-				ObjectType:    objectType,
-				Object:        binding.Status.Object,
-				ActiveLayer:   binding.Status.ActiveLayer,
-				NextCommand:   binding.Status.NextCommand,
-				BindingIssues: append([]string{}, binding.BindingIssues...),
-			},
-			ExplicitFallbackScope: removedBindingScope[object],
-			InvalidatingRuleRefs:  filterInvalidatingRuleRefs(selectedRuleRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
-		})
-	}
-	return result, nil
-}
-
 func candidateModulesWithRemovedSelectedBinding(repoRoot string, moduleBindings map[string]moduleBinding, scopedRefs, scopedIDs []string, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile) (map[string]bool, error) {
 	result := map[string]bool{}
 	for module, binding := range moduleBindings {
@@ -615,14 +497,9 @@ func candidateModulesWithRemovedSelectedBinding(repoRoot string, moduleBindings 
 	return result, nil
 }
 
-func allReferencedRuleRefs(moduleBindings map[string]moduleBinding, flowBindings map[string]objectBinding) map[string]bool {
+func allReferencedRuleRefs(moduleBindings map[string]moduleBinding) map[string]bool {
 	result := map[string]bool{}
 	for _, binding := range moduleBindings {
-		for _, ref := range binding.RuleRefs {
-			result[ref] = true
-		}
-	}
-	for _, binding := range flowBindings {
 		for _, ref := range binding.RuleRefs {
 			result[ref] = true
 		}
@@ -870,9 +747,7 @@ func normalizeTypedBoundObjectRef(raw string) (string, error) {
 	}
 	objectType = strings.TrimSpace(objectType)
 	object = strings.TrimSpace(object)
-	switch objectType {
-	case "unit", "scenario":
-	default:
+	if objectType != "unit" {
 		return "", fmt.Errorf("bound_objects item %q uses unsupported object type %q", raw, objectType)
 	}
 	if object == "" {

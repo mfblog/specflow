@@ -68,7 +68,7 @@ If you are new to `specFlow`, understand it in this order:
 
 1. first understand why it exists: requirements and behavior truth should live in the repository
 2. then complete the smallest installation path: copy `specflow/` into your project and run `init`
-3. learn the four core abstractions: `unit`, `scenario`, `rule`, and `repository_mapping`
+3. learn the three core abstractions: `unit`, `rule`, and `repository_mapping`
 4. understand the development workflow: the `stable` → `candidate` → verify → promote loop, and the standard command chain
 5. use Reader to inspect progress and object relationships
 6. use standard commands for daily work
@@ -226,20 +226,16 @@ The agent reads the installed entry files and current repository truth, then dec
 
 ## Core Concepts
 
-`specFlow` has only four formal abstractions. Everything else is built from these.
+`specFlow` has only three formal abstractions. Everything else is built from these.
 
-### The Four Abstractions
+### The Three Abstractions
 
 `unit` is one independently describable, implementable, and verifiable engineering responsibility.
-It is the smallest governed object. A unit owns its own behavior truth, implementation planning, and implementation work.
+It is the only standard lifecycle object. A unit owns its own behavior truth, implementation planning, implementation work, and verification. A unit can describe a local capability or a complete user-result chain.
 It does not automatically equal a directory, package, or service.
 
-`scenario` is one end-to-end trigger-to-outcome chain.
-When the question is whether a user-visible path works from entry point to final result — crossing multiple units — a scenario is needed.
-A scenario owns chain truth and end-to-end verification. It does not own implementation planning.
-
 `rule` is one formally reusable rule shared across objects.
-It comes in two scopes: global (`g_`) rules apply repository-wide; bound (`b_`) rules apply only to the units or scenarios that explicitly reference them.
+It comes in two scopes: global (`g_`) rules apply repository-wide; bound (`b_`) rules apply only to the units that explicitly reference them through `rule_refs`.
 A rule is not a command target — users enter rule work through natural language, and the agent routes to the correct internal rule-governance flow.
 
 `repository_mapping` is the repository structure truth file (`docs/specs/repository_mapping.md`).
@@ -248,7 +244,7 @@ It is not a command target and does not use the `stable`/`candidate` layer model
 
 ### Layers: stable and candidate
 
-`stable` and `candidate` are not standalone concepts. They are the two layers a `unit`, `scenario`, or `rule` can be in.
+`stable` and `candidate` are not standalone concepts. They are the two layers a `unit` or `rule` can be in.
 
 `stable` is the currently accepted truth. If the project officially accepts a behavior, the matching `stable` file says so.
 
@@ -257,13 +253,13 @@ It is not a command target and does not use the `stable`/`candidate` layer model
 ### State Index
 
 `_status.md` is the state index (`docs/specs/_status.md`).
-It records each `unit` and `scenario` object's current layer and next legal command. It does not contain behavior rules.
+It records each `unit` object's current layer and next legal command. It does not contain behavior rules.
 
 ### The Smallest Model
 
 ```mermaid
 flowchart LR
-    A["A. unit/scenario/rule in stable"] --> B["B. unit/scenario/rule in candidate"]
+    A["A. unit/rule in stable"] --> B["B. unit/rule in candidate"]
     B --> C["C. implementation and verification"]
     C --> D["D. promote into new stable"]
     D --> A
@@ -315,12 +311,6 @@ How to read this:
 
 For a brand-new unit that has never had stable truth, the chain starts at `unit_new` instead of `unit_fork`.
 
-For a `scenario`, the chain is similar but excludes implementation planning:
-
-```text
-scenario_new → scenario_stable_verify → scenario_fork → scenario_check → scenario_verify → scenario_promote
-```
-
 ### Standard Commands At a Glance
 
 | Situation | Command |
@@ -335,13 +325,11 @@ scenario_new → scenario_stable_verify → scenario_fork → scenario_check →
 | Promote candidate to new stable | `unit_promote:{unit}` |
 | Check whether implementation still matches stable truth | `unit_stable_verify:{unit}` |
 
-The scenario equivalents follow the same shape: `scenario_new`, `scenario_fork`, `scenario_check`, `scenario_verify`, `scenario_promote`, `scenario_stable_verify`.
-
 ### Your Role
 
 As a user, your main responsibilities are:
 
-1. **Maintain spec documents** — write and update the behavior truth in `docs/specs/units/` (for units) and `docs/specs/scenarios/` (for scenarios). These are the source of truth that commands consume.
+1. **Maintain spec documents** — write and update the behavior truth in `docs/specs/units/`. These are the source of truth that commands consume.
 2. **Drive the lifecycle** — issue the right command at the right stage. Use `_status.md` and Reader to know the current stage and next legal command.
 3. **Judge acceptance** — confirm that candidate truth is correct before promotion, and that verification results match your expectations.
 
@@ -468,7 +456,7 @@ cd specflow/tooling/bin
 
 Reader answers questions like:
 
-- which `unit`, `scenario`, and `rule` objects exist now
+- which `unit` and `rule` objects exist now
 - which objects already have accepted truth and which are preparing next truth
 - what each object's next step is
 - how Spec documents, rules, and implementation paths connect
@@ -503,7 +491,7 @@ The usual workflow is:
 
 In daily work, you will mostly use the standard `unit` commands shown in [Development Workflow](#development-workflow).
 
-The command form is `{command}:{unit}` or `{command}:{scenario}`. For example: `unit_check:payment`, `scenario_verify:checkout_flow`.
+The command form is `{command}:{unit}`. For example: `unit_check:payment`.
 
 ### Choosing the Right Entry Point
 
@@ -649,7 +637,7 @@ It must not change business truth or implementation code.
 
 ### Advanced Flows
 
-Beyond unit and scenario commands, `specFlow` has governance-oriented flows.
+Beyond unit commands, `specFlow` has governance-oriented flows.
 
 The most common ones are:
 

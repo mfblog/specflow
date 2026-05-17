@@ -1,250 +1,133 @@
 # Spec Writing Guide
 
-## 1. Purpose
+This guide defines the writing contract for specFlow delivery documents.
 
-This file defines the writing rules for `specFlow` spec documents in this repository.
+Files under `specflow/` are framework and delivery documents and are written in English.
 
-It answers five questions:
+Files under `docs/` are project communication documents and are written in Chinese unless a specific delivery artifact requires otherwise.
 
-1. how spec files must be named and where they live
-2. which frontmatter fields each object type must record
-3. what format acceptance criteria must follow
-4. how explanatory and normative content must be organized
-5. how this guide relates to other framework governance files
+## 1. Formal Spec Paths
 
-This file is a framework baseline.
-Its rules apply automatically to every spec writer and every command that checks spec content.
-Project-level standards may tighten these rules through the registered project standards mechanism defined by `project_standards_policy.md`.
+Unit main Specs:
 
----
-
-## 2. Core Principle
-
-A spec document must be:
-
-1. **directly verifiable** — every acceptance item must have a pass condition that can be checked without relying on unwritten context
-2. **self-contained in structure** — the required fields (id, target, verification surface, implementation surface, verification method, pass condition) must each be explicitly recorded; the reader should not need to infer them from prose
-3. **clearly separated by content type** — explanatory narrative and normative constraints must live in distinct subsections so writers and checkers can distinguish design rationale from fixed rules
-
----
-
-## 3. File Naming and Location
-
-Spec file paths follow fixed templates defined by `specflow/framework/spec_policy.md` Section 3.
-
-Summary for writers:
-
-| Object | Layer | Path template |
-|--------|-------|---------------|
+| kind | layer | path |
+|---|---|---|
 | unit | stable | `docs/specs/units/stable/s_unit_{id}.md` |
 | unit | candidate | `docs/specs/units/candidate/c_unit_{id}.md` |
-| scenario | stable | `docs/specs/scenarios/stable/s_scenario_{id}.md` |
-| scenario | candidate | `docs/specs/scenarios/candidate/c_scenario_{id}.md` |
-| rule | stable | `docs/specs/rules/stable/*.md` |
-| rule | candidate | `docs/specs/rules/candidate/*.md` |
-| repository_mapping | current | `docs/specs/repository_mapping.md` |
-| _status.md | current | `docs/specs/_status.md` |
 
-Detailed rules for object identity recording, file name prefixes, typed refs, and truth path resolution are governed by `specflow/framework/spec_policy.md` Section 3 and must be resolved from that file.
+Rule Specs:
 
----
+| kind | layer | path |
+|---|---|---|
+| rule | stable | `docs/specs/rules/stable/s_{g_or_b}_rule_{id}.md` |
+| rule | candidate | `docs/specs/rules/candidate/c_{g_or_b}_rule_{id}.md` |
 
-## 4. Required Fields by Object Type
+`docs/specs/scenarios/**` is not a supported formal Spec path.
 
-### 4.1 `unit`
+## 2. Unit Frontmatter
 
-Each current-layer unit truth must record these frontmatter fields:
+Each unit main Spec must include these fields:
 
-1. `version`
-2. `rule_refs`
-
-Each candidate-layer unit main file must additionally record these frontmatter fields:
-
-1. `candidate_intent`
-2. `source_basis`
-3. `evidence_appendix_ref`
-
-For unit candidates:
-
-1. `candidate_intent` must be `repair` or `change` according to `specflow/framework/candidate_intent_policy.md`
-2. when `candidate_intent=repair`, the file must also record `repair_basis`
-3. when `candidate_intent=change`, the file must not record `repair_basis`
-4. `source_basis` and `evidence_appendix_ref` keep their source-selection meaning and must not be used to express repair or change intent
-
-`unit` does not formally record `scenario_refs`.
-
-### 4.2 `scenario`
-
-Each current-layer scenario truth must record:
-
-1. `repository_mapping_ref`
-2. `unit_refs`
-3. frontmatter `rule_refs`
-
-Each candidate-layer scenario main file must additionally record these frontmatter fields:
-
-1. `source_basis`
-2. `evidence_appendix_ref`
-
-### 4.3 `repository_mapping`
-
-`repository_mapping` must record:
-
-1. current `unit` IDs
-2. current `scenario` IDs, or `none`
-3. current `rule` IDs
-
-This is repository-structure truth, not lifecycle binding metadata for a command-target object.
-
-### 4.4 `rule`
-
-Each current-layer rule file must record:
-
-1. `rule_id`
-2. `rule_scope`
-   - `global`
-   - `bound`
-3. `layer`
-4. `rule_version`
-
-Rule files may also carry conditional fields (`promotion_owner_unit`, intentional-unbound retention fields) when governance rules require them. Those rules are defined by `specflow/framework/spec_policy.md`.
-
-Rule files must not record `bound_objects`. Tooling derives consumer lists by scanning current-layer `unit` and `scenario` frontmatter `rule_refs`.
-
-### 4.5 Appendix Files
-
-Appendix files are supporting truth for the main Spec that explicitly references them.
-
-Each appendix file must record the owner and layer fields needed to prove that relationship:
-
-1. `unit` or `scenario`
-2. `layer`
-
-Appendix files may record additional appendix-specific metadata.
-Appendix-specific metadata must not duplicate the main Spec version or replace the owner and layer relationship.
-Appendix files must not record `spec_version_ref`.
-The main Spec version is recorded by the main Spec itself and by process snapshot fields when a gate or active plan binds the current truth.
-
----
-
-## 5. Testability / Acceptance Criteria Contract
-
-Each current-layer `unit` and `scenario` main Spec must include a `Testability / Acceptance Criteria` section, or an explicitly equivalent acceptance section title.
-
-This section is not a prose-only result description.
-It is the formal list of verifiable acceptance items that downstream `check`, `plan`, `verify`, `stable_verify`, and `promote` commands must consume.
-
-Each acceptance item must record these fields:
-
-1. `id`
-   - a stable, object-local identifier
-   - examples: `ai.model_provider_public_port`, `runtime.task_dispatch_integration`
-2. `target`
-   - the exact behavior, protocol, boundary, event, storage effect, or external outcome being accepted
-3. `verification_surface`
-   - exactly one value from the fixed list below
-4. `implementation_surface`
-   - the concrete package, path set, entrypoint, storage surface, event surface, or manual effect surface that must satisfy the item
-5. `verification_method`
-   - the command, test, inspection, fixture, external-consumer stub, or manual observation that can prove the item
-6. `pass_condition`
-   - the concrete observed condition required for this item to pass
-
-The first-version fixed `verification_surface` values are:
-
-1. `public_api`
-2. `internal_flow`
-3. `error_handling`
-4. `eventing`
-5. `storage`
-6. `integration`
-7. `manual_effect`
-
-### Runnable-state rules
-
-1. If an acceptance item cannot be verified in the current repository state, the item must explicitly record `not_runnable_yet` and a non-empty reason.
-2. `not_runnable_yet` never counts as `pass`.
-3. A command must not silently treat missing test harnesses, missing runtime entrypoints, or unavailable external effects as passed acceptance.
-4. `not_runnable_yet` may be used only to avoid making a false pass claim. It does not allow implementation or verification to claim the underlying behavior is complete.
-
-### Surface-specific rules
-
-1. For `verification_surface=public_api`:
-   - `implementation_surface` must name the public package, file, or exported contract surface
-   - `verification_method` must describe an external-consumer style check
-   - `pass_condition` must state that the consumer can satisfy the contract without importing `internal` packages
-2. For `verification_surface=integration`:
-   - the item must name the runnable integration entrypoint or chain
-   - if no such entrypoint exists yet, the item must be marked `not_runnable_yet` with the missing entrypoint reason
-   - a broad integration claim must not be counted as accepted only because unit-local pieces pass
-3. For `verification_surface=manual_effect`:
-   - `verification_method` must name the exact human-observable effect and the observation procedure
-   - commands may use `human_verify` only when the remaining uncertainty is truly effect judgment rather than missing executable evidence
-
-### Acceptance item writing rules
-
-1. Do not infer acceptance items from words such as "must", "only", "external", or "replaceable".
-2. If a requirement is important enough to block planning, implementation, verification, or promotion, it must appear as an explicit acceptance item.
-3. A vague item such as "works", "aligns with design", "is replaceable", or "supports integration" is not sufficient unless the required fields make it directly verifiable.
-4. By default, every acceptance item is a current gate item that downstream commands must close.
-5. An item is outside the current pass claim only when it explicitly records `not_runnable_yet`, gives the reason, and its `pass_condition` states that it is not a current pass claim.
-6. Commands must not infer "key" or "non-key" status from wording, position, length, or apparent importance.
-7. Historical stable Specs are not required to be rewritten immediately only because this contract was introduced. They must be brought into this format the next time the object enters `unit_stable_verify`, `scenario` verification, or a fork that touches the acceptance section.
-
-### Example item shapes
-
-```md
-- id: ai.model_provider_public_port
-  target: External model adapters can implement the AI model provider contract without importing internal packages.
-  verification_surface: public_api
-  implementation_surface: AgentCore/contracts/model*.go; AgentCore/ports/model_provider.go
-  verification_method: External-consumer style compile test with a stub provider that imports only contracts and ports.
-  pass_condition: The stub implements ModelProvider and StreamingModelProvider using only public contracts/ports types and no internal import path.
+```yaml
+id: {unit}
+layer: stable|candidate
+version: x.y.z
+unit_refs: none
+rule_refs: none
 ```
 
-```md
-- id: runtime.task_dispatch_integration
-  target: Runtime dispatch reaches the task execution scenario entrypoint.
-  verification_surface: integration
-  implementation_surface: Runtime trigger-to-outcome entrypoint
-  verification_method: not_runnable_yet
-  not_runnable_yet_reason: The repository does not yet expose a complete runtime entrypoint for this chain.
-  pass_condition: Not a current pass claim; it becomes runnable only after the runtime entrypoint exists.
+`unit_refs` may also be a YAML list of stable unit refs:
+
+```yaml
+unit_refs:
+  - s_unit_agent@0.6.0
 ```
 
----
+`rule_refs` may also be a YAML list of exact rule refs:
 
-## 6. Section Content Organization
+```yaml
+rule_refs:
+  - s_b_rule_example@1.0.0
+```
 
-This rule applies to candidate-layer files: `unit` main Specs and appendix files, `scenario` main Specs and appendix files, and `rule` candidate files.
+Candidate unit Specs must also record the candidate source fields required by the active unit command, such as `candidate_intent`, `source_basis`, `repair_basis`, and `evidence_appendix_ref` when that command requires them.
 
-1. Within each section that contains both explanatory content (design rationale, mechanism description, workflow narrative) and normative content (constraints, rules, fixed protocol semantics), these must be separated at the subsection level.
-2. Normative content must appear under a clearly marked subheading such as `Fixed Rules` or `约束规则`.
-3. Explanatory narrative paragraphs must not embed "must/must not/fixed rules" normative language within the same paragraph or adjacent unseparated paragraphs.
-4. The following sections are exempt from this rule:
-   - `Terminology` — already uses a structured table format.
-   - `Rule Alignment` — already uses a structured reference list format.
-   - `Testability / Acceptance Criteria` — already uses a structured acceptance item contract under Section 5 of this guide.
-5. This rule does not apply to stable-layer files. Stable-layer truth files follow the existing stable content conventions.
+## 3. Unit Dependencies
 
----
+`unit_refs` means the current unit depends on the referenced stable unit's formal behavior.
 
-## 7. Relationship to Other Framework Documents
+It does not mean:
 
-1. The formal object identity rules, file path templates, truth path resolution, binding contracts, version semantics, process file rules, and governance lifecycle rules are defined by `specflow/framework/spec_policy.md`.
-2. The required frontmatter field `rule_refs` must follow the Rule binding contract defined by `specflow/framework/spec_policy.md` Section 6.1.
-3. Unit candidate intent fields follow `specflow/framework/candidate_intent_policy.md`; this guide records the required field shape, while that policy owns intent-specific command standards.
-4. Commands that check spec content (`unit_check`, `scenario_check`, `rule_new`, and verify commands) read this file as the baseline for spec writing rules.
-5. Project-level writing standards may tighten these rules through the registered project standards mechanism defined by `project_standards_policy.md`.
+1. the current unit may edit the referenced unit
+2. the referenced unit is part of the current unit's ownership
+3. the dependency can point to a candidate unit
 
----
+If the body says the unit relies on another unit's official behavior, `unit_refs` must list that stable unit ref.
 
-## 8. Non-Goals
+## 4. Rule References
 
-This file does not:
+`rule_refs` is the only formal consumer binding for rules.
 
-1. define formal object identity, file path templates, or truth path resolution — those are governed by `spec_policy.md`
-2. define binding contracts, version semantics, or process file rules — those are governed by `spec_policy.md`
-3. define command lifecycle or governance rules — those are governed by the command policy files under `specflow/framework/commands/`
-4. replace `spec_policy.md` as the formal governance source for object families, reading rules, or invalidation
-5. create a new command-target lifecycle object or a new governance flow entry
+Rules:
+
+1. `rule_refs` must be in frontmatter
+2. no formal `rule_refs` list should be duplicated in the body
+3. refs must use exact layer and version
+4. refs must be sorted lexically when written as a list
+5. `rule_refs: none` means the unit binds no rule
+
+Rule files must not record consumer truth through `bound_objects`.
+
+## 5. Rule Frontmatter
+
+Each rule Spec must include:
+
+```yaml
+rule_id: {rule}
+rule_scope: global|bound
+layer: stable|candidate
+rule_version: x.y.z
+```
+
+`promotion_owner_unit` may be present when one unit owns the promotion decision.
+
+## 6. Acceptance Criteria
+
+Each current-layer unit main Spec must include a `Testability / Acceptance Criteria` section or an explicitly equivalent acceptance section.
+
+The section must include structured acceptance items:
+
+```yaml
+acceptance_item_set:
+  - id: demo.core
+    target: Demo behavior is accepted.
+    verification_surface: internal_flow
+    implementation_surface: AgentCore/internal/demo
+    verification_method: Go test for demo behavior.
+    pass_condition: Demo behavior passes the declared checks.
+    not_runnable_yet: no
+```
+
+The acceptance item ids are used by process evidence. Changing ids invalidates existing process files.
+
+## 7. Appendix Files
+
+Appendix files are support truth for one unit.
+
+They do not replace the unit main Spec.
+
+Appendix files must be explicitly linked from the current-layer unit main Spec or named by the relevant frontmatter field.
+
+## 8. Process Snapshots
+
+Process files may include:
+
+1. `unit_appendix_snapshot`
+2. `unit_snapshot`
+3. `rule_snapshot`
+
+`unit_snapshot` records resolved stable unit dependencies from `unit_refs`.
+
+`rule_snapshot` records resolved rule dependencies from `rule_refs`.
+
+Snapshots prove what one command reviewed. They do not create or replace formal truth.

@@ -38,14 +38,14 @@ This file states only `unit_new`-local entry, output, and stop rules.
 4. the goal is future design first, not capturing current truth first
 5. read `specflow/framework/repository_mapping_policy.md`
 6. read `docs/specs/repository_mapping.md`
-7. confirm the target unit is not already present in `Object Registry` and does not conflict with any current `unit`, `scenario`, `rule`, support-surface, or ignore rule
+7. confirm the target unit is not already present in `Object Registry` and does not conflict with any current `unit`, `rule`, support-surface, or ignore rule
 8. read `specflow/framework/onboarding_decision_policy.md` and decide the first candidate's `source_basis` and `evidence_appendix_ref`
 9. read `specflow/framework/candidate_intent_policy.md`; first candidates use `candidate_intent=change`
 10. if the first candidate uses `source_basis=existing_implementation` or `source_basis=mixed`, prepare the required evidence appendix in the same round
 11. if the first candidate depends on rule truth that is not yet formalized as `rule`, or if the shared/unit boundary is still unstable, do not start `unit_new`; resolve that rule truth through natural-language rule governance first
 12. if the first candidate reuses already-existing rule truth, read the relevant `rule` files before writing `rule_refs`
 13. if the round will create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `rule_sync.md`
-14. if the round may remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit or scenario main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
+14. if the round may remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
 
 ## 4. Procedure
 
@@ -56,7 +56,8 @@ This file states only `unit_new`-local entry, output, and stop rules.
 3. define the new unit's goals, boundaries, protocols, and main flow
 4. prepare the `docs/specs/repository_mapping.md` writeback for the new unit before candidate or `_status.md` mutation:
    - add or update one `Object Registry` row for the target unit
-   - set `kind=unit`, `id={unit}`, `scope=capability`, and the one-line responsibility
+   - set `kind=unit`, `id={unit}`, and the one-line `responsibility`
+   - do not write `scope`; `scope` is not an Object Registry column
    - set `spec_files=docs/specs/units/candidate/c_unit_{unit}.md` after the candidate file is created in this same round
    - set `registration_state=landed` only when concrete implementation paths are declared
    - if no implementation path is declared yet, set `registration_state=planned` and `implementation_paths=none`
@@ -67,15 +68,15 @@ This file states only `unit_new`-local entry, output, and stop rules.
 7. initialize `frontmatter.candidate_intent=change`
 8. initialize `frontmatter.source_basis` and `frontmatter.evidence_appendix_ref` according to `onboarding_decision_policy.md`
 9. if `source_basis=existing_implementation` or `source_basis=mixed`, create the evidence appendix named by `evidence_appendix_ref`; if `source_basis=new_design` or `source_basis=replacement`, write `evidence_appendix_ref=none`
-10. ensure the file covers the core sections of a formal Spec, including `Testability / Acceptance Criteria` with explicit acceptance items that satisfy `spec_writing_guide.md` Section 5
+10. ensure the file covers the core sections of a formal Spec, including `Testability / Acceptance Criteria` with explicit acceptance items that satisfy `spec_writing_guide.md` Section 6
 11. initialize `Rule Alignment`:
    - write `rule_refs=none` only when the first candidate does not yet reuse rule truth
-   - if the first candidate already reuses existing rule truth, write the explicit `rule_refs` set using the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1 and explain that reuse in the candidate body in the same round
+   - if the first candidate already reuses existing rule truth, write the explicit `rule_refs` set according to the Rule References contract in `specflow/framework/spec_writing_guide.md` Section 4 and explain that reuse in the candidate body in the same round
    - `rule_reuse_summary`
    - `rule_exceptions`
 12. write the prepared `docs/specs/repository_mapping.md` update in the same round as the candidate writeback
 13. if the round changed Rule bindings or touched Rule files:
-   - derive the real repository-wide binding set of each touched Rule from current-layer unit and scenario `rule_refs` plus this round's prepared target-unit candidate writeback
+   - derive the real repository-wide binding set of each touched Rule from current-layer unit `rule_refs` plus this round's prepared target-unit candidate writeback
    - if current repository truth is insufficient to derive that touched real binding set safely, stop and reroute through natural-language rule governance from current repository truth instead of guessing
    - do not write consumer metadata into touched Rule files; every touched Rule file must omit `bound_objects` after this writeback
    - if a touched Rule file now has one or more formal bound units after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round

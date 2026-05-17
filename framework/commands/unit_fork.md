@@ -31,7 +31,7 @@ This file states only `unit_fork`-local entry, output, and stop rules.
 5. read any stable appendix files explicitly referenced by `s_unit_{unit}.md`
 6. read bound stable Rule files if `rule_refs` is not empty
 7. if the round will create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `rule_sync.md`
-8. if the round may remove, retarget, or otherwise change an existing Rule binding, read every current-layer unit or scenario main file needed to derive the real binding set of each touched Rule from `rule_refs`
+8. if the round may remove, retarget, or otherwise change an existing Rule binding, read every current-layer unit main file needed to derive the real binding set of each touched Rule from `rule_refs`
 9. read `specflow/framework/onboarding_decision_policy.md` for stable-fork candidate source handling
 10. read `specflow/framework/candidate_intent_policy.md`; after selecting the target `candidate_intent`, read the selected intent standard named by that policy
 
@@ -46,7 +46,7 @@ This file states only `unit_fork`-local entry, output, and stop rules.
    - use `repair` only when the previous `unit_stable_verify` result requires a controlled candidate round to restore current stable truth
    - use `change` when the previous `unit_stable_verify` result says the stable truth, protocol, boundary, or acceptance standard itself must change
    - stop before candidate writeback if the intent cannot be determined from `_status.md`, the prior stable verification conclusion, or the current user-entered command context
-6. apply the stable-fork candidate source rule from `specflow/framework/onboarding_decision_policy.md` Section 6.1 together with the selected intent standard
+6. apply the stable-fork candidate source rule from `specflow/framework/onboarding_decision_policy.md` together with the selected intent standard
    - if the fork uses only stable formal truth plus the current round's selected design changes, prepare `source_basis=new_design` and `evidence_appendix_ref=none`
    - if the fork selects behavior from implementation, tests, runtime behavior, historical material, or other non-stable evidence, prepare the required `source_basis`, `evidence_appendix_ref`, and candidate evidence appendix in the same round
    - if that source decision or evidence appendix is not ready, stop before writing the candidate main Spec
@@ -64,18 +64,18 @@ This file states only `unit_fork`-local entry, output, and stop rules.
    - retarget copied appendix markdown links and direct same-unit main or appendix path literals that point to the stable main Spec or copied same-unit stable appendices so they point to the candidate main Spec or copied candidate appendices
    - do not leave the candidate main Spec dependent on a stable-layer appendix as current-layer supporting truth
 9. set candidate `frontmatter.version` to that target version
-10. ensure the candidate `Testability / Acceptance Criteria` section uses explicit acceptance items that satisfy `spec_writing_guide.md` Section 5
+10. ensure the candidate `Testability / Acceptance Criteria` section uses explicit acceptance items that satisfy `spec_writing_guide.md` Section 6
    - if the stable source already has structured acceptance items, carry them forward and edit only the items affected by the new round
    - if the stable source still has historical prose-only acceptance text, convert the relevant current acceptance scope into explicit items in the candidate instead of preserving the ambiguity
 11. re-check `rule_refs`:
-   - interpret and rewrite that field using the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1
+   - interpret and rewrite that field according to the Rule References contract in `specflow/framework/spec_writing_guide.md` Section 4
    - judge Rule bindings independently from whether `s_g_rule_repository_baseline.md` exists
    - if the stable layer depended on rule files and the candidate still depends on the same unchanged rule truth, keep binding those existing rule files in the candidate
    - create or bind candidate-layer rule files only when the current round changes the rule truth itself
    - write `rule_refs=none` only when the current round no longer reuses rule truth
    - do not write `rule_refs=none` merely because a rule-truth change for this round has not yet been formalized
 12. if Step 11 removes or retargets any existing Rule binding:
-   - derive the real repository-wide binding set of each touched Rule from current-layer unit and scenario `rule_refs` plus the target unit candidate writeback prepared in Step 11
+   - derive the real repository-wide binding set of each touched Rule from current-layer unit `rule_refs` plus the target unit candidate writeback prepared in Step 11
    - if repository truth is insufficient to decide whether any touched Rule file would become unbound after this round, stop and reroute through natural-language rule governance from current repository truth instead of leaving cleanup ownership implicit
 13. if the round changed rule bindings or rule files, resolve Rule terminal state in the same round:
    - if a touched Rule file would have no formal bound units after this round, in the same round either delete it when cleanup is legal under `spec_policy.md` or explicitly keep it as independently authored rule truth by writing that file with:

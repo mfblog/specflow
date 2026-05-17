@@ -190,10 +190,8 @@ func TestApplyObjectFallbackForUnitPlanLayer(t *testing.T) {
 	}
 }
 
-func TestApplyObjectFallbackForScenarioDependencyReadinessKeepsProcessFiles(t *testing.T) {
+func TestApplyObjectFallbackRejectsScenario(t *testing.T) {
 	repoRoot := t.TempDir()
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/scenario"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/scenario"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 
 	status := strings.Join([]string{
@@ -206,30 +204,10 @@ func TestApplyObjectFallbackForScenarioDependencyReadinessKeepsProcessFiles(t *t
 		"| `scenario` | `checkout` | `no` | `yes` | `candidate` | `scenario_promote` | note |",
 	}, "\n") + "\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
-	for _, relPath := range []string{
-		"docs/specs/_check_result/scenario/checkout.md",
-		"docs/specs/_verify_result/scenario/checkout.md",
-	} {
-		mustWriteFile(t, filepath.Join(repoRoot, relPath), relPath)
-	}
 
-	result, err := ApplyObjectFallback(repoRoot, "scenario", "checkout", "scenario_promote", "stable_dependency_not_ready", "dependency_readiness_layer")
-	if err != nil {
-		t.Fatalf("ApplyObjectFallback: %v", err)
-	}
-	if result.NextCommand != "scenario_promote" {
-		t.Fatalf("expected next command scenario_promote, got %s", result.NextCommand)
-	}
-	if len(result.DeletedFiles) != 0 {
-		t.Fatalf("expected no deleted files, got %v", result.DeletedFiles)
-	}
-	for _, relPath := range []string{
-		"docs/specs/_check_result/scenario/checkout.md",
-		"docs/specs/_verify_result/scenario/checkout.md",
-	} {
-		if _, err := os.Stat(filepath.Join(repoRoot, relPath)); err != nil {
-			t.Fatalf("expected %s to remain, stat err=%v", relPath, err)
-		}
+	_, err := ApplyObjectFallback(repoRoot, "scenario", "checkout", "scenario_promote", "stable_dependency_not_ready", "dependency_readiness_layer")
+	if err == nil || !strings.Contains(err.Error(), "object type \"scenario\" is not supported; only unit is supported") {
+		t.Fatalf("expected scenario rejection, got %v", err)
 	}
 }
 

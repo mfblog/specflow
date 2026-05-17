@@ -38,7 +38,6 @@ That default scope includes:
    - `onboarding_decision_policy.md`
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
-   - `scenario_policy.md`
    - `spec_writing_guide.md`
    - `candidate_intent_policy.md`
    - `candidate_intents/`
@@ -66,6 +65,7 @@ That default scope includes:
    - `specflow/templates/CLAUDE.md`
    - `entry_index_registry.md`
    - `project_standards_policy.md`
+   - `output_baseline.md`
    - `project_standard_create.md`
    - `docs/project_standards/_registry.md`
    - the active registered project-local standards in scope
@@ -102,7 +102,6 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `onboarding_decision_policy.md`
    - `implementation_change_policy.md`
    - `repository_mapping_policy.md`
-   - `scenario_policy.md`
    - `spec_writing_guide.md`
    - `candidate_intent_policy.md`
    - `candidate_intents/`
@@ -129,6 +128,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
 3. `human_operability_and_extension`
    - `entry_index_registry.md`
    - `project_standards_policy.md`
+   - `output_baseline.md`
    - `project_standard_create.md`
    - `docs/project_standards/_registry.md`
    - the active registered project-local standards in scope

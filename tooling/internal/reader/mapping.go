@@ -6,11 +6,10 @@ import (
 	"strings"
 )
 
-const registryHeader = "kind|id|scope|registration_state|implementation_paths|spec_files|responsibility"
+const registryHeader = "kind|id|registration_state|implementation_paths|spec_files|responsibility"
 
 type repositoryMapping struct {
 	Units       map[string]mappingUnit
-	Scenarios   map[string]mappingScenario
 	Rules       map[string]mappingShared
 	GlobalRules map[string]mappingShared
 	Registry    map[string]mappingRegistryEntry
@@ -21,7 +20,6 @@ type repositoryMapping struct {
 type mappingRegistryEntry struct {
 	Kind                string
 	ID                  string
-	Scope               string
 	RegistrationState   string
 	ImplementationPaths []SourceRef
 	SpecFiles           []SourceRef
@@ -45,12 +43,6 @@ type mappingUnit struct {
 	Source              SourceRef
 }
 
-type mappingScenario struct {
-	ID             string
-	Responsibility string
-	Source         SourceRef
-}
-
 type mappingShared struct {
 	ID             string
 	Responsibility string
@@ -64,7 +56,6 @@ func loadRepositoryMapping(repoRoot string) repositoryMapping {
 	data, err := os.ReadFile(path)
 	result := repositoryMapping{
 		Units:       map[string]mappingUnit{},
-		Scenarios:   map[string]mappingScenario{},
 		Rules:       map[string]mappingShared{},
 		GlobalRules: map[string]mappingShared{},
 		Registry:    map[string]mappingRegistryEntry{},
@@ -103,7 +94,7 @@ func loadRepositoryMapping(repoRoot string) repositoryMapping {
 			if normalizeHeader(cells) != registryHeader {
 				result.InvalidRows = append(result.InvalidRows, mappingInvalidRow{
 					ID:      "header",
-					Message: "Object Registry header must be: | kind | id | scope | registration_state | implementation_paths | spec_files | responsibility |",
+					Message: "Object Registry header must be: | kind | id | registration_state | implementation_paths | spec_files | responsibility |",
 					Source:  SourceRef{Path: relPath, Line: idx + 1, Label: "Object Registry"},
 				})
 				result.Diagnostics = append(result.Diagnostics, Diagnostic{
@@ -151,32 +142,26 @@ func loadRepositoryMapping(repoRoot string) repositoryMapping {
 
 func parseRegistryEntry(cells []string, source SourceRef) mappingRegistryEntry {
 	entry := mappingRegistryEntry{Source: source}
-	if len(cells) != 7 {
+	if len(cells) != 6 {
 		entry.Invalid = true
-		entry.InvalidReason = "invalid Object Registry row: expected 7 columns"
+		entry.InvalidReason = "invalid Object Registry row: expected 6 columns"
 		return entry
 	}
 	entry.Kind = cleanRegistryCell(cells[0])
 	entry.ID = cleanRegistryCell(cells[1])
-	entry.Scope = cleanRegistryCell(cells[2])
-	entry.RegistrationState = cleanRegistryCell(cells[3])
-	entry.ImplementationPaths = parseRegistryPathList(cells[4], source)
-	entry.SpecFiles = parseRegistryPathList(cells[5], source)
-	entry.Responsibility = cleanRegistryCell(cells[6])
+	entry.RegistrationState = cleanRegistryCell(cells[2])
+	entry.ImplementationPaths = parseRegistryPathList(cells[3], source)
+	entry.SpecFiles = parseRegistryPathList(cells[4], source)
+	entry.Responsibility = cleanRegistryCell(cells[5])
 
-	if entry.Kind != "unit" && entry.Kind != "scenario" && entry.Kind != "rule" {
+	if entry.Kind != "unit" && entry.Kind != "rule" {
 		entry.Invalid = true
-		entry.InvalidReason = "invalid Object Registry row: kind must be unit, scenario, or rule"
+		entry.InvalidReason = "invalid Object Registry row: kind must be unit or rule"
 		return entry
 	}
 	if entry.ID == "" {
 		entry.Invalid = true
 		entry.InvalidReason = "invalid Object Registry row: id is required"
-		return entry
-	}
-	if !validRegistryScope(entry.Kind, entry.Scope) {
-		entry.Invalid = true
-		entry.InvalidReason = "invalid Object Registry row: scope does not match kind"
 		return entry
 	}
 	if entry.RegistrationState != "planned" && entry.RegistrationState != "landed" {
@@ -207,12 +192,6 @@ func applyRegistryEntry(result *repositoryMapping, entry mappingRegistryEntry) {
 			ImplementationPaths: entry.ImplementationPaths,
 			Source:              entry.Source,
 		}
-	case "scenario":
-		result.Scenarios[entry.ID] = mappingScenario{
-			ID:             entry.ID,
-			Responsibility: entry.Responsibility,
-			Source:         entry.Source,
-		}
 	case "rule":
 		shared := mappingShared{
 			ID:             entry.ID,
@@ -220,7 +199,7 @@ func applyRegistryEntry(result *repositoryMapping, entry mappingRegistryEntry) {
 			TruthPaths:     entry.SpecFiles,
 			Source:         entry.Source,
 		}
-		if entry.Scope == "global" {
+		if inferredRuleScope(entry.ID, "") == "global" {
 			result.GlobalRules[entry.ID] = shared
 		} else {
 			result.Rules[entry.ID] = shared
@@ -264,19 +243,6 @@ func isMarkdownSeparatorRow(cells []string) bool {
 		}
 	}
 	return true
-}
-
-func validRegistryScope(kind, scope string) bool {
-	switch kind {
-	case "unit":
-		return scope == "capability"
-	case "scenario":
-		return scope == "flow"
-	case "rule":
-		return scope == "bound" || scope == "global"
-	default:
-		return false
-	}
 }
 
 func parseRegistryPathList(cell string, source SourceRef) []SourceRef {

@@ -46,5 +46,5 @@
    - 表示只适用于列出的正式单元集合
    - 单元名必须来自 `docs/specs/_status.md`
    - 逗号分隔列表内部不得带空格
-4. `review_scenario:<stable_name>`
-   - 表示只适用于消费方已经正式定义过的某个 review scenario
+4. `review_profile:<stable_name>`
+   - 表示只适用于消费方已经正式定义过的某个 review profile

@@ -6,11 +6,12 @@ import (
 
 type frontmatter struct {
 	Scalars      map[string]string
+	Lists        map[string][]string
 	BoundObjects []string
 }
 
 func parseFrontmatter(text string) frontmatter {
-	result := frontmatter{Scalars: map[string]string{}}
+	result := frontmatter{Scalars: map[string]string{}, Lists: map[string][]string{}}
 	lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
 	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
 		return result
@@ -26,10 +27,14 @@ func parseFrontmatter(text string) frontmatter {
 		if trimmed == "" {
 			continue
 		}
-		if strings.HasPrefix(trimmed, "- ") && currentList == "bound_objects" {
+		if strings.HasPrefix(trimmed, "- ") && currentList != "" {
 			value := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
 			if value != "" {
-				result.BoundObjects = append(result.BoundObjects, value)
+				value = trimQuote(value)
+				result.Lists[currentList] = append(result.Lists[currentList], value)
+				if currentList == "bound_objects" {
+					result.BoundObjects = append(result.BoundObjects, value)
+				}
 			}
 			continue
 		}

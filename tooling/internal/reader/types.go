@@ -18,7 +18,6 @@ type ProjectInfo struct {
 	MappingFile      string `json:"mapping_file"`
 	RuleBaselineFile string `json:"rule_baseline_file"`
 	UnitCount        int    `json:"unit_count"`
-	ScenarioCount    int    `json:"scenario_count"`
 	RuleCount        int    `json:"rule_count"`
 	TruthFileCount   int    `json:"truth_file_count"`
 }
@@ -41,6 +40,7 @@ type ObjectView struct {
 	TruthPaths          []SourceRef `json:"truth_paths"`
 	ImplementationPaths []SourceRef `json:"implementation_paths"`
 	RuleRefs            []string    `json:"rule_refs"`
+	UnitRefs            []string    `json:"unit_refs"`
 	BoundObjects        []string    `json:"bound_objects"`
 	Sources             []SourceRef `json:"sources"`
 }

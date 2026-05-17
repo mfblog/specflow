@@ -121,9 +121,7 @@ func TestInitIncludesSupportingTruthLifecycleConvergenceSlice(t *testing.T) {
 	}
 	for _, input := range []string{
 		"specflow/framework/commands/unit_fork.md",
-		"specflow/framework/commands/scenario_fork.md",
 		"specflow/framework/commands/unit_promote.md",
-		"specflow/framework/commands/scenario_promote.md",
 		"specflow/framework/recovery_policy.md",
 		"specflow/framework/rule_sync.md",
 		"docs/specs/_status.md",
@@ -184,6 +182,16 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	}
 	if !containsString(designFoundation.InputFiles, "specflow/framework/advance_policy.md") {
 		t.Fatalf("expected advance policy in design foundation input files, got %+v", designFoundation.InputFiles)
+	}
+	if !containsString(designFoundation.InputFiles, "specflow/framework/candidate_intent_policy.md") {
+		t.Fatalf("expected candidate intent policy in design foundation input files, got %+v", designFoundation.InputFiles)
+	}
+	if !containsString(designFoundation.InputFiles, "specflow/framework/candidate_intents/repair.md") {
+		t.Fatalf("expected repair intent standard in design foundation input files, got %+v", designFoundation.InputFiles)
+	}
+	humanOperability := findSlice(t, state, "human_operability_and_extension")
+	if !containsString(humanOperability.InputFiles, "specflow/framework/output_baseline.md") {
+		t.Fatalf("expected output baseline in design human-operability input files, got %+v", humanOperability.InputFiles)
 	}
 
 	validation := ValidateFile(repoRoot, FlowSpecFlowDesignReview, result.File, now)
@@ -802,6 +810,12 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 	if !containsString(slice.InputFiles, "docs/specs/rules/stable/s_g_rule_repository_baseline.md") {
 		t.Fatalf("expected global rules input, got %+v", slice.InputFiles)
 	}
+	if !containsString(slice.InputFiles, "specflow/templates/docs/specs/repository_mapping.md") {
+		t.Fatalf("expected repository mapping template input, got %+v", slice.InputFiles)
+	}
+	if !containsString(slice.InputFiles, "specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md") {
+		t.Fatalf("expected global rule template input, got %+v", slice.InputFiles)
+	}
 	if !containsString(slice.InputFiles, "docs/specs/units/candidate/c_unit_demo.md") {
 		t.Fatalf("expected current project truth file input, got %+v", slice.InputFiles)
 	}
@@ -836,6 +850,9 @@ func TestInitIncludesToolingScriptAndReaderRuntimeInToolingSlices(t *testing.T) 
 	if !containsString(toolingSlice.InputFiles, "specflow/tooling/scripts/tooling_fingerprint.ps1") {
 		t.Fatalf("expected PowerShell fingerprint script in tooling execution input files, got %+v", toolingSlice.InputFiles)
 	}
+	if !containsString(toolingSlice.InputFiles, "specflow/tooling/scripts/build_release.sh") {
+		t.Fatalf("expected build release script in tooling execution input files, got %+v", toolingSlice.InputFiles)
+	}
 	if !containsString(toolingSlice.InputFiles, "specflow/tooling/reader/web/app.js") {
 		t.Fatalf("expected reader app.js in tooling execution input files, got %+v", toolingSlice.InputFiles)
 	}
@@ -850,6 +867,14 @@ func TestInitIncludesToolingScriptAndReaderRuntimeInToolingSlices(t *testing.T) 
 	if !containsString(convergenceSlice.InputFiles, "specflow/tooling/scripts/tooling_fingerprint.sh") {
 		t.Fatalf("expected shell fingerprint script in project/framework convergence input files, got %+v", convergenceSlice.InputFiles)
 	}
+	if !containsString(convergenceSlice.InputFiles, "specflow/tooling/scripts/build_release.sh") {
+		t.Fatalf("expected build release script in project/framework convergence input files, got %+v", convergenceSlice.InputFiles)
+	}
+
+	toolingConvergenceSlice := findSlice(t, state, "tooling_to_rule_convergence")
+	if !containsString(toolingConvergenceSlice.InputFiles, "specflow/tooling/scripts/build_release.sh") {
+		t.Fatalf("expected build release script in tooling/rule convergence input files, got %+v", toolingConvergenceSlice.InputFiles)
+	}
 }
 
 func TestRefreshMarksToolingScriptSlicesStale(t *testing.T) {
@@ -858,7 +883,7 @@ func TestRefreshMarksToolingScriptSlicesStale(t *testing.T) {
 	setSliceStatus(t, &state, "tooling_execution", slicePassed)
 	setSliceStatus(t, &state, "project_instance_to_framework_convergence", slicePassed)
 	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
-	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/tooling_fingerprint.sh"), "#!/usr/bin/env bash\necho changed\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/build_release.sh"), "#!/usr/bin/env bash\necho changed\n")
 
 	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
 	if err != nil {
@@ -932,9 +957,15 @@ func TestRefreshUpdatesBaselineInputFilesWhenScopeDefinitionChanges(t *testing.T
 	if !containsString(scopeSlice.InputFiles, "specflow/tooling/scripts/tooling_fingerprint.sh") {
 		t.Fatalf("expected refreshed scope_inventory to include shell fingerprint script, got %+v", scopeSlice.InputFiles)
 	}
+	if !containsString(scopeSlice.InputFiles, "specflow/tooling/scripts/build_release.sh") {
+		t.Fatalf("expected refreshed scope_inventory to include build release script, got %+v", scopeSlice.InputFiles)
+	}
 	toolingSlice := findSlice(t, refreshed, "tooling_execution")
 	if !containsString(toolingSlice.InputFiles, "specflow/tooling/scripts/tooling_fingerprint.ps1") {
 		t.Fatalf("expected refreshed tooling_execution to include PowerShell fingerprint script, got %+v", toolingSlice.InputFiles)
+	}
+	if !containsString(toolingSlice.InputFiles, "specflow/tooling/scripts/build_release.sh") {
+		t.Fatalf("expected refreshed tooling_execution to include build release script, got %+v", toolingSlice.InputFiles)
 	}
 	if got := toolingSlice.Status; got != sliceStale {
 		t.Fatalf("expected tooling_execution stale after input list update, got %s", got)
@@ -1017,9 +1048,9 @@ func createReviewRunRepo(t *testing.T) string {
 		"command_policy.md",
 		"implementation_change_policy.md",
 		"checkpoint_protocol.md",
+		"output_baseline.md",
 		"tooling_execution_policy.md",
 		"severity_policy.md",
-		"scenario_policy.md",
 		"spec_policy.md",
 		"spec_writing_guide.md",
 		"repository_mapping_policy.md",
@@ -1061,8 +1092,6 @@ func createReviewRunRepo(t *testing.T) string {
 		"specflow/framework/commands/unit_check.md",
 		"specflow/framework/commands/unit_fork.md",
 		"specflow/framework/commands/unit_promote.md",
-		"specflow/framework/commands/scenario_fork.md",
-		"specflow/framework/commands/scenario_promote.md",
 	} {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
@@ -1074,6 +1103,8 @@ func createReviewRunRepo(t *testing.T) string {
 		"specflow/templates/docs/specs/_plans/active/README.md",
 		"specflow/templates/docs/specs/_verify_result/README.md",
 		"specflow/templates/docs/specs/_governance_review/README.md",
+		"specflow/templates/docs/specs/repository_mapping.md",
+		"specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
 		"specflow/templates/docs/project_standards/_registry.md",
 		"specflow/templates/AGENTS.md",
 		"specflow/templates/GEMINI.md",
@@ -1086,6 +1117,7 @@ func createReviewRunRepo(t *testing.T) string {
 		"specflow/tooling/internal/demo/demo.go",
 		"specflow/tooling/internal/processcleanup/processcleanup.go",
 		"specflow/tooling/internal/rulesync/release.go",
+		"specflow/tooling/scripts/build_release.sh",
 		"specflow/tooling/scripts/tooling_fingerprint.sh",
 		"specflow/tooling/scripts/tooling_fingerprint.ps1",
 		"specflow/tooling/go.mod",

@@ -30,26 +30,19 @@ type ModuleStatus struct {
 }
 
 var allowedNextCommands = map[string]bool{
-	"unit_init":              true,
-	"unit_new":               true,
-	"unit_fork":              true,
-	"unit_stable_verify":     true,
-	"unit_check":             true,
-	"unit_plan":              true,
-	"unit_impl":              true,
-	"unit_verify":            true,
-	"unit_promote":           true,
-	"scenario_new":           true,
-	"scenario_fork":          true,
-	"scenario_check":         true,
-	"scenario_verify":        true,
-	"scenario_promote":       true,
-	"scenario_stable_verify": true,
+	"unit_init":          true,
+	"unit_new":           true,
+	"unit_fork":          true,
+	"unit_stable_verify": true,
+	"unit_check":         true,
+	"unit_plan":          true,
+	"unit_impl":          true,
+	"unit_verify":        true,
+	"unit_promote":       true,
 }
 
 var allowedObjectTypes = map[string]bool{
-	"unit":     true,
-	"scenario": true,
+	"unit": true,
 }
 
 func LoadModules(repoRoot string) ([]string, error) {

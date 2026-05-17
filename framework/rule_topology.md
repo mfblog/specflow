@@ -1,172 +1,108 @@
-# Rule Topology Flow
+# Rule Topology
 
-## 1. Purpose
+`rule_topology` is the internal rule-governance flow for changing the relationship between rule files and their unit consumers.
 
-`rule_topology` is the internal flow for Rule structural change and terminal-state resolution.
+It is used when the rule structure itself must change, such as splitting, merging, replacing, retiring, or intentionally keeping an unbound rule.
 
-It answers four questions:
+## 1. Scope
 
-1. whether the current request is really about Rule topology rather than simple authoring, extraction, binding, or impact closure
-2. which touched rule objects remain, which new rule objects must exist, and which old ones must end in this round
-3. which unit or scenario candidate-side bindings and body explanations must be rewritten because of that topology change
-4. how the repository must be reconciled after the topology change lands
-
-This is not a user-facing command entry.
-The user reaches it through natural-language routing when that routing enters the rule-governance branch.
-
----
-
-## 2. Scope
-
-By default it handles requests where one or more existing `rule` objects need structural topology change or terminal-state resolution.
-
-It may:
+`rule_topology` may:
 
 1. split one rule object into multiple rule objects
 2. merge multiple rule objects into one rule object
-3. rename, replace, or retire an existing rule object
-4. explicitly keep a touched unbound rule file as independently authored rule truth when that outcome is written clearly in the same round
-5. rewrite affected unit or scenario candidate-side `rule_refs` and body-level consumption explanations when the topology change changes what those command-target objects consume
-6. create, update, or delete candidate-layer Rule files as required by the topology change
-7. delete touched stable-layer Rule files only when they are already unbound and cleanup is legal under `spec_policy.md`
-8. keep an existing stable-layer Rule file unchanged when the topology plan intentionally leaves it in place
-9. trigger `rule_sync` after any rule-truth or binding writeback
-10. stop at a rule-governance checkpoint when legal unit writeback targets do not exist yet
+3. rename, replace, or retire rule objects
+4. create, update, or delete candidate rule files required by the topology plan
+5. delete a stable rule file only when current repository truth proves it is already unbound and terminal cleanup is legal
+6. rewrite candidate unit `rule_refs` and body-level rule consumption explanation
+7. write intentional unbound-retention fields for a touched rule that must remain independently authored
+8. update `docs/specs/repository_mapping.md` when the rule object map changes
+9. run `rule_sync` after topology writeback
 
-It does not:
+`rule_topology` must not:
 
-1. replace `rule_bind` when the main task is only one unit binding to an unchanged existing rule object
-2. replace `rule_new` when the main task is first-time shared authoring with no existing rule topology change
-3. replace `rule_extract` when the main task is only extracting unit-local truth into one rule object
-4. create or update a stable-layer Rule file directly just to carry new topology semantics or a new `rule_version`
-5. replace `unit_promote` when a promotion lands an owned candidate Rule as stable and retargets candidate units to the same-`rule_id`, same-`rule_version` stable Rule ref in the same round
-6. create an independent Rule lifecycle outside rule governance
+1. replace `rule_new` for first-time independent rule authoring
+2. replace `rule_extract` for simple extraction of unit-local truth
+3. replace `rule_bind` for one unit binding to an unchanged rule
+4. modify stable unit truth directly
+5. create or update stable rule semantics directly to carry a new version or new meaning
+6. leave a touched unbound rule file without an explicit delete-or-keep result
 
----
+## 2. Consumer Source
 
-## 3. Preconditions
+The topology graph is:
 
-Before execution:
+```text
+rule -> unit
+```
 
-1. read `specflow/framework/spec_policy.md`
-2. read `specflow/framework/command_policy.md`
-3. read `specflow/framework/rule_sync.md`
-4. apply the Rule version rules from `specflow/framework/spec_policy.md` Section 6.3 when topology changes create or update rule files
-5. read `docs/specs/_status.md`
-6. read `docs/specs/repository_mapping.md` because topology changes may change the rule object map or rule truth-path rules
-7. read each touched `rule` file that may be split, merged, renamed, replaced, retired, or explicitly kept
-8. build the repository-wide affected command-target review set for the touched rule objects from current repository truth before topology planning:
-   - start from the formal unit and scenario rows recorded in `_status.md`
-   - read every additional current-layer unit or scenario main file needed to judge which command-target objects currently bind each touched rule object through `rule_refs`
-   - do not treat only the user-named units, user-named scenarios, or currently obvious consumers as sufficient when other command-target objects may still bind the touched rule objects
-9. resolve every affected unit or scenario's current layer from `_status.md` before reading its main Spec
-10. read every affected unit or scenario current-layer main file needed to derive the real binding set from `rule_refs`
-11. if any affected unit or scenario is currently at `stable` and the topology change would require command-target truth writeback, also read the corresponding fork command file:
-   - `specflow/framework/commands/unit_fork.md` for units
-   - `specflow/framework/commands/scenario_fork.md` for scenarios
-12. read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the topology request may cross into project-wide default-rule promotion
-13. if this round may raise a checkpoint, read `specflow/framework/checkpoint_protocol.md`
+The graph is derived only from current-layer unit frontmatter `rule_refs`.
 
----
+Rule files must not store consumer truth. `bound_objects` must not be read or written as a consumer list.
+
+## 3. Required Reads
+
+Before any write, read:
+
+1. `specflow/framework/spec_policy.md`
+2. `specflow/framework/spec_writing_guide.md`
+3. `specflow/framework/command_policy.md`
+4. `specflow/framework/recovery_policy.md`
+5. `specflow/framework/rule_sync.md`
+6. `docs/specs/_status.md`
+7. `docs/specs/repository_mapping.md`
+8. every touched rule file that may be split, merged, renamed, replaced, retired, or intentionally kept
+9. every current-layer unit main Spec needed to derive the full current consumer graph for touched rules
+10. `specflow/framework/commands/unit_fork.md` when any affected stable unit would require binding writeback
+11. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the topology change may become a repository-wide default rule
 
 ## 4. Procedure
 
-1. confirm the request is really about Rule topology change or terminal-state resolution rather than `rule_new`, `rule_extract`, `rule_bind`, or `rule_sync`
-2. resolve the complete repository-wide affected command-target set for the touched rule objects from unit and scenario `rule_refs` rather than from `bound_objects`
-3. if current repository truth is insufficient to derive that complete affected command-target set safely, stop this flow and return control to `rule_escape` through rule-governance routing instead of guessing
-4. if any affected unit or scenario current layer is `stable` and the topology change would require command-target truth writeback:
-   - raise a blocking rule-governance checkpoint with `type=prerequisite_action`
-   - require `unit_fork:{unit}` for each such unit and `scenario_fork:{scenario}` for each such scenario before topology writeback continues
-   - set `required_writeback_target` to the corresponding future candidate main file set because chat-only agreement does not create legal topology-writeback targets
-5. decide the current-round topology plan explicitly against that complete affected command-target set:
-   - which touched rule object identity remains the same
-   - which new rule object identities must be created
-   - which touched rule files must be deleted in this round
-   - which touched rule files will remain intentionally unbound as independently authored rule truth
-6. if the current repository truth is not sufficient to stabilize Step 5, stop this flow and return control to `rule_escape` through rule-governance routing instead of guessing
-6.5. before any rule file writeback, capture the recovery baseline required by `specflow/framework/recovery_policy.md` Section 6.5.1:
-     - every touched candidate-layer and stable-layer Rule file
-     - every downstream unit or scenario candidate file that may be rewritten
-     - `docs/specs/repository_mapping.md` when the round may change the rule object map
-7. create, update, or delete the touched candidate-layer Rule files according to the topology plan:
-   - if the round creates the first file for a brand-new rule object, initialize `rule_version=0.1.0`
-   - if the round opens or rewrites a candidate-layer file for a rule object that already has a stable-layer sibling, set that candidate file's `rule_version` to the intended next stable version according to Rule semantic version rules
-   - for each candidate-layer file from the previous bullet, write exactly one `promotion_owner_unit` into that file:
-   - the owner must be a formal unit from the unit subset of the affected command-target set or another formal unit explicitly required by the topology plan
-     - that owner is the only unit round allowed to land that candidate-layer rule file as the next stable-layer Rule file
-     - the owner unit may remain bound to the current stable-layer shared sibling until a later legal unit candidate round rewrites its `rule_refs`
-     - if current repository truth is insufficient to name one stable owner for such a file, stop this flow and return control to `rule_escape` through rule-governance routing instead of guessing
-   - if the topology plan needs new or changed stable-layer rule semantics, do not write that stable-layer file directly in this flow; write or update the corresponding candidate-layer rule file first, carry the intended next stable `rule_version` there, and let a later legal promotion produce the stable-layer file
-8. rewrite every affected unit or scenario candidate-side `rule_refs` and body-level consumption explanation required by the topology plan
-   - any written `rule_refs` must use the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1
-9. for each touched rule file that has no formal consumers in the current-layer `unit` and `scenario` `rule_refs` graph after Step 8:
-   - delete it in the same round when the topology plan treats it as retired and cleanup is legal under `spec_policy.md`
-   - otherwise keep it only when the current round writes that same Rule file with the fixed intentional-unbound retention frontmatter from `spec_policy.md`:
-     - `unbound_retention: intentional`
-     - `unbound_retention_reason: <why this unbound state is intentional now>`
-     - `unbound_retention_owner: rule_topology`
-   - reject closure if neither deletion nor explicit keep-writeback has happened
-10. for each touched rule file that still has one or more formal consumers in the current-layer `unit` and `scenario` `rule_refs` graph after Step 8, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-11. do not write consumer metadata into Rule files; every remaining touched Rule file must omit `bound_objects`, and consumers are derived from current-layer frontmatter `rule_refs`
-12. if the topology plan created, removed, renamed, split, merged, replaced, retired, or otherwise changed the current rule object map, update `docs/specs/repository_mapping.md` in the same round before executing `rule_sync`:
-   - add, update, or remove the affected `Object Registry` rule rows according to the topology result
-   - every remaining current rule row must use `kind=rule`, `scope=bound`, and the current one-line responsibility
-   - rows for rules with concrete rule files must list those files in `spec_files`
-   - rows for rules with no direct implementation path must use `registration_state=planned` and `implementation_paths=none`
-   - remove retired rule rows only when the topology plan has legally resolved their terminal state
-   - if current repository truth is insufficient to write the exact mapping update without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
-13. after any write to `docs/specs/rules/**` or any unit or scenario `rule_refs`, execute `rule_sync` before claiming closure
-14. if `rule_sync` stops because repository truth is insufficient to continue safely, return control to `rule_escape` through rule-governance routing instead of inventing a flow-local checkpoint
+1. Confirm that the request is a topology change or terminal-state decision, not simple rule authoring, extraction, binding, or sync.
+2. Resolve the complete affected unit set from current-layer unit `rule_refs`.
+3. If current repository truth cannot prove the complete affected unit set, stop before writeback and return to `rule_escape`.
+4. If any affected unit is stable and the topology plan requires changing that unit's binding or body truth, stop before writeback and raise a prerequisite action requiring `unit_fork:{unit}`.
+5. Decide the topology plan explicitly:
+   - which rule identities remain
+   - which new rule identities are created
+   - which touched rule files are updated
+   - which touched rule files are deleted
+   - which touched rule files remain intentionally unbound
+6. Before the first file mutation, capture the recovery baseline required by `recovery_policy.md` Section 6.5.
+7. Create, update, or delete rule files according to the topology plan.
+8. When a new candidate rule is created for a brand-new rule object, write `rule_version: 0.1.0`.
+9. When a candidate rule has a stable sibling, write or validate exactly one valid `promotion_owner_unit`.
+10. Rewrite every affected candidate unit `rule_refs` and body explanation required by the topology plan.
+11. For every touched rule file with no formal current consumers after writeback, either delete it or write intentional unbound-retention fields in the same round.
+12. For every touched rule file with formal current consumers after writeback, remove or stop carrying unbound-retention fields.
+13. Do not write consumer lists or `bound_objects` into rule files.
+14. Update `docs/specs/repository_mapping.md` in the same round when the topology plan changes the rule object map.
+15. Run `rule_sync` after any rule-file write, unit `rule_refs` write, or rule object-map write.
 
----
+If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `recovery_policy.md` Section 6.5 before returning to natural-language routing.
 
 ## 5. Stop Conditions
 
-Stop when one of the following is true:
+Stop when one of these is true:
 
-1. the topology change is complete, every touched rule file's terminal state is resolved, any required `repository_mapping.md` object-map writeback is complete, and `rule_sync` has finished reconciliation
-2. the request is not really topology change and must be re-routed to another rule flow
-3. one or more affected units or scenarios are currently at `stable` and the flow has raised a rule-governance checkpoint for the corresponding fork command first
-4. repository truth is insufficient to continue safely, so control has returned to `rule_escape` through rule-governance routing
-5. the topology plan requires new or changed stable-layer rule semantics, so this flow has completed the current-round candidate-layer Rule writeback and any required `rule_sync` without direct stable-layer writeback; any later stable-layer Rule file must be produced by a legal promotion rather than by this flow
-7. the topology plan would leave a next-round candidate-layer rule file for an already-stable rule object without a stable `promotion_owner_unit`
-
----
+1. the topology plan is fully written, every touched rule file has a terminal state, any repository mapping update is complete, and `rule_sync` has closed reconciliation
+2. the request belongs to another rule flow
+3. a stable unit must be forked before binding writeback can continue
+4. repository truth is insufficient to prove the affected unit set or topology plan
+5. a candidate rule with a stable sibling would exist without exactly one valid `promotion_owner_unit`
+6. a touched unbound rule file cannot be safely deleted or intentionally retained
 
 ## 6. Output Contract
 
-The output must include at least:
+The output must report:
 
-1. the recognized topology intent and why it belongs to `rule_topology`
-2. the touched rule objects and the repository-wide affected command-target objects
-3. the explicit topology result for this round:
-   - which rule objects remain
-   - which new rule objects were created
-   - which touched rule files were deleted
-   - which touched rule files remain intentionally unbound and why
-4. the Rule file writeback result, including the written `rule_version` for each created or updated candidate-layer file
-5. for each created or rewritten candidate-layer file that already has a stable-layer sibling, the written `promotion_owner_unit`
-6. the unit or scenario candidate-side retarget or rewrite result
-7. confirmation that every remaining touched Rule file omits `bound_objects`
-8. when the topology plan changed the current rule object map, the `docs/specs/repository_mapping.md` writeback result
-9. the `rule_sync` result, including affected downstream objects and fallback if any
-10. the checkpoint result when candidate writeback could not legally start yet
-11. whether the flow had to stop with candidate-layer rule truth prepared for a later legal promotion instead of writing a stable-layer rule file directly
-
-Allowed checkpoint types:
-
-1. `prerequisite_action`
-
----
-
-## 7. Non-Goals
-
-`rule_topology` does not:
-
-1. guess whether an unstable boundary should become shared or stay unit-local
-2. replace `rule_escape` for decomposition when the repository truth is still ambiguous
-3. allow silent retention of touched unbound rule files with no explicit keep-or-delete result
-4. modify unit or scenario `stable` truth directly
-5. create or update a stable-layer Rule file directly to introduce new topology semantics or a newly chosen `rule_version`
-6. absorb Rule conclusions into stable `g_` rule automatically
-7. own same-round stable landing retargeting that is already fully constrained by `unit_promote`
+1. the recognized topology intent
+2. the touched rule objects
+3. the affected unit set derived from current-layer `rule_refs`
+4. the topology result for each touched rule file
+5. every rule file created, updated, deleted, or intentionally retained
+6. the written `rule_version` for each created or updated candidate rule
+7. the `promotion_owner_unit` result when required
+8. every unit candidate binding rewrite
+9. any repository mapping writeback
+10. confirmation that touched rule files do not carry `bound_objects`
+11. the `rule_sync` result or the recovery and rerouting result

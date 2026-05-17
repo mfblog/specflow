@@ -177,8 +177,8 @@ func validateRequiredOptions(opts Options) error {
 	if opts.Command == "" || opts.ObjectType == "" || opts.Object == "" || opts.Outcome == "" {
 		return fmt.Errorf("command, object-type, object, and outcome are required")
 	}
-	if opts.ObjectType != "unit" && opts.ObjectType != "scenario" {
-		return fmt.Errorf("object-type must be unit or scenario")
+	if opts.ObjectType != "unit" {
+		return fmt.Errorf("object-type must be unit")
 	}
 	if err := validateCommandMatchesObjectType(opts.Command, opts.ObjectType); err != nil {
 		return err
@@ -194,10 +194,6 @@ func validateCommandMatchesObjectType(command, objectType string) error {
 	case strings.HasPrefix(command, "unit_"):
 		if objectType != "unit" {
 			return fmt.Errorf("command %q requires object-type unit", command)
-		}
-	case strings.HasPrefix(command, "scenario_"):
-		if objectType != "scenario" {
-			return fmt.Errorf("command %q requires object-type scenario", command)
 		}
 	default:
 		return fmt.Errorf("unsupported command %q", command)
@@ -247,7 +243,7 @@ func validateOutcomeFlags(opts Options) error {
 
 func requiresExplicitTruthFallbackReason(opts Options) bool {
 	switch opts.Command {
-	case "unit_plan", "unit_impl", "unit_verify", "scenario_verify":
+	case "unit_plan", "unit_impl", "unit_verify":
 		return opts.Outcome == "truth_fallback"
 	default:
 		return false
@@ -304,31 +300,6 @@ func determineTransition(opts Options, before statusfile.ObjectStatus, present b
 		trans = unitVerifyTransition(opts, current)
 	case "unit_promote":
 		trans = unitPromoteTransition(opts, current)
-	case "scenario_new":
-		trans = exactOutcome(opts, current, "candidate_created", status("scenario", opts.Object, "no", "yes", "candidate", "scenario_check", current.Notes))
-	case "scenario_stable_verify":
-		trans = nextOnlyTransition(opts, current, map[string]string{
-			"aligned":             "scenario_fork",
-			"not_aligned":         "scenario_stable_verify",
-			"evidence_incomplete": "scenario_stable_verify",
-		})
-	case "scenario_fork":
-		trans = exactOutcome(opts, current, "candidate_created", status("scenario", opts.Object, current.Stable, "yes", "candidate", "scenario_check", current.Notes))
-		trans.CleanupKind = cleanupSuccess
-		trans.CleanupMode = "scenario_fork"
-	case "scenario_check":
-		trans = nextOnlyTransition(opts, current, map[string]string{
-			"pass":         "scenario_verify",
-			"blocked":      "scenario_check",
-			"fix_required": "scenario_check",
-		})
-		if opts.Outcome == "pass" {
-			trans.ValidationProcess = "check"
-		}
-	case "scenario_verify":
-		trans = scenarioVerifyTransition(opts, current)
-	case "scenario_promote":
-		trans = scenarioPromoteTransition(opts, current)
 	default:
 		return transition{}, fmt.Errorf("unsupported command %q", opts.Command)
 	}
@@ -446,41 +417,6 @@ func unitPromoteTransition(opts Options, current statusfile.ObjectStatus) transi
 	}
 }
 
-func scenarioVerifyTransition(opts Options, current statusfile.ObjectStatus) transition {
-	switch opts.Outcome {
-	case "pass":
-		return withNextAndValidation(current, "scenario_promote", "verify")
-	case "truth_fallback":
-		return fallback(current, "scenario_check", "truth_layer", opts.Reason)
-	case "gate_fallback":
-		return fallback(current, "scenario_check", "gate_layer", defaultReason(opts.Reason, "gate_missing"))
-	case "evidence_incomplete":
-		return fallback(current, "scenario_verify", "evidence_layer", defaultReason(opts.Reason, "evidence_incomplete"))
-	case "blocked_by_affected_units":
-		return withNext(current, "scenario_verify")
-	default:
-		return transition{}
-	}
-}
-
-func scenarioPromoteTransition(opts Options, current statusfile.ObjectStatus) transition {
-	switch opts.Outcome {
-	case "promoted":
-		after := status("scenario", current.Object, "yes", "no", "stable", "scenario_fork", current.Notes)
-		return transition{Status: after, ValidationProcess: "verify", CleanupKind: cleanupSuccess, CleanupMode: "scenario_promote"}
-	case "dependency_not_ready":
-		return withNext(current, "scenario_promote")
-	case "promotion_recovered":
-		stable, ok := stableBefore(opts)
-		if !ok {
-			return transition{}
-		}
-		return fallback(status("scenario", current.Object, stable, "yes", "candidate", "scenario_check", current.Notes), "scenario_check", "truth_layer", defaultReason(opts.Reason, "truth_drift"))
-	default:
-		return promoteInvalidTransition(opts, current, "scenario")
-	}
-}
-
 func promoteInvalidTransition(opts Options, current statusfile.ObjectStatus, objectType string) transition {
 	if !strings.HasPrefix(opts.Outcome, "verify_invalid_") {
 		return transition{}
@@ -585,7 +521,7 @@ func shouldValidateInput(command string, trans transition) bool {
 		return false
 	}
 	switch command {
-	case "unit_plan", "unit_impl", "unit_verify", "unit_promote", "scenario_verify", "scenario_promote":
+	case "unit_plan", "unit_impl", "unit_verify", "unit_promote":
 		return true
 	default:
 		return false
@@ -635,7 +571,7 @@ func cleanupAction(trans transition) string {
 
 func isCreateCommand(command string) bool {
 	switch command {
-	case "unit_init", "unit_new", "scenario_new":
+	case "unit_init", "unit_new":
 		return true
 	default:
 		return false

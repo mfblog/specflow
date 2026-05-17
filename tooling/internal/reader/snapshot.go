@@ -21,7 +21,7 @@ type markdownDoc struct {
 }
 
 var sharedRefPattern = regexp.MustCompile("`?([cs]_[gb]_rule_[A-Za-z0-9_]+@[0-9]+\\.[0-9]+\\.[0-9]+)`?")
-var unitRefPattern = regexp.MustCompile("`?[cs]_unit_([A-Za-z0-9_]+)@[0-9]+\\.[0-9]+\\.[0-9]+`?")
+var unitRefPattern = regexp.MustCompile("`?s_unit_([A-Za-z0-9_]+)@[0-9]+\\.[0-9]+\\.[0-9]+`?")
 var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+\.md(?:#[^)]+)?)\)`)
 var candidateIntentPattern = regexp.MustCompile(`\bcandidate[_-]intent\s*=?\s*(repair|change)\b`)
 
@@ -76,12 +76,15 @@ func BuildSnapshot(repoRoot string) Snapshot {
 	builder.addNode(GraphNode{ID: "rule:baseline", Kind: "rule", Label: "Global Rules", Group: "rule", Source: ptr(SourceRef{Path: "docs/specs/rules/stable/s_g_rule_repository_baseline.md"})})
 
 	for _, status := range statuses {
-		if status.ObjectType == "unit" {
-			snapshot.Project.UnitCount++
+		if status.ObjectType != "unit" {
+			snapshot.Diagnostics = append(snapshot.Diagnostics, Diagnostic{
+				Severity: "warning",
+				Message:  "unsupported status object type ignored: " + status.ObjectType,
+				Source:   &SourceRef{Path: "docs/specs/_status.md", Label: "Status"},
+			})
+			continue
 		}
-		if status.ObjectType == "scenario" {
-			snapshot.Project.ScenarioCount++
-		}
+		snapshot.Project.UnitCount++
 		object := buildObjectFromStatus(status, mapping, docByPath)
 		snapshot.Objects = append(snapshot.Objects, object)
 		nodeID := status.ObjectType + ":" + status.Object
@@ -102,6 +105,11 @@ func BuildSnapshot(repoRoot string) Snapshot {
 			builder.addNode(GraphNode{ID: sharedNode, Kind: "rule", Label: sharedID, Group: "shared"})
 			builder.addEdge(GraphEdge{ID: nodeID + "->" + sharedNode, From: nodeID, To: sharedNode, Kind: "uses_shared", Label: "uses shared", Source: firstSource(object.Sources)})
 		}
+		for _, unitID := range object.UnitRefs {
+			dependencyNode := "unit:" + unitID
+			builder.addNode(GraphNode{ID: dependencyNode, Kind: "unit", Label: unitID, Group: "unit"})
+			builder.addEdge(GraphEdge{ID: nodeID + "->" + dependencyNode, From: nodeID, To: dependencyNode, Kind: "depends_on", Label: "depends on", Source: firstSource(object.Sources)})
+		}
 	}
 
 	sharedObjects := buildSharedObjects(mapping, docs)
@@ -117,7 +125,7 @@ func BuildSnapshot(repoRoot string) Snapshot {
 			builder.addEdge(GraphEdge{ID: sharedNode + "->" + fileNode, From: sharedNode, To: fileNode, Kind: "described_by", Label: "described by", Source: ptr(truth)})
 		}
 		for _, bound := range object.BoundObjects {
-			if strings.HasPrefix(bound, "unit:") || strings.HasPrefix(bound, "scenario:") {
+			if strings.HasPrefix(bound, "unit:") {
 				builder.addEdge(GraphEdge{ID: sharedNode + "->" + bound, From: sharedNode, To: bound, Kind: "bound_to", Label: "bound to", Source: firstSource(object.Sources)})
 			}
 		}
@@ -150,17 +158,13 @@ func buildObjectFromStatus(status statusfile.ObjectStatus, mapping repositoryMap
 		Notes:           status.Notes,
 		Sources:         []SourceRef{{Path: "docs/specs/_status.md", Label: "Status"}},
 	}
-	if status.ObjectType == "unit" {
-		if unit, ok := mapping.Units[status.Object]; ok {
-			object.Responsibility = unit.Responsibility
-			object.ImplementationPaths = unit.ImplementationPaths
-		}
+	if unit, ok := mapping.Units[status.Object]; ok {
+		object.Responsibility = unit.Responsibility
+		object.ImplementationPaths = unit.ImplementationPaths
 	}
-	if status.ObjectType == "unit" || status.ObjectType == "scenario" {
-		if truthPath, err := specpaths.ObjectMainSpecFileRef(status.ObjectType, status.ActiveLayer, status.Object); err == nil {
-			object.TruthPaths = []SourceRef{{Path: truthPath, Label: "Active Truth"}}
-			object.Sources = appendSourceUnique(object.Sources, SourceRef{Path: truthPath, Label: "Active Truth"})
-		}
+	if truthPath, err := specpaths.ObjectMainSpecFileRef("unit", status.ActiveLayer, status.Object); err == nil {
+		object.TruthPaths = []SourceRef{{Path: truthPath, Label: "Active Truth"}}
+		object.Sources = appendSourceUnique(object.Sources, SourceRef{Path: truthPath, Label: "Active Truth"})
 	}
 	for _, truth := range object.TruthPaths {
 		doc, ok := docs[truth.Path]
@@ -174,10 +178,12 @@ func buildObjectFromStatus(status statusfile.ObjectStatus, mapping repositoryMap
 			object.NextIntent = nextIntentFromDoc(status, doc)
 			object.NextIntentLabel = humanNextIntent(object.NextIntent)
 		}
-		object.RuleRefs = appendUnique(object.RuleRefs, extractRuleIDs(doc.Text)...)
+		object.RuleRefs = appendUnique(object.RuleRefs, extractRuleIDsFromFrontmatter(doc.Frontmatter)...)
+		object.UnitRefs = appendUnique(object.UnitRefs, extractUnitIDsFromFrontmatter(doc.Frontmatter)...)
 		object.TruthPaths = appendSourceUnique(object.TruthPaths, appendixRefsForDoc(doc, docs)...)
 	}
 	sort.Strings(object.RuleRefs)
+	sort.Strings(object.UnitRefs)
 	return object
 }
 
@@ -351,6 +357,49 @@ func extractRuleIDs(text string) []string {
 	return ids
 }
 
+func extractRuleIDsFromFrontmatter(fm frontmatter) []string {
+	ids := []string{}
+	for _, ref := range frontmatterRefs(fm, "rule_refs") {
+		id := sharedRefToID(ref)
+		if id != "" {
+			ids = appendUnique(ids, id)
+		}
+	}
+	return ids
+}
+
+func extractUnitIDsFromFrontmatter(fm frontmatter) []string {
+	ids := []string{}
+	for _, ref := range frontmatterRefs(fm, "unit_refs") {
+		matches := unitRefPattern.FindStringSubmatch(ref)
+		if len(matches) != 2 {
+			continue
+		}
+		ids = appendUnique(ids, strings.TrimSpace(matches[1]))
+	}
+	return ids
+}
+
+func frontmatterRefs(fm frontmatter, key string) []string {
+	values := []string{}
+	for _, value := range fm.Lists[key] {
+		value = strings.TrimSpace(value)
+		if value != "" && value != "none" {
+			values = append(values, value)
+		}
+	}
+	scalar := strings.TrimSpace(fm.Scalars[key])
+	if scalar != "" && scalar != "none" {
+		for _, value := range strings.Split(scalar, ",") {
+			value = strings.TrimSpace(value)
+			if value != "" && value != "none" {
+				values = append(values, value)
+			}
+		}
+	}
+	return values
+}
+
 func extractUnitIDs(text string) []string {
 	matches := unitRefPattern.FindAllStringSubmatch(text, -1)
 	ids := []string{}
@@ -399,7 +448,7 @@ func buildRegistryItems(repoRoot string, mapping repositoryMapping, statuses []s
 
 	for _, entry := range mapping.Registry {
 		item := ensure(entry.Kind, entry.ID)
-		item.RuleScope = inferredRuleScope(entry.ID, entry.Scope)
+		item.RuleScope = inferredRuleScope(entry.ID, "")
 		item.RegistrationState = entry.RegistrationState
 		item.MappingRegistered = true
 		item.MappingSource = ptr(entry.Source)
@@ -418,7 +467,7 @@ func buildRegistryItems(repoRoot string, mapping repositoryMapping, statuses []s
 	}
 
 	for _, status := range statuses {
-		if status.ObjectType != "unit" && status.ObjectType != "scenario" {
+		if status.ObjectType != "unit" {
 			continue
 		}
 		item := ensure(status.ObjectType, status.Object)
@@ -437,9 +486,6 @@ func buildRegistryItems(repoRoot string, mapping repositoryMapping, statuses []s
 		switch {
 		case strings.Contains(doc.RelPath, "/units/"):
 			kind = "unit"
-			id = strings.TrimSpace(doc.Frontmatter.Scalars["id"])
-		case strings.Contains(doc.RelPath, "/scenarios/"):
-			kind = "scenario"
 			id = strings.TrimSpace(doc.Frontmatter.Scalars["id"])
 		case strings.Contains(doc.RelPath, "/rules/"):
 			kind = "rule"
@@ -462,10 +508,8 @@ func buildRegistryItems(repoRoot string, mapping repositoryMapping, statuses []s
 		}
 		switch kind {
 		case "unit":
-			item.RuleRefs = appendUnique(item.RuleRefs, extractRuleIDs(doc.Text)...)
-		case "scenario":
-			item.RuleRefs = appendUnique(item.RuleRefs, extractRuleIDs(doc.Text)...)
-			item.UnitRefs = appendUnique(item.UnitRefs, extractUnitIDs(doc.Text)...)
+			item.RuleRefs = appendUnique(item.RuleRefs, extractRuleIDsFromFrontmatter(doc.Frontmatter)...)
+			item.UnitRefs = appendUnique(item.UnitRefs, extractUnitIDsFromFrontmatter(doc.Frontmatter)...)
 		case "rule":
 			item.RuleScope = inferredRuleScope(id, strings.TrimSpace(doc.Frontmatter.Scalars["rule_scope"]))
 		}
@@ -477,7 +521,7 @@ func buildRegistryItems(repoRoot string, mapping repositoryMapping, statuses []s
 		source SourceRef
 	}{}
 	for _, item := range items {
-		if item.Kind != "unit" && item.Kind != "scenario" {
+		if item.Kind != "unit" {
 			continue
 		}
 		for _, rule := range item.RuleRefs {
@@ -622,18 +666,6 @@ func humanNextCommand(command string) string {
 		return "验证实现是否符合设计"
 	case "unit_promote":
 		return "把确认结果沉淀为正式基线"
-	case "scenario_new":
-		return "创建新的端到端流程设计"
-	case "scenario_fork":
-		return "从已确认流程开启新一轮设计"
-	case "scenario_check":
-		return "检查流程设计是否足够支撑验证"
-	case "scenario_verify":
-		return "验证端到端流程"
-	case "scenario_promote":
-		return "把流程确认结果沉淀为正式基线"
-	case "scenario_stable_verify":
-		return "检查端到端流程是否仍符合已确认设计"
 	default:
 		return command
 	}

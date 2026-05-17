@@ -98,7 +98,6 @@ type ProcessSnapshotData struct {
 	ModuleAppendixSnapshot []AppendixEntry
 	RepositoryMapping      RepositoryMappingEntry
 	ModuleSnapshot         []ObjectSnapshotEntry
-	FlowSnapshot           []ObjectSnapshotEntry
 	RuleSnapshot           []RuleEntry
 	AcceptanceItemSet      []AcceptanceItemEntry
 	AcceptancePlanCoverage []AcceptancePlanCoverageEntry
@@ -154,49 +153,6 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 	},
 }
 
-var requiredScenarioProcessSnapshotFields = map[string][]string{
-	"check": {
-		"object_type",
-		"object_ref",
-		"gate",
-		"decision",
-		"allow_next",
-		"next_command",
-		"blocking_summary",
-		"coverage_summary",
-		"truth_layer_ref",
-		"truth_file_ref",
-		"truth_version_ref",
-		"truth_fingerprint",
-		"repository_mapping_snapshot",
-		"unit_snapshot",
-		"scenario_appendix_snapshot",
-		"rule_snapshot",
-		"acceptance_item_set",
-	},
-	"verify": {
-		"object_type",
-		"object_ref",
-		"gate",
-		"decision",
-		"allow_next",
-		"next_command",
-		"blocking_summary",
-		"coverage_summary",
-		"truth_layer_ref",
-		"truth_file_ref",
-		"truth_version_ref",
-		"truth_fingerprint",
-		"repository_mapping_snapshot",
-		"unit_snapshot",
-		"scenario_appendix_snapshot",
-		"verification_scope_ref",
-		"rule_snapshot",
-		"acceptance_item_set",
-		"acceptance_item_evidence_matrix",
-	},
-}
-
 var allowedAcceptanceEvidenceStatuses = map[string]bool{
 	"pass":             true,
 	"fail":             true,
@@ -222,6 +178,9 @@ func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
 func RebuildCurrentObject(repoRoot, objectType, object string) (Snapshot, error) {
 	objectType = strings.TrimSpace(objectType)
 	object = strings.TrimSpace(object)
+	if objectType != "unit" {
+		return Snapshot{}, fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
+	}
 	status, err := statusfile.LookupObjectStatus(repoRoot, objectType, object)
 	if err != nil {
 		return Snapshot{}, err
@@ -255,29 +214,21 @@ func RebuildCurrentObject(repoRoot, objectType, object string) (Snapshot, error)
 	}
 	result.SpecVersionRef = fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(mainSpecRef), ".md"), version)
 
-	if objectType == "unit" || objectType == "scenario" {
-		appendixEntries, err := buildAppendixSnapshot(repoRoot, mainSpecRef, frontmatter, body)
-		if err != nil {
-			return Snapshot{}, err
-		}
-		result.ModuleAppendixSnapshot = appendixEntries
+	appendixEntries, err := buildAppendixSnapshot(repoRoot, mainSpecRef, frontmatter, body)
+	if err != nil {
+		return Snapshot{}, err
 	}
-	if objectType == "scenario" {
-		repositoryMapping, err := BuildRepositoryMappingSnapshot(repoRoot)
-		if err != nil {
-			return Snapshot{}, err
-		}
-		result.RepositoryMapping = repositoryMapping
-		unitRefs, _, err := parseNamedRefs(body, "unit_refs")
-		if err != nil {
-			return Snapshot{}, err
-		}
-		unitSnapshot, err := buildObjectDependencySnapshot(repoRoot, "unit", unitRefs)
-		if err != nil {
-			return Snapshot{}, err
-		}
-		result.UnitSnapshot = unitSnapshot
+	result.ModuleAppendixSnapshot = appendixEntries
+
+	unitRefs, _, err := parseFrontmatterNamedRefs(string(mainSpecContent), "unit_refs")
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("%s: %w", mainSpecRef, err)
 	}
+	unitSnapshot, err := buildObjectDependencySnapshot(repoRoot, "unit", unitRefs)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	result.UnitSnapshot = unitSnapshot
 
 	ruleRefs, err := rulerefs.ParseObjectRuleRefs(mainSpecRef, string(mainSpecContent))
 	if err != nil {
@@ -396,7 +347,7 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 		validateAcceptanceEvidenceMatrix(&result, actual, expected.AcceptanceItemSet)
 	}
 
-	if objectType == "unit" && (actual.scalars["unit_appendix_snapshot"] != "" || actual.appendixPresent) {
+	if actual.scalars["unit_appendix_snapshot"] != "" || actual.appendixPresent {
 		actualAppendix := normalizeAppendixList(actual.appendixEntries)
 		expectedAppendix := normalizeAppendixList(expected.ModuleAppendixSnapshot)
 		if actualAppendix != expectedAppendix {
@@ -404,30 +355,12 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 			result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
 		}
 	}
-	if objectType == "scenario" {
-		if actual.scalars["scenario_appendix_snapshot"] != "" || actual.appendixPresent {
-			actualAppendix := normalizeAppendixList(actual.appendixEntries)
-			expectedAppendix := normalizeAppendixList(expected.ModuleAppendixSnapshot)
-			if actualAppendix != expectedAppendix {
-				result.Valid = false
-				result.Mismatches = append(result.Mismatches, fmt.Sprintf("scenario_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
-			}
-		}
-		if actual.repositoryMappingPresent || actual.scalars["repository_mapping_snapshot"] != "" {
-			actualMapping := normalizeRepositoryMapping(actual.repositoryMapping)
-			expectedMapping := normalizeRepositoryMapping(expected.RepositoryMapping)
-			if actualMapping != expectedMapping {
-				result.Valid = false
-				result.Mismatches = append(result.Mismatches, fmt.Sprintf("repository_mapping_snapshot mismatch: actual=%s expected=%s", actualMapping, expectedMapping))
-			}
-		}
-		if actual.modulePresent || actual.scalars["unit_snapshot"] != "" {
-			actualUnits := normalizeObjectSnapshotList(actual.moduleEntries)
-			expectedUnits := normalizeObjectSnapshotList(expected.UnitSnapshot)
-			if actualUnits != expectedUnits {
-				result.Valid = false
-				result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_snapshot mismatch: actual=%s expected=%s", actualUnits, expectedUnits))
-			}
+	if actual.modulePresent || actual.scalars["unit_snapshot"] != "" {
+		actualUnits := normalizeObjectSnapshotList(actual.moduleEntries)
+		expectedUnits := normalizeObjectSnapshotList(expected.UnitSnapshot)
+		if actualUnits != expectedUnits {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_snapshot mismatch: actual=%s expected=%s", actualUnits, expectedUnits))
 		}
 	}
 	if _, ok := actual.scalars["rule_snapshot"]; ok || actual.sharedPresent {
@@ -448,9 +381,6 @@ func requiredFieldsForObjectProcess(objectType, processKind string) ([]string, b
 	case "unit":
 		fields, ok := requiredUnitProcessSnapshotFields[processKind]
 		return fields, ok
-	case "scenario":
-		fields, ok := requiredScenarioProcessSnapshotFields[processKind]
-		return fields, ok
 	default:
 		return nil, false
 	}
@@ -466,13 +396,6 @@ func expectedProcessRouting(objectType, processKind string) (string, string, err
 			return "unit_plan", "unit_impl", nil
 		case "verify":
 			return "unit_verify", "unit_promote", nil
-		}
-	case "scenario":
-		switch processKind {
-		case "check":
-			return "scenario_check", "scenario_verify", nil
-		case "verify":
-			return "scenario_verify", "scenario_promote", nil
 		}
 	}
 	return "", "", fmt.Errorf("process kind %q is not supported for object type %q", processKind, objectType)
@@ -505,7 +428,6 @@ func LoadProcessSnapshot(repoRoot, objectType, object, processKind string) (Proc
 		Scalars:                scalars,
 		ModuleAppendixSnapshot: append([]AppendixEntry(nil), parsed.appendixEntries...),
 		ModuleSnapshot:         append([]ObjectSnapshotEntry(nil), parsed.moduleEntries...),
-		FlowSnapshot:           append([]ObjectSnapshotEntry(nil), parsed.flowEntries...),
 		RuleSnapshot:           append([]RuleEntry(nil), parsed.sharedEntries...),
 		RepositoryMapping:      parsed.repositoryMapping,
 		AcceptanceItemSet:      append([]AcceptanceItemEntry(nil), parsed.acceptanceItemEntries...),
@@ -533,18 +455,10 @@ func Render(snapshot Snapshot) string {
 		"acceptance_item_set:",
 	}
 	lines = append(lines, renderAcceptanceItemLines(snapshot.AcceptanceItemSet)...)
-	if objectType == "unit" {
-		lines = append(lines, "unit_appendix_snapshot:")
-		lines = append(lines, renderAppendixLines(snapshot.ModuleAppendixSnapshot)...)
-	}
-	if objectType == "scenario" {
-		lines = append(lines, "scenario_appendix_snapshot:")
-		lines = append(lines, renderAppendixLines(snapshot.ModuleAppendixSnapshot)...)
-		lines = append(lines, "repository_mapping_snapshot:")
-		lines = append(lines, renderRepositoryMappingLines(snapshot.RepositoryMapping)...)
-		lines = append(lines, "unit_snapshot:")
-		lines = append(lines, renderObjectSnapshotLines("unit", snapshot.UnitSnapshot)...)
-	}
+	lines = append(lines, "unit_appendix_snapshot:")
+	lines = append(lines, renderAppendixLines(snapshot.ModuleAppendixSnapshot)...)
+	lines = append(lines, "unit_snapshot:")
+	lines = append(lines, renderObjectSnapshotLines("unit", snapshot.UnitSnapshot)...)
 	lines = append(lines, "rule_snapshot:")
 	lines = append(lines, renderSharedLines(snapshot.RuleSnapshot)...)
 	return strings.Join(lines, "\n")
@@ -614,8 +528,7 @@ func hasAcceptanceSection(body string) bool {
 }
 
 func isStableMainSpecRef(mainSpecRef string) bool {
-	return strings.HasPrefix(mainSpecRef, "docs/specs/units/stable/") ||
-		strings.HasPrefix(mainSpecRef, "docs/specs/scenarios/stable/")
+	return strings.HasPrefix(mainSpecRef, "docs/specs/units/stable/")
 }
 
 func buildAppendixSnapshot(repoRoot, mainSpecRef string, frontmatter map[string]string, body string) ([]AppendixEntry, error) {
@@ -792,18 +705,12 @@ func resolveObjectVersionRef(repoRoot, expectedObjectType, ref string) (ObjectSn
 			layer = "stable"
 			object = strings.TrimPrefix(prefix, "s_unit_")
 		}
-	case "scenario":
-		switch {
-		case strings.HasPrefix(prefix, "c_scenario_"):
-			layer = "candidate"
-			object = strings.TrimPrefix(prefix, "c_scenario_")
-		case strings.HasPrefix(prefix, "s_scenario_"):
-			layer = "stable"
-			object = strings.TrimPrefix(prefix, "s_scenario_")
-		}
 	}
 	if layer == "" || object == "" {
 		return ObjectSnapshotEntry{}, fmt.Errorf("invalid %s ref %q", expectedObjectType, ref)
+	}
+	if expectedObjectType == "unit" && layer != "stable" {
+		return ObjectSnapshotEntry{}, fmt.Errorf("unit_refs must reference stable units; got %q", ref)
 	}
 	fileRef, err := specpaths.ObjectMainSpecFileRef(expectedObjectType, layer, object)
 	if err != nil {
@@ -940,6 +847,69 @@ func parseFrontmatter(content string) (map[string]string, string, error) {
 	return result, body, nil
 }
 
+func parseFrontmatterNamedRefs(content, fieldName string) ([]string, bool, error) {
+	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return nil, false, nil
+	}
+	endIdx := -1
+	for idx := 1; idx < len(lines); idx++ {
+		if strings.TrimSpace(lines[idx]) == "---" {
+			endIdx = idx
+			break
+		}
+	}
+	if endIdx == -1 {
+		return nil, false, nil
+	}
+
+	for idx := 1; idx < endIdx; idx++ {
+		trimmed := strings.TrimSpace(lines[idx])
+		right, matched, err := parseNamedFieldLine(trimmed, fieldName)
+		if err != nil {
+			return nil, false, err
+		}
+		if !matched {
+			continue
+		}
+		if right == "`none`" || right == "none" {
+			return nil, true, nil
+		}
+		if right != "" {
+			return nil, false, fmt.Errorf("%s must use literal none or a YAML list", fieldName)
+		}
+		refs := []string{}
+		seen := map[string]bool{}
+		for next := idx + 1; next < endIdx; next++ {
+			nextTrimmed := strings.TrimSpace(lines[next])
+			if nextTrimmed == "" || strings.HasPrefix(nextTrimmed, "#") {
+				continue
+			}
+			if !strings.HasPrefix(nextTrimmed, "- ") {
+				break
+			}
+			ref := strings.TrimSpace(strings.TrimPrefix(nextTrimmed, "- "))
+			ref = strings.Trim(strings.Trim(ref, "`"), "\"'")
+			if ref == "" {
+				return nil, false, fmt.Errorf("%s contains an empty item", fieldName)
+			}
+			if seen[ref] {
+				return nil, false, fmt.Errorf("%s contains duplicate item %q", fieldName, ref)
+			}
+			seen[ref] = true
+			refs = append(refs, ref)
+		}
+		if len(refs) == 0 {
+			return nil, false, fmt.Errorf("%s must not be an empty list", fieldName)
+		}
+		if err := validateOrderedRefs(fieldName, refs); err != nil {
+			return nil, false, err
+		}
+		return refs, true, nil
+	}
+	return nil, false, nil
+}
+
 func hashNormalizedText(content string) string {
 	text := strings.ReplaceAll(content, "\r\n", "\n")
 	text = strings.TrimSuffix(text, "\n")
@@ -1068,10 +1038,6 @@ func mainSpecObject(mainSpecRef string) (string, string, error) {
 		return strings.TrimPrefix(base, "c_unit_"), "unit", nil
 	case strings.HasPrefix(base, "s_unit_"):
 		return strings.TrimPrefix(base, "s_unit_"), "unit", nil
-	case strings.HasPrefix(base, "c_scenario_"):
-		return strings.TrimPrefix(base, "c_scenario_"), "scenario", nil
-	case strings.HasPrefix(base, "s_scenario_"):
-		return strings.TrimPrefix(base, "s_scenario_"), "scenario", nil
 	default:
 		return "", "", fmt.Errorf("unsupported main spec file ref %q", mainSpecRef)
 	}
@@ -1086,8 +1052,6 @@ type processSnapshot struct {
 	repositoryMappingPresent  bool
 	moduleEntries             []ObjectSnapshotEntry
 	modulePresent             bool
-	flowEntries               []ObjectSnapshotEntry
-	flowPresent               bool
 	sharedEntries             []RuleEntry
 	sharedPresent             bool
 	acceptanceItemEntries     []AcceptanceItemEntry
@@ -1127,7 +1091,7 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 			result.presentFields[key] = true
 			if value == "" {
 				switch key {
-				case "unit_appendix_snapshot", "scenario_appendix_snapshot":
+				case "unit_appendix_snapshot":
 					result.appendixPresent = true
 					currentList = key
 				case "repository_mapping_snapshot":
@@ -1135,9 +1099,6 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 					currentList = key
 				case "unit_snapshot":
 					result.modulePresent = true
-					currentList = key
-				case "scenario_snapshot":
-					result.flowPresent = true
 					currentList = key
 				case "rule_snapshot":
 					result.sharedPresent = true
@@ -1165,7 +1126,7 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 			}
 			listItemStart := strings.HasPrefix(trimmed, "- ")
 			switch currentList {
-			case "unit_appendix_snapshot", "scenario_appendix_snapshot":
+			case "unit_appendix_snapshot":
 				if !allowedAppendixSnapshotField(key) {
 					result.invalidFields = append(result.invalidFields, fmt.Sprintf("unsupported field: %s.%s", currentList, key))
 					continue
@@ -1183,12 +1144,6 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 					currentIndex = len(result.moduleEntries) - 1
 				}
 				assignObjectSnapshotField(&result.moduleEntries[currentIndex], key, value)
-			case "scenario_snapshot":
-				if currentIndex < 0 || (listItemStart && key == "scenario") {
-					result.flowEntries = append(result.flowEntries, ObjectSnapshotEntry{})
-					currentIndex = len(result.flowEntries) - 1
-				}
-				assignObjectSnapshotField(&result.flowEntries[currentIndex], key, value)
 			case "rule_snapshot":
 				if currentIndex < 0 || (listItemStart && key == "rule_id") {
 					result.sharedEntries = append(result.sharedEntries, RuleEntry{})
@@ -1221,10 +1176,6 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 		result.appendixPresent = true
 		result.appendixEntries = nil
 	}
-	if raw, ok := result.scalars["scenario_appendix_snapshot"]; ok && raw == "none" {
-		result.appendixPresent = true
-		result.appendixEntries = nil
-	}
 	if raw, ok := result.scalars["repository_mapping_snapshot"]; ok && raw == "none" {
 		result.repositoryMappingPresent = true
 		result.repositoryMapping = RepositoryMappingEntry{}
@@ -1232,10 +1183,6 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 	if raw, ok := result.scalars["unit_snapshot"]; ok && raw == "none" {
 		result.modulePresent = true
 		result.moduleEntries = nil
-	}
-	if raw, ok := result.scalars["scenario_snapshot"]; ok && raw == "none" {
-		result.flowPresent = true
-		result.flowEntries = nil
 	}
 	if raw, ok := result.scalars["rule_snapshot"]; ok && raw == "none" {
 		result.sharedPresent = true
@@ -1335,7 +1282,7 @@ func assignRepositoryMappingField(entry *RepositoryMappingEntry, key, value stri
 
 func assignObjectSnapshotField(entry *ObjectSnapshotEntry, key, value string) {
 	switch key {
-	case "unit", "scenario":
+	case "unit":
 		entry.ObjectRef = value
 	case "layer":
 		entry.Layer = value
@@ -1707,10 +1654,8 @@ func classifyFailureLayer(objectType, processKind string, mismatches []string) s
 			strings.Contains(mismatch, "spec_version_ref mismatch"),
 			strings.Contains(mismatch, "spec_fingerprint mismatch"),
 			strings.Contains(mismatch, "acceptance_item_set mismatch"),
-			strings.Contains(mismatch, "scenario_appendix_snapshot mismatch"),
 			strings.Contains(mismatch, "unit_appendix_snapshot mismatch"),
 			strings.Contains(mismatch, "unit_snapshot mismatch"),
-			strings.Contains(mismatch, "repository_mapping_snapshot mismatch"),
 			strings.Contains(mismatch, "rule_snapshot mismatch"):
 			return "truth_layer"
 		}
@@ -1739,15 +1684,6 @@ func nextCommandForFailureLayer(objectType, processKind, failureLayer string) st
 			return "unit_impl"
 		case "evidence_layer":
 			return "unit_verify"
-		}
-	case "scenario":
-		switch failureLayer {
-		case "truth_layer", "gate_layer":
-			return "scenario_check"
-		case "evidence_layer":
-			return "scenario_verify"
-		case "dependency_readiness_layer":
-			return "scenario_promote"
 		}
 	}
 	return ""
@@ -1852,6 +1788,9 @@ func VerifyResultFilePath(objectType, object string) string {
 }
 
 func ProcessArtifactPaths(objectType, object, processKind string) ([]string, error) {
+	if objectType != "unit" {
+		return nil, fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
+	}
 	switch processKind {
 	case "check":
 		return []string{CheckResultFilePath(objectType, object)}, nil
@@ -1868,6 +1807,9 @@ func ProcessArtifactPaths(objectType, object, processKind string) ([]string, err
 }
 
 func ProcessFilePath(objectType, object, processKind string) (string, error) {
+	if objectType != "unit" {
+		return "", fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
+	}
 	switch processKind {
 	case "check":
 		return CheckResultFilePath(objectType, object), nil

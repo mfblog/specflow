@@ -22,7 +22,7 @@ Use guidance when the request is about any of these before the formal candidate 
 5. turning an approved discussion result into candidate truth
 
 Before selecting a guidance skill, diagnose the user's goal in ordinary language.
-Do not ask the user to classify the request as `unit`, `scenario`, `rule`, stable `g_` rule, or `repository_mapping`.
+Do not ask the user to classify the request as `unit`, `rule`, stable `g_` rule, or `repository_mapping`.
 Use repository truth and natural-language routing to translate the user's goal into the internal specFlow owner.
 
 Do not use guidance when the user gives an exact standard command such as `unit_check:skill` or `unit_plan:agent`. Exact commands route through `command_policy.md`.

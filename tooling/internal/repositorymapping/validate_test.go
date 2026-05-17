@@ -11,17 +11,14 @@ func TestValidateAcceptsObjectRegistry(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeStatus(t, repoRoot, []statusRow{
 		{objectType: "unit", object: "demo", stable: "no", candidate: "yes", activeLayer: "candidate", nextCommand: "unit_check"},
-		{objectType: "scenario", object: "demo_flow", stable: "no", candidate: "yes", activeLayer: "candidate", nextCommand: "scenario_check"},
 	})
 	writeMapping(t, repoRoot, []string{
-		"| unit | demo | capability | landed | `AgentCore/internal/demo/**` | `docs/specs/units/candidate/c_unit_demo.md` | demo unit |",
-		"| scenario | demo_flow | flow | planned | none | `docs/specs/scenarios/candidate/c_scenario_demo_flow.md` | demo flow |",
-		"| rule | b_rule_future | bound | planned | none | none | future rule |",
-		"| rule | b_rule_demo | bound | planned | none | `docs/specs/rules/stable/s_b_rule_demo.md` | demo rule |",
+		"| unit | demo | landed | `AgentCore/internal/demo/**` | `docs/specs/units/candidate/c_unit_demo.md` | demo unit |",
+		"| rule | b_rule_future | planned | none | none | future rule |",
+		"| rule | b_rule_demo | planned | none | `docs/specs/rules/stable/s_b_rule_demo.md` | demo rule |",
 	})
 	writeFile(t, repoRoot, "AgentCore/internal/demo/service.go", "package demo\n")
 	writeFile(t, repoRoot, "docs/specs/units/candidate/c_unit_demo.md", "# Demo\n")
-	writeFile(t, repoRoot, "docs/specs/scenarios/candidate/c_scenario_demo_flow.md", "# Demo Flow\n")
 	writeFile(t, repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md", "# Rule\n")
 
 	result, err := Validate(repoRoot)
@@ -37,7 +34,7 @@ func TestValidateRejectsMissingLandedImplementationPath(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeStatus(t, repoRoot, nil)
 	writeMapping(t, repoRoot, []string{
-		"| rule | b_rule_missing | bound | landed | `AgentCore/internal/missing/**` | none | missing rule |",
+		"| rule | b_rule_missing | landed | `AgentCore/internal/missing/**` | none | missing rule |",
 	})
 
 	result, err := Validate(repoRoot)
@@ -53,7 +50,7 @@ func TestValidateRejectsPlannedImplementationPath(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeStatus(t, repoRoot, nil)
 	writeMapping(t, repoRoot, []string{
-		"| rule | b_rule_future | bound | planned | `AgentCore/internal/future/**` | none | future rule |",
+		"| rule | b_rule_future | planned | `AgentCore/internal/future/**` | none | future rule |",
 	})
 
 	result, err := Validate(repoRoot)
@@ -69,8 +66,8 @@ func TestValidateRejectsInvalidRegistryRow(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeStatus(t, repoRoot, nil)
 	writeMapping(t, repoRoot, []string{
-		"| feature | demo | capability | landed | `AgentCore/internal/demo/**` | none | invalid kind |",
-		"| unit | planned_demo | capability | waiting | none | none | invalid state |",
+		"| feature | demo | landed | `AgentCore/internal/demo/**` | none | invalid kind |",
+		"| unit | planned_demo | waiting | none | none | invalid state |",
 	})
 
 	result, err := Validate(repoRoot)
@@ -131,8 +128,8 @@ func writeMapping(t *testing.T, repoRoot string, rows []string) {
 		"",
 		"## 2. Object Registry",
 		"",
-		"| kind | id | scope | registration_state | implementation_paths | spec_files | responsibility |",
-		"|---|---|---|---|---|---|---|",
+		"| kind | id | registration_state | implementation_paths | spec_files | responsibility |",
+		"|---|---|---|---|---|---|",
 	}
 	content = append(content, rows...)
 	content = append(content, "", "## 3. Boundary Rules", "")

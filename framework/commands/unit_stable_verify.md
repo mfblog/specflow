@@ -45,7 +45,7 @@ Stable binding and fingerprint comparisons must use `specflow/framework/process_
 ## 4. Procedure
 
 1. read `docs/specs/units/stable/s_unit_{unit}.md` and any required appendix or Rule files
-2. verify that the stable `Testability / Acceptance Criteria` section contains explicit acceptance items according to `spec_writing_guide.md` Section 5
+2. verify that the stable `Testability / Acceptance Criteria` section contains explicit acceptance items according to `spec_writing_guide.md` Section 6
    - historical stable Specs that still use prose-only acceptance text must not be treated as automatically passing
    - if the stable truth lacks structured acceptance items, report the gap and keep the object at `unit_stable_verify` or route through the smallest legal truth-update path before claiming stable alignment
 3. verify stable truth, appendix, Rule, and global-baseline binding fingerprints through the process snapshot contract or deterministic tooling; if authoritative comparison is unavailable, report that stable alignment cannot be confirmed

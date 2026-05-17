@@ -9,4 +9,5 @@ templates/docs/specs/_plans/draft/README.md	docs/specs/_plans/draft/README.md	fr
 templates/docs/specs/_plans/active/README.md	docs/specs/_plans/active/README.md	framework
 templates/docs/specs/_verify_result/README.md	docs/specs/_verify_result/README.md	framework
 templates/docs/specs/_status.md	docs/specs/_status.md	project
+templates/docs/specs/repository_mapping.md	docs/specs/repository_mapping.md	project
 templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md	docs/specs/rules/stable/s_g_rule_repository_baseline.md	project

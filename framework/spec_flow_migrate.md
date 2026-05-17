@@ -1,217 +1,135 @@
-# Spec Flow Migrate
+# spec_flow_migrate
 
-## 1. Purpose
+`spec_flow_migrate` is a dedicated operation for updating SpecFlow file shapes to the current framework contracts after those contracts change.
 
-`spec_flow_migrate` migrates the current project instance after the repository has received newer `specFlow` framework rules.
+It is not a unit lifecycle command.
+It does not decide product behavior, acceptance meaning, rule meaning, implementation logic, or object ownership.
 
-It answers five questions:
+## 1. Entry
 
-1. whether current project-instance files can be consumed by the current framework rules
-2. which project-instance shape problems can be updated mechanically
-3. which process-state files must be invalidated after migration
-4. which problems require user judgment or another upstream action before migration can continue
-5. what the executor must report after migration, partial migration, or a blocked migration
+Migration authority exists only when the user explicitly invokes the exact `spec_flow_migrate` entry.
+The entry may include a narrowing phrase that names the files or project-instance surfaces to inspect.
 
-Plain input `spec_flow_migrate` means full project-instance migration unless the user explicitly narrows the target surface.
+Requests that do not explicitly invoke `spec_flow_migrate` must not receive migration write authority by implication.
+They must be handled by the route selected for that request, or stopped when the route is unclear.
 
-This flow is not a standard `unit` or `scenario` command.
-It does not use `{command}:{object}` syntax.
-It does not create a lifecycle object, replace `spec_flow_review`, or add compatibility aliases for old project-instance shapes.
+## 2. Required Reads
 
----
+Before any write, migration must read the current owner contract for each target surface it may touch.
 
-## 2. Migration Target
+The required read surface is the smallest set that proves the target shape:
 
-Project-instance migration targets only the files that must match the current framework contracts before normal `specFlow` routing, commands, review, and tooling can consume the project.
+1. the framework policy file that owns the target file shape
+2. the matching template under `specflow/templates/**` when the target shape is template-defined
+3. `specflow/framework/repository_mapping_policy.md` when object registration or path ownership shape is touched
+4. `specflow/framework/spec_policy.md` and `docs/specs/_status.md` when object state rows are touched
+5. `specflow/framework/process_snapshot_contract.md` when process files or stored process evidence are touched
+6. `specflow/framework/entry_index_registry.md` when a registered entry managed block is touched
+7. `specflow/framework/tooling_execution_policy.md` and `specflow/tooling/README.md` when existing tooling is used
 
-The default target surface is:
+Repository history, chat agreement, old file examples, and ordinary word meaning are not target-shape sources.
 
-1. project-instance truth and state under `docs/specs/**`
-2. template-governed process contract files under `docs/specs/_check_result/**`, `docs/specs/_plans/**`, and `docs/specs/_verify_result/**`
-3. `docs/specs/_status.md`
-4. `docs/specs/repository_mapping.md`
-5. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
-6. registered entry index managed blocks in `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md`
+## 3. Target Shape Rule
 
-Migration may read framework rules, templates, and tooling contracts as inputs.
-Migration must not rewrite framework rules, command files, tooling source, or template files.
+Every migration edit must have one current rule-derived target.
 
-If framework-managed files are missing, internally inconsistent, or not updated to the intended target framework version, `spec_flow_migrate` must stop with a `prerequisite_action` checkpoint instead of inferring the target framework from repository history, chat context, or a remote source.
+A target is rule-derived only when the current owner contract states one of the following:
 
----
+1. a required file path
+2. a required table header
+3. a required frontmatter field
+4. an allowed field value set
+5. a required managed-block shape
+6. a required process-file field shape
+7. a deterministic tooling command or validation contract
 
-## 3. Required Read Surface
+If the current owner contract does not define the target shape, migration must stop for that target.
+The executor must not invent a target shape from judgment, naming preference, or old repository shape.
 
-Before any migration writeback, read:
+## 4. Allowed Writes
 
-1. this file
-2. `specflow/framework/checkpoint_protocol.md`
-3. `specflow/framework/spec_flow_review.md` Section 2.9 for the project-instance compatibility boundary
-4. `specflow/framework/spec_policy.md` for truth-file ownership and binding rules
-5. `specflow/framework/command_policy.md` for command ownership and lifecycle boundaries
-6. `specflow/framework/process_snapshot_contract.md` for process snapshot shape and invalidation rules
-7. `specflow/framework/recovery_policy.md` for fallback cleanup and next-command targets
-8. `specflow/framework/entry_index_registry.md` before changing registered entry files
-9. `specflow/framework/tooling_execution_policy.md` before using any governance tooling
-10. `docs/specs/repository_mapping.md`
-11. `docs/specs/_status.md`
-12. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when it exists
-13. the template-side process and state contracts under `specflow/templates/docs/specs/**` that correspond to the project files being migrated
-14. the template entry files under `specflow/templates/` when registered entry managed blocks are in scope
+Migration may write only file-shape changes whose target is fixed by Section 3.
 
-When the user explicitly narrows the migration target, read only the subset needed to prove that narrowed migration and its downstream invalidation effects.
+Allowed writes are limited to:
 
----
+1. updating framework policy documents or templates so they state the current shape directly
+2. updating project-instance tables, frontmatter, status rows, paths, or registered fields to match the current shape
+3. updating registered entry managed blocks under `specflow/framework/entry_index_registry.md`
+4. removing obsolete shape fields when the current owner contract says the field is no longer part of the shape
+5. rebuilding deterministic derivatives or running validators when the tooling contract already allows that action
 
-## 4. Compatibility Scan
+An allowed write changes format, location, field shape, or managed framework text.
+It must not change the meaning carried by the file.
 
-The first executable step is a compatibility scan.
+## 5. Forbidden Writes
 
-The scan must classify every discovered issue into exactly one of these classes:
+Migration must not:
 
-1. `mechanical_update`
-   - the current framework rules or templates define one exact target shape
-   - the update does not choose business behavior, object ownership, acceptance meaning, rule-truth ownership, or global-rule meaning
-2. `process_invalidation`
-   - a process file or status row can no longer prove the gate, plan, verification, or active-layer state it previously claimed
-   - the affected object and fallback target are mechanically determined by current `_status.md`, `process_snapshot_contract.md`, and `recovery_policy.md`
-3. `blocked_decision`
-   - more than one target meaning is possible, or a business, ownership, acceptance, shared, or system decision is needed
-4. `blocked_prerequisite`
-   - migration cannot continue until a concrete upstream file, framework update, mapping writeback, or command result exists
-5. `out_of_scope`
-   - the issue is business-truth correctness, implementation correctness, product design quality, or another concern outside project-instance format migration
+1. change unit behavior truth
+2. change acceptance meaning
+3. change rule truth or rule binding meaning
+4. change implementation logic
+5. choose a new object owner or object responsibility
+6. fill missing dependency meaning for an existing unit
+7. create compatibility aliases, hidden fallback branches, or repair logic
+8. preserve old process evidence as a current pass claim after the evidence source changed
+9. edit host-owned content outside a registered entry managed block
+10. use tooling to make a semantic decision that belongs to governance rules or runtime reasoning
 
-The scan must not treat old shape as valid only because older framework versions accepted it.
-The target is the current framework rule set in the repository.
+When a required edit would need any forbidden decision, migration must stop and report the correct owner or next action.
 
----
+## 6. Process State Handling
 
-## 5. Allowed Writeback
+Process files are evidence, not behavior truth.
 
-`spec_flow_migrate` may write only `mechanical_update` and `process_invalidation` results.
+When migration changes a file that existing process evidence depends on, migration must not leave that evidence trusted unless the current process contract still validates it.
 
-Allowed mechanical updates include:
+For affected unit process state, migration must use the current rules in:
 
-1. adding, renaming, or reordering required fields when the new field value is mechanically derivable from existing project truth or the current template contract
-2. converting tables or frontmatter to the current required shape when every row maps one-to-one
-3. replacing registered entry managed blocks with the managed block from the current matching template entry file
-4. updating template-governed process README files from current templates
-5. deleting or invalidating process files that cannot remain consumable under current snapshot rules
-6. updating `_status.md` only when the object, active layer, and next legal command are mechanically determined by current command and recovery rules
+1. `specflow/framework/process_snapshot_contract.md`
+2. `specflow/framework/recovery_policy.md`
+3. `specflow/framework/impact_sync_policy.md`
 
-Forbidden writeback:
+Migration may change process state only when those rules define the exact writeback or cleanup action.
+If the affected process state cannot be invalidated or rerouted by a current rule, migration must stop and report the affected files and the missing rule-defined next action.
 
-1. do not change unit, scenario, rule, repository-mapping, or global-rule business meaning
-2. do not add fallback logic, compatibility aliases, legacy command names, or dual-format reader rules
-3. do not preserve a stale `_check_result`, active plan, `_verify_result`, or status claim by editing its snapshot fields to match new files
-4. do not invent `version`, `rule_version`, `candidate_intent`, `repair_basis`, `source_basis`, `evidence_appendix_ref`, `Next Command`, or binding values when the current project truth does not determine them
-5. do not infer object ownership from directory shape when `docs/specs/repository_mapping.md` is missing or unclear
-6. do not change implementation-side files
-7. do not create or modify `specflow/tooling` source or a `specflowctl migrate` command as part of this flow
+## 7. Tooling Boundary
 
-If one file contains both mechanically migratable shape and unresolved business meaning, update only the independent mechanical part when doing so cannot hide or change the blocked meaning.
-Otherwise stop before writing that file.
+Existing tooling may be used only for mechanical actions already allowed by `specflow/framework/tooling_execution_policy.md`.
 
----
+Migration may use tooling to collect, parse, validate, rebuild, compare, clean up, transition, sync, or render only when the upstream input and writeback target are already fixed.
+Tooling must not decide whether a migration target is semantically correct, whether evidence is sufficient, or which owner should receive a truth decision.
 
-## 6. Process-State Invalidation
+If existing tooling cannot perform the needed mechanical action, migration must report a tooling gap instead of changing the tooling contract by implication.
 
-Migration must invalidate process state whenever migrated truth or support files make an existing process claim unprovable under the current framework.
+## 8. Blocked Stop
 
-Invalidation rules:
+Migration must stop before writing a target when any of the following is true:
 
-1. if a current `unit` candidate's consumable process state becomes invalid, delete its candidate-side process files and set the unit's next legal command to `unit_check`
-2. if a current `scenario` candidate's consumable process state becomes invalid, delete its candidate-side process files and set the scenario's next legal command to `scenario_check`
-3. if a current `unit` stable alignment claim becomes invalid, do not delete candidate-side files solely for that stable drift; set the unit's next legal command to `unit_stable_verify`
-4. if a current `scenario` stable alignment claim becomes invalid, do not delete candidate-side files solely for that stable drift; set the scenario's next legal command to `scenario_stable_verify`
-5. if a process file cannot be tied to one current object and one current layer, do not guess; classify it as `blocked_decision` or `blocked_prerequisite`
+1. the user did not explicitly invoke `spec_flow_migrate`
+2. the target surface does not have a current owner contract
+3. the target shape cannot be derived from a current owner contract
+4. the write would require a forbidden decision from Section 5
+5. affected process state cannot be invalidated or rerouted by a current rule
+6. registered entry managed-block source selection is unclear
+7. existing tooling is required but cannot legally perform the needed mechanical action
 
-Process-state invalidation must follow `specflow/framework/recovery_policy.md`.
-Snapshot comparison must follow `specflow/framework/process_snapshot_contract.md`.
+A blocked stop report must state:
 
-Tool-backed invalidation rules:
+1. the target that could not be migrated
+2. the current contracts that were read
+3. the missing contract, unclear source, or forbidden decision
+4. the files intentionally left unchanged
+5. the smallest legal next owner or action
 
-1. when `snapshot validate-process` supports a process file being evaluated, use that result before deciding that the file remains consumable or must be invalidated
-2. when deterministic cleanup tooling supports the selected invalidation layer, use it for process-file cleanup and `_status.md` fallback
-3. if validation or cleanup tooling is unavailable, stale, unsupported, or missing a command-declared layer, stop with `blocked_prerequisite` and report the tooling gap
-4. do not use shell checksums, manual hashes, editor display, conversation-derived values, or temporary scripts to preserve, delete, or rewrite process state
-5. migration must never repair a stale process file by editing its fingerprint fields to current values
+## 9. Migration Report
 
----
+After a migration run, the user-facing report must state:
 
-## 7. Checkpoints
+1. files changed
+2. the current contract used for each changed surface
+3. validators or deterministic tooling commands run
+4. process state invalidated, rerouted, or left blocked
+5. remaining decisions that are outside migration authority
 
-`spec_flow_migrate` may stop through these checkpoint types:
-
-1. `clarification`
-   - use when the user narrowed migration scope but the target surface is ambiguous
-2. `decision`
-   - use when two or more migration mappings are possible and the choice changes durable project truth
-3. `prerequisite_action`
-   - use when a required framework file, project truth file, repository mapping update, or upstream command result must exist before migration can continue
-
-Checkpoint fields must follow `specflow/framework/checkpoint_protocol.md`.
-
-For checkpoints raised by this flow:
-
-1. `command` must be `spec_flow_migrate`
-2. `target_objects` must name every migrated command-target object affected by the checkpoint using `unit:{unit}` or `scenario:{scenario}`, or `none` when the checkpoint is not bound to any command-target object
-3. `required_writeback_target` must name the concrete project truth, support file, or upstream action target when the answer affects durable state
-4. `resume_next_step` must be rerunning `spec_flow_migrate` from current repository truth unless a more specific prerequisite action is named
-
----
-
-## 8. Post-Migration Check
-
-After every migration writeback round, run the compatibility scan again over the migrated surface.
-
-The post-migration check must prove:
-
-1. every written file now matches the current framework shape that governed that writeback
-2. every process-state invalidation required by changed truth or support files has been applied
-3. registered entry managed blocks are consistent
-4. remaining problems are classified as `blocked_decision`, `blocked_prerequisite`, or `out_of_scope`
-5. no standard command lifecycle result is claimed solely because migration completed
-
-Migration completion does not advance `unit` or `scenario` lifecycle gates.
-Any object whose check, plan, verification, or stable alignment was invalidated must re-enter its next legal command after migration.
-
----
-
-## 9. Output Contract
-
-The final or stop report must include:
-
-1. migration scope
-2. current framework target files used as migration authority
-3. compatibility scan summary
-4. files changed
-5. process files deleted or invalidated
-6. `_status.md` rows changed
-7. registered entry managed-block result
-8. remaining blocked decisions or prerequisites
-9. out-of-scope findings, if any
-10. post-migration check result
-11. final conclusion:
-    - `migrated`
-    - `partially_migrated_blocked`
-    - `blocked_no_change`
-
-When no file changed, report `files changed: none`.
-When no blocker remains, report `remaining blockers: none`.
-
----
-
-## 10. Non-Goals
-
-This flow does not:
-
-1. review business truth correctness
-2. review whether the current governance design is worthwhile
-3. replace `spec_flow_review` or `spec_flow_design_review`
-4. create a new `unit`, `scenario`, or `rule`
-5. execute implementation work
-6. add old-format compatibility behavior
-7. introduce new tooling commands
-8. infer migration rules from Git history, release notes, or chat-only decisions
+The report must not claim that unit behavior, acceptance meaning, rule meaning, or implementation logic has been validated unless the owning non-migration process actually did that work.

@@ -41,7 +41,7 @@ type surfaceContract struct {
 	StandardType      string
 	AllowedEffects    map[string]bool
 	AllowedKinds      map[string]bool
-	AllowedScenarios  map[string]bool
+	AllowedProfiles   map[string]bool
 	AllowAllOnSurface bool
 }
 
@@ -197,9 +197,9 @@ func ValidateRegistry(repoRoot string) (ValidationResult, error) {
 					entryValid = false
 				}
 			}
-		case "review_scenario":
-			if !contract.AllowedScenarios[selector.Values[0]] {
-				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unsupported review scenario %q", rowPrefix, selector.Values[0]))
+		case "review_profile":
+			if !contract.AllowedProfiles[selector.Values[0]] {
+				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: unsupported review profile %q", rowPrefix, selector.Values[0]))
 				entryValid = false
 			}
 		}
@@ -255,12 +255,12 @@ func ParseAppliesTo(raw string) (AppliesSelector, error) {
 		}
 		return AppliesSelector{Kind: "unit_set", Values: values}, nil
 	}
-	if strings.HasPrefix(raw, "review_scenario:") {
-		value := strings.TrimSpace(strings.TrimPrefix(raw, "review_scenario:"))
+	if strings.HasPrefix(raw, "review_profile:") {
+		value := strings.TrimSpace(strings.TrimPrefix(raw, "review_profile:"))
 		if value == "" {
-			return AppliesSelector{}, fmt.Errorf("review_scenario selector requires one stable scenario name")
+			return AppliesSelector{}, fmt.Errorf("review_profile selector requires one stable profile name")
 		}
-		return AppliesSelector{Kind: "review_scenario", Values: []string{value}}, nil
+		return AppliesSelector{Kind: "review_profile", Values: []string{value}}, nil
 	}
 	return AppliesSelector{}, fmt.Errorf("unsupported applies_to selector %q", raw)
 }

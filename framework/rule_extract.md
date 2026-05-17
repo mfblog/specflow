@@ -1,159 +1,94 @@
-# Rule Extract Flow
+# Rule Extract
 
-## 1. Purpose
+`rule_extract` is the internal rule-governance flow for moving existing unit-local formal truth into one independent rule.
 
-`rule_extract` is the internal flow for extracting already-existing unit truth into one independent `rule`.
+It is used only when the shared constraint already exists in current unit truth and must stop being duplicated inside unit bodies.
 
-It answers four questions:
+## 1. Scope
 
-1. whether multiple units really depend on the same formal truth now
-2. which part of current unit-local truth should move into one rule object
-3. how unit-side truth must be rewritten so duplicate formal truth no longer remains
-4. how the repository must be reconciled after the shared extraction lands
+`rule_extract` may:
 
-This is not a user-facing command entry.
-The user reaches it through natural-language routing when that routing enters the rule-governance branch.
+1. create or update a candidate rule file for the extracted truth
+2. rewrite candidate unit `rule_refs` so the affected units consume the extracted rule
+3. rewrite candidate unit prose so the unit body explains how it consumes the rule
+4. remove duplicated formal truth from candidate unit bodies
+5. update `docs/specs/repository_mapping.md` when a new rule object is registered or the rule object map changes
+6. run `rule_sync` after rule truth or unit binding writeback
 
----
+`rule_extract` must not:
 
-## 2. Scope
+1. design a new rule with no current unit-local source truth
+2. bind a unit to an unchanged existing rule as the main action
+3. modify stable unit truth directly
+4. promote rule truth into a stable rule file
+5. leave the same formal constraint duplicated in both unit truth and rule truth
 
-By default it handles requests where rule truth already exists inside one or more units and now needs to be extracted.
+## 2. Required Reads
 
-It may:
+Before any write, read:
 
-1. create or update a candidate-layer `rule`
-2. rewrite unit candidate-side references and boundary explanation
-3. remove duplicate formal truth from the source unit candidate side
-4. trigger `rule_sync` after any rule-truth or binding writeback
-5. stop at a rule-governance checkpoint when any source or consumer unit is currently at `stable`
+1. `specflow/framework/spec_policy.md`
+2. `specflow/framework/spec_writing_guide.md`
+3. `specflow/framework/command_policy.md`
+4. `specflow/framework/recovery_policy.md`
+5. `specflow/framework/rule_sync.md`
+6. `docs/specs/_status.md`
+7. every named source unit's current-layer main Spec
+8. every current-layer unit main Spec needed to determine whether that unit already carries, duplicates, or consumes the target truth
+9. every relevant existing rule file that may overlap the target truth
+10. `docs/specs/repository_mapping.md` when a new rule id is created or the rule object map may change
+11. `specflow/framework/commands/unit_fork.md` when any writeback-required unit is currently stable
+12. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
-It does not:
+Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
-1. design new rule truth from scratch when no unit-local source truth exists
-2. bind a unit to an already-stable rule truth as the only task
-3. replace unit lifecycle commands
-4. promote rule truth into stable `g_` rule
+## 3. Procedure
 
----
+1. Confirm that the request is extraction of existing unit-local formal truth.
+2. Identify the smallest rule object that carries only the shared constraint.
+3. Build the complete involved-unit set from current repository truth:
+   - units that currently carry the source truth
+   - units that already consume equivalent rule truth
+   - units whose current-layer body or `rule_refs` must change for extraction closure
+4. Decide the writeback-required unit subset. A unit is writeback-required only when its current-layer `rule_refs` or body text must change.
+5. If any writeback-required unit is currently stable, stop before writeback and raise a prerequisite action requiring `unit_fork:{unit}` for each such unit.
+6. Before the first file mutation, capture the recovery baseline required by `recovery_policy.md` Section 6.5.
+7. Create or update the target candidate rule file.
+8. If this is the first file for a new rule object, write `rule_version: 0.1.0`.
+9. If the target rule has a stable sibling, write or validate exactly one `promotion_owner_unit` from the writeback-required unit subset. If no such owner can be named from current truth, stop and return to `rule_escape`.
+10. Update `docs/specs/repository_mapping.md` in the same round when the rule object map changed.
+11. Rewrite each source candidate unit so the extracted truth no longer remains as duplicated unit-local formal truth.
+12. Rewrite each affected candidate unit's `rule_refs` and body explanation required by the extraction result.
+13. Remove unbound-retention fields from the target rule when the resulting current-layer unit `rule_refs` graph has consumers.
+14. If the resulting rule remains intentionally unbound, write intentional unbound-retention fields in the target rule; otherwise reject closure.
+15. Do not write consumer lists or `bound_objects` into any rule file.
+16. Run `rule_sync` after any rule-file write or unit `rule_refs` write.
 
-## 3. Preconditions
+If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `recovery_policy.md` Section 6.5 before returning to natural-language routing.
 
-Before execution:
+## 4. Stop Conditions
 
-1. read `specflow/framework/spec_policy.md`
-2. read `specflow/framework/command_policy.md`
-3. read `docs/specs/_status.md` and use it as the repository-wide formal unit index for this extraction
-4. resolve each named unit's current layer from `_status.md` before reading its main Spec
-5. read the source unit current-layer main files and any explicitly referenced appendix truth involved in the extraction
-6. build the repository-wide involved-unit set needed for this extraction from current repository truth before writeback starts:
-   - start from the current formal unit set recorded in `_status.md`
-   - start from the named source units and any named consumer units
-   - read every additional current-layer unit main file needed to judge whether that unit still carries, duplicates, or already consumes the target truth
-   - do not treat the source unit list alone as sufficient when the extraction target may already be reused elsewhere
-7. read any relevant existing `rule` files that may overlap the target truth
-8. read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may cross into project-wide default-rule promotion
-9. if any involved unit is currently at `stable`, also read `specflow/framework/commands/unit_fork.md`
-10. if the round may create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `specflow/framework/rule_sync.md` first
-11. if the round may create or update any file under `docs/specs/rules/**`, apply the Rule version rules from `specflow/framework/spec_policy.md` Section 6.3
-12. if the round may create the first file for a brand-new `rule_id` or otherwise change the current rule object map, read `docs/specs/repository_mapping.md` before rule truth writeback
-13. read every current-layer unit or scenario main file needed to derive the real repository-wide binding set of each touched Rule from frontmatter `rule_refs`
+Stop when one of these is true:
 
----
+1. extraction is complete, duplicated unit-local formal truth is removed, required unit bindings are written, and `rule_sync` has closed reconciliation
+2. the request is not extraction and must route to another rule flow or unit lifecycle work
+3. a writeback-required unit is stable and must be forked before extraction can continue
+4. unit-local truth and shared rule truth cannot be separated safely from current repository truth
+5. involved-unit coverage is incomplete or uncertain
+6. a candidate rule with a stable sibling would exist without exactly one valid `promotion_owner_unit`
 
-## 4. Procedure
+## 5. Output Contract
 
-1. confirm the request is really about extracting already-existing unit-local formal truth
-2. identify the smallest rule object that multiple units truly depend on
-3. resolve the complete involved-unit set from current repository truth before writeback:
-   - identify which units currently carry duplicate unit-local truth for that object
-   - identify which command-target objects already consume that object through `rule_refs`
-   - reject closure if consumer coverage is still uncertain
-4. derive the writeback-required involved-unit subset for this round from the already-resolved involved-unit set:
-   - include each source unit whose current-layer formal truth must be rewritten so the extracted object no longer remains duplicated as unit-local truth
-   - include each consumer unit whose current-layer `rule_refs` or body-level consumption explanation must change because of the extraction result
-   - do not require writeback for an involved unit that is read only to confirm consumer coverage and whose current-layer truth already aligns with the extraction result
-5. if any writeback-required involved unit current layer is `stable`, do not modify that unit `stable` directly:
-   - raise a blocking rule-governance checkpoint with `type=prerequisite_action`
-   - require `unit_fork:{unit}` for each such unit before extraction continues
-   - set `required_writeback_target` to the corresponding unit candidate main file set because chat-only agreement does not create legal extraction targets
-5.5. before any rule file writeback, capture the recovery baseline required by `specflow/framework/recovery_policy.md` Section 6.5.1:
-     - the target candidate-layer Rule file
-     - any stable-layer sibling that may be created or updated
-     - any downstream unit candidate file that may be rewritten (rule_refs, body text)
-     - `docs/specs/repository_mapping.md` when the round may change the rule object map
-     - every other file under `docs/specs/rules/**` that may be touched by this round
-6. create or update the target candidate-layer `rule`
-7. if Step 6 created the first file for a brand-new rule object, initialize `rule_version=0.1.0`
-8. if Step 6 reopened an already-stable rule object at the candidate layer, set the candidate `rule_version` to the intended next stable version according to Rule semantic version rules
-9. if Step 6 reopened an already-stable rule object at the candidate layer, also write exactly one `promotion_owner_unit` into that candidate-layer rule file:
-   - the owner must be chosen from the writeback-required involved-unit subset for this round
-   - that owner is the unit round that must later land this candidate-layer rule file as the next stable-layer Rule file
-   - the owner unit may still remain formally bound to the current stable-layer shared sibling until a later legal unit candidate round rewrites its `rule_refs`
-   - if current repository truth is insufficient to name one stable owner without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
-10. if the target candidate-layer rule file has a stable-layer sibling after Steps 6 to 9, validate that the resulting candidate-layer file still carries exactly one valid `promotion_owner_unit`:
-   - if Step 9 already wrote the owner, confirm that the resulting file still keeps that owner
-   - if Step 6 updated an already-existing candidate-layer file with a stable-layer sibling, preserve or rewrite `promotion_owner_unit` so the resulting file still names one formal unit from the writeback-required involved-unit subset for this round
-   - if current repository truth is insufficient to keep one stable owner from that subset without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
-11. if this round created the first file for a brand-new `rule_id` or otherwise changed the current rule object map, update `docs/specs/repository_mapping.md` in the same round before executing `rule_sync`:
-   - add or update one `Object Registry` row for the changed `rule`
-   - set `kind=rule`, `id={rule_id}`, `scope=bound`, and the one-line responsibility
-   - list the concrete rule file in `spec_files`
-   - set `registration_state=landed` only when the rule has concrete implementation paths
-   - if the rule has no direct implementation path, set `registration_state=planned` and `implementation_paths=none`
-   - if current repository truth is insufficient to write the exact mapping update without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
-12. rewrite every source unit candidate side so the extracted truth is no longer duplicated as unit-local formal truth
-13. rewrite every additional writeback-required involved consumer unit candidate-side reference and behavior explanation required by the extraction result
-   - any written `rule_refs` must use the Rule binding contract from `specflow/framework/spec_policy.md` Section 6.1
-14. do not write consumer metadata into the target Rule file; the target Rule file must omit `bound_objects`
-15. if the target rule file now has one or more formal consumers in the current-layer `unit` and `scenario` `rule_refs` graph after this round, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields from that resulting bound file state in the same round
-16. if duplicate formal truth still remains after extraction, stop and report boundary closure failure
-17. if any involved unit that should now consume the extracted truth was not fully reviewed and rewritten where required, stop and report consumer-coverage failure
-18. after any write to `docs/specs/rules/**` or any unit `rule_refs`, execute `rule_sync` before claiming closure
+The output must report:
 
----
-
-## 5. Stop Conditions
-
-Stop when one of the following is true:
-
-1. the shared extraction is complete, duplicate formal truth is removed, and `rule_sync` has finished reconciliation
-   - the target Rule file must omit `bound_objects`
-   - involved consumer coverage must already be complete for the current repository truth
-   - any required `repository_mapping.md` object-map writeback must already be complete
-2. the request is not really extraction and must be re-routed to another rule flow
-3. one or more writeback-required involved units are currently at `stable` and the flow has raised a rule-governance checkpoint for `unit_fork` first
-4. unit-local truth versus rule truth is still not stably separable
-5. involved consumer coverage is still incomplete or uncertain, so the flow cannot claim extraction closure yet
-7. a resulting candidate-layer rule file for an already-stable rule object would exist after this round, but no stable `promotion_owner_unit` can be named from the writeback-required involved-unit subset
-
----
-
-## 6. Output Contract
-
-The output must include at least:
-
-1. the extracted rule object and why it belongs to `rule_extract`
-2. the complete involved-unit set used for the extraction decision
-3. which involved units were source units, which command-target objects were already consumers, which units required writeback in this round, and which had to stop for `unit_fork`
-4. the source unit files that originally carried the truth
-5. the target rule file written or updated, or the checkpoint result when extraction could not legally start yet
-6. the written `rule_version` and why it is correct for the current round
-7. the unit candidate-side rewrite result and whether duplicate formal truth was fully removed
-8. whether involved unit and scenario consumer coverage is complete for the current repository truth
-9. confirmation that the target rule file omits `bound_objects`
-10. when the resulting candidate-layer rule file has a stable-layer sibling, the written or validated `promotion_owner_unit`
-11. when the round changed the current rule object map, the `docs/specs/repository_mapping.md` writeback result
-12. the `rule_sync` result, including affected downstream objects and fallback if any
-
----
-
-## 7. Non-Goals
-
-`rule_extract` does not:
-
-1. preserve two formal truths for the same object
-2. skip unit-side boundary rewrite after creating a rule file
-3. leave reconciliation for later after changing rule truth or bindings
-4. modify unit `stable` truth directly
-5. absorb shared conclusions into stable `g_` rule
+1. the extracted rule truth and source unit truth
+2. the complete involved-unit set
+3. which units were rewritten and which units were read only
+4. any stable unit that blocked writeback and the required fork action
+5. the rule file created or updated
+6. the written `rule_version`
+7. the `promotion_owner_unit` result when required
+8. the unit-side rewrite result and whether duplicate formal truth was removed
+9. any repository mapping writeback
+10. confirmation that touched rule files do not carry `bound_objects`
+11. the `rule_sync` result or the recovery and rerouting result

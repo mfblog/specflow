@@ -10,7 +10,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
-const registryHeader = "kind|id|scope|registration_state|implementation_paths|spec_files|responsibility"
+const registryHeader = "kind|id|registration_state|implementation_paths|spec_files|responsibility"
 
 type Result struct {
 	Diagnostics []string
@@ -23,7 +23,6 @@ func (r Result) Valid() bool {
 type registryEntry struct {
 	Kind                string
 	ID                  string
-	Scope               string
 	RegistrationState   string
 	ImplementationPaths []string
 	SpecFiles           []string
@@ -48,7 +47,7 @@ func Validate(repoRoot string) (Result, error) {
 	}
 	statusRows := map[string]statusfile.ObjectStatus{}
 	for _, status := range statuses {
-		if status.ObjectType == "unit" || status.ObjectType == "scenario" {
+		if status.ObjectType == "unit" {
 			statusRows[status.ObjectType+":"+status.Object] = status
 		}
 	}
@@ -75,7 +74,7 @@ func Validate(repoRoot string) (Result, error) {
 			}
 		}
 		if entry.RegistrationState == "landed" {
-			if entry.Kind == "unit" || entry.Kind == "scenario" {
+			if entry.Kind == "unit" {
 				if _, ok := statusRows[key]; !ok {
 					result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("landed %s %q is missing from _status.md", entry.Kind, entry.ID))
 				}
@@ -152,7 +151,7 @@ func loadMapping(repoRoot string) (mappingData, error) {
 		}
 		if !headerSeen {
 			if normalizeHeader(cells) != registryHeader {
-				result.Diagnostics = append(result.Diagnostics, "Object Registry header must be: | kind | id | scope | registration_state | implementation_paths | spec_files | responsibility |")
+				result.Diagnostics = append(result.Diagnostics, "Object Registry header must be: | kind | id | registration_state | implementation_paths | spec_files | responsibility |")
 				return result, nil
 			}
 			headerSeen = true
@@ -172,25 +171,21 @@ func loadMapping(repoRoot string) (mappingData, error) {
 
 func parseRegistryEntry(cells []string, line int) (registryEntry, []string) {
 	entry := registryEntry{Line: line}
-	if len(cells) != 7 {
-		return entry, []string{fmt.Sprintf("Object Registry row %d must have 7 columns", line)}
+	if len(cells) != 6 {
+		return entry, []string{fmt.Sprintf("Object Registry row %d must have 6 columns", line)}
 	}
 	entry.Kind = cleanCell(cells[0])
 	entry.ID = cleanCell(cells[1])
-	entry.Scope = cleanCell(cells[2])
-	entry.RegistrationState = cleanCell(cells[3])
-	entry.ImplementationPaths = parsePathList(cells[4])
-	entry.SpecFiles = parsePathList(cells[5])
+	entry.RegistrationState = cleanCell(cells[2])
+	entry.ImplementationPaths = parsePathList(cells[3])
+	entry.SpecFiles = parsePathList(cells[4])
 
 	diagnostics := []string{}
-	if entry.Kind != "unit" && entry.Kind != "scenario" && entry.Kind != "rule" {
+	if entry.Kind != "unit" && entry.Kind != "rule" {
 		diagnostics = append(diagnostics, fmt.Sprintf("Object Registry row %d has invalid kind %q", line, entry.Kind))
 	}
 	if entry.ID == "" {
 		diagnostics = append(diagnostics, fmt.Sprintf("Object Registry row %d has empty id", line))
-	}
-	if !validScope(entry.Kind, entry.Scope) {
-		diagnostics = append(diagnostics, fmt.Sprintf("Object Registry row %d has invalid scope %q for kind %q", line, entry.Scope, entry.Kind))
 	}
 	if entry.RegistrationState != "planned" && entry.RegistrationState != "landed" {
 		diagnostics = append(diagnostics, fmt.Sprintf("Object Registry row %d has invalid registration_state %q", line, entry.RegistrationState))
@@ -237,19 +232,6 @@ func isMarkdownSeparatorRow(cells []string) bool {
 		}
 	}
 	return len(cells) > 0
-}
-
-func validScope(kind, scope string) bool {
-	switch kind {
-	case "unit":
-		return scope == "capability"
-	case "scenario":
-		return scope == "flow"
-	case "rule":
-		return scope == "bound" || scope == "global"
-	default:
-		return false
-	}
 }
 
 func parsePathList(cell string) []string {

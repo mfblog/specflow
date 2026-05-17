@@ -3,7 +3,6 @@ rule_id: g_rule_repository_baseline
 rule_scope: global
 layer: stable
 rule_version: 0.1.0
-bound_objects: all_units
 ---
 
 # Repository Baseline Rule
@@ -12,7 +11,7 @@ This file is the default stable global rule for the repository.
 
 Because this is a stable `g_` rule, every `unit` reads it automatically. A unit must not repeat this file in `rule_refs`. Candidate `g_` rules do not apply automatically; they become default inputs only after promotion to the stable layer.
 
-This file is not a `unit` or `scenario` truth file and does not enter `docs/specs/_status.md`.
+This file is not a `unit` truth file and does not enter `docs/specs/_status.md`.
 
 ## 1. Scope
 

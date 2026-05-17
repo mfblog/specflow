@@ -240,10 +240,10 @@ The compatibility check may judge only:
 
 The compatibility check must not judge:
 
-1. whether a unit, scenario, or rule describes the right business behavior
+1. whether a unit or rule describes the right business behavior
 2. whether acceptance criteria are sufficient for the product
 3. whether a candidate or stable Spec should make different design decisions
-4. whether implementation actually satisfies a unit, scenario, or rule
+4. whether implementation actually satisfies a unit or rule
 5. whether the current governance design is worth using
 6. whether an evidence appendix's observed behavior is business-correct or should be retained
 
@@ -261,13 +261,13 @@ It does not review business truth correctness.
 The migration closure check must judge:
 
 1. exact entry routing for `spec_flow_migrate`
-2. natural-language routing for requests to update old project-instance files to current framework contracts
+2. rejection of migration write authority for requests that do not explicitly invoke `spec_flow_migrate`
 3. migration read surface and target surface
 4. mechanical writeback boundaries
 5. forbidden compatibility aliases, fallback logic, and business-truth rewriting
 6. process-state invalidation after migrated truth or support files change
 7. registered entry managed-block handling
-8. checkpoint and output contracts for blocked migration
+8. blocked-stop and output contracts for blocked migration
 9. agreement with tooling boundaries when existing tooling is used
 
 If migration can rewrite project files without a current rule-derived target, preserve stale process pass claims, choose business meaning, or leave invalidated downstream state without a legal next action, it is a `spec_flow_review` finding.
@@ -300,22 +300,25 @@ The default scope includes:
    - `specflow/templates/docs/specs/_plans/active/README.md`
    - `specflow/templates/docs/specs/_verify_result/README.md`
    - `specflow/templates/docs/specs/_governance_review/README.md`
-6. template entry files
+6. template-side project-instance bootstrap contracts
+   - `specflow/templates/docs/specs/repository_mapping.md`
+   - `specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md`
+7. template entry files
    - `specflow/templates/AGENTS.md`
    - `specflow/templates/GEMINI.md`
    - `specflow/templates/CLAUDE.md`
-7. project entry files
+8. project entry files
    - `AGENTS.md`
    - `GEMINI.md`
    - `CLAUDE.md`
-8. entry registry and project-standard governance files
+9. entry registry and project-standard governance files
    - `specflow/framework/entry_index_registry.md`
    - `specflow/framework/project_standards_policy.md`
    - `specflow/framework/project_standard_create.md`
    - `specflow/templates/docs/project_standards/_registry.md`
    - `docs/project_standards/_registry.md`
    - the active registered project-local standards in scope
-9. tooling contract, tooling source input, and reader runtime input
+10. tooling contract, tooling source input, and reader runtime input
    - `specflow/framework/tooling_execution_policy.md`
    - `specflow/tooling/README.md`
    - `specflow/tooling/cmd/**/*.go`
@@ -323,6 +326,9 @@ The default scope includes:
    - `specflow/tooling/go.mod`
    - `specflow/tooling/manifest.tsv`
    - `specflow/tooling/go.sum` when it exists
+   - `specflow/tooling/scripts/build_release.sh`
+   - `specflow/tooling/scripts/tooling_fingerprint.sh`
+   - `specflow/tooling/scripts/tooling_fingerprint.ps1`
    - `specflow/tooling/reader/web/**`
 
 Default scope excludes project-instance truth and project-instance state files under `docs/specs/` from business-truth review.
@@ -333,7 +339,6 @@ Files excluded from business-truth review include:
 2. `docs/specs/_status.md`
 3. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 4. `docs/specs/units/**`
-5. `docs/specs/scenarios/**`
 6. `docs/specs/rules/**`
 7. `docs/specs/_check_result/**`
 8. `docs/specs/_plans/**`
@@ -351,7 +356,7 @@ The compatibility input surface includes:
 2. `docs/specs/repository_mapping.md`
 3. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 4. existing project process files under `docs/specs/_check_result/**`, `docs/specs/_plans/**`, and `docs/specs/_verify_result/**`
-5. existing project truth files under `docs/specs/units/**`, `docs/specs/scenarios/**`, and `docs/specs/rules/**`, only for file shape, required fields, references, and binding format
+5. existing project truth files under `docs/specs/units/**` and `docs/specs/rules/**`, only for file shape, required fields, references, and binding format
 
 `docs/specs/_governance_review/**` is not part of the compatibility input fingerprint.
 The active full-scope run-state file is governed by the run-state procedure in Section 6, because including that file in its own slice fingerprint would create self-referential stale state.
@@ -359,7 +364,7 @@ The active full-scope run-state file is governed by the run-state procedure in S
 Default scope must explicitly include:
 
 1. the onboarding source decision rule set
-   - at minimum `natural_language_routing.md` where it enters onboarding source decision or advance routing, `advance_policy.md`, `onboarding_decision_policy.md`, `spec_policy.md`, `implementation_change_policy.md`, `unit_new.md`, `unit_check.md`, `unit_plan.md`, `unit_impl.md`, `unit_promote.md`, `scenario_new.md`, `scenario_check.md`, `scenario_promote.md`, `candidate_handoff_contract.md`, `candidate_intent_policy.md`, and `candidate_intents/*.md`
+   - at minimum `natural_language_routing.md` where it enters onboarding source decision or advance routing, `advance_policy.md`, `onboarding_decision_policy.md`, `spec_policy.md`, `implementation_change_policy.md`, `unit_new.md`, `unit_check.md`, `unit_plan.md`, `unit_impl.md`, `unit_promote.md`, `candidate_handoff_contract.md`, `candidate_intent_policy.md`, and `candidate_intents/*.md`
 2. the rule-governance rule set
    - at minimum `natural_language_routing.md` only where it defines the rule-governance branch, `rule_new.md`, `rule_extract.md`, `rule_bind.md`, `rule_topology.md`, `rule_sync.md`, and `rule_escape.md`
 3. the guidance-skill rule set
@@ -375,7 +380,7 @@ Default scope must explicitly include:
 8. the project-instance compatibility check
    - at minimum project-instance status, repository mapping, global rules, existing process files, and existing formal truth files under `docs/specs/`, limited by Section 2.10
 9. the project-instance migration flow
-   - at minimum `spec_flow_migrate.md`, `natural_language_routing.md` where it routes project-instance migration, `command_policy.md` where it defines the non-command boundary, `checkpoint_protocol.md`, `process_snapshot_contract.md`, `recovery_policy.md`, `entry_index_registry.md`, and the template-side process and entry files that migration consumes
+   - at minimum `spec_flow_migrate.md`, `natural_language_routing.md` where it routes project-instance migration, `command_policy.md` where it defines the non-command boundary, `process_snapshot_contract.md`, `recovery_policy.md`, `entry_index_registry.md`, and the template-side process and entry files that migration consumes
 10. the supporting-truth lifecycle closure check
    - at minimum fork commands, promote commands, process cleanup and recovery rules, Rule sync and release-version paths, project-instance compatibility inputs, tooling contracts, and tooling source that creates, retargets, preserves, or deletes supporting truth
 
@@ -403,8 +408,8 @@ Local slices review one owner area for internal closure, side effects, contract 
    - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `severity_policy.md`, and `checkpoint_protocol.md`
    - verifies review entry meaning, output contracts, finding contracts, and stop behavior
 3. `routing_and_command_policy`
-   - reviews `natural_language_routing.md`, `advance_policy.md`, `onboarding_decision_policy.md`, `command_policy.md`, `scenario_policy.md`, `spec_flow_migrate.md`, `candidate_intent_policy.md`, `candidate_intents/*.md`, `commands/*.md`, and `skills/*/SKILL.md`
-   - verifies exact command routing, exact advance routing, exact project-instance migration routing, natural-language routing, onboarding source routing, unit command progression, scenario command progression, and guidance entry behavior
+   - reviews `natural_language_routing.md`, `advance_policy.md`, `onboarding_decision_policy.md`, `command_policy.md`, `spec_flow_migrate.md`, `candidate_intent_policy.md`, `candidate_intents/*.md`, `commands/*.md`, and `skills/*/SKILL.md`
+   - verifies exact command routing, exact advance routing, exact project-instance migration routing, natural-language routing, onboarding source routing, unit command progression, and guidance entry behavior
 4. `truth_and_implementation_gates`
    - reviews `spec_policy.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `onboarding_decision_policy.md`, `candidate_intent_policy.md`, `candidate_intents/*.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, and `recovery_policy.md`
    - verifies truth ownership, candidate source fields, evidence appendix ownership, implementation diversion, handoff, fallback, and recovery rules
@@ -417,8 +422,8 @@ Local slices review one owner area for internal closure, side effects, contract 
 7. `project_instance_contract_compatibility`
    - reviews the current project-instance files under `docs/specs/` only for format and contract compatibility with current framework rules
    - reviews `spec_flow_migrate.md` as the migration owner for old project-instance shape discovered by this slice
-   - verifies status shape, repository mapping shape, global rules shape, process-file shape, formal object file shape, candidate source metadata shape, candidate intent standard shape, evidence appendix reference shape, evidence appendix file shape, current-layer supporting-truth reference shape, appendix owner/layer/path agreement, reference format, status values, command names, rule binding format, migration writeback boundary, migration state invalidation, migration checkpoint handling, and migration output closure
-   - must not judge unit, scenario, rule, or evidence-appendix business truth correctness
+   - verifies status shape, repository mapping shape, global rules shape, process-file shape, formal object file shape, candidate source metadata shape, candidate intent standard shape, evidence appendix reference shape, evidence appendix file shape, current-layer supporting-truth reference shape, appendix owner/layer/path agreement, reference format, status values, command names, rule binding format, migration writeback boundary, migration state invalidation, migration blocked-stop handling, and migration output closure
+   - must not judge unit, rule, or evidence-appendix business truth correctness
 8. `entry_and_project_extension`
    - reviews `entry_index_registry.md`, `project_standards_policy.md`, `project_standard_create.md`, registered entry files, template entry files, template project-standard registry, project registry, and active project-local standards in scope
 9. `tooling_execution`

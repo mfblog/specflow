@@ -14,7 +14,7 @@ The output is a discussion-stage scope decision. It becomes durable only after c
 ## Process
 
 1. Separate the full vision from the first candidate round.
-2. Identify independent capabilities that should not be forced into one unit or scenario change.
+2. Identify independent responsibilities that should not be forced into one unit change.
 3. Identify whether the first useful proof is a local capability result, a trigger-to-outcome flow, a rule, a stable g_ rule, or a structure/ownership decision.
 4. Recommend the smallest version that can prove the user-facing goal.
 5. State what is explicitly out of scope for this round.

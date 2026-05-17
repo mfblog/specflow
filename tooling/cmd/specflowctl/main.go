@@ -98,7 +98,7 @@ func runCommand(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		command := fs.String("command", "", "standard command name")
-		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		objectType := fs.String("object-type", "", "formal object type: unit")
 		object := fs.String("object", "", "formal object name")
 		outcome := fs.String("outcome", "", "standard command outcome")
 		reason := fs.String("reason", "", "fallback or diagnostic reason code")
@@ -137,7 +137,7 @@ func runCommand(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		command := fs.String("command", "", "standard command name")
-		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		objectType := fs.String("object-type", "", "formal object type: unit")
 		object := fs.String("object", "", "formal object name")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
@@ -638,7 +638,7 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("process cleanup-fallback", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		objectType := fs.String("object-type", "", "formal object type: unit")
 		object := fs.String("object", "", "formal object name")
 		fromCommand := fs.String("from-command", "", "origin command")
 		reason := fs.String("reason", "", "fallback reason code")
@@ -669,7 +669,7 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("process cleanup-success", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		objectType := fs.String("object-type", "", "formal object type: unit")
 		object := fs.String("object", "", "formal object name")
 		mode := fs.String("mode", "", "success cleanup mode")
 		if err := fs.Parse(args[1:]); err != nil {
@@ -732,7 +732,6 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 		}
 
 		writeList(stdout, "Scoped units", result.ScopedModules)
-		writeList(stdout, "Scoped scenarios", result.ScopedFlows)
 		writeList(stdout, "Scoped rule refs", result.ScopedRuleRefs)
 		writeList(stdout, "Scoped rule ids", result.ScopedRuleIDs)
 		fmt.Fprintf(stdout, "Stable landing unit: %s\n", noneIfEmpty(result.StableLandingModule))
@@ -744,22 +743,6 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 		}
 		for _, item := range result.ModuleResults {
 			fmt.Fprintf(stdout, "- %s | layer=%s | outcome=%s | next=%s | reason=%s | status_updated=%t\n", item.Module, item.ActiveLayer, item.Outcome, item.NextCommand, noneIfEmpty(item.FallbackReasonCode), item.StatusUpdated)
-			for _, diagnostic := range item.Diagnostics {
-				fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)
-			}
-			for _, path := range item.DeletedFiles {
-				fmt.Fprintf(stdout, "  deleted: %s\n", path)
-			}
-			for _, path := range item.MissingFiles {
-				fmt.Fprintf(stdout, "  missing: %s\n", path)
-			}
-		}
-		fmt.Fprintf(stdout, "Flow results (%d):\n", len(result.FlowResults))
-		if len(result.FlowResults) == 0 {
-			fmt.Fprintln(stdout, "- none")
-		}
-		for _, item := range result.FlowResults {
-			fmt.Fprintf(stdout, "- %s | layer=%s | outcome=%s | next=%s | reason=%s | status_updated=%t\n", item.Object, item.ActiveLayer, item.Outcome, item.NextCommand, noneIfEmpty(item.FallbackReasonCode), item.StatusUpdated)
 			for _, diagnostic := range item.Diagnostics {
 				fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)
 			}
@@ -822,7 +805,6 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 		writeList(stdout, "Candidate appendices removed", result.AppendixRemoved)
 		writeList(stdout, "Process files removed", result.ProcessFilesRemoved)
 		writeList(stdout, "Synced units", result.Sync.ScopedModules)
-		writeList(stdout, "Synced scenarios", result.Sync.ScopedFlows)
 		return nil
 	case "-h", "--help", "help":
 		writeRuleUsage(stdout)
@@ -844,7 +826,7 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("snapshot rebuild", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		objectType := fs.String("object-type", "", "formal object type: unit")
 		object := fs.String("object", "", "formal object name")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
@@ -863,7 +845,7 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 		fs := flag.NewFlagSet("snapshot validate-process", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
-		objectType := fs.String("object-type", "", "formal object type: unit | scenario")
+		objectType := fs.String("object-type", "", "formal object type: unit")
 		object := fs.String("object", "", "formal object name")
 		processKind := fs.String("process", "", "check | plan | verify")
 		if err := fs.Parse(args[1:]); err != nil {
@@ -1034,8 +1016,8 @@ func writeRootUsage(w io.Writer) {
 
 func writeCommandUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl command close --command COMMAND --object-type unit|scenario --object OBJECT --outcome OUTCOME [--reason CODE] [--failure-layer LAYER] [--candidate-intent repair|change] [--stable-before yes|no] [--notes TEXT] [--apply] [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl command preflight --command COMMAND --object-type unit|scenario --object OBJECT [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl command close --command COMMAND --object-type unit --object OBJECT --outcome OUTCOME [--reason CODE] [--failure-layer LAYER] [--candidate-intent repair|change] [--stable-before yes|no] [--notes TEXT] [--apply] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl command preflight --command COMMAND --object-type unit --object OBJECT [--repo-root PATH]")
 }
 
 func writeEntryUsage(w io.Writer) {
@@ -1080,13 +1062,14 @@ func writeReviewScope(stdout io.Writer, repoRoot, flow string) error {
 	}
 
 	fmt.Fprintf(stdout, "Review flow: %s\n", flow)
-	fmt.Fprintf(stdout, "Review scenario: %s\n", scope.Scenario)
+	fmt.Fprintf(stdout, "Review profile: %s\n", scope.Profile)
 	writeList(stdout, "Framework guideline files", scope.FrameworkGuidelineFiles)
 	writeList(stdout, "Command files", scope.CommandFiles)
 	writeList(stdout, "Candidate intent files", scope.CandidateIntentFiles)
 	writeList(stdout, "Guidance skill files", scope.GuidanceSkillFiles)
 	writeList(stdout, "Rule-governance minimum files", scope.RuleGovernanceFiles)
 	writeList(stdout, "Template governance files", scope.TemplateGovernanceFiles)
+	writeList(stdout, "Template project-instance files", scope.TemplateProjectInstanceFiles)
 	writeList(stdout, "Template entry files", scope.TemplateEntryFiles)
 	writeList(stdout, "Project entry files", scope.ProjectEntryFiles)
 	writeList(stdout, "Agent operability files", scope.AgentOperabilityFiles)
@@ -1122,8 +1105,8 @@ func requireReviewFlow(flow string, stderr io.Writer) error {
 
 func writeProcessUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl process cleanup-fallback --object-type unit|scenario --object OBJECT --from-command COMMAND --reason CODE --failure-layer LAYER [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl process cleanup-success --object-type unit|scenario --object OBJECT --mode unit_fork|unit_promote|scenario_fork|scenario_promote [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl process cleanup-fallback --object-type unit --object OBJECT --from-command COMMAND --reason CODE --failure-layer LAYER [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl process cleanup-success --object-type unit --object OBJECT --mode unit_fork|unit_promote [--repo-root PATH]")
 }
 
 func writeRuleUsage(w io.Writer) {
@@ -1136,13 +1119,13 @@ func writeRuleUsage(w io.Writer) {
 
 func writeSnapshotUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl snapshot rebuild --object-type unit|scenario --object OBJECT [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl snapshot validate-process --object-type unit|scenario --object OBJECT --process check|plan|verify [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl snapshot rebuild --object-type unit --object OBJECT [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl snapshot validate-process --object-type unit --object OBJECT --process check|plan|verify [--repo-root PATH]")
 }
 
 func writeStatusUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl status set-object --type scenario|unit --object OBJECT --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl status set-object --type unit --object OBJECT --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl status set-unit --unit UNIT --stable yes|no --candidate yes|no --active-layer stable|candidate --next-command COMMAND [--notes TEXT] [--create] [--repo-root PATH]")
 }
 
@@ -1196,9 +1179,6 @@ func noneIfEmpty(value string) string {
 }
 
 func checkCommandForObjectType(objectType string) string {
-	if objectType == "scenario" {
-		return "scenario_check"
-	}
 	return "unit_check"
 }
 

@@ -46,7 +46,6 @@ Terms must not be left to ordinary interpretation when relevant:
 
 1. `Spec`
 2. `unit`
-3. `scenario`
 4. `stable`
 5. `candidate`
 6. `_status.md`
@@ -158,7 +157,7 @@ Report a governance finding when a document can cause a new reader to:
 1. start from code when truth writeback is required
 2. choose the wrong command or governance flow
 3. treat an internal flow or non-command object as a user-facing command
-4. guess `unit` or `scenario` ownership from directory shape
+4. guess `unit` ownership from directory shape
 5. leave checkpoint or resume behavior unclear
 6. treat chat agreement as durable truth
 7. skip required downstream reconciliation

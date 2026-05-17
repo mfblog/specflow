@@ -719,7 +719,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Does the default governance baseline scope include every required governance input family.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingScriptFiles, scope.ToolingRuntimeFiles, scope.ActiveProjectStandardFiles)
+				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateProjectInstanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingScriptFiles, scope.ToolingRuntimeFiles, scope.ActiveProjectStandardFiles)
 			},
 		},
 		{
@@ -740,7 +740,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Do routing and command policies send each request to the correct governed next step.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union([]string{"specflow/framework/natural_language_routing.md", "specflow/framework/advance_policy.md", "specflow/framework/onboarding_decision_policy.md", "specflow/framework/command_policy.md", "specflow/framework/scenario_policy.md", "specflow/framework/spec_flow_migrate.md"}, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles)
+				return union([]string{"specflow/framework/natural_language_routing.md", "specflow/framework/advance_policy.md", "specflow/framework/onboarding_decision_policy.md", "specflow/framework/command_policy.md", "specflow/framework/spec_flow_migrate.md"}, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles)
 			},
 		},
 		{
@@ -790,11 +790,10 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 					"specflow/framework/onboarding_decision_policy.md",
 					"specflow/framework/process_snapshot_contract.md",
 					"specflow/framework/repository_mapping_policy.md",
-					"specflow/framework/scenario_policy.md",
 					"specflow/framework/spec_flow_migrate.md",
 					"specflow/framework/spec_policy.md",
 					"specflow/framework/spec_writing_guide.md",
-				}, scope.CandidateIntentFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.ProjectInstanceCompatibilityFiles)
+				}, scope.CandidateIntentFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateProjectInstanceFiles, scope.ProjectInstanceCompatibilityFiles)
 			},
 		},
 		{

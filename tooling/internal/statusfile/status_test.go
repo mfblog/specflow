@@ -153,7 +153,7 @@ func TestUpsertObjectStatusRejectsUnsupportedObjectType(t *testing.T) {
 	}
 }
 
-func TestUpdateObjectNextCommand(t *testing.T) {
+func TestUpdateObjectNextCommandRejectsScenario(t *testing.T) {
 	repoRoot := t.TempDir()
 	statusPath := filepath.Join(repoRoot, "docs/specs")
 	if err := os.MkdirAll(statusPath, 0o755); err != nil {
@@ -166,7 +166,7 @@ func TestUpdateObjectNextCommand(t *testing.T) {
 		"## Formal Objects",
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|---|---|",
+		"|---|---|---|---|---|---|---|",
 		"| `scenario` | `demo` | `no` | `yes` | `candidate` | `scenario_verify` | note |",
 	}, "\n") + "\n"
 	if err := os.WriteFile(filepath.Join(statusPath, "_status.md"), []byte(content), 0o644); err != nil {
@@ -174,18 +174,7 @@ func TestUpdateObjectNextCommand(t *testing.T) {
 	}
 
 	updated, err := UpdateObjectNextCommand(repoRoot, "scenario", "demo", "scenario_check")
-	if err != nil {
-		t.Fatalf("UpdateObjectNextCommand: %v", err)
-	}
-	if !updated {
-		t.Fatalf("expected update to be true")
-	}
-
-	data, err := os.ReadFile(filepath.Join(statusPath, "_status.md"))
-	if err != nil {
-		t.Fatalf("read status: %v", err)
-	}
-	if !strings.Contains(string(data), "| `scenario` | `demo` | `no` | `yes` | `candidate` | `scenario_check` | note |") {
-		t.Fatalf("updated status row not found:\n%s", string(data))
+	if err == nil || !strings.Contains(err.Error(), "object type \"scenario\" is not a supported status value") {
+		t.Fatalf("expected scenario rejection, got updated=%v err=%v", updated, err)
 	}
 }

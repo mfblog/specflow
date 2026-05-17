@@ -80,10 +80,10 @@ Field meanings:
    - the active command or governance flow that raised the checkpoint
 4. `target_objects`
    - the command-target object set that the checkpoint is about
-   - use an ordered list of entries rendered as `unit:{unit}` or `scenario:{scenario}` when one or more command-target objects are involved
+   - use an ordered list of entries rendered as `unit:{unit}` when one or more command-target objects are involved
    - use literal `none` only when the active governance flow is not bound to any command-target object
    - for a standard command checkpoint, list exactly the command target object
-   - for a governance-flow checkpoint, list every unit or scenario whose truth, upstream command, or writeback target blocks resume
+   - for a governance-flow checkpoint, list every unit whose truth, upstream command, or writeback target blocks resume
 5. `question_or_action`
    - the exact input or verification the user must provide
    - it must be phrased in ordinary user-goal language unless the user already chose the relevant internal specFlow term
@@ -135,7 +135,7 @@ Executors must not use checkpoints to:
 4. create a second workflow outside the command chain
 5. keep asking open-ended preference questions that do not materially affect the active command
 6. transfer technical investigation, repository reading, or formal owner resolution to the user when the executor can resolve it from repository truth
-7. ask the user to choose between internal labels such as `unit`, `scenario`, `rule`, stable `g_` rule, or internal rule flow names when an ordinary-language question about goal, scope, outcome, or verification would identify the missing blocker
+7. ask the user to choose between internal labels such as `unit`, `rule`, stable `g_` rule, or internal rule flow names when an ordinary-language question about goal, scope, outcome, or verification would identify the missing blocker
 
 Additional type boundaries:
 

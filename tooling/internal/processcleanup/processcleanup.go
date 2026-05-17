@@ -46,12 +46,6 @@ var layeredRules = map[string]map[string]cleanupRule{
 		"implementation_layer": {NextCommand: "unit_impl", FileKinds: []string{"verify"}},
 		"evidence_layer":       {NextCommand: "unit_verify", FileKinds: []string{"verify"}},
 	},
-	"scenario": {
-		"truth_layer":                {NextCommand: "scenario_check", FileKinds: []string{"check", "verify"}},
-		"gate_layer":                 {NextCommand: "scenario_check", FileKinds: []string{"check"}},
-		"evidence_layer":             {NextCommand: "scenario_verify", FileKinds: []string{"verify"}},
-		"dependency_readiness_layer": {NextCommand: "scenario_promote", FileKinds: nil},
-	},
 }
 
 func ApplyFallback(repoRoot, module, fromCommand, reason string) (CleanupResult, error) {
@@ -179,8 +173,6 @@ func inferFailureLayer(objectType, fromCommand, reason string) string {
 		return "implementation_layer"
 	case "evidence_incomplete":
 		return "evidence_layer"
-	case "stable_dependency_not_ready":
-		return "dependency_readiness_layer"
 	case "gate_missing":
 		if strings.HasSuffix(fromCommand, "_impl") {
 			return "plan_layer"
@@ -212,26 +204,6 @@ func successCleanupPaths(repoRoot, objectType, object, mode string) ([]string, e
 		}
 		paths = append(paths, candidateMainRef)
 		paths = append(paths, filePathsForObject(objectType, object, []string{"check", "plan", "verify"})...)
-		appendixPaths, err := candidateAppendixPaths(repoRoot, objectType, object)
-		if err != nil {
-			return nil, err
-		}
-		paths = append(paths, appendixPaths...)
-	case "scenario_fork":
-		if objectType != "scenario" {
-			return nil, fmt.Errorf("mode %q requires object type scenario", mode)
-		}
-		paths = append(paths, filePathsForObject(objectType, object, []string{"check", "verify"})...)
-	case "scenario_promote":
-		if objectType != "scenario" {
-			return nil, fmt.Errorf("mode %q requires object type scenario", mode)
-		}
-		candidateMainRef, err := specpaths.ObjectMainSpecFileRef(objectType, "candidate", object)
-		if err != nil {
-			return nil, err
-		}
-		paths = append(paths, candidateMainRef)
-		paths = append(paths, filePathsForObject(objectType, object, []string{"check", "verify"})...)
 		appendixPaths, err := candidateAppendixPaths(repoRoot, objectType, object)
 		if err != nil {
 			return nil, err
@@ -269,6 +241,9 @@ func ensureFormalModule(repoRoot, module string) (bool, error) {
 }
 
 func ensureFormalObject(repoRoot, objectType, object string) (bool, error) {
+	if objectType != "unit" {
+		return false, fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
+	}
 	statuses, err := statusfile.LoadObjectStatuses(repoRoot)
 	if err != nil {
 		return false, err

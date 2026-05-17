@@ -1,140 +1,112 @@
-# Rule Escape Flow
+# Rule Escape
 
-## 1. Purpose
+`rule_escape` is the internal rule-governance flow for stopping unsafe rule work and routing it to the smallest legal next action.
 
-`rule_escape` is the internal flow for stopping unsafe rule-governance requests and decomposing them only when a stable next action exists.
+It is used when a rule-governance request is ambiguous, combines multiple rule actions, or returns from another rule flow because current repository truth was not sufficient to close safely.
 
-It answers four questions:
+## 1. Scope
 
-1. whether a rule-governance request can be routed into exactly one standard rule flow
-2. whether the request can be decomposed into a safe sequence of standard rule flows
-3. when a checkpoint is mandatory instead of automatic continuation
-4. how to hand work back to the smallest legal next step without guessing
+`rule_escape` may:
 
-This is not a user-facing command entry.
-The user reaches it through natural-language routing when that routing enters the rule-governance branch.
+1. route a request to exactly one rule flow
+2. decompose a complex request into a stable sequence of rule flows
+3. raise a clarification checkpoint
+4. raise a decision checkpoint
+5. raise a prerequisite-action checkpoint
+6. run rule-governance recovery before rerouting when another rule flow already mutated files and can no longer close safely
 
----
+`rule_escape` must not:
 
-## 2. Scope
+1. write rule truth as a substitute for the routed rule flow
+2. write unit truth as a substitute for unit lifecycle or `rule_bind`
+3. keep unresolved truth only in chat
+4. create a durable command chain outside the standard rule flows
+5. resume an old decomposition after the current handling has stopped
 
-By default it handles rule-governance requests that cannot be stably routed into exactly one of:
+## 2. Required Reads
 
-1. `rule_new`
-2. `rule_extract`
-3. `rule_bind`
-4. `rule_topology`
-5. `rule_sync`
+Before routing or checkpointing, read only the smallest durable truth needed for the decision:
 
-It also handles cases where one of those already-routed internal rule flows later discovers that current repository truth is insufficient to continue safely.
+1. `specflow/framework/spec_policy.md`
+2. `specflow/framework/command_policy.md`
+3. `specflow/framework/checkpoint_protocol.md`
+4. `specflow/framework/recovery_policy.md` when control returned after mutation
+5. `docs/specs/_status.md` when existing units are named or affected
+6. the current-layer unit main Specs needed to judge unit-local truth, binding, or writeback legality
+7. the relevant rule files
+8. `docs/specs/repository_mapping.md` when path ownership or rule object registration matters
+9. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
-It may:
+Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
-1. decompose one complex request into a safe sequence of standard rule flows
-2. raise a `clarification` checkpoint
-3. raise a `decision` checkpoint
-4. raise a `prerequisite_action` checkpoint when one required upstream command must happen first
-5. emit a formal `remaining_steps_contract` when safe decomposition exists
+## 3. Routing Decisions
 
-It does not:
+Route to:
 
-1. act as a catch-all executor freedom zone
-2. replace the downstream standard rule flows
-3. create an independent system command chain
-4. keep truth in chat without required writeback
-5. turn `remaining_steps_contract` into durable truth that survives a later resume without fresh routing
+1. `rule_new` when independent rule truth must be authored from the start or reopened at candidate layer
+2. `rule_extract` when existing unit-local formal truth must move into a rule
+3. `rule_bind` when a unit must consume, remove, or retarget an existing rule binding
+4. `rule_topology` when rule files or rule bindings need structural change or terminal-state resolution
+5. `rule_sync` when rule truth or binding has already changed and only downstream impact must be reconciled
+6. unit lifecycle when the change is unit-local behavior truth
+7. repository mapping governance when the change is path ownership or object registration
 
----
-
-## 3. Preconditions
-
-Before execution:
-
-1. read `specflow/framework/spec_policy.md`
-2. read `specflow/framework/command_policy.md`
-3. read `specflow/framework/checkpoint_protocol.md`
-4. read `specflow/framework/recovery_policy.md` when control may have returned after file mutation
-5. read `docs/specs/_status.md` when the request names existing formal units or scenarios
-6. resolve every named existing unit or scenario's current layer from `_status.md` before reading its main Spec
-7. read any current-layer unit files, scenario files, appendix files, and `rule` files needed to judge the true boundary
-8. read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may cross into project-wide default-rule promotion
-
----
+If more than one rule flow is required, `rule_escape` may produce an execution-local `remaining_steps_contract` only when the step order cannot change the resulting formal truth.
 
 ## 4. Procedure
 
-1. identify the smallest distinct action units inside the current request
-2. if control was returned by an already-routed internal rule flow, identify the unresolved remainder from that flow using current repository truth instead of assuming the earlier route is still sufficient
-2.5. if control was returned by an already-routed internal rule flow after file mutation (i.e., rule_sync returned control because repository truth is insufficient), check whether a recovery baseline exists in execution context:
-     - if a recovery baseline exists and files were mutated, execute `specflow/framework/recovery_policy.md` Section 6.5.3 (Rule-Governance Recovery Procedure) before proceeding to decomposition
-     - if no recovery baseline exists but files were mutated, raise a `prerequisite_action` checkpoint listing each file believed to have been mutated
-3. test whether the request can be routed into exactly one standard rule flow without ambiguity
-4. if yes, stop and route back to that one standard flow instead of continuing inside `rule_escape`
-5. if more than one rule flow is involved, test whether a sequence exists whose order does not change formal truth
-6. if such a stable sequence exists, build a formal `remaining_steps_contract` that records:
-   - the full ordered step list
-   - the current step
-   - the remaining steps after the current step
-   - the closure condition that rule governance stays open until the final listed step finishes
-   - that the contract is execution-local and must be discarded if the current rule-governance handling stops before final closure
-7. if such a stable sequence exists, report that contract and route to the first legal flow only
-8. stop immediately and raise a checkpoint when any of the following holds:
-   - the same truth has two or more plausible formal landing points
-   - the boundary between unit-local truth and rule truth is unstable
-   - the action order would change resulting formal truth
-   - current repository truth is insufficient to support a stable decomposition
-10. if the current rule-governance handling stops before all listed steps finish, require rerunning natural-language routing from current repository truth rather than resuming an old `remaining_steps_contract`
-
----
-
-## 5. Stop Conditions
-
-Stop when one of the following is true:
-
-1. the request has been reduced to exactly one legal next rule flow and any required `remaining_steps_contract` has been emitted
-2. a checkpoint has been raised because automatic continuation would be unsafe
-3. the request has crossed out of rule-only governance and must return to command-target candidate truth writeback before resume
-
----
-
-## 6. Output Contract
-
-The output must include at least:
-
-1. the complex intent recognized from the request
-2. why single-flow routing was unstable
-3. whether a safe decomposition exists
-4. when control was returned from an already-routed internal rule flow, which flow returned control and why its continuation was no longer stable
-5. when a safe decomposition exists, the formal `remaining_steps_contract`, including:
+1. Identify the smallest distinct actions inside the request.
+2. If control returned from another rule flow after file mutation, use `recovery_policy.md` Section 6.5 before any new routing decision unless that returning flow already completed recovery.
+3. Test whether the current request can route to exactly one rule flow without ambiguity.
+4. If exactly one flow is legal, route to that flow and stop.
+5. If multiple flows are involved, test whether their order is stable from current repository truth.
+6. If the order is stable, emit an execution-local `remaining_steps_contract` with:
    - `step_order`
    - `current_step`
    - `remaining_steps`
-   - `shared_governance_closure_rule`
+   - `closure_rule`
    - `durability=execution_local`
    - `resume_rule=rerun_natural_language_routing_from_current_truth_if_interrupted`
-6. the smallest legal next rule flow if decomposition is stable
-7. if a checkpoint is raised:
-   - `type`
-   - `blocking`
-   - `command=rule_escape`
-   - `entry=natural_language_routing`
-   - `branch=shared_governance`
-   - `routed_flow=rule_escape`
-   - `target_objects`; use `unit:{unit}` and `scenario:{scenario}` entries for every command-target object the checkpoint is about, or `none` when no command-target object is involved
-   - `question_or_action`
-   - `why_blocking`
-   - `required_writeback_target`
-   - `resume_signal`
-   - `resume_next_step`
+7. Route only the first legal step after emitting that contract.
+8. If the order is not stable, raise a checkpoint instead of guessing.
+9. If the boundary between unit-local truth and rule truth is unclear, raise a checkpoint instead of writing truth.
+10. If the request crosses out of rule governance, return to the owning unit lifecycle or repository mapping route.
 
----
+## 5. Checkpoints
 
-## 7. Non-Goals
+Checkpoint `target_objects` may list only:
 
-`rule_escape` does not:
+1. `unit:{unit}`
+2. `none`
 
-1. guess through unstable boundaries
-2. continue automatically when action order changes formal truth
-3. keep system-boundary conclusions only in chat
-4. replace the actual downstream rule flow that must perform the work
-5. treat a first-step route as the full closure of a multi-step rule request
+No scenario target is supported.
+
+Use:
+
+1. `clarification` when the requested meaning is unclear
+2. `decision` when the user must choose between two valid formal landing points
+3. `prerequisite_action` when a legal upstream action, such as `unit_fork:{unit}`, must happen before writeback
+
+The checkpoint must state the blocking question or action, why it blocks closure, the required writeback target when one exists, and the resume signal.
+
+## 6. Stop Conditions
+
+Stop when one of these is true:
+
+1. the request has been reduced to one legal next flow
+2. a stable execution-local sequence has been emitted and the first flow is selected
+3. a checkpoint has been raised
+4. recovery completed and routing must restart from current repository truth
+5. the request belongs to unit lifecycle or repository mapping governance instead of rule governance
+
+## 7. Output Contract
+
+The output must report:
+
+1. the recognized request shape
+2. why direct routing was possible or unsafe
+3. the selected next flow when one exists
+4. the execution-local `remaining_steps_contract` when decomposition is safe
+5. the checkpoint fields when checkpointing is required
+6. any rule-governance recovery that was performed before rerouting
+7. confirmation that `target_objects` contains only `unit:{unit}` entries or `none`

@@ -64,22 +64,6 @@ func TestDetermineTransitionCoversStandardOutcomes(t *testing.T) {
 		{name: "unit_promote verify_invalid_gate", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "verify_invalid_gate"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "gate_layer", wantReason: "gate_missing"},
 		{name: "unit_promote verify_invalid_evidence", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "verify_invalid_evidence"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_verify", wantCleanupKind: cleanupFallback, wantFailureLayer: "evidence_layer", wantReason: "evidence_incomplete"},
 		{name: "unit_promote promotion_recovered", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "promotion_recovered", StableBefore: "yes"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "yes", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "truth_drift"},
-		{name: "scenario_new candidate_created", opts: Options{Command: "scenario_new", ObjectType: "scenario", Object: "checkout", Outcome: "candidate_created"}, present: false, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_check", wantCleanupKind: cleanupNone},
-		{name: "scenario_stable_verify aligned", opts: Options{Command: "scenario_stable_verify", ObjectType: "scenario", Object: "checkout", Outcome: "aligned"}, current: scenarioStableStatus("scenario_stable_verify"), present: true, wantStable: "yes", wantCandidate: "no", wantActiveLayer: "stable", wantNext: "scenario_fork", wantCleanupKind: cleanupNone},
-		{name: "scenario_stable_verify not_aligned", opts: Options{Command: "scenario_stable_verify", ObjectType: "scenario", Object: "checkout", Outcome: "not_aligned"}, current: scenarioStableStatus("scenario_stable_verify"), present: true, wantStable: "yes", wantCandidate: "no", wantActiveLayer: "stable", wantNext: "scenario_stable_verify", wantCleanupKind: cleanupNone},
-		{name: "scenario_stable_verify evidence_incomplete", opts: Options{Command: "scenario_stable_verify", ObjectType: "scenario", Object: "checkout", Outcome: "evidence_incomplete"}, current: scenarioStableStatus("scenario_stable_verify"), present: true, wantStable: "yes", wantCandidate: "no", wantActiveLayer: "stable", wantNext: "scenario_stable_verify", wantCleanupKind: cleanupNone},
-		{name: "scenario_fork candidate_created", opts: Options{Command: "scenario_fork", ObjectType: "scenario", Object: "checkout", Outcome: "candidate_created"}, current: scenarioStableStatus("scenario_fork"), present: true, wantStable: "yes", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_check", wantCleanupKind: cleanupSuccess, wantCleanupMode: "scenario_fork"},
-		{name: "scenario_check pass", opts: Options{Command: "scenario_check", ObjectType: "scenario", Object: "checkout", Outcome: "pass"}, current: scenarioCandidateStatus("scenario_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_verify", wantValidation: "check", wantCleanupKind: cleanupNone},
-		{name: "scenario_check blocked", opts: Options{Command: "scenario_check", ObjectType: "scenario", Object: "checkout", Outcome: "blocked"}, current: scenarioCandidateStatus("scenario_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_check", wantCleanupKind: cleanupNone},
-		{name: "scenario_check fix_required", opts: Options{Command: "scenario_check", ObjectType: "scenario", Object: "checkout", Outcome: "fix_required"}, current: scenarioCandidateStatus("scenario_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_check", wantCleanupKind: cleanupNone},
-		{name: "scenario_verify pass", opts: Options{Command: "scenario_verify", ObjectType: "scenario", Object: "checkout", Outcome: "pass"}, current: scenarioCandidateStatus("scenario_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_promote", wantValidation: "verify", wantCleanupKind: cleanupNone},
-		{name: "scenario_verify truth_fallback", opts: Options{Command: "scenario_verify", ObjectType: "scenario", Object: "checkout", Outcome: "truth_fallback", Reason: "truth_drift"}, current: scenarioCandidateStatus("scenario_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "truth_drift"},
-		{name: "scenario_verify gate_fallback", opts: Options{Command: "scenario_verify", ObjectType: "scenario", Object: "checkout", Outcome: "gate_fallback"}, current: scenarioCandidateStatus("scenario_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "gate_layer", wantReason: "gate_missing"},
-		{name: "scenario_verify evidence_incomplete", opts: Options{Command: "scenario_verify", ObjectType: "scenario", Object: "checkout", Outcome: "evidence_incomplete"}, current: scenarioCandidateStatus("scenario_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_verify", wantCleanupKind: cleanupFallback, wantFailureLayer: "evidence_layer", wantReason: "evidence_incomplete"},
-		{name: "scenario_verify blocked_by_affected_units", opts: Options{Command: "scenario_verify", ObjectType: "scenario", Object: "checkout", Outcome: "blocked_by_affected_units"}, current: scenarioCandidateStatus("scenario_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_verify", wantCleanupKind: cleanupNone},
-		{name: "scenario_promote promoted", opts: Options{Command: "scenario_promote", ObjectType: "scenario", Object: "checkout", Outcome: "promoted"}, current: scenarioCandidateStatus("scenario_promote"), present: true, wantStable: "yes", wantCandidate: "no", wantActiveLayer: "stable", wantNext: "scenario_fork", wantValidation: "verify", wantCleanupKind: cleanupSuccess, wantCleanupMode: "scenario_promote"},
-		{name: "scenario_promote dependency_not_ready", opts: Options{Command: "scenario_promote", ObjectType: "scenario", Object: "checkout", Outcome: "dependency_not_ready"}, current: scenarioCandidateStatus("scenario_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_promote", wantCleanupKind: cleanupNone},
-		{name: "scenario_promote promotion_recovered", opts: Options{Command: "scenario_promote", ObjectType: "scenario", Object: "checkout", Outcome: "promotion_recovered", StableBefore: "no"}, current: scenarioCandidateStatus("scenario_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "scenario_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "truth_drift"},
 	}
 
 	for _, tc := range cases {
@@ -288,7 +272,7 @@ func TestCloseRejectsUnitVerifyReadyWhenInputCheckOrPlanMissing(t *testing.T) {
 	})
 }
 
-func TestCloseRejectsScenarioPromoteDependencyNotReadyWhenVerifyMissing(t *testing.T) {
+func TestCloseRejectsScenarioObjectType(t *testing.T) {
 	repoRoot := commandCloseSnapshotRepo(t, "| `scenario` | `checkout` | `no` | `yes` | `candidate` | `scenario_promote` | test |\n")
 	_, err := Close(Options{
 		RepoRoot:   repoRoot,
@@ -298,15 +282,8 @@ func TestCloseRejectsScenarioPromoteDependencyNotReadyWhenVerifyMissing(t *testi
 		Outcome:    "dependency_not_ready",
 		Apply:      true,
 	})
-	if err == nil || !strings.Contains(err.Error(), "verify: missing process file") {
-		t.Fatalf("expected input preflight failure for missing scenario verify, got %v", err)
-	}
-	status, err := statusfile.LookupObjectStatus(repoRoot, "scenario", "checkout")
-	if err != nil {
-		t.Fatalf("LookupObjectStatus: %v", err)
-	}
-	if status.NextCommand != "scenario_promote" {
-		t.Fatalf("missing scenario verify must not advance status, got %+v", status)
+	if err == nil || !strings.Contains(err.Error(), "object-type must be unit") {
+		t.Fatalf("expected scenario object type rejection, got %v", err)
 	}
 }
 
@@ -323,7 +300,7 @@ func TestValidateOutcomeFlagsForControlledCandidateIntent(t *testing.T) {
 }
 
 func TestValidateOutcomeFlagsRequiresReasonForGenericTruthFallback(t *testing.T) {
-	for _, command := range []string{"unit_plan", "unit_impl", "unit_verify", "scenario_verify"} {
+	for _, command := range []string{"unit_plan", "unit_impl", "unit_verify"} {
 		t.Run(command, func(t *testing.T) {
 			err := validateOutcomeFlags(Options{Command: command, Outcome: "truth_fallback"})
 			if err == nil || !strings.Contains(err.Error(), "requires --reason") {
@@ -346,14 +323,6 @@ func unitStableStatus(next string) statusfile.ObjectStatus {
 
 func unitCandidateStatus(next string) statusfile.ObjectStatus {
 	return statusfile.ObjectStatus{ObjectType: "unit", Object: "demo", Stable: "no", Candidate: "yes", ActiveLayer: "candidate", NextCommand: next, Notes: "test"}
-}
-
-func scenarioStableStatus(next string) statusfile.ObjectStatus {
-	return statusfile.ObjectStatus{ObjectType: "scenario", Object: "checkout", Stable: "yes", Candidate: "no", ActiveLayer: "stable", NextCommand: next, Notes: "test"}
-}
-
-func scenarioCandidateStatus(next string) statusfile.ObjectStatus {
-	return statusfile.ObjectStatus{ObjectType: "scenario", Object: "checkout", Stable: "no", Candidate: "yes", ActiveLayer: "candidate", NextCommand: next, Notes: "test"}
 }
 
 func commandCloseTestRepo(t *testing.T, rows string) string {
@@ -390,28 +359,6 @@ acceptance_item_set:
     implementation_surface: AgentCore/internal/demo
     verification_method: Go test for the demo behavior.
     pass_condition: The demo behavior passes under the declared checks.
-    not_runnable_yet: no
-`)
-	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/scenarios/candidate/c_scenario_checkout.md"), `---
-id: checkout
-layer: candidate
-version: 0.1.0
----
-
-# Checkout
-
-unit_refs: none
-rule_refs: none
-
-## Testability / Acceptance Criteria
-
-acceptance_item_set:
-  - id: checkout.e2e
-    target: Checkout flow is accepted.
-    verification_surface: integration
-    implementation_surface: AgentCore/runtime
-    verification_method: Run the checkout flow.
-    pass_condition: The checkout result is observed.
     not_runnable_yet: no
 `)
 	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), `---

@@ -1,156 +1,101 @@
-# Rule New Flow
+# Rule New
 
-## 1. Purpose
+`rule_new` is the internal rule-governance flow for authoring independent rule truth.
 
-`rule_new` is the internal flow for creating rule truth from the start, or opening the next candidate-layer round for an already-independent rule object.
+It is used only after natural-language routing has already decided that the requested truth belongs in a rule file rather than inside one unit.
 
-It answers four questions:
+## 1. Scope
 
-1. whether the target truth should exist independently as `rule`
-2. whether that truth is really cross-unit rule truth rather than one unit's private appendix
-3. which candidate-layer `rule` file should carry that truth now, including when a stable-layer sibling file already exists
-4. how the repository must be reconciled after that rule truth is created or updated, including who owns the later stable landing when a next-round shared candidate is opened for an already-stable rule object
+`rule_new` may:
 
-This is not a user-facing command entry.
-The user reaches it through natural-language routing when that routing enters the rule-governance branch.
+1. create the first candidate rule file for a new rule object
+2. update an existing candidate rule file that still represents the same rule object
+3. open the next candidate-layer round for a rule object that already has a stable-layer file
+4. update `docs/specs/repository_mapping.md` when a new rule object is registered or the rule object map changes
+5. write `promotion_owner_unit` when a candidate rule has a stable sibling and one unit owns the later promotion decision
+6. run `rule_sync` after rule truth writeback
 
----
+`rule_new` must not:
 
-## 2. Scope
+1. extract existing unit-local truth from a unit body
+2. bind a unit to an existing rule as the main action
+3. modify stable unit truth directly
+4. create, update, or promote stable rule semantics directly
+5. write implementation files
 
-By default it handles requests where rule truth should be authored as an independent rule object, whether that object is being created for the first time or reopened at the candidate layer for a new rule round.
+When the request also requires unit binding, `rule_escape` must either decompose the work into a safe sequence or route the binding part to `rule_bind`. `rule_new` must not invent a unit consumer binding merely because the new rule exists.
 
-It may:
+## 2. Required Reads
 
-1. create a new candidate-layer `rule`
-2. create or update a candidate-layer `rule` for a `rule_id` that already has a stable-layer file
-3. update an existing candidate-layer `rule` that is still the same rule object
-4. record expected future landing points in planning text when consumer units do not yet have current-layer candidates
-5. trigger `rule_sync` after rule truth writeback
-6. declare the later `unit_promote` owner when the round opens the next candidate-layer file for a rule object that already has a stable-layer sibling
+Before any write, read:
 
-It does not:
+1. `specflow/framework/spec_policy.md`
+2. `specflow/framework/spec_writing_guide.md`
+3. `specflow/framework/command_policy.md`
+4. `specflow/framework/recovery_policy.md`
+5. `specflow/framework/rule_sync.md`
+6. `docs/specs/_status.md`
+7. every current-layer unit main Spec needed to check whether the target truth already exists as unit-local truth or is already bound through `rule_refs`
+8. every existing rule file that names or overlaps the requested rule truth
+9. `docs/specs/repository_mapping.md` when a new rule id is created or the rule object map may change
+10. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
-1. extract already-written unit-local truth out of an existing unit body
-2. bind one unit to an already-existing `rule` as the main task
-3. replace unit command chains
-4. promote rule truth into stable `g_` rule
+Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
----
+## 3. Rule Identity
 
-## 3. Preconditions
+The rule id must use the rule's real scope:
 
-Before execution:
+1. `g_rule_` for a global rule
+2. `b_rule_` for a bound shared rule
 
-1. read `specflow/framework/spec_policy.md`
-2. read `specflow/framework/command_policy.md`
-3. read `docs/specs/_status.md` and use it as the repository-wide formal unit index for duplicate-truth review
-4. resolve every named existing unit's current layer from `_status.md` before reading its main Spec
-5. read any current-layer unit main files already involved in the request
-6. read every additional current-layer unit main file needed to judge whether the target truth already exists as unit-local formal truth, is already duplicated across units, or is already formalized as rule truth elsewhere
-7. read any relevant existing `rule` files if the request names or overlaps them
-8. read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may cross into project-wide default-rule promotion
-9. if the round may create, update, or delete any file under `docs/specs/rules/**`, read `specflow/framework/rule_sync.md` first
-10. if the round may create or update any file under `docs/specs/rules/**`, apply the Rule version rules from `specflow/framework/spec_policy.md` Section 6.3
-11. if the round may create the first file for a brand-new `rule_id` or otherwise change the current rule object map, read `docs/specs/repository_mapping.md` before rule truth writeback
-12. if the request may create or update a candidate-layer file for a `rule_id` that already has a stable-layer sibling, build the repository-wide binding review set and the affected-unit owner set for that already-stable rule object from current repository truth before owner selection:
-   - start from the formal unit and scenario rows recorded in `_status.md`
-   - read every additional current-layer unit or scenario main file needed to judge which command-target objects currently bind that stable-layer sibling or its current candidate-layer sibling through `rule_refs`
-   - derive the affected-unit owner set from the unit subset of that repository-wide binding review set
-   - do not treat only the user-named units, user-named scenarios, or currently obvious consumers as sufficient when other command-target objects may still bind that already-stable rule object
+Each rule file must include `rule_id`, `rule_scope`, `layer`, and `rule_version`.
 
-If the request names units that do not yet have current-layer Spec files and the user intent is explicitly "design rule truth first", do not block on that absence.
+A brand-new candidate rule starts at `rule_version: 0.1.0`.
 
----
+When a stable sibling already exists, the candidate file must carry the exact intended next stable `rule_version`. If the next version cannot be justified from current repository truth, stop and return to `rule_escape`.
 
 ## 4. Procedure
 
-1. confirm the request is really about independent shared authoring, including creating rule truth from the start or opening the next candidate-layer round for an already-independent rule object, rather than `rule_extract` or `rule_bind`
-2. resolve the repository-wide duplicate-truth review set from current repository truth before writeback:
-   - start from the formal unit set recorded in `_status.md`
-   - include any named existing units and any units already shown by current repository truth to overlap the target topic
-   - read every additional current-layer unit main file needed to judge whether the target truth already exists as unit-local formal truth, is already duplicated across units, or is already formalized as a different rule object
-   - if current repository truth is insufficient to rule those cases out safely, stop this flow and return control to `rule_escape` through rule-governance routing instead of guessing
-3. inspect existing unit truth and existing rule truth across that repository-wide review set to ensure the target truth is not already formalized elsewhere as duplicate formal truth
-4. decide the target rule object boundary:
-   - one rule object per rule file
-   - do not merge unrelated shared topics into one file
-5. if the round may create or update a candidate-layer file for a `rule_id` that already has a stable-layer sibling, resolve the repository-wide binding set and the affected-unit owner set for that already-stable rule object from current repository truth before owner selection:
-   - derive the binding set from current-layer unit and scenario frontmatter `rule_refs`
-   - include command-target objects that currently bind the stable-layer sibling and command-target objects that already bind its current candidate-layer sibling when that sibling exists
-   - derive the affected-unit owner set from the unit subset of that binding set
-   - if current repository truth is insufficient to derive that binding set or owner set safely, stop this flow and return control to `rule_escape` through rule-governance routing instead of guessing
-   - if the affected-unit owner set is empty but the binding set is not empty, stop this flow and return control to `rule_escape`; scenario-only current bindings cannot supply the required `promotion_owner_unit`
-   - if both sets are empty, continue only when current repository truth explicitly shows that the already-stable rule object is intentionally kept as independently authored rule truth with no current formal bindings; otherwise stop this flow and return control to `rule_escape` through rule-governance routing instead of guessing a lifecycle owner with no current formal consumer set
-5.5. before any rule file writeback, capture the recovery baseline required by `specflow/framework/recovery_policy.md` Section 6.5.1:
-     - the target candidate-layer Rule file
-     - any stable-layer sibling that may be created or updated
-     - `docs/specs/repository_mapping.md` when the round may change the rule object map
-     - every other file under `docs/specs/rules/**` that may be touched by this round
-6. if the request is to continue evolving an already-independent rule object that currently has only a stable-layer file, create or update the sibling candidate-layer `rule` for the same `rule_id`, set its `rule_version` to the intended next stable version according to Rule semantic version rules, and write exactly one `promotion_owner_unit` into that candidate-layer rule file:
-   - when the repository-wide affected-unit owner set from Step 5 is not empty, the owner must be one formal unit from that set
-   - when Step 5 confirmed that the already-stable rule object is intentionally kept with no current formal bindings, the owner must be one formal unit explicitly required by the current round as the future adopter of that next-round draft
-   - that owner is the unit round that must later bind or retarget legally to this candidate-layer rule file before it may land as the next stable-layer Rule file
-   - the owner unit may still remain formally bound to the current stable-layer shared sibling until a later legal unit candidate round rewrites its `rule_refs`
-   - if current repository truth is insufficient to justify the no-current-binding continuation or to name one stable promotion owner unit, stop this flow and return control to `rule_escape` through rule-governance routing instead of guessing
-7. otherwise create or update the target candidate-layer `rule`
-7.5. ensure the candidate-layer rule file body satisfies `spec_writing_guide.md` Section 6: explanatory and normative content must be separated at the subsection level
-8. if Step 7 created the first file for a brand-new rule object, initialize `rule_version=0.1.0`
-9. if the target candidate-layer rule file has a stable-layer sibling after Steps 6 to 8, validate that the resulting candidate-layer file still carries exactly one valid `promotion_owner_unit`:
-   - if Step 6 already wrote the owner, confirm that the resulting file still keeps that owner
-   - if Step 7 updated an already-existing candidate-layer file with a stable-layer sibling, preserve or rewrite `promotion_owner_unit` so the resulting file still names one formal unit from the repository-wide affected-unit owner set resolved in Step 5
-   - if current repository truth is insufficient to keep one stable promotion owner without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
-10. if this round created the first file for a brand-new `rule_id` or otherwise changed the current rule object map, update `docs/specs/repository_mapping.md` in the same round before executing `rule_sync`:
-   - add or update one `Object Registry` row for the changed `rule`
-   - set `kind=rule`, `id={rule_id}`, `scope=bound`, and the one-line responsibility
-   - if the rule file is created in this same round, list the concrete rule file in `spec_files`
-   - set `registration_state=landed` only when the rule has concrete implementation paths
-   - if the rule has no direct implementation path, set `registration_state=planned` and `implementation_paths=none`
-   - if current repository truth is insufficient to write the exact mapping update without guessing, stop this flow and return control to `rule_escape` through rule-governance routing
-11. if no command-target object formally binds the rule truth yet:
-   - keep the Rule file without `bound_objects`
-   - record expected future consumers only as planning text in the rule file body
-12. if the same truth still remains duplicated as formal unit truth elsewhere, stop and report that boundary closure is incomplete
-13. after any write to `docs/specs/rules/**`, execute `rule_sync` before claiming closure, even when the binding set or affected-unit owner set is currently empty
+1. Confirm that the requested truth is independent rule truth, not unit-local behavior, a pure binding change, extraction, topology cleanup, or implementation work.
+2. Build the repository-wide duplicate-truth review set from current `_status.md` rows and current-layer unit Specs.
+3. Check that the same formal rule truth is not already present in another rule file or duplicated as unit-local formal truth.
+4. Choose the smallest stable rule boundary. One rule file must carry one coherent shared constraint.
+5. If the target rule already has a stable sibling, derive the current consumer set from current-layer unit `rule_refs` and choose exactly one valid `promotion_owner_unit`.
+6. Before the first file mutation, capture the recovery baseline required by `recovery_policy.md` Section 6.5.
+7. Create or update the candidate rule file.
+8. If the rule has no formal current consumers after this write, keep it only when the file explicitly records intentional unbound retention with:
+   - `unbound_retention: intentional`
+   - `unbound_retention_reason: <why this rule is intentionally independent now>`
+   - `unbound_retention_owner: rule_new`
+9. If the rule has formal current consumers, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields.
+10. Do not write consumer lists or `bound_objects` into the rule file.
+11. Update `docs/specs/repository_mapping.md` in the same round when the rule object map changed.
+12. Run `rule_sync` after any rule-file write or rule object-map write.
 
----
+If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `recovery_policy.md` Section 6.5 before returning to natural-language routing.
 
 ## 5. Stop Conditions
 
-Stop when one of the following is true:
+Stop when one of these is true:
 
-1. the target candidate-layer `rule` has been written, any required `repository_mapping.md` object-map writeback is complete, and required reconciliation through `rule_sync` is complete
-2. the request is not really independent shared authoring or next-round opening and must be re-routed to another rule flow
-3. duplicate formal truth remains in unit-local files and boundary closure has not been completed
-4. current repository truth is insufficient to rule out duplicate formal truth or alternate formal landing points, so control has returned to `rule_escape` through rule-governance routing
-5. the request is really a pure unit retarget or rule impact-check request and must be re-routed to another rule flow
-6. a next-round candidate-layer rule file for an already-stable rule object would exist after this round, but no stable `promotion_owner_unit` can be named from current repository truth
-
----
+1. the candidate rule file is written, any required repository mapping update is complete, and `rule_sync` has closed reconciliation
+2. the request belongs to `rule_extract`, `rule_bind`, `rule_topology`, or unit lifecycle work instead
+3. duplicate formal truth remains and cannot be removed by this flow
+4. current repository truth is insufficient to justify the rule boundary, rule version, mapping update, or promotion owner
+5. a candidate rule with a stable sibling would exist without exactly one valid `promotion_owner_unit`
 
 ## 6. Output Contract
 
-The output must include at least:
+The output must report:
 
-1. the recognized rule object and why it belongs to `rule_new`
-2. the target rule file written or updated
-3. the written `rule_version` and why it is correct for the current round
-4. whether the round created the first candidate-layer file for an already-existing stable-layer rule object
-5. the repository-wide duplicate-truth review set used for the decision
-6. whether any named units already bind that truth formally
-7. whether duplicate unit-local formal truth was found, or whether the flow had to return to `rule_escape` because that judgment could not be stabilized safely
-8. the `rule_sync` result, including whether any units were affected
-9. when the resulting candidate-layer rule file has a stable-layer sibling, the repository-wide binding set and affected-unit owner set used for owner selection
-10. when the resulting candidate-layer rule file has a stable-layer sibling, the written or validated `promotion_owner_unit`, whether it came from the current affected-unit owner set or an explicit intentionally-unbound continuation owner, and whether that owner still needs a later unit-side binding retarget before promotion
-11. when the round changed the current rule object map, the `docs/specs/repository_mapping.md` writeback result
-
----
-
-## 7. Non-Goals
-
-`rule_new` does not:
-
-1. guess through unstable boundaries
-2. invent formal unit bindings before `rule_refs` exists
-3. leave reconciliation for later after changing rule truth
-4. absorb shared conclusions into stable `g_` rule
+1. the recognized rule truth and why it belongs in a rule file
+2. the rule file created or updated
+3. the written `rule_version`
+4. whether a stable sibling exists
+5. the `promotion_owner_unit` result when required
+6. the duplicate-truth review set used for the decision
+7. whether the rule is formally consumed through current-layer unit `rule_refs`
+8. any repository mapping writeback
+9. confirmation that the rule file does not carry `bound_objects`
+10. the `rule_sync` result or the recovery and rerouting result

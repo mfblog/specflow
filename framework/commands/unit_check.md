@@ -31,7 +31,7 @@ By default this command reviews:
 7. whether any registered project-local review standard applies on a `unit_check`-owned generic review extension surface and tightens the closure decision for the current candidate
 8. whether the candidate records a coherent current design rather than an over-broad, unresolved, or chat-dependent proposal
 9. whether the candidate source fields and evidence appendix requirements from `onboarding_decision_policy.md` are satisfied
-10. whether `Testability / Acceptance Criteria` contains explicit acceptance items that satisfy `spec_writing_guide.md` Section 5
+10. whether `Testability / Acceptance Criteria` contains explicit acceptance items that satisfy `spec_writing_guide.md` Section 6
 
 ### 2.1 Command Read Summary
 
@@ -197,7 +197,7 @@ Project-local review extension contract:
 15. process explicit acceptance items:
    - the candidate must contain a `Testability / Acceptance Criteria` section, or an explicitly equivalent acceptance section title
    - each acceptance item must record `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, and `pass_condition`
-   - `verification_surface` must use only the fixed values from `spec_writing_guide.md` Section 5
+   - `verification_surface` must use only the fixed values from `spec_writing_guide.md` Section 6
    - vague acceptance text such as "works", "can be replaced", "aligns with design", "supports integration", or equivalent result-only wording is not sufficient unless the required fields make the item directly verifiable
    - for `verification_surface=public_api`, the item must name the public package or exported contract surface, describe an external-consumer style verification method, and require a pass condition that does not import `internal` packages
    - for `verification_surface=integration`, the item must name the runnable integration entrypoint or mark the item as `not_runnable_yet` with a concrete missing-entrypoint reason

@@ -3,6 +3,7 @@ package reviewscope
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -50,6 +51,8 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_verify_result/README.md"), "# verify\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_governance_review/README.md"), "# governance review\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/project_standards/_registry.md"), "# template registry\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/repository_mapping.md"), "# repository mapping template\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# global rule template\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_check_result/README.md"), "# project check\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/README.md"), "# project plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/README.md"), "# project draft plans\n")
@@ -71,7 +74,7 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 		"## Active Standards\n\n"+
 		"| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule | notes |\n"+
 		"|---|---|---|---|---|---|---|---|---|---|\n"+
-		"| `bad_prompt_rule` | `review_standard` | `candidate_closure_review` | `docs/project_standards/prompt_guidelines.md` | `unit_check` | `review_scenario:not_supported_here` | `tighten` | `framework_wins` | invalid scenario |\n")
+		"| `bad_prompt_rule` | `review_standard` | `candidate_closure_review` | `docs/project_standards/prompt_guidelines.md` | `unit_check` | `review_profile:not_supported_here` | `tighten` | `framework_wins` | invalid profile |\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/prompt_guidelines.md"), "# prompt\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/README.md"), "# tooling\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\nfunc main() {}\n")
@@ -161,6 +164,12 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if !containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/rules/stable/s_g_rule_repository_baseline.md") {
 		t.Fatalf("expected project global rules in compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
 	}
+	if !containsString(scope.TemplateProjectInstanceFiles, "specflow/templates/docs/specs/repository_mapping.md") {
+		t.Fatalf("expected repository mapping template in template project-instance scope, got %+v", scope.TemplateProjectInstanceFiles)
+	}
+	if !containsString(scope.TemplateProjectInstanceFiles, "specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md") {
+		t.Fatalf("expected global rule template in template project-instance scope, got %+v", scope.TemplateProjectInstanceFiles)
+	}
 	if !containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/units/candidate/c_unit_demo.md") {
 		t.Fatalf("expected project truth file shape input in compatibility scope, got %+v", scope.ProjectInstanceCompatibilityFiles)
 	}
@@ -185,8 +194,14 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	if !containsString(scope.ToolingScriptFiles, "specflow/tooling/scripts/tooling_fingerprint.ps1") {
 		t.Fatalf("expected PowerShell fingerprint script in tooling script scope, got %+v", scope.ToolingScriptFiles)
 	}
+	if !containsString(scope.ToolingScriptFiles, "specflow/tooling/scripts/build_release.sh") {
+		t.Fatalf("expected build release script in tooling script scope, got %+v", scope.ToolingScriptFiles)
+	}
 	if containsString(scope.ToolingSourceFiles, "specflow/tooling/scripts/tooling_fingerprint.sh") {
 		t.Fatalf("expected shell fingerprint script outside tooling source scope, got %+v", scope.ToolingSourceFiles)
+	}
+	if containsString(scope.ToolingSourceFiles, "specflow/tooling/scripts/build_release.sh") {
+		t.Fatalf("expected build release script outside tooling source scope, got %+v", scope.ToolingSourceFiles)
 	}
 	if !containsString(scope.ToolingRuntimeFiles, "specflow/tooling/reader/web/app.js") {
 		t.Fatalf("expected reader app.js in tooling runtime scope, got %+v", scope.ToolingRuntimeFiles)
@@ -240,6 +255,8 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_verify_result/README.md"), "# verify\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_governance_review/README.md"), "# governance review\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/project_standards/_registry.md"), "# template registry\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/repository_mapping.md"), "# repository mapping template\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# global rule template\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_check_result/README.md"), "# project check\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/README.md"), "# project plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/README.md"), "# project draft plans\n")
@@ -259,7 +276,7 @@ func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *te
 		"## Active Standards\n\n"+
 		"| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule | notes |\n"+
 		"|---|---|---|---|---|---|---|---|---|---|\n"+
-		"| `bad_overlay_rule` | `review_standard` | `governance_baseline_review` | `docs/project_standards/prompt_guidelines.md` | `spec_flow_review` | `review_scenario:` | `tighten` | `framework_wins` | malformed selector |\n")
+		"| `bad_overlay_rule` | `review_standard` | `governance_baseline_review` | `docs/project_standards/prompt_guidelines.md` | `spec_flow_review` | `review_profile:` | `tighten` | `framework_wins` | malformed selector |\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/prompt_guidelines.md"), "# prompt\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/README.md"), "# tooling\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\nfunc main() {}\n")
@@ -295,8 +312,11 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 		"specflow/framework/onboarding_decision_policy.md",
 		"specflow/framework/implementation_change_policy.md",
 		"specflow/framework/repository_mapping_policy.md",
-		"specflow/framework/scenario_policy.md",
+		"specflow/framework/output_baseline.md",
 		"specflow/framework/checkpoint_protocol.md",
+		"specflow/framework/candidate_intent_policy.md",
+		"specflow/framework/candidate_intents/repair.md",
+		"specflow/framework/candidate_intents/change.md",
 		"specflow/framework/candidate_handoff_contract.md",
 		"specflow/framework/downgrade_policy.md",
 		"specflow/framework/process_snapshot_contract.md",
@@ -348,6 +368,28 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/advance_policy.md") {
 		t.Fatalf("expected advance policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
+	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intent_policy.md") {
+		t.Fatalf("expected candidate intent policy in design candidate intent scope, got %+v", scope.CandidateIntentFiles)
+	}
+	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intents/repair.md") {
+		t.Fatalf("expected repair candidate intent in design candidate intent scope, got %+v", scope.CandidateIntentFiles)
+	}
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/candidate_intents/change.md") {
+		t.Fatalf("expected change candidate intent in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.ProjectRegistryFiles, "specflow/framework/output_baseline.md") {
+		t.Fatalf("expected output baseline in design human-operability scope, got %+v", scope.ProjectRegistryFiles)
+	}
+}
+
+func TestCollectDefaultSpecFlowDesignScopeRequiresCandidateIntentStandards(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check\n")
+
+	_, err := CollectDefaultSpecFlowDesignScope(repoRoot)
+	if err == nil || !strings.Contains(err.Error(), "default design candidate intent files are incomplete") {
+		t.Fatalf("expected missing candidate intent standards error, got %v", err)
+	}
 }
 
 func mustWrite(t *testing.T, path, content string) {
@@ -385,6 +427,7 @@ func writeReaderWebFiles(t *testing.T, repoRoot string) {
 
 func writeToolingScriptFiles(t *testing.T, repoRoot string) {
 	t.Helper()
+	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/build_release.sh"), "#!/usr/bin/env bash\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/tooling_fingerprint.sh"), "#!/usr/bin/env bash\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/tooling_fingerprint.ps1"), "param()\n")
 }

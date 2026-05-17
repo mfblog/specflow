@@ -74,6 +74,9 @@ func Consumers(repoRoot string, options ConsumerOptions) (ConsumerResult, error)
 
 	result := ConsumerResult{RuleID: ruleID, RuleRef: ruleRef}
 	for _, status := range statuses {
+		if status.ObjectType != "unit" {
+			continue
+		}
 		fileRef, err := specpaths.ObjectMainSpecFileRef(status.ObjectType, status.ActiveLayer, status.Object)
 		if err != nil {
 			return ConsumerResult{}, err
@@ -163,6 +166,9 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 	changedObjects := map[string]statusfile.ObjectStatus{}
 
 	for _, status := range statuses {
+		if status.ObjectType != "unit" {
+			continue
+		}
 		fileRef, err := specpaths.ObjectMainSpecFileRef(status.ObjectType, status.ActiveLayer, status.Object)
 		if err != nil {
 			return ReleaseVersionResult{}, err
@@ -219,13 +225,11 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 			return ReleaseVersionResult{}, fmt.Errorf("%s: %w", fileRef, err)
 		}
 		frontmatterUpdates := map[string]string{
+			"candidate_intent":      "change",
 			"layer":                 "candidate",
 			"version":               nextVersion,
 			"source_basis":          "new_design",
 			"evidence_appendix_ref": "none",
-		}
-		if status.ObjectType == "unit" {
-			frontmatterUpdates["candidate_intent"] = "change"
 		}
 		updated, err := rulerefs.RewriteObjectFrontmatter(candidateRef, string(contentBytes), frontmatterUpdates, nextRefs)
 		if err != nil {
@@ -261,7 +265,7 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 	}
 
 	if len(changedObjects) == 0 {
-		return ReleaseVersionResult{}, fmt.Errorf("no current-layer unit/scenario binds from-ref %q", normalized.FromRef)
+		return ReleaseVersionResult{}, fmt.Errorf("no current-layer unit binds from-ref %q", normalized.FromRef)
 	}
 
 	syncResult, err := SyncImpact(repoRoot, Options{RuleRefs: []string{normalized.ToRef}})
@@ -291,6 +295,9 @@ func ValidateCurrentBindings(repoRoot string, forbiddenRef string) []string {
 		return append(diagnostics, err.Error())
 	}
 	for _, status := range statuses {
+		if status.ObjectType != "unit" {
+			continue
+		}
 		fileRef, err := specpaths.ObjectMainSpecFileRef(status.ObjectType, status.ActiveLayer, status.Object)
 		if err != nil {
 			diagnostics = append(diagnostics, err.Error())
@@ -352,10 +359,10 @@ func ruleRefPrefix(ref string) (string, error) {
 }
 
 func removeProcessArtifacts(repoRoot, objectType, object string) ([]string, error) {
-	kinds := []string{"check", "verify"}
-	if objectType == "unit" {
-		kinds = []string{"check", "plan", "verify"}
+	if objectType != "unit" {
+		return nil, fmt.Errorf("unsupported object type %q", objectType)
 	}
+	kinds := []string{"check", "plan", "verify"}
 	removed := []string{}
 	for _, kind := range kinds {
 		paths, err := snapshot.ProcessArtifactPaths(objectType, object, kind)
@@ -463,9 +470,6 @@ func appendixPrefixes(objectType, object string) (string, string, error) {
 	case "unit":
 		return fmt.Sprintf("docs/specs/units/stable/appendix/s_unit_%s_", object),
 			fmt.Sprintf("docs/specs/units/candidate/appendix/c_unit_%s_", object), nil
-	case "scenario":
-		return fmt.Sprintf("docs/specs/scenarios/stable/appendix/s_scenario_%s_", object),
-			fmt.Sprintf("docs/specs/scenarios/candidate/appendix/c_scenario_%s_", object), nil
 	default:
 		return "", "", fmt.Errorf("unsupported object type %q", objectType)
 	}
@@ -678,9 +682,6 @@ func removeCandidateAppendices(repoRoot, objectType, object string) ([]string, e
 }
 
 func checkCommandForObject(objectType string) string {
-	if objectType == "scenario" {
-		return "scenario_check"
-	}
 	return "unit_check"
 }
 
