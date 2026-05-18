@@ -1,3 +1,3 @@
-module github.com/Bingordinary/SpecFlow/specflow/tooling
+module github.com/Bingordinary/SpecFlow/tooling
 
 go 1.22.2

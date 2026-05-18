@@ -9,10 +9,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulebinding"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/tooling/internal/rulebinding"
+	"github.com/Bingordinary/SpecFlow/tooling/internal/rulerefs"
+	"github.com/Bingordinary/SpecFlow/tooling/internal/specpaths"
+	"github.com/Bingordinary/SpecFlow/tooling/internal/statusfile"
 )
 
 type AppendixEntry struct {

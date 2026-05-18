@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/tooling/internal/statusfile"
 )
 
 const relativeRegistryPath = "docs/project_standards/_registry.md"

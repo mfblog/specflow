@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
+	"github.com/Bingordinary/SpecFlow/tooling/internal/toolingfreshness"
 )
 
 type Target struct {
@@ -105,7 +105,7 @@ func BuildAll(repoRoot string, targets []Target) (BuildResult, error) {
 
 func ldflagsForFingerprint(fingerprint string) string {
 	return fmt.Sprintf(
-		"-s -w -buildid= -X github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness.BuildFingerprint=%s",
+		"-s -w -buildid= -X github.com/Bingordinary/SpecFlow/tooling/internal/toolingfreshness.BuildFingerprint=%s",
 		fingerprint,
 	)
 }
