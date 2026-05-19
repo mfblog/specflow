@@ -48,6 +48,20 @@ add_go_tree() {
   done >>"${FILE_LIST}"
 }
 
+add_file_tree() {
+  local rel_root="$1"
+  local abs_root="${REPO_ROOT}/${rel_root}"
+
+  if [[ ! -d "${abs_root}" ]]; then
+    echo "Error: required tooling runtime directory missing: ${rel_root}" >&2
+    exit 1
+  fi
+
+  find "${abs_root}" -type f | while IFS= read -r abs_path; do
+    printf '%s\n' "${abs_path#"${REPO_ROOT}/"}"
+  done >>"${FILE_LIST}"
+}
+
 add_required_file() {
   local rel_path="$1"
   if [[ ! -f "${REPO_ROOT}/${rel_path}" ]]; then
@@ -66,6 +80,7 @@ add_optional_file() {
 
 add_go_tree "specflow/tooling/cmd"
 add_go_tree "specflow/tooling/internal"
+add_file_tree "specflow/tooling/reader/web"
 add_required_file "specflow/tooling/go.mod"
 add_required_file "specflow/tooling/manifest.tsv"
 add_optional_file "specflow/tooling/go.sum"

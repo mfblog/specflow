@@ -16,8 +16,8 @@ func TestLiveFingerprintChangesWhenToolingSourceChanges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LiveFingerprint returned error: %v", err)
 	}
-	if len(files) != 4 {
-		t.Fatalf("expected 4 fingerprint input files, got %d", len(files))
+	if len(files) != 5 {
+		t.Fatalf("expected 5 fingerprint input files, got %d", len(files))
 	}
 
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/internal/demo/demo.go"), "package demo\n\nfunc Value() string { return \"changed\" }\n")
@@ -71,7 +71,7 @@ func TestLiveFingerprintIgnoresNonToolingFiles(t *testing.T) {
 	}
 }
 
-func TestLiveFingerprintIgnoresReaderAssetChanges(t *testing.T) {
+func TestLiveFingerprintChangesWhenReaderAssetChanges(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeToolingRepo(t, repoRoot)
 
@@ -86,8 +86,8 @@ func TestLiveFingerprintIgnoresReaderAssetChanges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LiveFingerprint after reader asset change returned error: %v", err)
 	}
-	if first != second {
-		t.Fatalf("expected fingerprint to ignore reader asset change")
+	if first == second {
+		t.Fatalf("expected fingerprint to change after reader asset change")
 	}
 }
 

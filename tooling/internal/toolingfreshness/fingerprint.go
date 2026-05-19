@@ -17,6 +17,10 @@ var fingerprintRoots = []string{
 	"specflow/tooling/internal",
 }
 
+var fingerprintRuntimeRoots = []string{
+	"specflow/tooling/reader/web",
+}
+
 var fingerprintSingleFiles = []string{
 	"specflow/tooling/go.mod",
 	"specflow/tooling/manifest.tsv",
@@ -38,30 +42,19 @@ func SourceInputFiles(repoRoot string) ([]string, error) {
 
 	files := []string{}
 	for _, relDir := range fingerprintRoots {
-		root := filepath.Join(repoRoot, filepath.FromSlash(relDir))
-		if _, err := os.Stat(root); err != nil {
-			return nil, fmt.Errorf("required tooling source directory missing: %s", relDir)
-		}
-		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				return nil
-			}
-			if !strings.HasSuffix(info.Name(), ".go") {
-				return nil
-			}
-			rel, err := filepath.Rel(repoRoot, path)
-			if err != nil {
-				return err
-			}
-			files = append(files, filepath.ToSlash(rel))
-			return nil
-		})
+		inputFiles, err := sourceFilesUnder(repoRoot, relDir, ".go")
 		if err != nil {
 			return nil, err
 		}
+		files = append(files, inputFiles...)
+	}
+
+	for _, relDir := range fingerprintRuntimeRoots {
+		inputFiles, err := sourceFilesUnder(repoRoot, relDir, "")
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, inputFiles...)
 	}
 
 	for _, relPath := range fingerprintSingleFiles {
@@ -83,6 +76,36 @@ func SourceInputFiles(repoRoot string) ([]string, error) {
 
 	sort.Strings(files)
 	return dedupeSorted(files), nil
+}
+
+func sourceFilesUnder(repoRoot, relDir, suffix string) ([]string, error) {
+	root := filepath.Join(repoRoot, filepath.FromSlash(relDir))
+	if _, err := os.Stat(root); err != nil {
+		return nil, fmt.Errorf("required tooling source directory missing: %s", relDir)
+	}
+
+	files := []string{}
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if suffix != "" && !strings.HasSuffix(info.Name(), suffix) {
+			return nil
+		}
+		rel, err := filepath.Rel(repoRoot, path)
+		if err != nil {
+			return err
+		}
+		files = append(files, filepath.ToSlash(rel))
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
 }
 
 func LiveFingerprint(repoRoot string) (string, []string, error) {

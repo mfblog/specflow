@@ -120,37 +120,20 @@ See [tooling/README.md](./tooling/README.md) for tooling details.
 ## Prepare Local Binaries
 
 `specflow/tooling/bin/` is not committed to git.
-Before running `init`, download the platform-matching binaries from the Release that matches your installed tooling source fingerprint.
-The Release is tied to the tooling input fingerprint, not to every `specflow` source commit.
-
-For Linux amd64:
+Before running `init`, run the pull helper from your project root:
 
 ```bash
-mkdir -p specflow/tooling/bin
-tag="specflow-tooling-$(specflow/tooling/scripts/tooling_fingerprint.sh --short)"
-base="https://github.com/Bingordinary/SpecFlow/releases/download/${tag}"
-curl -fL -o specflow/tooling/bin/specflowctl-linux-amd64 "${base}/specflowctl-linux-amd64"
-curl -fL -o specflow/tooling/bin/specflow-reader-linux-amd64 "${base}/specflow-reader-linux-amd64"
-curl -fL -o specflow/tooling/bin/SHA256SUMS "${base}/SHA256SUMS"
-chmod +x specflow/tooling/bin/specflowctl-linux-amd64 specflow/tooling/bin/specflow-reader-linux-amd64
-(cd specflow/tooling/bin && sha256sum -c SHA256SUMS --ignore-missing)
+specflow/tooling/scripts/pull_with_release.sh
 ```
 
-These commands replace existing files under `specflow/tooling/bin/`.
-That directory is only a local cache, so replacing those files is the normal update path.
-
-For Windows amd64 PowerShell:
+Windows PowerShell:
 
 ```powershell
-$tag = "specflow-tooling-" + (& .\specflow\tooling\scripts\tooling_fingerprint.ps1 -Short)
-$base = "https://github.com/Bingordinary/SpecFlow/releases/download/$tag"
-New-Item -ItemType Directory -Force specflow/tooling/bin | Out-Null
-Invoke-WebRequest "$base/specflowctl-windows-amd64.exe" -OutFile "specflow/tooling/bin/specflowctl-windows-amd64.exe"
-Invoke-WebRequest "$base/specflow-reader-windows-amd64.exe" -OutFile "specflow/tooling/bin/specflow-reader-windows-amd64.exe"
-Invoke-WebRequest "$base/SHA256SUMS" -OutFile "specflow/tooling/bin/SHA256SUMS"
+.\specflow\tooling\scripts\pull_with_release.ps1
 ```
 
-Other supported suffixes are `darwin-amd64`, `darwin-arm64`, `linux-amd64`, `linux-arm64`, `windows-amd64.exe`, and `windows-arm64.exe`.
+The script runs a fast-forward pull for `specflow/`, computes the current tooling fingerprint, and installs the current platform's `specflowctl`, `specflow-reader`, and `SHA256SUMS` only when the local binaries are missing, stale, or missing checksums.
+The Release is tied to the tooling input fingerprint, not to every `specflow` source commit.
 
 ## Quick Start
 

@@ -119,37 +119,20 @@ Add-Content .gitignore "specflow/"
 ## 准备本地二进制文件
 
 `specflow/tooling/bin/` 不提交到 git。
-执行 `init` 前，先从与你当前 tooling 源码 fingerprint 匹配的 Release 下载当前平台需要的 binary。
-Release 绑定的是 tooling 输入 fingerprint，不是每一次 `specflow` 源码提交。
-
-Linux amd64 示例：
+执行 `init` 前，在你的项目根目录运行 pull 脚本：
 
 ```bash
-mkdir -p specflow/tooling/bin
-tag="specflow-tooling-$(specflow/tooling/scripts/tooling_fingerprint.sh --short)"
-base="https://github.com/Bingordinary/SpecFlow/releases/download/${tag}"
-curl -fL -o specflow/tooling/bin/specflowctl-linux-amd64 "${base}/specflowctl-linux-amd64"
-curl -fL -o specflow/tooling/bin/specflow-reader-linux-amd64 "${base}/specflow-reader-linux-amd64"
-curl -fL -o specflow/tooling/bin/SHA256SUMS "${base}/SHA256SUMS"
-chmod +x specflow/tooling/bin/specflowctl-linux-amd64 specflow/tooling/bin/specflow-reader-linux-amd64
-(cd specflow/tooling/bin && sha256sum -c SHA256SUMS --ignore-missing)
+specflow/tooling/scripts/pull_with_release.sh
 ```
 
-这些命令会替换 `specflow/tooling/bin/` 下已经存在的同名文件。
-这个目录只是本地缓存，所以替换这些文件就是正常的更新方式。
-
-Windows amd64 PowerShell 示例：
+Windows PowerShell：
 
 ```powershell
-$tag = "specflow-tooling-" + (& .\specflow\tooling\scripts\tooling_fingerprint.ps1 -Short)
-$base = "https://github.com/Bingordinary/SpecFlow/releases/download/$tag"
-New-Item -ItemType Directory -Force specflow/tooling/bin | Out-Null
-Invoke-WebRequest "$base/specflowctl-windows-amd64.exe" -OutFile "specflow/tooling/bin/specflowctl-windows-amd64.exe"
-Invoke-WebRequest "$base/specflow-reader-windows-amd64.exe" -OutFile "specflow/tooling/bin/specflow-reader-windows-amd64.exe"
-Invoke-WebRequest "$base/SHA256SUMS" -OutFile "specflow/tooling/bin/SHA256SUMS"
+.\specflow\tooling\scripts\pull_with_release.ps1
 ```
 
-其他平台后缀包括 `darwin-amd64`、`darwin-arm64`、`linux-amd64`、`linux-arm64`、`windows-amd64.exe` 和 `windows-arm64.exe`。
+这个脚本会对 `specflow/` 执行 fast-forward pull，计算当前 tooling fingerprint，并且只在本地 binary 缺失、过期或缺少校验文件时，安装当前平台需要的 `specflowctl`、`specflow-reader` 和 `SHA256SUMS`。
+Release 绑定的是 tooling 输入 fingerprint，不是每一次 `specflow` 源码提交。
 
 ## 快速开始
 
