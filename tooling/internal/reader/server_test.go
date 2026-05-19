@@ -49,6 +49,28 @@ func TestSnapshotAndSourceEndpoints(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for disallowed source, got %d", rec.Code)
 	}
+
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_memory.md"), "# Memory\n\nStable line.\n")
+	req = httptest.NewRequest(http.MethodGet, "/api/source-diff?path=docs/specs/units/candidate/c_unit_memory.md", nil)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected source diff 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var diff SourceDiff
+	if err := json.Unmarshal(rec.Body.Bytes(), &diff); err != nil {
+		t.Fatalf("source diff json invalid: %v", err)
+	}
+	if !diff.Available || diff.StablePath != "docs/specs/units/stable/s_unit_memory.md" {
+		t.Fatalf("unexpected source diff: %+v", diff)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/source-diff?path=../AGENTS.md", nil)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for escaped source diff path, got %d", rec.Code)
+	}
 }
 
 func TestSnapshotEndpointRefreshesFromDisk(t *testing.T) {

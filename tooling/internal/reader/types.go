@@ -95,3 +95,32 @@ type Diagnostic struct {
 	Message  string     `json:"message"`
 	Source   *SourceRef `json:"source,omitempty"`
 }
+
+type SourceDiff struct {
+	Available     bool        `json:"available"`
+	CandidatePath string      `json:"candidate_path,omitempty"`
+	StablePath    string      `json:"stable_path,omitempty"`
+	Reason        string      `json:"reason,omitempty"`
+	Summary       DiffSummary `json:"summary"`
+	Hunks         []DiffHunk  `json:"hunks"`
+}
+
+type DiffSummary struct {
+	Added    int `json:"added"`
+	Deleted  int `json:"deleted"`
+	Modified int `json:"modified"`
+	Hunks    int `json:"hunks"`
+}
+
+type DiffHunk struct {
+	StableStart    int        `json:"stable_start"`
+	CandidateStart int        `json:"candidate_start"`
+	Lines          []DiffLine `json:"lines"`
+}
+
+type DiffLine struct {
+	Type          string `json:"type"`
+	StableLine    int    `json:"stable_line,omitempty"`
+	CandidateLine int    `json:"candidate_line,omitempty"`
+	Text          string `json:"text"`
+}

@@ -15,6 +15,9 @@ let snapshotDataSignature = "";
 let activeSourceHeadings = [];
 let docGuideOpen = false;
 let lastGraphView = "";
+let activeSourceDiff = null;
+let diffMarkersEnabled = true;
+let expandedDiffMarkers = new Set();
 
 const LANGUAGE_STORAGE_KEY = "specflow-reader-language";
 const SUPPORTED_LANGUAGES = ["zh-CN", "en"];
@@ -373,6 +376,21 @@ const TRANSLATIONS = {
     docMode: {
       rendered: "渲染",
       raw: "原文"
+    },
+    diff: {
+      show: "显示差异",
+      hide: "隐藏差异",
+      unavailable: "无 stable 可对比",
+      added: "新增",
+      deleted: "删除",
+      modified: "修改",
+      context: "上下文",
+      summary: "相对 stable 的变化",
+      stableRange: "stable",
+      candidateRange: "candidate",
+      insertedLines: "新增 {count} 行",
+      deletedLines: "删除 {count} 行",
+      expand: "查看完整差异"
     },
     source: {
       guideTitle: "导览",
@@ -749,6 +767,21 @@ const TRANSLATIONS = {
       rendered: "Rendered",
       raw: "Source"
     },
+    diff: {
+      show: "Show diff",
+      hide: "Hide diff",
+      unavailable: "No stable baseline",
+      added: "Added",
+      deleted: "Deleted",
+      modified: "Modified",
+      context: "Context",
+      summary: "Changes from stable",
+      stableRange: "stable",
+      candidateRange: "candidate",
+      insertedLines: "{count} added",
+      deletedLines: "{count} deleted",
+      expand: "View full diff"
+    },
     source: {
       guideTitle: "Guide",
       guideShow: "Show Guide",
@@ -784,6 +817,7 @@ const sourceContent = document.getElementById("source-content");
 const sourceRendered = document.getElementById("source-rendered");
 const docGuide = document.getElementById("doc-guide");
 const docGuideToggle = document.getElementById("doc-guide-toggle");
+const docDiffToggle = document.getElementById("doc-diff-toggle");
 const resizeBar = document.getElementById("resize-bar");
 const infoTab = document.getElementById("info-tab");
 const truthTab = document.getElementById("truth-tab");
@@ -813,6 +847,7 @@ document.querySelectorAll("[data-doc-mode]").forEach((button) => {
   button.addEventListener("click", () => setDocMode(button.dataset.docMode));
 });
 docGuideToggle.addEventListener("click", () => setDocGuideOpen(!docGuideOpen));
+docDiffToggle.addEventListener("click", () => setDiffMarkersEnabled(!diffMarkersEnabled));
 
 resizeBar.addEventListener("pointerdown", startInspectorResize);
 
@@ -873,6 +908,7 @@ function applyStaticText() {
   renderDocGuide(activeSourceHeadings);
   bindDocGuideLinks();
   updateDocGuideToggle();
+  updateDiffToggle();
 }
 
 async function loadSnapshot() {
@@ -3384,8 +3420,11 @@ function updateTruthTab(truthRefs, ownerID, options = {}) {
     sourcePath.textContent = "";
     sourceContent.textContent = t("source.emptyRaw");
     sourceRendered.textContent = t("source.emptyRendered");
+    activeSourceDiff = null;
+    expandedDiffMarkers = new Set();
     activeSourceHeadings = [];
     renderDocGuide([]);
+    updateDiffToggle();
     setInspectorTab("info");
     return;
   }
@@ -3553,22 +3592,31 @@ async function openSource(path, options = {}) {
     sourcePath.textContent = path;
     sourceContent.textContent = message;
     sourceRendered.textContent = message;
+    activeSourceDiff = null;
+    expandedDiffMarkers = new Set();
     activeSourceHeadings = [];
     renderDocGuide([]);
+    updateDiffToggle();
     setDocMode(activeDocMode);
     if (activate) setInspectorTab("truth");
     return;
   }
   const source = await response.json();
   const renderedDoc = renderMarkdownDocument(source.content);
+  activeSourceDiff = await fetchSourceDiff(source.path);
+  diffMarkersEnabled = Boolean(activeSourceDiff && activeSourceDiff.available);
+  expandedDiffMarkers = new Set();
   sourcePath.textContent = source.path;
   sourceContent.textContent = source.content;
   sourceRendered.innerHTML = renderReviewProgressHeader(source.path) + renderedDoc.html;
   activeSourceHeadings = renderedDoc.headings;
+  applyDiffAnnotations();
   renderDocGuide(activeSourceHeadings);
+  updateDiffToggle();
   bindReviewProgressHeader();
   bindRenderedDocLinks(source.path);
   bindDocGuideLinks();
+  bindDiffMarkers();
   renderMermaidBlocks();
   if (targetLine > 0) {
     setDocMode("raw");
@@ -3577,6 +3625,198 @@ async function openSource(path, options = {}) {
     setDocMode(activeDocMode);
   }
   if (activate) setInspectorTab("truth");
+}
+
+async function fetchSourceDiff(path) {
+  try {
+    const response = await fetch(`/api/source-diff?path=${encodeURIComponent(path)}`);
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function setDiffMarkersEnabled(enabled) {
+  diffMarkersEnabled = Boolean(enabled && activeSourceDiff && activeSourceDiff.available);
+  applyDiffAnnotations();
+  renderDocGuide(activeSourceHeadings);
+  bindDocGuideLinks();
+  updateDiffToggle();
+  bindDiffMarkers();
+}
+
+function updateDiffToggle() {
+  if (!docDiffToggle) return;
+  const available = Boolean(activeSourceDiff && activeSourceDiff.available && list(activeSourceDiff.hunks).length > 0);
+  docDiffToggle.classList.toggle("hidden", !available);
+  docDiffToggle.classList.toggle("active", available && diffMarkersEnabled);
+  docDiffToggle.textContent = available && diffMarkersEnabled ? t("diff.hide") : t("diff.show");
+  docDiffToggle.disabled = !available;
+}
+
+function applyDiffAnnotations() {
+  sourceRendered.querySelectorAll(".diff-marker-row").forEach((node) => node.remove());
+  sourceRendered.classList.toggle("diff-enabled", Boolean(diffMarkersEnabled));
+  if (!diffMarkersEnabled || !activeSourceDiff || !activeSourceDiff.available) return;
+
+  const blocks = sourceBlocks();
+  const hunks = list(activeSourceDiff.hunks);
+  hunks.forEach((hunk, index) => {
+    const anchor = anchorLineForHunk(hunk);
+    const target = targetBlockForLine(blocks, anchor);
+    const row = document.createElement("div");
+    row.className = "diff-marker-row";
+    row.dataset.diffIndex = String(index);
+    row.innerHTML = renderDiffMarker(hunk, index);
+    if (target && hunkIsDeleteOnly(hunk)) {
+      target.before(row);
+    } else if (target) {
+      target.before(row);
+    } else {
+      sourceRendered.appendChild(row);
+    }
+  });
+}
+
+function sourceBlocks() {
+  return [...sourceRendered.querySelectorAll("[data-source-start]")]
+    .filter((node) => !node.closest(".diff-marker-row") && !node.classList.contains("review-progress-panel"))
+    .map((node) => ({
+      node,
+      start: Number(node.dataset.sourceStart || 0),
+      end: Number(node.dataset.sourceEnd || node.dataset.sourceStart || 0)
+    }))
+    .filter((item) => item.start > 0)
+    .sort((left, right) => left.start - right.start);
+}
+
+function targetBlockForLine(blocks, line) {
+  if (blocks.length === 0) return null;
+  return (blocks.find((block) => block.start <= line && block.end >= line)
+    || blocks.find((block) => block.start >= line)
+    || blocks[blocks.length - 1]).node;
+}
+
+function anchorLineForHunk(hunk) {
+  const lines = list(hunk.lines);
+  const firstInsert = lines.find((line) => line.type === "insert" && Number(line.candidate_line || 0) > 0);
+  if (firstInsert) return Number(firstInsert.candidate_line);
+
+  const firstDeleteIndex = lines.findIndex((line) => line.type === "delete");
+  if (firstDeleteIndex >= 0) {
+    const nextSurvivingLine = lines.slice(firstDeleteIndex + 1)
+      .find((line) => line.type === "equal" && Number(line.candidate_line || 0) > 0);
+    if (nextSurvivingLine) return Number(nextSurvivingLine.candidate_line);
+  }
+
+  const candidateLine = lines.map((line) => Number(line.candidate_line || 0)).find((line) => line > 0);
+  return candidateLine || Number(hunk.candidate_start || 1);
+}
+
+function hunkIsDeleteOnly(hunk) {
+  const lines = list(hunk.lines);
+  return lines.some((line) => line.type === "delete") && !lines.some((line) => line.type === "insert");
+}
+
+function hunkChangeType(hunk) {
+  const lines = list(hunk.lines);
+  const hasInsert = lines.some((line) => line.type === "insert");
+  const hasDelete = lines.some((line) => line.type === "delete");
+  if (hasInsert && hasDelete) return "modified";
+  if (hasInsert) return "added";
+  if (hasDelete) return "deleted";
+  return "context";
+}
+
+function renderDiffMarker(hunk, index) {
+  const type = hunkChangeType(hunk);
+  const expanded = expandedDiffMarkers.has(String(index));
+  const summary = summarizeDiffHunk(hunk);
+  return `
+    <button class="diff-marker ${escapeAttr(type)}" type="button" data-diff-toggle="${escapeAttr(index)}" aria-expanded="${escapeAttr(expanded)}">
+      <span class="diff-marker-type">${escapeHTML(t(`diff.${type}`))}</span>
+      <span class="diff-marker-body">
+        <span class="diff-marker-title">
+          <strong>${escapeHTML(diffRangeSummary(summary))}</strong>
+          <em>${escapeHTML(diffCountSummary(summary))}</em>
+        </span>
+        <span class="diff-marker-action">${escapeHTML(t("diff.expand"))}</span>
+      </span>
+    </button>
+    ${expanded ? renderDiffHunk(hunk) : ""}
+  `;
+}
+
+function summarizeDiffHunk(hunk) {
+  const changedLines = list(hunk.lines).filter((line) => line.type === "insert" || line.type === "delete");
+  const inserted = changedLines.filter((line) => line.type === "insert");
+  const deleted = changedLines.filter((line) => line.type === "delete");
+  return {
+    inserted,
+    deleted,
+    stableRange: lineRangeText(deleted.map((line) => Number(line.stable_line || 0)).filter(Boolean)),
+    candidateRange: lineRangeText(inserted.map((line) => Number(line.candidate_line || 0)).filter(Boolean))
+  };
+}
+
+function lineRangeText(lines) {
+  if (lines.length === 0) return "";
+  const min = Math.min(...lines);
+  const max = Math.max(...lines);
+  return min === max ? `L${min}` : `L${min}-L${max}`;
+}
+
+function diffRangeSummary(summary) {
+  const parts = [];
+  if (summary.stableRange) parts.push(`${t("diff.stableRange")} ${summary.stableRange}`);
+  if (summary.candidateRange) parts.push(`${t("diff.candidateRange")} ${summary.candidateRange}`);
+  return parts.length > 0 ? parts.join(" -> ") : t("diff.summary");
+}
+
+function diffCountSummary(summary) {
+  const parts = [];
+  if (summary.deleted.length > 0) parts.push(t("diff.deletedLines", { count: summary.deleted.length }));
+  if (summary.inserted.length > 0) parts.push(t("diff.insertedLines", { count: summary.inserted.length }));
+  return parts.join(" · ");
+}
+
+function renderDiffHunk(hunk) {
+  return `
+    <div class="diff-hunk" role="region" aria-label="${escapeAttr(t("diff.summary"))}">
+      ${list(hunk.lines).map((line) => {
+        const lineNo = line.type === "delete" ? line.stable_line : line.candidate_line;
+        return `
+          <div class="diff-line ${escapeAttr(line.type)}">
+            <span class="diff-line-no">${escapeHTML(lineNo || "")}</span>
+            <span class="diff-line-prefix">${escapeHTML(diffLinePrefix(line.type))}</span>
+            <code>${escapeHTML(line.text || "")}</code>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function diffLinePrefix(type) {
+  if (type === "insert") return "+";
+  if (type === "delete") return "-";
+  return " ";
+}
+
+function bindDiffMarkers() {
+  sourceRendered.querySelectorAll("[data-diff-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = button.dataset.diffToggle;
+      if (expandedDiffMarkers.has(index)) {
+        expandedDiffMarkers.delete(index);
+      } else {
+        expandedDiffMarkers.add(index);
+      }
+      applyDiffAnnotations();
+      bindDiffMarkers();
+    });
+  });
 }
 
 function renderMarkdown(markdown) {
@@ -3589,16 +3829,21 @@ function renderMarkdownDocument(markdown) {
   const html = [];
   const headings = [];
   let paragraph = [];
+  let paragraphStartLine = 0;
   let listType = "";
   let inCode = false;
   let codeLines = [];
   let codeLang = "";
+  let codeStartLine = 0;
   let tableLines = [];
 
   const flushParagraph = () => {
     if (paragraph.length === 0) return;
-    html.push(`<p>${renderInline(paragraph.join(" "))}</p>`);
+    const startLine = paragraphStartLine || paragraph[0].line;
+    const endLine = paragraph[paragraph.length - 1].line;
+    html.push(`<p data-source-start="${escapeAttr(startLine)}" data-source-end="${escapeAttr(endLine)}">${renderInline(paragraph.map((item) => item.text).join(" "))}</p>`);
     paragraph = [];
+    paragraphStartLine = 0;
   };
   const flushList = () => {
     if (!listType) return;
@@ -3617,24 +3862,27 @@ function renderMarkdownDocument(markdown) {
   };
 
   if (parsed.frontmatter.length > 0) {
-    html.push(renderFrontmatter(parsed.frontmatter));
+    html.push(renderFrontmatter(parsed.frontmatter, 1, parsed.bodyStartLine - 2));
   }
 
   lines.forEach((line, index) => {
+    const sourceLine = parsed.bodyStartLine + index;
     if (line.startsWith("```")) {
       if (inCode) {
         const code = codeLines.join("\n");
         if (codeLang === "mermaid" || codeLang === "mmd") {
-          html.push(`<div class="mermaid">${escapeHTML(code)}</div>`);
+          html.push(`<div class="mermaid" data-source-start="${escapeAttr(codeStartLine)}" data-source-end="${escapeAttr(sourceLine)}">${escapeHTML(code)}</div>`);
         } else {
-          html.push(`<pre><code>${escapeHTML(code)}</code></pre>`);
+          html.push(`<pre data-source-start="${escapeAttr(codeStartLine)}" data-source-end="${escapeAttr(sourceLine)}"><code>${escapeHTML(code)}</code></pre>`);
         }
         codeLines = [];
         codeLang = "";
+        codeStartLine = 0;
         inCode = false;
       } else {
         flushBlocks();
         inCode = true;
+        codeStartLine = sourceLine;
         codeLang = line.slice(3).trim().split(/\s+/)[0].toLowerCase();
       }
       return;
@@ -3652,7 +3900,7 @@ function renderMarkdownDocument(markdown) {
     if (isTableLine(trimmed)) {
       flushParagraph();
       flushList();
-      tableLines.push(trimmed);
+      tableLines.push({ text: trimmed, line: sourceLine });
       return;
     }
     flushTable();
@@ -3664,8 +3912,8 @@ function renderMarkdownDocument(markdown) {
       const level = heading[1].length;
       const text = plainHeadingText(heading[2]);
       const id = `doc-heading-${headings.length + 1}`;
-      headings.push({ id, level, text, line: parsed.bodyStartLine + index });
-      html.push(`<h${level} id="${escapeAttr(id)}">${renderInline(heading[2])}</h${level}>`);
+      headings.push({ id, level, text, line: sourceLine });
+      html.push(`<h${level} id="${escapeAttr(id)}" data-source-start="${escapeAttr(sourceLine)}" data-source-end="${escapeAttr(sourceLine)}">${renderInline(heading[2])}</h${level}>`);
       return;
     }
 
@@ -3677,7 +3925,7 @@ function renderMarkdownDocument(markdown) {
         listType = "ul";
         html.push("<ul>");
       }
-      html.push(`<li>${renderInline(unordered[1])}</li>`);
+      html.push(`<li data-source-start="${escapeAttr(sourceLine)}" data-source-end="${escapeAttr(sourceLine)}">${renderInline(unordered[1])}</li>`);
       return;
     }
 
@@ -3689,23 +3937,25 @@ function renderMarkdownDocument(markdown) {
         listType = "ol";
         html.push("<ol>");
       }
-      html.push(`<li>${renderInline(ordered[1])}</li>`);
+      html.push(`<li data-source-start="${escapeAttr(sourceLine)}" data-source-end="${escapeAttr(sourceLine)}">${renderInline(ordered[1])}</li>`);
       return;
     }
 
     if (trimmed.startsWith("> ")) {
       flushParagraph();
       flushList();
-      html.push(`<blockquote>${renderInline(trimmed.slice(2))}</blockquote>`);
+      html.push(`<blockquote data-source-start="${escapeAttr(sourceLine)}" data-source-end="${escapeAttr(sourceLine)}">${renderInline(trimmed.slice(2))}</blockquote>`);
       return;
     }
 
     flushList();
-    paragraph.push(trimmed);
+    if (paragraph.length === 0) paragraphStartLine = sourceLine;
+    paragraph.push({ text: trimmed, line: sourceLine });
   });
 
   if (inCode) {
-    html.push(`<pre><code>${escapeHTML(codeLines.join("\n"))}</code></pre>`);
+    const endLine = parsed.bodyStartLine + lines.length - 1;
+    html.push(`<pre data-source-start="${escapeAttr(codeStartLine || endLine)}" data-source-end="${escapeAttr(endLine)}"><code>${escapeHTML(codeLines.join("\n"))}</code></pre>`);
   }
   flushBlocks();
   return { html: html.join(""), headings };
@@ -3726,14 +3976,30 @@ function renderDocGuide(headings) {
   docGuide.innerHTML = `
     <div class="doc-guide-title">${escapeHTML(t("source.guideTitle"))}</div>
     <div class="doc-guide-list">
-      ${items.map((heading) => `
+      ${items.map((heading, index) => `
         <button class="doc-guide-item depth-${Math.min(Math.max(heading.level, 1), 4)}" type="button" data-heading-id="${escapeAttr(heading.id)}" data-heading-line="${escapeAttr(heading.line)}">
-          ${escapeHTML(heading.text || t("source.noGuide"))}
+          <span>${escapeHTML(heading.text || t("source.noGuide"))}</span>
+          ${renderHeadingDiffBadge(heading, index, items)}
         </button>
       `).join("")}
     </div>
   `;
   updateDocGuideToggle();
+}
+
+function renderHeadingDiffBadge(heading, index, headings) {
+  if (!diffMarkersEnabled || !activeSourceDiff || !activeSourceDiff.available) return "";
+  const start = Number(heading.line || 0);
+  const next = list(headings).slice(index + 1).find((item) => Number(item.level || 0) <= Number(heading.level || 0));
+  const end = next ? Number(next.line || start) - 1 : Number.MAX_SAFE_INTEGER;
+  const types = new Set();
+  list(activeSourceDiff.hunks).forEach((hunk) => {
+    const line = anchorLineForHunk(hunk);
+    if (line >= start && line <= end) types.add(hunkChangeType(hunk));
+  });
+  if (types.size === 0) return "";
+  const type = types.has("modified") ? "modified" : types.has("added") ? "added" : "deleted";
+  return `<em class="doc-guide-diff ${escapeAttr(type)}">${escapeHTML(t(`diff.${type}`))}</em>`;
 }
 
 function setDocGuideOpen(open) {
@@ -3816,7 +4082,7 @@ function splitFrontmatter(markdown) {
   };
 }
 
-function renderFrontmatter(lines) {
+function renderFrontmatter(lines, startLine = 1, endLine = 1) {
   const rows = [];
   let current = null;
   const pushCurrent = () => {
@@ -3844,10 +4110,10 @@ function renderFrontmatter(lines) {
   pushCurrent();
 
   if (rows.length === 0) {
-    return `<section class="frontmatter-block"><h2>${escapeHTML(t("frontmatter.title"))}</h2><pre><code>${escapeHTML(lines.join("\n"))}</code></pre></section>`;
+    return `<section class="frontmatter-block" data-source-start="${escapeAttr(startLine)}" data-source-end="${escapeAttr(endLine)}"><h2>${escapeHTML(t("frontmatter.title"))}</h2><pre><code>${escapeHTML(lines.join("\n"))}</code></pre></section>`;
   }
   return `
-    <section class="frontmatter-block">
+    <section class="frontmatter-block" data-source-start="${escapeAttr(startLine)}" data-source-end="${escapeAttr(endLine)}">
       <h2>${escapeHTML(t("frontmatter.title"))}</h2>
       <table>
         ${rows.map((row) => `<tr><th>${escapeHTML(row.key)}</th><td>${row.values.length > 0 ? row.values.map(renderInline).join("<br>") : escapeHTML(t("frontmatter.undeclared"))}</td></tr>`).join("")}
@@ -3881,12 +4147,14 @@ function isTableLine(line) {
 
 function renderTable(lines) {
   if (lines.length < 2) {
-    return lines.map((line) => `<p>${renderInline(line)}</p>`).join("");
+    return lines.map((line) => `<p data-source-start="${escapeAttr(line.line)}" data-source-end="${escapeAttr(line.line)}">${renderInline(line.text)}</p>`).join("");
   }
-  const rows = lines.filter((line) => !/^\|\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(line));
+  const rows = lines.filter((line) => !/^\|\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(line.text));
   if (rows.length === 0) return "";
-  return `<table>${rows.map((line, rowIndex) => {
-    const cells = line.split("|").slice(1, -1);
+  const startLine = rows[0].line;
+  const endLine = rows[rows.length - 1].line;
+  return `<table data-source-start="${escapeAttr(startLine)}" data-source-end="${escapeAttr(endLine)}">${rows.map((line, rowIndex) => {
+    const cells = line.text.split("|").slice(1, -1);
     const tag = rowIndex === 0 ? "th" : "td";
     return `<tr>${cells.map((cell) => `<${tag}>${renderInline(cell.trim())}</${tag}>`).join("")}</tr>`;
   }).join("")}</table>`;

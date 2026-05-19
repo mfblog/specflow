@@ -88,6 +88,18 @@ func NewHandler(store *Store) (http.Handler, error) {
 		}
 		writeJSON(w, source)
 	})
+	mux.HandleFunc("/api/source-diff", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		diff, err := ReadAllowedSourceDiff(store.RepoRoot(), r.URL.Query().Get("path"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, diff)
+	})
 	mux.Handle("/", noStore(http.FileServer(http.Dir(webRoot))))
 	return mux, nil
 }
