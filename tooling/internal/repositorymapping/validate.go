@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/specpaths"
-	"github.com/Bingordinary/SpecFlow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
 const registryHeader = "kind|id|registration_state|implementation_paths|spec_files|responsibility"

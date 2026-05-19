@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/buildrelease"
-	"github.com/Bingordinary/SpecFlow/tooling/internal/toolingfreshness"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/buildrelease"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
 )
 
 func TestDoctorPassesForFreshBinary(t *testing.T) {
@@ -115,7 +115,7 @@ func setupDoctorRepo(t *testing.T, repoRoot string) string {
 		"templates/docs/project_standards/_registry.md\tdocs/project_standards/_registry.md\tproject",
 	}, "\n")+"\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), "# registry\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module github.com/Bingordinary/SpecFlow/tooling\n\ngo 1.22.2\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module github.com/Bingordinary/SpecFlow/specflow/tooling\n\ngo 1.22.2\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflow-reader/main.go"), "package main\n\nfunc main() {}\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/internal/demo/demo.go"), "package demo\n\nfunc Value() string { return \"demo\" }\n")

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/testfixtures"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/testfixtures"
 )
 
 func TestResolveRefRequiresPromotionOwnerUnitWhenCandidateSharedHasStableSibling(t *testing.T) {

@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/buildrelease"
-	"github.com/Bingordinary/SpecFlow/tooling/internal/managedblock"
-	"github.com/Bingordinary/SpecFlow/tooling/internal/manifest"
-	"github.com/Bingordinary/SpecFlow/tooling/internal/toolingfreshness"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/buildrelease"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/managedblock"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/manifest"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
 )
 
 type InitResult struct {

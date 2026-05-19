@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/projectstandards"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/projectstandards"
 )
 
 type SpecFlowScope struct {

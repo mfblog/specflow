@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/snapshot"
-	"github.com/Bingordinary/SpecFlow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
 type ModuleBinding struct {

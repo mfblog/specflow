@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/rulerefs"
-	"github.com/Bingordinary/SpecFlow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
 type ResolvedRef struct {

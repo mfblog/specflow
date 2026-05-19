@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/snapshot"
-	"github.com/Bingordinary/SpecFlow/tooling/internal/statusfile"
-	"github.com/Bingordinary/SpecFlow/tooling/internal/testfixtures"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/testfixtures"
 )
 
 func TestDetermineTransitionCoversStandardOutcomes(t *testing.T) {

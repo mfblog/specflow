@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/reader"
-	"github.com/Bingordinary/SpecFlow/tooling/internal/toolingfreshness"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reader"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
 )
 
 const defaultRepoRoot = "../../.."

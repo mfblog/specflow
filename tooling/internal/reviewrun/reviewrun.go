@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/reviewscope"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewscope"
 )
 
 const (

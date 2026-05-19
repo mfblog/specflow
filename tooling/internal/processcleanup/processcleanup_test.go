@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bingordinary/SpecFlow/tooling/internal/specpaths"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 )
 
 func TestApplyFallbackForPromoteEvidenceIncomplete(t *testing.T) {
