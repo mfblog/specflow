@@ -3865,7 +3865,9 @@ function renderMarkdownDocument(markdown) {
     html.push(renderFrontmatter(parsed.frontmatter, 1, parsed.bodyStartLine - 2));
   }
 
+  let skipUntilIndex = 0;
   lines.forEach((line, index) => {
+    if (index < skipUntilIndex) return;
     const sourceLine = parsed.bodyStartLine + index;
     if (line.startsWith("```")) {
       if (inCode) {
@@ -3893,6 +3895,15 @@ function renderMarkdownDocument(markdown) {
     }
 
     const trimmed = line.trim();
+    if (trimmed === "acceptance_item_set:") {
+      flushBlocks();
+      const block = parseAcceptanceItemSet(lines, index, parsed.bodyStartLine);
+      if (block) {
+        html.push(renderAcceptanceItemSet(block));
+        skipUntilIndex = block.endIndex + 1;
+        return;
+      }
+    }
     if (trimmed === "") {
       flushBlocks();
       return;
@@ -3959,6 +3970,80 @@ function renderMarkdownDocument(markdown) {
   }
   flushBlocks();
   return { html: html.join(""), headings };
+}
+
+function parseAcceptanceItemSet(lines, startIndex, bodyStartLine) {
+  const items = [];
+  let current = null;
+  let endIndex = startIndex;
+
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+    if (trimmed === "") break;
+    if (!/^\s/.test(line)) break;
+
+    const itemStart = /^\s*-\s+id:\s*(.+)$/.exec(line);
+    if (itemStart) {
+      current = { id: itemStart[1].trim(), fields: [], startLine: bodyStartLine + index };
+      items.push(current);
+      endIndex = index;
+      continue;
+    }
+
+    const field = /^\s+([A-Za-z0-9_]+):\s*(.*)$/.exec(line);
+    if (field && current) {
+      current.fields.push({
+        key: field[1],
+        value: field[2].trim(),
+        line: bodyStartLine + index
+      });
+      endIndex = index;
+    }
+  }
+
+  if (items.length === 0) return null;
+  return {
+    items,
+    startLine: bodyStartLine + startIndex,
+    endLine: bodyStartLine + endIndex,
+    endIndex
+  };
+}
+
+function renderAcceptanceItemSet(block) {
+  return `
+    <section class="acceptance-item-set" data-source-start="${escapeAttr(block.startLine)}" data-source-end="${escapeAttr(block.endLine)}">
+      <div class="acceptance-set-heading">
+        <code>acceptance_item_set</code>
+        <span>${escapeHTML(String(block.items.length))} items</span>
+      </div>
+      <div class="acceptance-items">
+        ${block.items.map(renderAcceptanceItem).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderAcceptanceItem(item) {
+  const fields = item.fields.filter((field) => field.key !== "id");
+  const runnable = fields.find((field) => field.key === "not_runnable_yet");
+  const statusClass = runnable && runnable.value === "yes" ? "not-runnable" : "runnable";
+  const statusLabel = runnable && runnable.value === "yes" ? "not runnable yet" : "runnable";
+  return `
+    <article class="acceptance-item ${statusClass}" data-source-start="${escapeAttr(item.startLine)}" data-source-end="${escapeAttr(item.fields.length ? item.fields[item.fields.length - 1].line : item.startLine)}">
+      <header>
+        <code>${escapeHTML(item.id)}</code>
+        <span>${escapeHTML(statusLabel)}</span>
+      </header>
+      <dl>
+        ${fields.map((field) => `
+          <dt>${escapeHTML(field.key)}</dt>
+          <dd>${renderInline(field.value)}</dd>
+        `).join("")}
+      </dl>
+    </article>
+  `;
 }
 
 function renderDocGuide(headings) {
