@@ -1080,6 +1080,19 @@ button.registry-path:hover {
   gap: 10px;
 }
 
+.todo-relation-sections,
+.todo-relation-section {
+  display: grid;
+  gap: 12px;
+}
+
+.todo-relation-section h4 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .todo-card {
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -1088,9 +1101,52 @@ button.registry-path:hover {
   cursor: pointer;
 }
 
+.todo-card.relation-ready {
+  border-left: 3px solid #16a34a;
+}
+
+.todo-card.relation-blocked {
+  border-left: 3px solid #d97706;
+  background: #fffbeb;
+}
+
+.todo-card.relation-cycle {
+  border-left: 3px solid #dc2626;
+  background: #fef2f2;
+}
+
 .todo-card.intent-repair {
   border-color: var(--line);
   background: #fffbeb;
+}
+
+.todo-card.todo-type-repairFork {
+  border-color: #d97706;
+  border-left: 5px solid #d97706;
+  background: linear-gradient(90deg, #fff7ed 0, #ffffff 68%);
+}
+
+.todo-card.todo-type-repairFork .todo-type {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.todo-card.todo-type-repairFork .progress-line span {
+  background: #d97706;
+}
+
+.todo-card.relation-ready {
+  border-left-color: #16a34a;
+}
+
+.todo-card.relation-blocked {
+  border-left-color: #d97706;
+  background: #fffbeb;
+}
+
+.todo-card.relation-cycle {
+  border-left-color: #dc2626;
+  background: #fef2f2;
 }
 
 .todo-card.active {
@@ -1101,6 +1157,10 @@ button.registry-path:hover {
 .todo-card.intent-repair.active {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22);
+}
+
+.todo-card.todo-type-repairFork.active {
+  border-left-color: #d97706;
 }
 
 .todo-card-head {
@@ -1189,6 +1249,52 @@ button.registry-path:hover {
 
 .todo-intent.intent-repair strong {
   color: #92400e;
+}
+
+.todo-relation-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin: -2px 0 9px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #f1f5f9;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.todo-relation-pill strong {
+  color: var(--ink);
+}
+
+.todo-relation-pill.relation-ready {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.todo-relation-pill.relation-ready strong {
+  color: #166534;
+}
+
+.todo-relation-pill.relation-blocked {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.todo-relation-pill.relation-blocked strong {
+  color: #92400e;
+}
+
+.todo-relation-pill.relation-cycle {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.todo-relation-pill.relation-cycle strong {
+  color: #991b1b;
 }
 
 .todo-command-row {

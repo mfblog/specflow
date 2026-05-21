@@ -172,6 +172,19 @@ const TRANSLATIONS = {
       notes: "原因",
       openMaterial: "打开材料",
       noMaterials: "暂无可读取材料",
+      relationStatus: "推进关系",
+      relationBlockedBy: "等待对象",
+      relationSources: "关系来源",
+      relationReady: "可先推进",
+      relationBlocked: "等待上游",
+      relationCycle: "推进环",
+      relationOther: "普通动作",
+      relationGroups: {
+        ready: "可先推进",
+        blocked: "等待上游",
+        cycle: "存在推进环",
+        other: "其他动作"
+      },
       sourceLabels: {
         activeTruth: "当前 Spec",
         appendix: "附录",
@@ -562,6 +575,19 @@ const TRANSLATIONS = {
       notes: "Reason",
       openMaterial: "Open material",
       noMaterials: "No readable material",
+      relationStatus: "Relation status",
+      relationBlockedBy: "Waiting for",
+      relationSources: "Relation sources",
+      relationReady: "Ready first",
+      relationBlocked: "Waiting upstream",
+      relationCycle: "Relation cycle",
+      relationOther: "Ordinary action",
+      relationGroups: {
+        ready: "Ready first",
+        blocked: "Waiting upstream",
+        cycle: "Relation cycles",
+        other: "Other actions"
+      },
       sourceLabels: {
         activeTruth: "Current Spec",
         appendix: "Appendix",
@@ -1398,7 +1424,7 @@ function graphForTodoView() {
       id: item.id,
       kind: item.object.kind,
       label: item.objectLabel,
-      group: item.type,
+      group: todoRelationStatus(item) === "other" ? item.type : todoRelationStatus(item),
       source: firstSourceRef(item.sources)
     })),
     edges: []
@@ -2442,18 +2468,29 @@ function renderTodoBoard() {
         </div>
         ${renderSourceButton(snapshot.project.status_file, t("statusBoard.sourceLabel"))}
       </div>
-      <div class="todo-card-grid">
-        ${items.map(renderTodoCard).join("")}
+      <div class="todo-relation-sections">
+        ${todoRelationGroups(items).map(renderTodoRelationSection).join("")}
       </div>
     </section>
   `;
   bindTodoBoardLinks();
 }
 
+function renderTodoRelationSection(group) {
+  return `
+    <section class="todo-relation-section relation-${escapeAttr(group.status)}">
+      <h4>${escapeHTML(group.label)}</h4>
+      <div class="todo-card-grid">
+        ${group.items.map(renderTodoCard).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderTodoCard(item) {
   const view = lifecycleView(item.object, item.nextCommand);
   return `
-    <article class="todo-card ${escapeAttr(objectKindClass(item.object.kind))} ${item.id === selectedNodeID ? "active" : ""} ${escapeAttr(nextIntentClass(item.object))}" data-todo-card="${escapeAttr(item.id)}">
+    <article class="todo-card ${escapeAttr(objectKindClass(item.object.kind))} ${escapeAttr(todoCardTypeClass(item.type))} ${item.id === selectedNodeID ? "active" : ""} ${escapeAttr(nextIntentClass(item.object))} ${escapeAttr(todoRelationClass(item))}" data-todo-card="${escapeAttr(item.id)}">
       <div class="todo-card-head">
         <div class="todo-card-title">
           ${renderKindBadge(item.object.kind)}
@@ -2471,11 +2508,23 @@ function renderTodoCard(item) {
         </div>
       </div>
       ${renderTodoIntentPill(item)}
+      ${renderTodoRelationPill(item)}
       ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
       <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
       ${renderNextRoundEntry(view, item.object)}
       <p>${escapeHTML(item.object.notes || t("fallback.none"))}</p>
     </article>
+  `;
+}
+
+function renderTodoRelationPill(item) {
+  const relation = item.relation || {};
+  if (!relation.status || relation.status === "other") return "";
+  return `
+    <div class="todo-relation-pill relation-${escapeAttr(relation.status)}">
+      <span>${escapeHTML(t("todo.relationStatus"))}</span>
+      <strong>${escapeHTML(relation.label || todoRelationLabel(relation.status))}</strong>
+    </div>
   `;
 }
 
@@ -2534,6 +2583,7 @@ function todoItems() {
         nextCommand,
         commandText: `${nextCommand}:${object.id}`,
         advanceCommandText: advanceEntryCommandForObject(object, nextCommand),
+        relation: candidateRelationForObject(object),
         sources,
         primarySources: sources.filter((source) => source.group !== "references"),
         referenceSources: sources.filter((source) => source.group === "references"),
@@ -2581,6 +2631,106 @@ function compareTodoItems(left, right) {
     || String(left.nextCommand || "").localeCompare(String(right.nextCommand || ""));
 }
 
+function todoRelationGroups(items) {
+  const buckets = {
+    ready: [],
+    blocked: [],
+    cycle: [],
+    other: []
+  };
+  list(items).forEach((item) => {
+    const status = todoRelationStatus(item);
+    if (!buckets[status]) buckets.other.push(item);
+    else buckets[status].push(item);
+  });
+  return ["ready", "blocked", "cycle", "other"]
+    .filter((status) => buckets[status].length > 0)
+    .map((status) => ({
+      status,
+      label: t(`todo.relationGroups.${status}`),
+      items: buckets[status]
+    }));
+}
+
+function todoRelationStatus(item) {
+  const status = String(item && item.relation && item.relation.status ? item.relation.status : "other");
+  return ["ready", "blocked", "cycle"].includes(status) ? status : "other";
+}
+
+function todoRelationClass(item) {
+  return `relation-${todoRelationStatus(item)}`;
+}
+
+function todoCardTypeClass(type) {
+  return `todo-type-${String(type || "other").trim() || "other"}`;
+}
+
+function todoRelationLabel(status) {
+  if (status === "ready") return t("todo.relationReady");
+  if (status === "blocked") return t("todo.relationBlocked");
+  if (status === "cycle") return t("todo.relationCycle");
+  return t("todo.relationOther");
+}
+
+function candidateRelationData() {
+  return snapshot && snapshot.candidate_relations ? snapshot.candidate_relations : {};
+}
+
+function candidateRelationForObject(object) {
+  const objectID = String(object && object.id ? object.id : "").trim();
+  if (!objectID || !object || object.kind !== "unit" || object.layer !== "candidate") {
+    return {
+      status: "other",
+      label: todoRelationLabel("other"),
+      blockedBy: [],
+      sources: [],
+      blocksAdvance: false
+    };
+  }
+
+  const relation = candidateRelationData();
+  const cycle = list(relation.candidate_cycles).find((item) => list(item.objects).includes(objectID));
+  if (cycle) {
+    const cycleObjects = list(cycle.objects).filter((value) => value !== objectID);
+    return {
+      status: "cycle",
+      label: todoRelationLabel("cycle"),
+      blockedBy: cycleObjects.length > 0 ? cycleObjects : list(cycle.objects),
+      sources: list(cycle.sources),
+      blocksAdvance: true
+    };
+  }
+
+  const blocked = list(relation.blocked_candidates).find((item) => item.object === objectID);
+  if (blocked) {
+    return {
+      status: "blocked",
+      label: todoRelationLabel("blocked"),
+      blockedBy: list(blocked.blocked_by),
+      sources: list(blocked.sources),
+      blocksAdvance: true
+    };
+  }
+
+  if (list(relation.ready_candidates).includes(objectID)) {
+    return {
+      status: "ready",
+      label: todoRelationLabel("ready"),
+      blockedBy: [],
+      sources: [],
+      blocksAdvance: false
+    };
+  }
+
+  return {
+    status: "other",
+    label: todoRelationLabel("other"),
+    blockedBy: [],
+    sources: [],
+    blocksAdvance: true
+  };
+}
+
 function advanceEntryCommandForObject(object, nextCommand) {
   const kind = String(object && object.kind ? object.kind : "").trim();
   const objectID = String(object && object.id ? object.id : "").trim();
@@ -2594,6 +2744,7 @@ function advanceEntryCommandForObject(object, nextCommand) {
 
 function renderAdvanceCommandButton(item, className) {
   const command = String(item && item.advanceCommandText ? item.advanceCommandText : "").trim();
+  if (item && item.relation && item.relation.blocksAdvance) return "";
   if (!command) return "";
   return `
     <button class="${escapeAttr(className)}" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(`${t("todo.advanceEntry")}: ${command}`)}">
@@ -3310,6 +3461,7 @@ function renderTodoDetail(item) {
       <dt>${escapeHTML(t("todo.command"))}</dt><dd><code>${escapeHTML(item.commandText)}</code></dd>
       ${renderTodoIntentDetailRows(item)}
       <dt>${escapeHTML(t("inspector.fields.status"))}</dt><dd>${escapeHTML(item.object.human_state || item.object.layer || t("fallback.undeclared"))}</dd>
+      ${renderTodoRelationDetailRows(item)}
       <dt>${escapeHTML(t("todo.notes"))}</dt><dd>${escapeHTML(item.object.notes || t("fallback.none"))}</dd>
     </dl>
     <section class="todo-detail-section">
@@ -3350,6 +3502,21 @@ function renderTodoIntentDetailRows(item) {
   const intent = nextIntent(item.object);
   if (!intent) return "";
   return `<dt>${escapeHTML(t("todo.intent"))}</dt><dd>${escapeHTML(todoIntentLabel(intent))}</dd>`;
+}
+
+function renderTodoRelationDetailRows(item) {
+  const relation = item.relation || {};
+  if (!relation.status || relation.status === "other") return "";
+  const parts = [
+    `<dt>${escapeHTML(t("todo.relationStatus"))}</dt><dd><span class="todo-relation-pill relation-${escapeAttr(relation.status)}"><strong>${escapeHTML(relation.label || todoRelationLabel(relation.status))}</strong></span></dd>`
+  ];
+  if (list(relation.blockedBy).length > 0) {
+    parts.push(`<dt>${escapeHTML(t("todo.relationBlockedBy"))}</dt><dd><div class="chips">${list(relation.blockedBy).map((value) => `<span class="chip">${escapeHTML(value)}</span>`).join("")}</div></dd>`);
+  }
+  if (list(relation.sources).length > 0) {
+    parts.push(`<dt>${escapeHTML(t("todo.relationSources"))}</dt><dd><div class="chips">${list(relation.sources).map((source) => `<button class="chip" type="button" data-source="${escapeAttr(source.path)}">${escapeHTML(source.path)}</button>`).join("")}</div></dd>`);
+  }
+  return parts.join("");
 }
 
 function renderTodoEmptyDetail() {
@@ -3458,7 +3625,6 @@ function setDocMode(mode) {
 function isReadableOriginalPath(path) {
   if (!path) return false;
   return path.startsWith("docs/specs/")
-    || path.startsWith("docs/project_standards/")
     || path === "AGENTS.md"
     || path === "CLAUDE.md"
     || path === "GEMINI.md";
