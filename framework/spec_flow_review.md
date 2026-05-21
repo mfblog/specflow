@@ -165,7 +165,7 @@ Any contract drift that can change execution, stop behavior, review judgment, or
 Locally correct rules must still compose into one coherent governance baseline.
 
 The review must test cross-convergence wherever one rule area depends on another rule area.
-At minimum, cross-convergence covers routing, commands, project-instance migration, truth writeback, implementation gates, onboarding source decision, rule governance, impact reconciliation, process state, entry files, project-local standards, tooling, and recovery when those areas are in scope.
+At minimum, cross-convergence covers routing, commands, project-instance migration, truth writeback, implementation gates, onboarding source decision, rule governance, impact reconciliation, process state, entry files, tooling, and recovery when those areas are in scope.
 
 When onboarding source decision is in scope, the review must verify that candidate source fields, candidate main Spec text, evidence appendix handling, implementation permission, and lifecycle gates converge without allowing observed implementation behavior to become implementation truth outside the candidate main Spec.
 
@@ -274,11 +274,25 @@ If migration can rewrite project files without a current rule-derived target, pr
 
 ### 2.12 Relationship To The Slice Catalog
 
+`spec_flow_review` adopts `specflow/framework/slice_work_state_protocol.md` when it uses a review run-state file.
+This review file owns the adoption details, the review standard, the slice catalog, and the final conclusion rules.
+
 The baseline slice catalog is an execution organization for this review.
 It is not the review standard by itself.
 
 Every local slice, cross-convergence slice, and dynamic slice must be judged against this section.
 Coverage without the standards in this section is not sufficient for `pass`.
+
+Command-specific adoption rules:
+
+1. the state carrier for the default full-scope review is `docs/specs/_governance_review/spec_flow_review.md`
+2. narrowed reviews do not use that carrier unless the user explicitly asks for resumable slice review
+3. required run fields and slice fields are defined in Section 8
+4. baseline local and cross-convergence slices are defined in Section 4
+5. dynamic slices are allowed only under Section 5
+6. freshness and stale handling are defined in Section 6.5
+7. slice-set closure supports a final review conclusion only when every in-scope baseline and dynamic slice closes under this review standard
+8. missing governance truth, unclear ownership, or unsupported state transition must become a finding, blocker, or narrowed-scope stop; it must not be hidden by adding implementation work
 
 ## 3. Default Scope
 
@@ -294,6 +308,7 @@ The default scope includes:
    - `specflow/framework/skills/*/SKILL.md`
 5. template-side process and state contracts
    - `specflow/templates/docs/specs/_status.md`
+   - `specflow/templates/docs/specs/_check_work/README.md`
    - `specflow/templates/docs/specs/_check_result/README.md`
    - `specflow/templates/docs/specs/_plans/README.md`
    - `specflow/templates/docs/specs/_plans/draft/README.md`
@@ -311,15 +326,12 @@ The default scope includes:
    - `AGENTS.md`
    - `GEMINI.md`
    - `CLAUDE.md`
-9. entry registry and project-standard governance files
+9. entry registry and project-level agent rule files
    - `specflow/framework/entry_index_registry.md`
-   - `specflow/framework/project_standards_policy.md`
-   - `specflow/framework/project_standard_create.md`
-   - `specflow/templates/docs/project_standards/_registry.md`
-   - `docs/project_standards/_registry.md`
-   - the active registered project-local standards in scope
+   - `specflow/framework/output_baseline.md`
 10. tooling contract, tooling source input, and reader runtime input
    - `specflow/framework/tooling_execution_policy.md`
+   - `specflow/framework/slice_work_state_protocol.md`
    - `specflow/tooling/README.md`
    - `specflow/tooling/cmd/**/*.go`
    - `specflow/tooling/internal/**/*.go`
@@ -341,9 +353,10 @@ Files excluded from business-truth review include:
 4. `docs/specs/units/**`
 6. `docs/specs/rules/**`
 7. `docs/specs/_check_result/**`
-8. `docs/specs/_plans/**`
-9. `docs/specs/_verify_result/**`
-10. `docs/specs/_governance_review/**`
+8. `docs/specs/_check_work/**`
+9. `docs/specs/_plans/**`
+10. `docs/specs/_verify_result/**`
+11. `docs/specs/_governance_review/**`
 
 Those files may be reviewed for business-truth correctness only when the user explicitly narrows `spec_flow_review` to project-instance state, or when a command, repository-mapping flow, rule-governance flow, or verification flow consumes them under its own policy.
 
@@ -355,7 +368,7 @@ The compatibility input surface includes:
 1. `docs/specs/_status.md`
 2. `docs/specs/repository_mapping.md`
 3. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
-4. existing project process files under `docs/specs/_check_result/**`, `docs/specs/_plans/**`, and `docs/specs/_verify_result/**`
+4. existing project process files under `docs/specs/_check_work/**`, `docs/specs/_check_result/**`, `docs/specs/_plans/**`, and `docs/specs/_verify_result/**`
 5. existing project truth files under `docs/specs/units/**` and `docs/specs/rules/**`, only for file shape, required fields, references, and binding format
 
 `docs/specs/_governance_review/**` is not part of the compatibility input fingerprint.
@@ -370,9 +383,9 @@ Default scope must explicitly include:
 3. the guidance-skill rule set
    - at minimum `using-specflow-guidance/SKILL.md`, `project-framing/SKILL.md`, `scope-cutting/SKILL.md`, `solution-design/SKILL.md`, `design-quality-review/SKILL.md`, and `spec-writeback-guidance/SKILL.md`
 4. the impact-reconciliation rule set
-   - at minimum `impact_sync_policy.md`, `process_snapshot_contract.md`, `recovery_policy.md`, template `_status.md`, and the template-side process README files
+   - at minimum `impact_sync_policy.md`, `process_snapshot_contract.md`, `slice_work_state_protocol.md`, `recovery_policy.md`, template `_status.md`, and the template-side process README files
 5. the tooling execution contract set
-   - at minimum `tooling_execution_policy.md`, `specflow/tooling/README.md`, the in-scope tooling source files, and the runtime reader web files
+   - at minimum `tooling_execution_policy.md`, `slice_work_state_protocol.md`, `specflow/tooling/README.md`, the in-scope tooling source files, and the runtime reader web files
 6. the agent-operability standard
    - at minimum `agent_operability_standard.md`, entry files, routing policy files, onboarding source decision files, command policy files, command files, candidate intent policy and standards, rule-governance files, guidance skill files, review policy files, and process-state contract files in the current review scope
 7. the state-space closure check
@@ -402,7 +415,7 @@ It does not replace the Review Standard in Section 2.
 Local slices review one owner area for internal closure, side effects, contract drift, missing ownership, and local agent operability.
 
 1. `scope_inventory`
-   - verifies default-scope collection, excluded project-instance truth, active project-local standards, and unassigned file handling
+   - verifies default-scope collection, excluded project-instance truth, project entry files, and unassigned file handling
    - includes the deterministic scope produced by `review collect-default-scope --flow spec_flow_review`
 2. `review_entry_policy`
    - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `severity_policy.md`, and `checkpoint_protocol.md`
@@ -417,7 +430,7 @@ Local slices review one owner area for internal closure, side effects, contract 
    - reviews `natural_language_routing.md` only where it defines the rule-governance branch
    - reviews `rule_new.md`, `rule_extract.md`, `rule_bind.md`, `rule_topology.md`, `rule_sync.md`, and `rule_escape.md`
 6. `process_and_impact_state`
-   - reviews `impact_sync_policy.md`, `process_snapshot_contract.md`, `recovery_policy.md`, template `_status.md`, template `_check_result`, template `_plans`, template `_verify_result`, and template `_governance_review`
+   - reviews `impact_sync_policy.md`, `process_snapshot_contract.md`, `slice_work_state_protocol.md`, `recovery_policy.md`, template `_status.md`, template `_check_work`, template `_check_result`, template `_plans`, template `_verify_result`, and template `_governance_review`
    - verifies process-state contracts, snapshot invalidation, impact handling, and governance-review run-state boundaries
 7. `project_instance_contract_compatibility`
    - reviews the current project-instance files under `docs/specs/` only for format and contract compatibility with current framework rules
@@ -425,13 +438,13 @@ Local slices review one owner area for internal closure, side effects, contract 
    - verifies status shape, repository mapping shape, global rules shape, process-file shape, formal object file shape, candidate source metadata shape, candidate intent standard shape, evidence appendix reference shape, evidence appendix file shape, current-layer supporting-truth reference shape, appendix owner/layer/path agreement, reference format, status values, command names, rule binding format, migration writeback boundary, migration state invalidation, migration blocked-stop handling, and migration output closure
    - must not judge unit, rule, or evidence-appendix business truth correctness
 8. `entry_and_project_extension`
-   - reviews `entry_index_registry.md`, `project_standards_policy.md`, `project_standard_create.md`, registered entry files, template entry files, template project-standard registry, project registry, and active project-local standards in scope
+   - reviews `entry_index_registry.md`, `output_baseline.md`, registered entry files, and template entry files
 9. `tooling_execution`
-   - reviews `tooling_execution_policy.md`, `specflow/tooling/README.md`, in-scope tooling source files, and runtime reader web files
+   - reviews `tooling_execution_policy.md`, `slice_work_state_protocol.md`, `specflow/tooling/README.md`, in-scope tooling source files, and runtime reader web files
    - verifies tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness, reader runtime coverage, and document/source/runtime agreement
 10. `agent_operability_local`
    - reviews the agent-operability result recorded by each local slice against `agent_operability_standard.md`
-   - verifies that local slice conclusions, including candidate intent policy and standard consumption, did not rely on prior conversation, ordinary term meanings, or avoidable repeated reading
+   - verifies that local slice conclusions, including candidate intent policy and entry-file consumption, did not rely on prior conversation, ordinary term meanings, or avoidable repeated reading
 
 ### 4.2 Cross-Convergence Baseline Slices
 
@@ -451,7 +464,7 @@ Cross-convergence slices review whether locally correct rules still compose into
 5. `shared_to_impact_convergence`
    - verifies rule-governance changes correctly converge with impact reconciliation and downstream process-state invalidation
 6. `entry_extension_to_review_convergence`
-   - verifies entry files and project-local standards cannot bypass the framework baseline, narrow default scope silently, or change review meaning without owner rules
+   - verifies entry files and project-level agent rules cannot bypass the framework baseline, narrow default scope silently, or change review meaning without owner rules
 7. `tooling_to_rule_convergence`
    - verifies tooling executes only rule-decided mechanical work, does not become a second semantic source of truth, and does not introduce a migration command unless a rule owner defines its mechanical surface
 8. `supporting_truth_lifecycle_convergence`
@@ -534,7 +547,7 @@ Mechanical fields must be written by deterministic tooling when the tooling is a
 If the tooling is unavailable, the executor must obtain UTC time from the runtime environment before writing timestamp fields.
 The executor must not invent timestamps, input fingerprints, or stale-refresh results from conversation context.
 
-The mechanical fields are:
+The mechanical fields are the fields allowed by `slice_work_state_protocol.md` and this review's run-state contract:
 
 1. `created_at`
 2. `last_updated_at`

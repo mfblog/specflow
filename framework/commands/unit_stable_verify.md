@@ -32,6 +32,22 @@ This file states only `unit_stable_verify`-local entry, output, and stop rules.
 
 Stable binding and fingerprint comparisons must use `specflow/framework/process_snapshot_contract.md` normalization rules or deterministic specFlow tooling when available. Manual hash output, shell checksum output, editor display, conversation-derived values, and temporary script results are diagnostic only; they must not support a stable-alignment pass, a drift conclusion, or `_status.md` writeback.
 
+### 2.2 Slice Work-State Protocol Adoption
+
+`unit_stable_verify` adopts `specflow/framework/slice_work_state_protocol.md` only for command-owned stable verification evidence coverage in the command output.
+It does not create a dedicated work-state, review run-state, or downstream-consumable process file.
+
+Adoption rules:
+
+1. the state carrier is the command output's structured verification evidence matrix and coverage summary
+2. the business slices are stable acceptance item evidence rows
+3. the required domain fields are `acceptance_item_id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `evidence`, `status`, item-level risk notes for non-pass states, and the aggregate `Coverage Summary`
+4. dynamic slices are not a separate carrier concept for this command
+5. newly discovered evidence gaps, stable-truth gaps, baseline drift, rule drift, or implementation deviations are recorded as evidence gaps, deviation entries, fallback reasons, or next-action classification
+6. command-local convergence is the comparison between current stable acceptance items, current code evidence, current stable bindings, and the selected next action
+7. stable-alignment closure can update `_status.md` only when current evidence directly supports the stable acceptance items and the command's stable binding checks pass
+8. if verification discovers missing structured acceptance truth, rule drift, baseline drift, or a need for controlled candidate work, it must classify the smallest legal next action instead of adding another verification slice to compensate
+
 ## 3. Preconditions
 
 1. complete required pre-checks

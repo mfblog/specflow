@@ -2,11 +2,9 @@
 
 ## 1. Purpose
 
-This file defines the framework baseline minimum output quality rules for the `specflow_response` / `user_facing_response_clarity` shared surface.
+This file defines the framework baseline minimum output quality rules for user-facing SpecFlow output.
 
-These rules are framework baseline. They apply automatically to every specFlow consumer that produces user-facing output on this shared surface. No registry entry or project-level activation is required.
-
-Project-level output standards may tighten these rules through the registered project standards mechanism defined by `specflow/framework/project_standards_policy.md`.
+These rules are framework baseline. They apply automatically to every SpecFlow consumer that produces user-facing output. No project-level activation is required.
 
 This file answers four questions:
 
@@ -88,8 +86,6 @@ The following output forms are forbidden on this surface:
 5. Using `fallback_reason_code` as the main answer.
 6. Stacking file paths, line numbers, status tables, and internal object names as the answer body opening.
 
-Project-level standards registered on this surface may add additional forbidden shapes through the registered standards mechanism defined by `specflow/framework/project_standards_policy.md`.
-
 ---
 
 ## 6. Relationship to Other Framework Documents
@@ -97,8 +93,6 @@ Project-level standards registered on this surface may add additional forbidden 
 `specflow/framework/command_policy.md` Section 8.6 defines the user-facing close-out block contract for formal commands. That contract inherits this baseline and adds command-specific fields.
 
 `specflow/framework/natural_language_routing.md` Section 11.1 defines the output contract for natural-language routing. That contract inherits this baseline and adds routing-specific fields.
-
-`specflow/framework/project_standards_policy.md` Section 10.1 documents how project-level standards on the `user_facing_response_clarity` surface may tighten this baseline.
 
 ---
 

@@ -23,6 +23,16 @@ The executor must read:
 3. `specflow/framework/command_policy.md`
 4. the command file for the unit's current `Next Command`
 
+When the target row has `Candidate=yes` and `Active Layer=candidate`, the executor must run the computed candidate relation preflight before entering the next command:
+
+```text
+specflowctl relation candidate-preflight --object {unit}
+```
+
+If the target is not in the current ready set, the executor must stop.
+It must report the target unit, the ready candidates, the blocking candidate units or candidate Rules, any candidate cycle, and the source files reported by the relation calculation.
+It must not silently advance a different candidate unit.
+
 ## 2. Allowed Progression
 
 `unit_advance:{unit}` may automatically enter only these commands:
@@ -65,6 +75,7 @@ The executor must stop when:
 5. rule, repository mapping, or global baseline truth must be changed first
 6. a human decision is required
 7. a referenced stable unit is outdated and the dependent unit must be revalidated
+8. candidate relation preflight says the target is blocked by another current candidate, a candidate Rule, or a candidate progression cycle
 
 ## 5. Completion
 

@@ -4,17 +4,26 @@ Process files record what a unit command checked in one round.
 
 They are evidence, not behavior truth.
 
+When a supported process file carries slice work state, the generic slice terms and mechanical maintenance boundaries come from `specflow/framework/slice_work_state_protocol.md`.
+This file defines only the supported process paths, process snapshots, unit-check work-state fields, freshness rules, and validation rules.
+
 ## 1. Supported Process Paths
 
 Supported unit process paths:
 
-1. check result: `docs/specs/_check_result/unit/{unit}.md`
-2. active plan: `docs/specs/_plans/active/{unit}.md`
-3. draft plan: `docs/specs/_plans/draft/{unit}.md`
-4. verify result: `docs/specs/_verify_result/unit/{unit}.md`
-5. stable promotion summary: `docs/specs/_verify_result/stable/unit/{unit}.md`
+1. unit check work state: `docs/specs/_check_work/unit/{unit}.md`
+2. check result: `docs/specs/_check_result/unit/{unit}.md`
+3. active plan: `docs/specs/_plans/active/{unit}.md`
+4. draft plan: `docs/specs/_plans/draft/{unit}.md`
+5. verify result: `docs/specs/_verify_result/unit/{unit}.md`
+6. stable promotion summary: `docs/specs/_verify_result/stable/unit/{unit}.md`
 
 No `scenario` process path is supported.
+
+`_check_work` is a command-local work-state path for `unit_check`.
+It is not a pass gate and is not consumed by `unit_plan`.
+Downstream handoff commands consume only `_check_result`, `_plans/active`, and `_verify_result` according to their command contracts.
+Other process files may carry command-owned business slice records only when their owning command defines that adoption in its command file.
 
 ## 2. Common Fields
 
@@ -156,7 +165,149 @@ Each stable promotion summary must record:
 
 Later stable verification may read this summary as background, but it must collect current evidence before making a new stable-alignment claim.
 
-## 9. Process Validation
+## 9. Unit Check Work State
+
+`docs/specs/_check_work/unit/{unit}.md` records resumable `unit_check` progress for one target candidate.
+It follows the generic state-carrier and slice-field standards in `specflow/framework/slice_work_state_protocol.md`, with the command-specific fields below.
+
+It is:
+
+1. a process work-state file
+2. a resume aid for the current `unit_check` round
+3. a place to record slice status, input fingerprints, finding references, blocked reason, and next resume step
+
+It is not:
+
+1. a Spec
+2. behavior truth
+3. a downstream pass gate
+4. a substitute for `_check_result/unit/{unit}.md`
+5. a place for tooling to decide semantic pass, finding severity, or final conclusion
+
+### 9.1 Required Run Fields
+
+The work-state run table must record:
+
+```yaml
+work_flow: unit_check
+work_id: YYYYMMDD-HHMMSS-unit_check-{unit}
+object_type: unit
+object_ref: {unit}
+status: in_progress|blocked_on_finding|ready_for_final|closed_pass|closed_blocked|closed_fix_required
+created_at: YYYY-MM-DDTHH:MM:SSZ
+last_updated_at: YYYY-MM-DDTHH:MM:SSZ
+active_slice: {slice_id}
+truth_layer_ref: candidate
+truth_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
+truth_version_ref: c_unit_{unit}@x.y.z
+truth_fingerprint: {fingerprint}
+baseline_slice_table: present
+dynamic_slice_table: none|present
+finding_refs: none|{refs}
+blocked_reason: none|{reason}
+resume_next_step: {step}
+```
+
+`truth_fingerprint` uses the same normalized SHA-256 contract as Section 6.
+
+### 9.2 Slice Table Fields
+
+Baseline and dynamic slice tables use these fields:
+
+```text
+slice_id
+slice_origin
+slice_type
+status
+review_question
+why_added
+parent_slice_id
+input_files
+input_fingerprint
+depends_on
+finding_refs
+result_summary
+exit_condition
+resume_next_step
+```
+
+Allowed `slice_origin` values:
+
+1. `baseline`
+2. `dynamic`
+
+Allowed `slice_type` values:
+
+1. `local`
+2. `cross_convergence`
+
+Allowed `status` values:
+
+1. `pending`
+2. `passed`
+3. `blocked`
+4. `stale`
+5. `skipped_not_applicable`
+
+Every dynamic slice must name an existing `parent_slice_id`.
+The parent may be a baseline slice or another dynamic slice.
+Dynamic slices must not replace required baseline slices.
+
+### 9.3 Baseline Slice Skeleton
+
+The mechanical work-state skeleton for `unit_check` must include these baseline local slices:
+
+1. `goal_and_responsibility`
+2. `dependency_truth_surface`
+3. `main_flow_and_state`
+4. `boundary_and_protocol`
+5. `data_artifact_and_output`
+6. `error_edge_and_gap`
+7. `acceptance_and_testability`
+8. `implementation_handoff`
+
+It must include these baseline cross-check slices:
+
+1. `goal_to_acceptance_convergence`
+2. `flow_to_boundary_convergence`
+3. `dependency_truth_convergence`
+4. `output_to_acceptance_convergence`
+
+### 9.4 Freshness And Stale Rules
+
+Before a `unit_check` pass gate is written, the work-state file must be refreshed and validated.
+
+Refresh rules:
+
+1. recompute the work-state truth fingerprint from the current target candidate
+2. recompute each slice `input_fingerprint` from the current `input_files`
+3. if a slice is `passed` and its input fingerprint changes, mark that slice `stale`
+4. if a slice is `passed` and one of its input files is missing, mark that slice `stale`
+5. if a cross-check slice is `passed` and any slice in `depends_on` is `stale`, mark the cross-check slice `stale`
+6. update `last_updated_at`
+
+If truth drift, binding drift, fallback cleanup, unit fork, unit promote, rule release, or project-instance migration invalidates the target candidate's prior check state, the old `_check_work` file must be deleted or marked unusable by the owning cleanup path.
+
+### 9.5 Tooling Boundary
+
+`specflowctl process check-work-*` commands may:
+
+1. create the work-state skeleton
+2. validate field presence, legal values, slice table shape, dynamic parent links, object type, and repository-relative input paths
+3. refresh timestamps
+4. compute input fingerprints
+5. mark stale slices caused by input or dependency fingerprint change
+
+They must not:
+
+1. mark a semantic slice as `passed`
+2. write finding content
+3. choose finding severity
+4. decide `blocked` versus `fix_required`
+5. decide whether the candidate is good enough to pass
+6. write `_check_result/unit/{unit}.md`
+
+## 10. Process Validation
 
 When a command writes or consumes a supported unit process file, it must rebuild the current snapshot from current bound truth and compare it against the stored fields exactly.
 
@@ -181,9 +332,11 @@ specflow/tooling/bin/specflowctl-<os>-<arch> snapshot validate-process --repo-ro
 
 3. `plan` validates only `docs/specs/_plans/active/{unit}.md`
 4. `docs/specs/_plans/draft/{unit}.md` is not a downstream-consumable handoff file
-5. a command that writes a covered process file must run the matching validation command after writeback and before reporting a pass gate, active handoff, verification pass, or lifecycle advance
-6. a command that consumes a covered process file must run the matching validation command before treating that file as current and consumable
-7. if the required validation tooling is missing, unsupported for the target process kind, stale, or fails to execute, the command must report that authoritative process validation is unavailable and must not claim lifecycle progression from that process file
-8. manual hash output, shell checksum output, editor display, conversation-derived values, and temporary script results are diagnostic only; they must not replace the tooling result for lifecycle progression
+5. `_check_work` is validated by `specflowctl process check-work-validate`, not by `snapshot validate-process`
+6. `snapshot validate-process` remains limited to downstream-consumable `check`, `plan`, and `verify` files
+7. a command that writes a covered downstream process file must run the matching validation command after writeback and before reporting a pass gate, active handoff, verification pass, or lifecycle advance
+8. a command that consumes a covered downstream process file must run the matching validation command before treating that file as current and consumable
+9. if the required validation tooling is missing, unsupported for the target process kind, stale, or fails to execute, the command must report that authoritative process validation is unavailable and must not claim lifecycle progression from that process file
+10. manual hash output, shell checksum output, editor display, conversation-derived values, and temporary script results are diagnostic only; they must not replace the tooling result for lifecycle progression
 
 If any required field differs after applying only command-owned exceptions, the process file is invalid for downstream use.

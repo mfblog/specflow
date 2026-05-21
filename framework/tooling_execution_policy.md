@@ -13,7 +13,7 @@ It answers five questions:
 5. how `spec_flow_review` must review the tooling layer
 
 This file is a framework-governance rule.
-It is not a command, not a unit Spec, and not a project-local standard.
+It is not a command, not a unit Spec, and not a project-level agent instruction.
 
 ## 2. What Counts As Governance Tooling
 
@@ -82,6 +82,13 @@ The allowed action families are:
    - align managed content or metadata when the source, target, and writeback contract are already explicit
 10. render
    - expose a read-only local view derived from already-written truth files without creating, editing, or promoting truth
+11. work-state maintenance
+   - create, validate, refresh, or touch slice work-state carriers when the adopting owner defines the exact path, fields, statuses, and stale rules under `specflow/framework/slice_work_state_protocol.md`
+   - maintain only mechanical data such as timestamps, skeleton rows, input fingerprints, and stale marks
+12. relation calculation
+   - compute candidate readiness, candidate blockers, candidate cycles, and reference-only edges from explicit already-written references
+   - read only declared truth and support-surface files
+   - write no project files and create no durable process artifact
 
 Writeback rule:
 
@@ -119,6 +126,8 @@ Additional rule:
 3. command preflight tooling may report whether the current status row and required process snapshots mechanically allow a command to continue, but it must not decide whether candidate truth is complete, whether evidence is sufficient, whether downgrade is allowed, or whether a promotion should happen
 4. command close tooling may accept explicit standardized flags such as `--outcome`, `--reason`, `--failure-layer`, and `--candidate-intent`, but it must not choose those values, repair contradictory values, or infer a semantic outcome from repository content
 5. command close tooling may reject an unsupported state combination and may apply the one legal transition for a supported combination, but it must not create a second lifecycle rule outside the command-owned transition table
+6. slice work-state tooling may mark stale slices from fingerprint changes only when the adopting owner defines that mechanical action, but it must not mark semantic slices as passed, write finding content, choose severity, decide review scores, decide verification sufficiency, or decide a final command or review result
+7. relation calculation tooling may report explicit candidate references, ready candidates, blocked candidates, and cycles, but it must not infer dependencies from prose, judge candidate content quality, choose a lifecycle outcome, or repair references
 
 ## 6. Relationship To `spec_flow_review`
 
@@ -134,18 +143,19 @@ That review must cover at least:
 The required tooling-contract document set is:
 
 1. this policy file for framework-level boundary rules
-2. `specflow/tooling/README.md` for the concrete command surface, build flow, recovery flow, and usage examples
-3. the current tooling source input files:
+2. `specflow/framework/slice_work_state_protocol.md` for slice work-state carrier and mechanical maintenance boundaries
+3. `specflow/tooling/README.md` for the concrete command surface, build flow, recovery flow, and usage examples
+4. the current tooling source input files:
    - `specflow/tooling/cmd/**/*.go`
    - `specflow/tooling/internal/**/*.go`
    - `specflow/tooling/go.mod`
    - `specflow/tooling/manifest.tsv`
    - `specflow/tooling/go.sum` when it exists
-4. the tooling helper script files:
+5. the tooling helper script files:
    - `specflow/tooling/scripts/build_release.sh`
    - `specflow/tooling/scripts/tooling_fingerprint.sh`
    - `specflow/tooling/scripts/tooling_fingerprint.ps1`
-5. the runtime reader web files:
+6. the runtime reader web files:
    - `specflow/tooling/reader/web/**`
 
 Default `spec_flow_review` must not issue `pass` when any of the following is true:

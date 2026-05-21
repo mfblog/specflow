@@ -15,6 +15,7 @@ By default it handles:
 5. consuming the `unit_verify -> unit_promote` handoff only when verification still covers the current round
 6. preserving the promoted round's minimal stable acceptance coverage summary before deleting current-round process files
 7. retargeting other candidate-layer units from the promoted candidate Rule ref to the same-round stable Rule ref when the retarget is only a same-`rule_id`, same-`rule_version`, candidate-to-stable layer landing
+8. releasing the promoted stable unit version through current-layer `unit_refs` consumers before promotion closure is claimed
 
 ### 2.1 Command Read Summary
 
@@ -25,14 +26,14 @@ It is navigation only and does not replace the preconditions, procedure, stop co
 2. The minimum inputs are the current candidate, latest valid `_verify_result/unit/{unit}.md`, required appendix files, touched or bound Rule files, current global baseline, and recovery policy.
 3. Promotion must stop before truth-file mutation if verification, bindings, rule truth, or baseline no longer match the current round.
 4. If mutation has started and promotion cannot safely complete, incomplete-promotion recovery restores candidate semantics and sends the object back to the smallest restart point.
-5. Rule topology, terminal-state handling, `promotion_owner_unit`, `release-version`, and post-promotion `rule_sync` remain detailed closure rules; this summary does not shorten them.
+5. Rule topology, terminal-state handling, `promotion_owner_unit`, Rule `release-version`, Unit `release-version`, and post-promotion `rule_sync` remain detailed closure rules; this summary does not shorten them.
 
 ### 2.2 Lifecycle-State Advance Inheritance
 
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `unit_promote`-local entry, output, and stop rules.
 
-Process-file consumption for `_verify_result/unit/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for the current process kind, `snapshot validate-process --process verify` is the mandatory tool-backed validation step before treating `_verify_result/unit/{unit}.md` as consumable, reporting the promotion handoff as valid, or advancing lifecycle state.
+Process-file consumption for `_verify_result/unit/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 10. When deterministic snapshot validation tooling is available for the current process kind, `snapshot validate-process --process verify` is the mandatory tool-backed validation step before treating `_verify_result/unit/{unit}.md` as consumable, reporting the promotion handoff as valid, or advancing lifecycle state.
 
 Stable acceptance summary writeback under `_verify_result/stable/unit/{unit}.md` must follow the stable summary field contract in `specflow/framework/process_snapshot_contract.md` Section 8. It is not validated with `snapshot validate-process` because that tooling command supports only `check`, `plan`, and `verify` process kinds.
 
@@ -165,7 +166,7 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
    - `Active Layer=stable`
    - `Next Command=unit_fork`
    - do not execute the `promoted` command close yet
-   - final command closure must wait until stable acceptance summary writeback, required appendix handling, Rule release-version work, and promotion dependency reference retargeting are complete
+   - final command closure must wait until stable acceptance summary writeback, required appendix handling, Rule release-version work, Unit release-version work, and promotion dependency reference retargeting are complete
 17. do not update `docs/specs/repository_mapping.md` only because this promotion changed the active layer from `candidate` to `stable`; the current unit main Spec path is resolved from `_status.md` plus the `unit_default` truth-surface rule
 18. if the round lands a new stable Rule version or changes a stable Rule `rule_version`, do not hand-edit consumer `rule_refs`; execute `specflow/tooling/bin/specflowctl-<os>-<arch> rule release-version --rule-id <rule-id> --from-ref <old-stable-rule-ref> --to-ref <new-stable-rule-ref>` after the stable Rule file exists and before claiming promotion closure
    - `release-version` is the only command allowed to retarget stable current-layer consumers; it auto-forks those consumers and rewrites only the candidate `rule_refs`
@@ -186,7 +187,17 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
      - if the promoted unit's own newly written stable file still contains a mechanically retargetable reference to its just-promoted candidate file, retarget that reference as part of the promoted stable landing and keep the promoted unit's successful follow-up state at `Next Command=unit_fork`
      - if a non-current-layer historical Spec file is retargeted, record the retarget but do not update `_status.md` for that object only because the historical file changed
      - record every retargeted file, every status-row update, every deleted process file, and every non-retargeted blocking reference in the output contract
-19. after Step 18a completes or proves that no retargeting is needed, close the command with the `promoted` outcome:
+18b. if this promotion replaces an existing stable unit version, release the stable unit version through current-layer `unit_refs` before promotion closure is claimed:
+     - derive `from-ref` from the pre-promotion stable main Spec version and `to-ref` from the promoted stable main Spec version
+     - execute `specflow/tooling/bin/specflowctl-<os>-<arch> unit release-version --unit {unit} --from-ref s_unit_{unit}@<previous-stable-version> --to-ref s_unit_{unit}@<promoted-version>` after the promoted stable file exists
+     - `unit release-version` owns only current-layer unit main Specs and their frontmatter `unit_refs`
+     - it must not edit non-current historical unit files, body prose, Rule refs, Rule files, implementation files, repository mapping, or the referenced unit's behavior truth
+     - for each affected current-layer candidate unit, it rewrites only `unit_refs`, deletes unsafe current-round check work, check, plan, and verify process files when present, and sets the next command to `unit_check`
+     - for each affected current-layer stable unit, it rewrites only `unit_refs`, does not fork the unit, does not create candidate truth, and sets the next command to `unit_stable_verify`
+     - replacing the ref does not prove compatibility; it only makes the dependency resolvable so the affected unit can re-enter the legal verification gate
+     - if no current-layer unit uses the previous stable ref, the command may report a no-op result
+     - after the command completes, promotion closure must verify that no current-layer unit main Spec still contains the previous stable `unit_refs` value
+19. after Steps 18a and 18b complete or prove that no retargeting is needed, close the command with the `promoted` outcome:
    - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_promote --object-type unit --object {unit} --outcome promoted --notes <status-note> --apply`
    - command close writes the promoted stable state from Step 16 before it deletes:
    - `docs/specs/units/candidate/c_unit_{unit}.md`
@@ -227,6 +238,7 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
 7. if post-promotion `rule_sync` could not continue safely, incomplete promotion recovery is complete and the next required action is rerunning natural-language routing from restored candidate truth so it can re-enter rule governance before any later candidate-chain restart
 8. if a candidate-layer Rule sibling remains after promotion, its next-round draft state is already explicit for the current repository truth
 9. if same-round stable landing retargeting occurred, every retargeted candidate unit has fallen back to `unit_check` and its unsafe current-round process files have been deleted
+10. if Unit release-version occurred, every affected current-layer stable unit is at `unit_stable_verify`, every affected current-layer candidate unit is at `unit_check`, and no current-layer unit main Spec still carries the previous stable unit ref
 
 ## 6. Output Contract
 
@@ -253,10 +265,11 @@ Before reading `_verify_result/unit/{unit}.md` as a usable promotion input, run 
 21. when post-promotion `rule_sync` was executed, the passed `current_stable_landing_unit` value
 22. when post-promotion `rule_sync` was executed, the passed `stable_landing_rule_refs` value
 23. when `release-version` was executed, the exact `rule_id`, `from-ref`, `to-ref`, forked consumers, directly updated consumers, and deleted process files
-24. when same-round stable landing retargeting occurred, the exact retargeted units, the old candidate Rule refs, the new stable Rule refs, and each retargeted unit's fallback result
-25. when promotion stopped because post-promotion Rule topology, retained candidate next-round draft shape, `promotion_owner_unit`, same-round retarget shape, unbound-file terminal state, or post-promotion `rule_sync` uncertainty was unclear, the required next step through natural-language rule governance
-26. promotion dependency reference retarget result, including retargeted files, non-current historical retargets, status-row updates, deleted process files, and any blocking prerequisite action caused by candidate-only reference meaning
-27. follow-up state explanation
+24. when Unit `release-version` was executed, the exact `unit`, `from-ref`, `to-ref`, candidate consumers updated, stable consumers updated, main Specs updated, status rows updated, deleted process files, and no-op result when no current-layer consumer used the previous stable ref
+25. when same-round stable landing retargeting occurred, the exact retargeted units, the old candidate Rule refs, the new stable Rule refs, and each retargeted unit's fallback result
+26. when promotion stopped because post-promotion Rule topology, retained candidate next-round draft shape, `promotion_owner_unit`, same-round retarget shape, unbound-file terminal state, Unit release-version, or post-promotion `rule_sync` uncertainty was unclear, the required next step through natural-language rule governance
+27. promotion dependency reference retarget result, including retargeted files, non-current historical retargets, status-row updates, deleted process files, and any blocking prerequisite action caused by candidate-only reference meaning
+28. follow-up state explanation
    - when promotion succeeds, the follow-up state must explicitly confirm:
      - `Stable=yes`
      - `Candidate=no`

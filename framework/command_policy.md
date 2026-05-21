@@ -59,7 +59,7 @@ Commands must apply these rules:
 1. `unit_check` must reject or route back when the unit body relies on another unit's formal behavior but `unit_refs` does not record that dependency.
 2. `unit_check` must reject candidate-layer `unit_refs`.
 3. `unit_promote` must resolve `unit_refs` before stable writeback.
-4. after a unit is promoted, tooling must find current-layer units that still reference the promoted unit's previous stable version and reroute them to the legal revalidation entry.
+4. after a unit is promoted, `unit release-version` tooling must find current-layer units that still reference the promoted unit's previous stable version, retarget those `unit_refs` to the new stable version, and reroute them to the legal revalidation entry.
 5. `unit_refs` never grants write permission to the referenced unit.
 
 ## 4. Rule Consumption
@@ -81,7 +81,6 @@ The following exact entries are not unit lifecycle commands:
 7. `rule_topology`
 8. `rule_sync`
 9. `rule_escape`
-10. `project_standard_create`
 
 Each such entry is governed by its matching framework file.
 
@@ -112,6 +111,7 @@ Rules:
 5. checkpoints are structured stops inside a command, not second lifecycles
 6. `rule`, stable `g_` rule, and `repository_mapping` are upstream governance inputs, not standard lifecycle command targets
 7. commands that rely on repository path ownership must consume `docs/specs/repository_mapping.md`
+8. when a command uses slice-based work state, the command file must declare its adoption of `specflow/framework/slice_work_state_protocol.md`; the protocol supplies standards only and does not decide command adoption, carrier paths, slice catalogs, closure rules, or lifecycle progression
 
 ## 8. Rule Gate Rules
 
@@ -184,13 +184,11 @@ Rules:
 
 Every formal command output must include a `user-facing close-out block`.
 
-Formal command close-out output is part of the shared `specflow_response` / `user_facing_response_clarity` output surface defined by `specflow/framework/project_standards_policy.md`.
-The command close-out block also inherits the framework output baseline defined by `specflow/framework/output_baseline.md`.
+Formal command close-out output inherits the framework output baseline defined by `specflow/framework/output_baseline.md`.
 The fields listed below are the command-specific minimum for close-out blocks on top of the baseline.
 Fields not applicable in a given close-out context are covered by the baseline's escape hatch for non-applicable items.
-Registered project-local standards selected by that surface may tighten or clarify only command close-out wording, ordering, and execution-note separation.
+Command files may tighten or clarify close-out wording, ordering, and execution-note separation within their own output contract.
 They must not affect command result types, lifecycle advancement, `_status.md`, `_check_result` writeback, fallback selection, checkpoint semantics, or command-local required fields.
-Command files inherit this shared output surface through this section and must not restate the registry shape in each command file.
 
 This block must report at least:
 

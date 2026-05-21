@@ -35,9 +35,26 @@ It is navigation only and does not replace the preconditions, procedure, stop co
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `unit_plan`-local entry, output, and stop rules.
 
-Process-file consumption and writeback for `_check_result/unit/{unit}.md` and `_plans/active/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for the current process kind, the matching `snapshot validate-process` command is the mandatory tool-backed validation step before treating a process file as consumable, reporting an active handoff, or advancing lifecycle state.
+Process-file consumption and writeback for `_check_result/unit/{unit}.md` and `_plans/active/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 10. When deterministic snapshot validation tooling is available for the current process kind, the matching `snapshot validate-process` command is the mandatory tool-backed validation step before treating a process file as consumable, reporting an active handoff, or advancing lifecycle state.
 
 Before reading `_check_result/unit/{unit}.md` as a usable pass gate, run `specflowctl command preflight --command unit_plan --object-type unit --object {unit}`. If command preflight is unavailable, run `snapshot validate-process --object-type unit --object {unit} --process check` explicitly. Manual hash output must not classify gate drift or trigger fallback cleanup.
+
+### 2.3 Slice Work-State Protocol Adoption
+
+`unit_plan` adopts `specflow/framework/slice_work_state_protocol.md` only for command-owned business slice tracking.
+It does not create a dedicated work-state or review run-state file.
+
+Adoption rules:
+
+1. the state carriers are `docs/specs/_plans/draft/{unit}.md` and `docs/specs/_plans/active/{unit}.md`
+2. `draft/{unit}.md` is a non-consumable planning carrier for blocked planning, decision checkpoints, bounded research notes, and open implementation facts
+3. `active/{unit}.md` is the downstream-consumable carrier only when this command reaches `plan-ready`
+4. business slices are execution surface entries, implementation slices, and verification targets
+5. the required domain fields are owned by `docs/specs/_plans/draft/README.md`, `docs/specs/_plans/active/README.md`, and this command's procedure
+6. dynamic slices are not a separate carrier concept for this command; newly discovered implementation facts are recorded in command-owned fields such as `open_modeling_unknowns`, `research_notes`, `changed_execution_surfaces`, and `slice_cutover_plan`
+7. command-local convergence is the acceptance-item coverage check, execution-surface target review, verification-target review, and `Plan Executability` review
+8. closure can advance to implementation only when an active plan exists, covers the accepted acceptance item set, passes handoff validation, and satisfies the `plan-ready` rules in Section 4
+9. if planning discovers missing behavior truth, boundary truth, or acceptance truth, the result is `truth-fallback`; do not add another planning slice to compensate
 
 ## 3. Preconditions
 

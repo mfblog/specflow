@@ -51,7 +51,7 @@ Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
    - units that already consume equivalent rule truth
    - units whose current-layer body or `rule_refs` must change for extraction closure
 4. Decide the writeback-required unit subset. A unit is writeback-required only when its current-layer `rule_refs` or body text must change.
-5. If any writeback-required unit is currently stable, stop before writeback and raise a prerequisite action requiring `unit_fork:{unit}` for each such unit.
+5. If any writeback-required unit is currently stable, stop before writeback and return control to `rule_escape` to raise a `prerequisite_action` checkpoint requiring `unit_fork:{unit}` for each such unit.
 6. Before the first file mutation, capture the recovery baseline required by `recovery_policy.md` Section 6.5.
 7. Create or update the target candidate rule file.
 8. If this is the first file for a new rule object, write `rule_version: 0.1.0`.
@@ -72,7 +72,7 @@ Stop when one of these is true:
 
 1. extraction is complete, duplicated unit-local formal truth is removed, required unit bindings are written, and `rule_sync` has closed reconciliation
 2. the request is not extraction and must route to another rule flow or unit lifecycle work
-3. a writeback-required unit is stable and must be forked before extraction can continue
+3. a writeback-required unit is stable and `rule_escape` must raise a `prerequisite_action` checkpoint before extraction can continue
 4. unit-local truth and shared rule truth cannot be separated safely from current repository truth
 5. involved-unit coverage is incomplete or uncertain
 6. a candidate rule with a stable sibling would exist without exactly one valid `promotion_owner_unit`
@@ -84,7 +84,7 @@ The output must report:
 1. the extracted rule truth and source unit truth
 2. the complete involved-unit set
 3. which units were rewritten and which units were read only
-4. any stable unit that blocked writeback and the required fork action
+4. any stable unit that blocked writeback and the `rule_escape` prerequisite checkpoint result
 5. the rule file created or updated
 6. the written `rule_version`
 7. the `promotion_owner_unit` result when required

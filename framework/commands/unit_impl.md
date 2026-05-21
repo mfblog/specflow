@@ -20,9 +20,26 @@ By default it handles:
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `unit_impl`-local entry, output, and stop rules.
 
-Process-file consumption and writeback for `_check_result/unit/{unit}.md` and `_plans/active/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for the current process kind, the matching `snapshot validate-process` command is the mandatory tool-backed validation step before treating either process file as consumable, reporting the implementation handoff as valid, or advancing lifecycle state.
+Process-file consumption and writeback for `_check_result/unit/{unit}.md` and `_plans/active/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 10. When deterministic snapshot validation tooling is available for the current process kind, the matching `snapshot validate-process` command is the mandatory tool-backed validation step before treating either process file as consumable, reporting the implementation handoff as valid, or advancing lifecycle state.
 
 Before reading `_check_result/unit/{unit}.md` or `_plans/active/{unit}.md` as usable implementation inputs, run `specflowctl command preflight --command unit_impl --object-type unit --object {unit}`. If command preflight is unavailable, run `snapshot validate-process` for both `check` and `plan` explicitly. A file's presence, raw checksum, or manual fingerprint comparison is never enough to enter implementation.
+
+### 2.2 Slice Work-State Protocol Adoption
+
+`unit_impl` adopts `specflow/framework/slice_work_state_protocol.md` only for command-owned implementation progress tracking inside the active plan.
+It does not create a dedicated work-state or review run-state file.
+
+Adoption rules:
+
+1. the state carrier is the current `docs/specs/_plans/active/{unit}.md`
+2. the business slices are the implementation slices already defined by the active plan
+3. the required domain fields are the active plan's execution surface, file scope, dependencies, verification action, done condition, current status, and this command's progress write-back fields
+4. dynamic slices are not a separate carrier concept for this command
+5. newly discovered implementation facts are recorded under command-owned active-plan fields such as `Newly Confirmed Legacy`, `Residual Legacy Dependencies`, `Takeover Progress`, and `Retirement Progress`
+6. command-local convergence is the match between advanced implementation slices, cutover results, retirement results, verification notes, and active-plan acceptance coverage
+7. implementation progress can support `ready_for_verify` only when the active plan remains valid and the advanced slices satisfy their done conditions far enough for verification entry
+8. if implementation discovers that the active plan cannot stand without new behavior truth, boundary truth, or acceptance truth, implementation must stop and fall back to `unit_check`
+9. this command must not use implementation discovery to rewrite candidate truth or create a second review gate
 
 ## 3. Preconditions
 
@@ -45,7 +62,7 @@ Before reading `_check_result/unit/{unit}.md` or `_plans/active/{unit}.md` as us
 7. validate all required bindings of the pass gate and plan file according to the candidate handoff contract
    - this includes validating that the active plan still covers the current candidate acceptance item `id` set
 8. when a required appendix is an evidence appendix, treat it only as reviewed evidence covered by the pass gate; it must not supply implementation requirements, acceptance criteria, or behavior rules
-9. if handoff validation fails, classify the failure through `recovery_policy.md` Section 4 before cleanup:
+9. if handoff validation fails, classify the failure through `recovery_policy.md` Section 1 before cleanup:
    - if the check gate no longer covers current truth or bindings, use `truth_layer`, delete the unit candidate-side process chain, and fall back `_status.md` to `unit_check`
    - if only the active plan is missing, malformed, not tool-valid, or missing acceptance coverage while the check gate still covers current truth, use `plan_layer`, delete `_plans/draft/{unit}.md`, `_plans/active/{unit}.md`, and `_verify_result/unit/{unit}.md` if present, then set `_status.md` to `unit_plan`
    - if only the check gate process shape is malformed while current truth and bindings still match, use `gate_layer`, delete `_check_result/unit/{unit}.md`, and set `_status.md` to `unit_check`

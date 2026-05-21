@@ -10,6 +10,10 @@ Only unit handoffs are supported.
 
 If the check result is missing, malformed, or stale, the next legal step remains `unit_check`.
 
+`unit_plan` must not consume `docs/specs/_check_work/unit/{unit}.md`.
+That file is only a resumable `unit_check` work-state file.
+It is not a pass gate and cannot prove that the candidate is ready for planning.
+
 ## 2. Plan To Implementation
 
 `unit_impl` may consume the active plan only when the plan validates against current candidate unit truth.

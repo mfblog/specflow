@@ -23,9 +23,25 @@ By default it handles:
 Lifecycle-state advancement follows `specflow/framework/command_policy.md` Sections 8.5 and 8.8.
 This file states only `unit_verify`-local entry, output, and stop rules.
 
-Process-file consumption and writeback for `_check_result/unit/{unit}.md`, `_plans/active/{unit}.md`, and `_verify_result/unit/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 9. When deterministic snapshot validation tooling is available for the current process kind, the matching `snapshot validate-process` command is the mandatory tool-backed validation step before treating a process file as consumable, reporting a verification pass, or advancing lifecycle state.
+Process-file consumption and writeback for `_check_result/unit/{unit}.md`, `_plans/active/{unit}.md`, and `_verify_result/unit/{unit}.md` must follow `specflow/framework/process_snapshot_contract.md` Section 10. When deterministic snapshot validation tooling is available for the current process kind, the matching `snapshot validate-process` command is the mandatory tool-backed validation step before treating a process file as consumable, reporting a verification pass, or advancing lifecycle state.
 
 Before reading `_check_result/unit/{unit}.md` or `_plans/active/{unit}.md` as usable verification inputs, run `specflowctl command preflight --command unit_verify --object-type unit --object {unit}`. If command preflight is unavailable, run `snapshot validate-process` for both `check` and `plan` explicitly. After writing `_verify_result/unit/{unit}.md`, run `snapshot validate-process --process verify` before reporting a verification pass.
+
+### 2.2 Slice Work-State Protocol Adoption
+
+`unit_verify` adopts `specflow/framework/slice_work_state_protocol.md` only for command-owned verification evidence coverage.
+It does not create a dedicated work-state or review run-state file.
+
+Adoption rules:
+
+1. the state carrier is `docs/specs/_verify_result/unit/{unit}.md` when verification evidence is written
+2. the business slices are acceptance-item evidence rows and structure-convergence rows
+3. the required domain fields are the structured verification evidence matrix, `Structure Convergence Matrix`, `Coverage Summary`, and the verify-result snapshot fields required by `process_snapshot_contract.md`
+4. dynamic slices are not a separate carrier concept for this command
+5. newly discovered evidence surfaces, integration paths, or deviations are recorded in the evidence matrix, structure convergence matrix, or deviation list
+6. command-local convergence is goal-backward verification from acceptance item `id` values into current evidence, plus structural convergence for changed execution surfaces
+7. verification closure can support promotion entry only when every required current-gate acceptance item has an allowed current-round evidence status and every required structure convergence check is closed
+8. if verification discovers missing behavior truth, boundary truth, acceptance truth, or invalid planning coverage, it must stop through the command's layered recovery path instead of adding another verification slice to compensate
 
 ## 3. Preconditions
 

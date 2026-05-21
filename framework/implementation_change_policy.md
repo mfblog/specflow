@@ -46,7 +46,7 @@ This policy may be the first policy file for a natural-language request only whe
 4. Rule truth or binding
 5. global rule truth
 6. end-to-end user-result truth that belongs in a unit Spec
-7. governance rules, project standards, or migration behavior
+7. governance rules, project-level agent instructions, or migration behavior
 8. guidance before formal truth writeback
 
 When this entry applies, the executor must classify the request through this policy before reading the full natural-language routing file.

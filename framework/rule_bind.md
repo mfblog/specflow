@@ -47,7 +47,7 @@ Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
 1. Confirm that the target unit truly depends on the target rule truth.
 2. Resolve the target unit's current layer from `_status.md`.
-3. If the target unit is stable, stop before writeback and raise a prerequisite action requiring `unit_fork:{unit}`.
+3. If the target unit is stable, stop before writeback and return control to `rule_escape` to raise a `prerequisite_action` checkpoint requiring `unit_fork:{unit}`.
 4. Read the target unit's current `rule_refs` and record any previous rule ref that this round will remove or replace.
 5. Build the repository-wide consumer set for the target rule and every previous touched rule from current-layer unit `rule_refs`.
 6. Before the first file mutation, capture the recovery baseline required by `recovery_policy.md` Section 6.5.
@@ -72,7 +72,7 @@ Stop when one of these is true:
 1. the candidate unit binding, body explanation, target unit fallback, touched rule terminal state, and `rule_sync` reconciliation are complete
 2. the request is not binding and must route to another rule flow or unit lifecycle work
 3. the target unit does not actually consume the rule truth
-4. the target unit is stable and must be forked before writeback can continue
+4. the target unit is stable and `rule_escape` must raise a `prerequisite_action` checkpoint before writeback can continue
 5. a touched candidate rule with a stable sibling cannot keep or receive exactly one valid `promotion_owner_unit`
 6. a touched rule would become unbound and its terminal state cannot be decided safely
 
@@ -82,7 +82,7 @@ The output must report:
 
 1. the target unit and target rule
 2. why the unit consumes that rule truth
-3. whether the target unit was candidate or stopped for a fork prerequisite
+3. whether the target unit was candidate or stopped with a `rule_escape` prerequisite checkpoint
 4. the unit `rule_refs` writeback result
 5. the body-level consumption explanation result
 6. the consumer-set review result for each touched rule

@@ -42,21 +42,24 @@ That default scope includes:
    - `candidate_intent_policy.md`
    - `candidate_intents/`
    - `checkpoint_protocol.md`
+   - `slice_work_state_protocol.md`
    - `natural_language_routing.md` only where it defines the rule-governance branch
 2. lifecycle and gate-shape rules
    - `specflow/framework/commands/*.md`
    - `candidate_handoff_contract.md`
    - `downgrade_policy.md`
    - `process_snapshot_contract.md`
+   - `slice_work_state_protocol.md`
    - `recovery_policy.md`
    - `specflow/templates/docs/specs/_status.md`
+   - `specflow/templates/docs/specs/_check_work/README.md`
    - `specflow/templates/docs/specs/_check_result/README.md`
    - `specflow/templates/docs/specs/_plans/README.md`
    - `specflow/templates/docs/specs/_plans/draft/README.md`
    - `specflow/templates/docs/specs/_plans/active/README.md`
    - `specflow/templates/docs/specs/_verify_result/README.md`
    - `specflow/templates/docs/specs/_governance_review/README.md`
-3. human-entry and extension-surface rules
+3. human-entry rules
    - `AGENTS.md`
    - `GEMINI.md`
    - `CLAUDE.md`
@@ -64,11 +67,7 @@ That default scope includes:
    - `specflow/templates/GEMINI.md`
    - `specflow/templates/CLAUDE.md`
    - `entry_index_registry.md`
-   - `project_standards_policy.md`
    - `output_baseline.md`
-   - `project_standard_create.md`
-   - `docs/project_standards/_registry.md`
-   - the active registered project-local standards in scope
 
 The default scope excludes:
 
@@ -105,6 +104,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `spec_writing_guide.md`
    - `candidate_intent_policy.md`
    - `candidate_intents/`
+   - `slice_work_state_protocol.md`
    - `natural_language_routing.md` only where it defines the rule-governance branch
    - `AGENTS.md`
    - `GEMINI.md`
@@ -117,8 +117,10 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `candidate_handoff_contract.md`
    - `downgrade_policy.md`
    - `process_snapshot_contract.md`
+   - `slice_work_state_protocol.md`
    - `recovery_policy.md`
    - `specflow/templates/docs/specs/_status.md`
+   - `specflow/templates/docs/specs/_check_work/README.md`
    - `specflow/templates/docs/specs/_check_result/README.md`
    - `specflow/templates/docs/specs/_plans/README.md`
    - `specflow/templates/docs/specs/_plans/draft/README.md`
@@ -127,11 +129,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `checkpoint_protocol.md`
 3. `human_operability_and_extension`
    - `entry_index_registry.md`
-   - `project_standards_policy.md`
    - `output_baseline.md`
-   - `project_standard_create.md`
-   - `docs/project_standards/_registry.md`
-   - the active registered project-local standards in scope
    - `AGENTS.md`
    - `GEMINI.md`
    - `CLAUDE.md`
@@ -158,6 +156,9 @@ If a narrowed review still crosses one of those boundaries and the owner block i
 ## 5. Preconditions
 
 ### 5.1 Full-Scope Review Run State
+
+`spec_flow_design_review` adopts `specflow/framework/slice_work_state_protocol.md` when it uses a review run-state file.
+This review file owns the adoption details, design review blocks, scoring model, hard-blocker rules, optimization rules, and final conclusion rules.
 
 Default full-scope `spec_flow_design_review` uses a run-state process file.
 
@@ -220,6 +221,18 @@ Rules:
     - if the decision is delete, the startup procedure must delete the file, create a new run-state file, and begin at `design_foundation`
 12. if the fixed run-state file is valid, open, and last updated more than seven days before startup, the startup procedure must delete it as expired, report the deletion reason, create a new run-state file, and begin at `design_foundation`
 13. the startup procedure must not scan a per-flow subdirectory or preserve old closed run-state files as review history
+
+Design-review adoption rules:
+
+1. the state carrier for the default full-scope review is `docs/specs/_governance_review/spec_flow_design_review.md`
+2. narrowed reviews do not use that carrier unless the user explicitly asks for resumable design review
+3. required run-state fields, baseline slice rows, dynamic risk slice rows, and score-state rows are defined in this file
+4. baseline slices are defined in Section 5.2
+5. dynamic risk slices are allowed only under Section 5.3
+6. required cross-block convergence checks are defined in Section 4 and represented by the applicable baseline or dynamic risk slices
+7. freshness and stale handling are performed through the review run-state procedure
+8. slice-set closure can support `pass` or `pass-with-optimization` only when the hard-blocker review, scoring model, group checks, weighted score, findings review, optimization review, and cross-block convergence also pass
+9. missing design truth, unclear in-scope ownership, or excluded-scope dependency gaps must become a dynamic risk slice, finding, optimization, blocked result, or explicit scope stop; they must not be hidden as ordinary score evidence
 
 Structural validation rule:
 
@@ -291,9 +304,8 @@ Before execution:
 2. build one execution-local `review_plan`
 3. map in-scope files into the fixed review blocks
 4. name the required cross-block convergence checks before final conclusions
-5. if project-local governance standards are registered, resolve the active in-scope entries from `docs/project_standards/_registry.md`
-6. if the default scope is used, explicitly confirm that the review stayed inside the design main chain and did not silently rely on excluded tooling or internal rule-flow files
-7. for default full-scope review, create or reuse the run-state file from Section 5.1 before reviewing the first baseline slice
+5. if the default scope is used, explicitly confirm that the review stayed inside the design main chain and did not silently rely on excluded tooling or internal rule-flow files
+6. for default full-scope review, create or reuse the run-state file from Section 5.1 before reviewing the first baseline slice
 
 If any in-scope file cannot be assigned to a review block, do not issue `pass`.
 
@@ -668,5 +680,4 @@ This flow does not:
 5. create a new command chain
 6. update `_status.md`
 7. write `_check_result`, `_plans`, or `_verify_result`
-8. define a project-local overlay surface in v1
-9. use checkpoints in v1
+8. use checkpoints in v1

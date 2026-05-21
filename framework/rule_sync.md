@@ -57,16 +57,22 @@ The caller may provide:
    - changed or in-scope rule ids when exact refs are not enough by themselves
 3. `units`
    - an optional narrowing set after at least one rule trigger is known
-4. `current_stable_landing_unit`
+4. `deleted_rule_refs`
+   - exact rule refs for Rule files deleted by the caller after the caller already proved from current-layer unit `rule_refs` that those refs have no current consumers
+5. `current_stable_landing_unit`
    - the unit whose stable truth was written in the same round
-5. `stable_landing_rule_refs`
+6. `stable_landing_rule_refs`
    - the exact stable rule refs written by that same stable landing round
-6. `retargeted_units`
+7. `retargeted_units`
    - candidate units retargeted in the same stable landing round from the old candidate rule ref to the listed stable rule refs
 
 `current_stable_landing_unit` is valid only together with `stable_landing_rule_refs`.
 
 `retargeted_units` may be used only when the caller selected exact old and new rule refs through `rule_refs`, and every retargeted unit is currently candidate.
+
+`deleted_rule_refs` is a terminal-deletion no-impact proof input.
+For each deleted ref, `rule_sync` must verify that the ref is not present under `docs/specs/rules/**` and is not referenced by any current-layer unit `rule_refs`.
+If any deleted ref still exists as a Rule file or still has a current-layer unit consumer, the no-impact path must fail.
 
 `rule_sync` must not invent execution-local inputs that the caller did not prove.
 
@@ -76,21 +82,25 @@ The caller may provide:
 2. Validate that `docs/specs/repository_mapping.md` is current enough for the in-scope rule object map. If it is missing or conflicting, stop and return control to `rule_escape`.
 3. Read `_status.md` and every needed current-layer unit main Spec.
 4. Rebuild the real consumer graph from unit `rule_refs`.
-5. Derive the affected unit set:
+5. For `deleted_rule_refs`, verify the terminal no-impact condition:
+   - the deleted ref is no longer present under `docs/specs/rules/**`
+   - no current-layer unit frontmatter `rule_refs` contains the deleted ref
+   - when every input is only `deleted_rule_refs`, close with affected candidate units `none`, affected stable units `none`, and no `impact_sync` fallback
+6. Derive the affected unit set:
    - include units that currently bind a changed exact rule ref
    - include units that currently bind a changed rule id when the change applies across that id's current relevant refs
    - include units explicitly retargeted by a same-round stable landing
    - do not include a sibling rule layer only because it has the same `rule_id`
-6. Apply only the proven execution-local exceptions:
+7. Apply only the proven execution-local exceptions:
    - stable landing self-exemption for the exact `current_stable_landing_unit` and exact `stable_landing_rule_refs`
    - explicit candidate fallback for validated `retargeted_units`
-7. Convert the final result into `impact_sync` input:
+8. Convert the final result into `impact_sync` input:
    - final invalidating rule refs
    - final affected candidate units
    - final affected stable units
    - final stable-landing exceptions
-8. Hand the fixed result to `impact_sync`.
-9. When using tooling, run `specflowctl rule sync-impact` with the exact `--rule-refs` or `--rule-ids` and any already-proven exception flags.
+9. Hand the fixed result to `impact_sync`.
+10. When using tooling, run `specflowctl rule sync-impact` with the exact `--rule-refs`, `--rule-ids`, or `--deleted-rule-refs` and any already-proven exception flags.
 
 If repository truth is insufficient, return control to `rule_escape` without performing fallback cleanup. The caller that already mutated truth must then apply its rule-governance recovery baseline before rerouting.
 
@@ -122,5 +132,7 @@ The output must report:
 4. whether repository mapping truth was sufficient
 5. every execution-local exception applied
 6. every retargeted unit validated for explicit fallback
-7. whether control passed to `impact_sync`
-8. whether control returned to `rule_escape`
+7. every deleted rule ref verified as terminal no-impact
+8. whether control passed to `impact_sync`
+9. whether control closed as no-impact
+10. whether control returned to `rule_escape`

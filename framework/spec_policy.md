@@ -131,7 +131,42 @@ This means:
 4. unit-to-unit dependency is explicit and stable-only
 5. no hidden lifecycle object may be inferred from a multi-step workflow
 
-## 6. Process Evidence
+## 6. Candidate Relation Graph
+
+Candidate advancement order is a computed relation, not a manually maintained field.
+
+The computed candidate relation graph may read only these inputs:
+
+1. `docs/specs/_status.md`
+2. current-layer candidate unit main Specs
+3. same-layer unit appendix files explicitly referenced by a current-layer candidate unit main Spec
+4. `unit_refs`
+5. `rule_refs`
+6. Markdown `.md` links
+7. explicit version refs in the forms `c_unit_{unit}@{version}`, `c_b_rule_{rule}@{version}`, and `c_g_rule_{rule}@{version}`
+
+The graph builder must not infer candidate order from prose alone.
+If a document says in natural language that one candidate waits for another candidate, the document must also contain one of the explicit reference forms above before tooling may compute an order.
+
+The graph has these edge meanings:
+
+1. stable dependency edge
+   - a current-layer unit depends on stable unit or stable Rule truth through `unit_refs` or `rule_refs`
+   - stable dependency edges are formal pass foundations only when the referenced stable truth exists and is current enough for the command being run
+2. candidate progression edge
+   - a current-layer candidate unit main Spec or non-evidence same-layer appendix explicitly references another current candidate unit or candidate Rule
+   - the referencing candidate waits for the referenced candidate unit or candidate Rule before it may pass `unit_check` or be automatically advanced
+3. reference-only edge
+   - an evidence appendix explicitly references a candidate unit or candidate Rule
+   - the edge is displayed for traceability but does not block candidate advancement
+
+Cycle semantics are fixed:
+
+1. a cycle made only from stable dependency edges is diagnostic only and does not by itself block a candidate preflight
+2. a cycle that contains candidate progression edges blocks every candidate unit in that cycle
+3. a blocked candidate must not receive a `unit_check` pass gate and must not be entered by `unit_advance:{unit}`
+
+## 7. Process Evidence
 
 Unit process files may record:
 

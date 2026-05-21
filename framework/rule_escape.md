@@ -87,7 +87,16 @@ Use:
 2. `decision` when the user must choose between two valid formal landing points
 3. `prerequisite_action` when a legal upstream action, such as `unit_fork:{unit}`, must happen before writeback
 
-The checkpoint must state the blocking question or action, why it blocks closure, the required writeback target when one exists, and the resume signal.
+The checkpoint must include every fixed checkpoint field from `specflow/framework/checkpoint_protocol.md`.
+
+For a `prerequisite_action` that requires `unit_fork:{unit}` before rule-governance writeback:
+
+1. `target_objects` must list every stable unit whose candidate fork is required
+2. `question_or_action` must name the required fork action for each unit
+3. `why_blocking` must state that rule-governance writeback cannot modify stable unit truth directly
+4. `required_writeback_target` must name the `unit_fork` write targets for each unit, including `docs/specs/_status.md`, the candidate main Spec path, and any candidate appendix path required by the fork command
+5. `resume_signal` must be completion of the required fork command for every listed unit
+6. `resume_next_step` must be rerunning `rule_escape` from current repository truth for the original rule-governance request
 
 ## 6. Stop Conditions
 

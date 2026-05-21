@@ -22,8 +22,6 @@ If the request exactly matches a rule governance entry, read that rule file.
 
 If the request exactly matches `spec_flow_migrate`, read `specflow/framework/spec_flow_migrate.md`.
 
-If the request exactly matches `project_standard_create`, read `specflow/framework/project_standard_create.md`.
-
 If the request uses `scenario_*`, `scenario_advance:{id}`, or `object-type=scenario`, stop and report that scenario lifecycle support has been removed.
 
 ## 2. Routing Inputs
@@ -35,7 +33,6 @@ Before choosing a route, read the smallest necessary durable truth:
 3. current-layer unit truth when a named unit is involved
 4. current-layer rule truth when rule governance is involved
 5. `specflow/framework/implementation_change_policy.md` for implementation-only work
-6. `specflow/framework/project_standard_create.md` when the request asks to create or register a project-local standard
 
 Do not guess ownership from directory shape alone.
 
@@ -61,14 +58,6 @@ Rule consumer discovery must use current-layer unit `rule_refs`.
 Route to repository mapping when the request changes path ownership, object registration, implementation path registration, or support-surface boundaries.
 
 Repository mapping does not change unit behavior or rule meaning by itself.
-
-## 5.1 Project-Local Standard Creation Route
-
-Route to `specflow/framework/project_standard_create.md` when the request asks to create, add, generate, or register a project-local standard under `docs/project_standards/`.
-
-`project_standard_create` is an internal governance flow reached from user intent. It is not a standard unit command, and the user does not need to name it.
-
-If the request is too vague to identify the project-local standard's object, type, target surface, or consumer, stop under `specflow/framework/project_standard_create.md` instead of creating an empty rule shell.
 
 ## 6. Implementation-Only Route
 
@@ -101,20 +90,17 @@ They should state:
 
 Internal file names may appear in a separate execution note, but the user-facing answer must not require the user to understand internal policy names.
 
-## 9. Shared Response Surface
+## 9. Response Baseline
 
-Natural-language routing output is part of the shared `specflow_response` / `user_facing_response_clarity` output surface defined by `specflow/framework/project_standards_policy.md`.
-
-It also inherits the framework output baseline defined by `specflow/framework/output_baseline.md`.
-
-Registered project-local output standards selected by that shared surface may tighten or clarify only:
+Natural-language routing output inherits the framework output baseline defined by `specflow/framework/output_baseline.md`.
+This routing file may tighten or clarify only:
 
 1. user-facing wording
 2. answer ordering
 3. main-answer and execution-note separation
 4. Mermaid usage in user-facing explanation
 
-Registered standards must not:
+Output wording rules must not:
 
 1. route the request
 2. change the chosen first step
@@ -155,8 +141,6 @@ It must not present internal command names, lifecycle state names, object-family
 Natural-language routing also inherits:
 
 1. the framework output baseline defined by `specflow/framework/output_baseline.md`
-2. the shared response surface defined by `specflow/framework/project_standards_policy.md`
-3. any registered project-local output standards legally selected by that shared surface
 
 ### 11.1 User-Facing Report Contract
 
@@ -180,4 +164,4 @@ The main answer must not make the user understand internal object-family names, 
 Internal names may be included only in the execution note after the project-structure explanation.
 
 If the output starts an existing standard command, the command's own output contract controls the final close-out.
-That command output must still follow the user-facing language separation required by `specflow/framework/command_policy.md` and the same shared response surface defined by `specflow/framework/project_standards_policy.md`.
+That command output must still follow the user-facing language separation required by `specflow/framework/command_policy.md` and the framework output baseline defined by `specflow/framework/output_baseline.md`.

@@ -24,6 +24,7 @@ Rule files do not own consumer lists.
 When a stable unit is promoted, impact sync must find every current-layer unit whose `unit_refs` still references the previous stable version.
 
 Those dependent units must be rerouted to the legal revalidation entry before closure is claimed.
+The deterministic tooling entry for this promoted-stable-unit path is `specflowctl unit release-version --unit <unit> --from-ref <old-stable-unit-ref> --to-ref <new-stable-unit-ref>`.
 
 ## 4. Reroute Rules
 

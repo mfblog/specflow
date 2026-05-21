@@ -60,7 +60,7 @@ Before any write, read:
 1. Confirm that the request is a topology change or terminal-state decision, not simple rule authoring, extraction, binding, or sync.
 2. Resolve the complete affected unit set from current-layer unit `rule_refs`.
 3. If current repository truth cannot prove the complete affected unit set, stop before writeback and return to `rule_escape`.
-4. If any affected unit is stable and the topology plan requires changing that unit's binding or body truth, stop before writeback and raise a prerequisite action requiring `unit_fork:{unit}`.
+4. If any affected unit is stable and the topology plan requires changing that unit's binding or body truth, stop before writeback and return control to `rule_escape` to raise a `prerequisite_action` checkpoint requiring `unit_fork:{unit}` for each such unit.
 5. Decide the topology plan explicitly:
    - which rule identities remain
    - which new rule identities are created
@@ -77,6 +77,9 @@ Before any write, read:
 13. Do not write consumer lists or `bound_objects` into rule files.
 14. Update `docs/specs/repository_mapping.md` in the same round when the topology plan changes the rule object map.
 15. Run `rule_sync` after any rule-file write, unit `rule_refs` write, or rule object-map write.
+    - when the only remaining effect for a touched Rule is terminal deletion after Step 11 has already proven that no current-layer unit consumes the deleted exact rule ref, run the `rule_sync` terminal no-impact path with that exact deleted ref
+    - that no-impact path may close only when affected candidate units are `none`, affected stable units are `none`, and no current-layer unit `rule_refs` still contains the deleted ref
+    - if the deleted ref still has a current-layer consumer, the topology round must not claim no-impact closure; it must route through the normal affected-unit reconciliation or recover before rerouting
 
 If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `recovery_policy.md` Section 6.5 before returning to natural-language routing.
 
@@ -84,9 +87,9 @@ If repository truth becomes insufficient before any mutation, stop and return to
 
 Stop when one of these is true:
 
-1. the topology plan is fully written, every touched rule file has a terminal state, any repository mapping update is complete, and `rule_sync` has closed reconciliation
+1. the topology plan is fully written, every touched rule file has a terminal state, any repository mapping update is complete, and `rule_sync` has closed reconciliation or terminal no-impact
 2. the request belongs to another rule flow
-3. a stable unit must be forked before binding writeback can continue
+3. a stable unit requires a `rule_escape` prerequisite checkpoint before binding writeback can continue
 4. repository truth is insufficient to prove the affected unit set or topology plan
 5. a candidate rule with a stable sibling would exist without exactly one valid `promotion_owner_unit`
 6. a touched unbound rule file cannot be safely deleted or intentionally retained
@@ -105,4 +108,6 @@ The output must report:
 8. every unit candidate binding rewrite
 9. any repository mapping writeback
 10. confirmation that touched rule files do not carry `bound_objects`
-11. the `rule_sync` result or the recovery and rerouting result
+11. the deleted Rule no-impact result when a touched Rule file was deleted after having no current consumers
+12. the `rule_escape` prerequisite checkpoint result when stable unit fork prerequisites block writeback
+13. the `rule_sync` result or the recovery and rerouting result
