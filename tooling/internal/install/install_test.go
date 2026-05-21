@@ -44,25 +44,6 @@ func TestDoctorFailsForStaleBinary(t *testing.T) {
 	}
 }
 
-func TestDoctorFailsWhenProjectStandardsRegistryIsMissing(t *testing.T) {
-	repoRoot := t.TempDir()
-	liveFingerprint := setupDoctorRepo(t, repoRoot)
-	writeFingerprintProbeBinary(t, repoRoot, liveFingerprint)
-	if err := os.Remove(filepath.Join(repoRoot, "docs/project_standards/_registry.md")); err != nil {
-		t.Fatalf("Remove(project registry) failed: %v", err)
-	}
-
-	result, err := Doctor(repoRoot)
-	if err != nil {
-		t.Fatalf("Doctor returned unexpected error: %v", err)
-	}
-
-	joined := strings.Join(result.Failures, "\n")
-	if !strings.Contains(joined, "MISSING docs/project_standards/_registry.md") {
-		t.Fatalf("expected missing project registry failure, got %v", result.Failures)
-	}
-}
-
 func TestDoctorFailsWhenReaderWebAssetIsMissing(t *testing.T) {
 	repoRoot := t.TempDir()
 	liveFingerprint := setupDoctorRepo(t, repoRoot)
@@ -112,9 +93,10 @@ func TestInitAppendsManagedBlockToExistingEntryFile(t *testing.T) {
 func setupDoctorRepo(t *testing.T, repoRoot string) string {
 	t.Helper()
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), strings.Join([]string{
-		"templates/docs/project_standards/_registry.md\tdocs/project_standards/_registry.md\tproject",
+		"templates/AGENTS.md\tAGENTS.md\tframework",
 	}, "\n")+"\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), "# registry\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "template\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module github.com/Bingordinary/SpecFlow/specflow/tooling\n\ngo 1.22.2\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflow-reader/main.go"), "package main\n\nfunc main() {}\n")

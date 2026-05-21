@@ -1059,9 +1059,8 @@ func createReviewRunRepo(t *testing.T) string {
 		"recovery_policy.md",
 		"impact_sync_policy.md",
 		"process_snapshot_contract.md",
+		"slice_work_state_protocol.md",
 		"entry_index_registry.md",
-		"project_standards_policy.md",
-		"project_standard_create.md",
 		"rule_new.md",
 		"rule_extract.md",
 		"rule_bind.md",
@@ -1097,6 +1096,7 @@ func createReviewRunRepo(t *testing.T) string {
 	}
 	for _, relPath := range []string{
 		"specflow/templates/docs/specs/_status.md",
+		"specflow/templates/docs/specs/_check_work/README.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
 		"specflow/templates/docs/specs/_plans/README.md",
 		"specflow/templates/docs/specs/_plans/draft/README.md",
@@ -1105,7 +1105,6 @@ func createReviewRunRepo(t *testing.T) string {
 		"specflow/templates/docs/specs/_governance_review/README.md",
 		"specflow/templates/docs/specs/repository_mapping.md",
 		"specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
-		"specflow/templates/docs/project_standards/_registry.md",
 		"specflow/templates/AGENTS.md",
 		"specflow/templates/GEMINI.md",
 		"specflow/templates/CLAUDE.md",
@@ -1126,11 +1125,6 @@ func createReviewRunRepo(t *testing.T) string {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
 	writeReviewReaderWebFiles(t, repoRoot)
-	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
-		"# Registry\n\n"+
-		"## Active Standards\n\n"+
-		"| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule | notes |\n"+
-		"|---|---|---|---|---|---|---|---|---|\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
 		"# Spec Status\n\n"+
 		"## Formal Objects\n\n"+

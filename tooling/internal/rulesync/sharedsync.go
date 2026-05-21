@@ -17,6 +17,7 @@ type Options struct {
 	Modules                      []string
 	RuleRefs                     []string
 	RuleIDs                      []string
+	DeletedRuleRefs              []string
 	StableLandingModule          string
 	StableLandingRuleRefs        []string
 	RetargetedUnits              []string
@@ -27,6 +28,7 @@ type Result struct {
 	ScopedModules                []string
 	ScopedRuleRefs               []string
 	ScopedRuleIDs                []string
+	DeletedRuleRefs              []string
 	StableLandingModule          string
 	StableLandingRuleRefs        []string
 	RetargetedUnits              []string
@@ -82,16 +84,20 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		Modules:                      normalizeStrings(options.Modules),
 		RuleRefs:                     normalizeStrings(options.RuleRefs),
 		RuleIDs:                      normalizeStrings(options.RuleIDs),
+		DeletedRuleRefs:              normalizeStrings(options.DeletedRuleRefs),
 		StableLandingModule:          strings.TrimSpace(options.StableLandingModule),
 		StableLandingRuleRefs:        normalizeStrings(options.StableLandingRuleRefs),
 		RetargetedUnits:              normalizeStrings(options.RetargetedUnits),
 		BoundObjectsOnlyRuleFileRefs: normalizeStrings(options.BoundObjectsOnlyRuleFileRefs),
 	}
-	if len(normalized.RuleRefs) == 0 && len(normalized.RuleIDs) == 0 {
-		return Result{}, fmt.Errorf("at least one of rule refs or rule ids is required")
+	if len(normalized.RuleRefs) == 0 && len(normalized.RuleIDs) == 0 && len(normalized.DeletedRuleRefs) == 0 {
+		return Result{}, fmt.Errorf("at least one of rule refs, rule ids, or deleted rule refs is required")
 	}
 	if len(normalized.BoundObjectsOnlyRuleFileRefs) > 0 {
 		return Result{}, fmt.Errorf("bound_objects-only sync is no longer supported; derive consumers from current-layer rule_refs")
+	}
+	if _, err := rulerefs.NormalizeRuleRefs(normalized.DeletedRuleRefs); err != nil {
+		return Result{}, fmt.Errorf("deleted rule refs: %w", err)
 	}
 
 	sharedFilesByRef, err := loadSharedFiles(repoRoot)
@@ -106,6 +112,9 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 	}
 	allUnresolvedRefs := normalizeStrings(unresolvedRuleRefs)
 	referencedRuleRefs := allReferencedRuleRefs(moduleBindings)
+	if err := validateDeletedRuleRefs(normalized.DeletedRuleRefs, sharedFilesByRef, referencedRuleRefs); err != nil {
+		return Result{}, err
+	}
 	for _, sharedID := range normalized.RuleIDs {
 		if len(allUnresolvedRefs) > 0 {
 			return Result{}, fmt.Errorf(
@@ -192,11 +201,24 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		ScopedModules:         scopeModules,
 		ScopedRuleRefs:        normalized.RuleRefs,
 		ScopedRuleIDs:         normalized.RuleIDs,
+		DeletedRuleRefs:       normalized.DeletedRuleRefs,
 		StableLandingModule:   normalized.StableLandingModule,
 		StableLandingRuleRefs: normalized.StableLandingRuleRefs,
 		RetargetedUnits:       normalized.RetargetedUnits,
 		ModuleResults:         impactResult.ModuleResults,
 	}, nil
+}
+
+func validateDeletedRuleRefs(deletedRuleRefs []string, sharedFilesByRef map[string]sharedFile, referencedRuleRefs map[string]bool) error {
+	for _, ref := range deletedRuleRefs {
+		if _, exists := sharedFilesByRef[ref]; exists {
+			return fmt.Errorf("deleted rule ref %q is still present under docs/specs/rules/", ref)
+		}
+		if referencedRuleRefs[ref] {
+			return fmt.Errorf("deleted rule ref %q is still referenced by current-layer unit rule_refs", ref)
+		}
+	}
+	return nil
 }
 
 func ReconcileBoundModules(repoRoot string, options ReconcileBoundModulesOptions) (ReconcileBoundModulesResult, error) {

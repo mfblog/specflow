@@ -76,7 +76,6 @@ func isAllowedSourcePath(path string) bool {
 	}
 	for _, prefix := range []string{
 		"docs/specs/",
-		"docs/project_standards/",
 	} {
 		if strings.HasPrefix(path, prefix) {
 			return true

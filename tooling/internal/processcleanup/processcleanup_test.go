@@ -52,6 +52,7 @@ func TestApplyFallbackForPromoteEvidenceIncomplete(t *testing.T) {
 
 func TestApplyFallbackForVerifyImplementationDeviation(t *testing.T) {
 	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_work/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/active"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
@@ -95,6 +96,7 @@ func TestApplyFallbackForVerifyImplementationDeviation(t *testing.T) {
 
 func TestApplyFallbackForVerifyTruthIncomplete(t *testing.T) {
 	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_work/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/active"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/draft"))
@@ -112,6 +114,7 @@ func TestApplyFallbackForVerifyTruthIncomplete(t *testing.T) {
 	}, "\n") + "\n"
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 	for _, relPath := range []string{
+		"docs/specs/_check_work/unit/ai.md",
 		"docs/specs/_check_result/unit/ai.md",
 		"docs/specs/_plans/active/ai.md",
 		"docs/specs/_plans/draft/ai.md",
@@ -127,10 +130,11 @@ func TestApplyFallbackForVerifyTruthIncomplete(t *testing.T) {
 	if result.NextCommand != "unit_check" {
 		t.Fatalf("expected next command unit_check, got %s", result.NextCommand)
 	}
-	if len(result.DeletedFiles) != 4 {
-		t.Fatalf("expected 4 deleted files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
+	if len(result.DeletedFiles) != 5 {
+		t.Fatalf("expected 5 deleted files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
 	}
 	for _, relPath := range []string{
+		"docs/specs/_check_work/unit/ai.md",
 		"docs/specs/_check_result/unit/ai.md",
 		"docs/specs/_plans/active/ai.md",
 		"docs/specs/_plans/draft/ai.md",
@@ -214,6 +218,7 @@ func TestApplyObjectFallbackRejectsScenario(t *testing.T) {
 func TestApplySuccessCleanupForPromote(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_work/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/active"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/draft"))
@@ -236,6 +241,7 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(candidateMainRef)), "candidate")
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_ai_prompt.md"), "appendix")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_work/unit/ai.md"), "check work")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/ai.md"), "check")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/ai.md"), "plan")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/ai.md"), "draft plan")
@@ -245,12 +251,13 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ApplySuccessCleanup: %v", err)
 	}
-	if len(result.DeletedFiles) != 6 {
-		t.Fatalf("expected 6 deleted files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
+	if len(result.DeletedFiles) != 7 {
+		t.Fatalf("expected 7 deleted files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
 	}
 	for _, relPath := range []string{
 		candidateMainRef,
 		specpaths.CandidateAppendixDir + "/c_unit_ai_prompt.md",
+		"docs/specs/_check_work/unit/ai.md",
 		"docs/specs/_check_result/unit/ai.md",
 		"docs/specs/_plans/active/ai.md",
 		"docs/specs/_plans/draft/ai.md",
@@ -265,6 +272,7 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 func TestApplySuccessCleanupForUnitForkPreservesCurrentCandidateAppendix(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_work/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/active"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/draft"))
@@ -283,6 +291,7 @@ func TestApplySuccessCleanupForUnitForkPreservesCurrentCandidateAppendix(t *test
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 	appendixRef := specpaths.CandidateAppendixDir + "/c_unit_ai_prompt.md"
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(appendixRef)), "appendix")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_work/unit/ai.md"), "check work")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/ai.md"), "check")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/ai.md"), "plan")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/ai.md"), "draft plan")
@@ -292,8 +301,8 @@ func TestApplySuccessCleanupForUnitForkPreservesCurrentCandidateAppendix(t *test
 	if err != nil {
 		t.Fatalf("ApplySuccessCleanup: %v", err)
 	}
-	if len(result.DeletedFiles) != 4 {
-		t.Fatalf("expected 4 deleted process files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
+	if len(result.DeletedFiles) != 5 {
+		t.Fatalf("expected 5 deleted process files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
 	}
 	for _, deleted := range result.DeletedFiles {
 		if deleted == appendixRef {
@@ -304,6 +313,7 @@ func TestApplySuccessCleanupForUnitForkPreservesCurrentCandidateAppendix(t *test
 		t.Fatalf("expected candidate appendix to remain, stat err=%v", err)
 	}
 	for _, relPath := range []string{
+		"docs/specs/_check_work/unit/ai.md",
 		"docs/specs/_check_result/unit/ai.md",
 		"docs/specs/_plans/active/ai.md",
 		"docs/specs/_plans/draft/ai.md",

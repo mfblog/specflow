@@ -1783,6 +1783,10 @@ func CheckResultFilePath(objectType, object string) string {
 	return fmt.Sprintf("docs/specs/_check_result/%s/%s.md", objectType, object)
 }
 
+func CheckWorkFilePath(objectType, object string) string {
+	return fmt.Sprintf("docs/specs/_check_work/%s/%s.md", objectType, object)
+}
+
 func VerifyResultFilePath(objectType, object string) string {
 	return fmt.Sprintf("docs/specs/_verify_result/%s/%s.md", objectType, object)
 }
@@ -1792,6 +1796,8 @@ func ProcessArtifactPaths(objectType, object, processKind string) ([]string, err
 		return nil, fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
 	}
 	switch processKind {
+	case "check_work":
+		return []string{CheckWorkFilePath(objectType, object)}, nil
 	case "check":
 		return []string{CheckResultFilePath(objectType, object)}, nil
 	case "plan":
@@ -1811,6 +1817,8 @@ func ProcessFilePath(objectType, object, processKind string) (string, error) {
 		return "", fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
 	}
 	switch processKind {
+	case "check_work":
+		return CheckWorkFilePath(objectType, object), nil
 	case "check":
 		return CheckResultFilePath(objectType, object), nil
 	case "plan":

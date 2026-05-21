@@ -115,8 +115,63 @@ func TestSyncImpactRejectsMissingExplicitScope(t *testing.T) {
 	setupCandidateSharedRepo(t, repoRoot)
 
 	_, err := SyncImpact(repoRoot, Options{})
-	if err == nil || !strings.Contains(err.Error(), "at least one of rule refs or rule ids is required") {
+	if err == nil || !strings.Contains(err.Error(), "at least one of rule refs, rule ids, or deleted rule refs is required") {
 		t.Fatalf("expected missing-scope error, got %v", err)
+	}
+}
+
+func TestSyncImpactAcceptsTerminalDeletedRuleRefWithNoConsumers(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateSharedRepo(t, repoRoot)
+
+	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), strings.Join([]string{
+		"---",
+		"id: demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"---",
+		"",
+		"# Demo",
+		"",
+		"## Rule Alignment",
+		"",
+		"2. rule_refs: none",
+		"",
+	}, "\n"))
+	if err := os.Remove(filepath.Join(repoRoot, "docs/specs/rules/candidate/c_b_rule_demo.md")); err != nil {
+		t.Fatalf("remove rule file: %v", err)
+	}
+
+	result, err := SyncImpact(repoRoot, Options{DeletedRuleRefs: []string{sharedRef}})
+	if err != nil {
+		t.Fatalf("SyncImpact: %v", err)
+	}
+	if len(result.DeletedRuleRefs) != 1 || result.DeletedRuleRefs[0] != sharedRef {
+		t.Fatalf("expected deleted rule ref output, got %+v", result.DeletedRuleRefs)
+	}
+	if len(result.ScopedModules) != 0 {
+		t.Fatalf("expected no scoped modules, got %+v", result.ScopedModules)
+	}
+	if len(result.ModuleResults) != 0 {
+		t.Fatalf("expected no module results, got %+v", result.ModuleResults)
+	}
+}
+
+func TestSyncImpactRejectsTerminalDeletedRuleRefWithConsumer(t *testing.T) {
+	repoRoot := t.TempDir()
+	sharedRef := setupCandidateSharedRepo(t, repoRoot)
+
+	if err := os.Remove(filepath.Join(repoRoot, "docs/specs/rules/candidate/c_b_rule_demo.md")); err != nil {
+		t.Fatalf("remove rule file: %v", err)
+	}
+
+	_, err := SyncImpact(repoRoot, Options{DeletedRuleRefs: []string{sharedRef}})
+	if err == nil || !strings.Contains(err.Error(), "is still referenced by current-layer unit rule_refs") {
+		t.Fatalf("expected deleted rule ref consumer error, got %v", err)
 	}
 }
 
@@ -1216,7 +1271,7 @@ func TestSyncImpactRejectsModulesOnlyScope(t *testing.T) {
 	_, err := SyncImpact(repoRoot, Options{
 		Modules: []string{"demo"},
 	})
-	if err == nil || !strings.Contains(err.Error(), "at least one of rule refs or rule ids is required") {
+	if err == nil || !strings.Contains(err.Error(), "at least one of rule refs, rule ids, or deleted rule refs is required") {
 		t.Fatalf("expected modules-only scope to be rejected, got %v", err)
 	}
 }

@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/buildrelease"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/checkwork"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandclose"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandpreflight"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/entrysync"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/install"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/projectstandards"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/relationgraph"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/repositorymapping"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewrun"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewscope"
@@ -24,6 +25,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitrelease"
 )
 
 func main() {
@@ -55,16 +57,14 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runInit(args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(args[1:], stdout, stderr)
-	case "upgrade":
-		return runUpgrade(args[1:], stdout, stderr)
 	case "build-release":
 		return runBuildRelease(args[1:], stdout, stderr)
 	case "command":
 		return runCommand(args[1:], stdout, stderr)
 	case "entry":
 		return runEntry(args[1:], stdout, stderr)
-	case "registry":
-		return runRegistry(args[1:], stdout, stderr)
+	case "relation":
+		return runRelation(args[1:], stdout, stderr)
 	case "repository-mapping":
 		return runRepositoryMapping(args[1:], stdout, stderr)
 	case "review":
@@ -77,6 +77,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runSnapshot(args[1:], stdout, stderr)
 	case "status":
 		return runStatus(args[1:], stdout, stderr)
+	case "unit":
+		return runUnit(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		writeRootUsage(stdout)
 		return nil
@@ -298,22 +300,6 @@ func runDoctor(args []string, stdout, stderr io.Writer) error {
 	return fmt.Errorf("specFlow doctor failed: %d issue(s)", len(result.Failures))
 }
 
-func runUpgrade(args []string, stdout, stderr io.Writer) error {
-	fs := flag.NewFlagSet("upgrade", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	repoRoot := fs.String("repo-root", ".", "repository root")
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
-	result, err := install.Upgrade(mustAbs(*repoRoot))
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(stdout, "specFlow upgrade completed. updated=%d skipped=%d\n", result.Updated, result.Skipped)
-	return nil
-}
-
 func runBuildRelease(args []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet("build-release", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -403,45 +389,6 @@ func runEntry(args []string, stdout, stderr io.Writer) error {
 	default:
 		writeEntryUsage(stderr)
 		return fmt.Errorf("unknown entry subcommand %q", args[0])
-	}
-}
-
-func runRegistry(args []string, stdout, stderr io.Writer) error {
-	if len(args) == 0 {
-		writeRegistryUsage(stderr)
-		return errors.New("missing registry subcommand")
-	}
-
-	switch args[0] {
-	case "validate":
-		fs := flag.NewFlagSet("registry validate", flag.ContinueOnError)
-		fs.SetOutput(stderr)
-		repoRoot := fs.String("repo-root", ".", "repository root")
-		if err := fs.Parse(args[1:]); err != nil {
-			return err
-		}
-
-		result, err := projectstandards.ValidateRegistry(mustAbs(*repoRoot))
-		if err != nil {
-			return err
-		}
-
-		if len(result.Diagnostics) == 0 {
-			fmt.Fprintf(stdout, "Project standards registry is valid. active_entries=%d\n", len(result.Entries))
-			return nil
-		}
-
-		fmt.Fprintf(stdout, "Project standards registry is invalid. issues=%d\n", len(result.Diagnostics))
-		for _, diagnostic := range result.Diagnostics {
-			fmt.Fprintf(stdout, "- %s\n", diagnostic)
-		}
-		return errors.New("project standards registry validation failed")
-	case "-h", "--help", "help":
-		writeRegistryUsage(stdout)
-		return nil
-	default:
-		writeRegistryUsage(stderr)
-		return fmt.Errorf("unknown registry subcommand %q", args[0])
 	}
 }
 
@@ -634,6 +581,103 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 	}
 
 	switch args[0] {
+	case "check-work-init":
+		fs := flag.NewFlagSet("process check-work-init", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		objectType := fs.String("object-type", "", "formal object type: unit")
+		object := fs.String("object", "", "formal object name")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" {
+			writeProcessUsage(stderr)
+			return errors.New("object-type and object are required")
+		}
+		result, err := checkwork.Init(mustAbs(*repoRoot), *objectType, *object, time.Now().UTC())
+		if err != nil {
+			return err
+		}
+		if result.Created {
+			fmt.Fprintf(stdout, "Check work-state created: %s\n", result.File)
+		} else if result.Reused {
+			fmt.Fprintf(stdout, "Check work-state reused: %s\n", result.File)
+		} else {
+			fmt.Fprintf(stdout, "Check work-state ready: %s\n", result.File)
+		}
+		if len(result.DeletedFiles) > 0 {
+			fmt.Fprintf(stdout, "Deleted check work-state files (%d):\n", len(result.DeletedFiles))
+			for _, deleted := range result.DeletedFiles {
+				fmt.Fprintf(stdout, "- %s | reason=%s\n", deleted.File, deleted.Reason)
+			}
+		}
+		return nil
+	case "check-work-validate":
+		fs := flag.NewFlagSet("process check-work-validate", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		objectType := fs.String("object-type", "", "formal object type: unit")
+		object := fs.String("object", "", "formal object name")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" {
+			writeProcessUsage(stderr)
+			return errors.New("object-type and object are required")
+		}
+		result := checkwork.Validate(mustAbs(*repoRoot), *objectType, *object, time.Now().UTC())
+		if result.Valid {
+			fmt.Fprintf(stdout, "Check work-state is valid: %s\n", result.File)
+			return nil
+		}
+		fmt.Fprintf(stdout, "Check work-state is invalid: %s\n", result.File)
+		for _, diagnostic := range result.Diagnostics {
+			fmt.Fprintf(stdout, "- %s\n", diagnostic)
+		}
+		return errors.New("check work-state validation failed")
+	case "check-work-refresh":
+		fs := flag.NewFlagSet("process check-work-refresh", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		objectType := fs.String("object-type", "", "formal object type: unit")
+		object := fs.String("object", "", "formal object name")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" {
+			writeProcessUsage(stderr)
+			return errors.New("object-type and object are required")
+		}
+		result, err := checkwork.Refresh(mustAbs(*repoRoot), *objectType, *object, time.Now().UTC())
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "Check work-state refreshed: %s\n", result.File)
+		fmt.Fprintf(stdout, "last_updated_at: %s\n", result.LastUpdatedAtUTC)
+		writeList(stdout, "Changed fingerprint slices", result.ChangedSlices)
+		writeList(stdout, "Stale slices", result.StaleSlices)
+		writeList(stdout, "Missing inputs", result.MissingInputs)
+		return nil
+	case "check-work-touch":
+		fs := flag.NewFlagSet("process check-work-touch", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		objectType := fs.String("object-type", "", "formal object type: unit")
+		object := fs.String("object", "", "formal object name")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" {
+			writeProcessUsage(stderr)
+			return errors.New("object-type and object are required")
+		}
+		result, err := checkwork.Touch(mustAbs(*repoRoot), *objectType, *object, time.Now().UTC())
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "Check work-state touched: %s\n", result.File)
+		fmt.Fprintf(stdout, "last_updated_at: %s\n", result.LastUpdatedAtUTC)
+		return nil
 	case "cleanup-fallback":
 		fs := flag.NewFlagSet("process cleanup-fallback", flag.ContinueOnError)
 		fs.SetOutput(stderr)
@@ -712,6 +756,7 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 		modules := fs.String("units", "", "comma-separated formal units")
 		ruleRefs := fs.String("rule-refs", "", "comma-separated rule version refs")
 		ruleIDs := fs.String("rule-ids", "", "comma-separated rule ids")
+		deletedRuleRefs := fs.String("deleted-rule-refs", "", "comma-separated terminal deleted rule version refs that must have no current consumers")
 		stableLandingUnit := fs.String("stable-landing-unit", "", "formal unit whose same-round stable landing should not invalidate itself")
 		stableLandingRuleRefs := fs.String("stable-landing-rule-refs", "", "comma-separated exact rule refs written by the same-round stable landing")
 		retargetedUnits := fs.String("retargeted-units", "", "comma-separated candidate units retargeted to same-round stable landing rule refs")
@@ -723,6 +768,7 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 			Modules:               parseCSV(*modules),
 			RuleRefs:              parseCSV(*ruleRefs),
 			RuleIDs:               parseCSV(*ruleIDs),
+			DeletedRuleRefs:       parseCSV(*deletedRuleRefs),
 			StableLandingModule:   strings.TrimSpace(*stableLandingUnit),
 			StableLandingRuleRefs: parseCSV(*stableLandingRuleRefs),
 			RetargetedUnits:       parseCSV(*retargetedUnits),
@@ -734,6 +780,7 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 		writeList(stdout, "Scoped units", result.ScopedModules)
 		writeList(stdout, "Scoped rule refs", result.ScopedRuleRefs)
 		writeList(stdout, "Scoped rule ids", result.ScopedRuleIDs)
+		writeList(stdout, "Deleted rule refs verified no-impact", result.DeletedRuleRefs)
 		fmt.Fprintf(stdout, "Stable landing unit: %s\n", noneIfEmpty(result.StableLandingModule))
 		writeList(stdout, "Stable landing rule refs", result.StableLandingRuleRefs)
 		writeList(stdout, "Retargeted units", result.RetargetedUnits)
@@ -812,6 +859,151 @@ func runRule(args []string, stdout, stderr io.Writer) error {
 	default:
 		writeRuleUsage(stderr)
 		return fmt.Errorf("unknown rule subcommand %q", args[0])
+	}
+}
+
+func runUnit(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		writeUnitUsage(stderr)
+		return errors.New("missing unit subcommand")
+	}
+
+	switch args[0] {
+	case "release-version":
+		fs := flag.NewFlagSet("unit release-version", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		unit := fs.String("unit", "", "unit name")
+		fromRef := fs.String("from-ref", "", "old stable unit version ref")
+		toRef := fs.String("to-ref", "", "new stable unit version ref")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		result, err := unitrelease.ReleaseVersion(mustAbs(*repoRoot), unitrelease.Options{
+			Unit:    *unit,
+			FromRef: *fromRef,
+			ToRef:   *toRef,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "Released unit version: %s from %s to %s\n", result.Unit, result.FromRef, result.ToRef)
+		if result.Noop {
+			fmt.Fprintln(stdout, "No current-layer unit_refs used the old ref.")
+		}
+		writeList(stdout, "Candidate current-layer units updated", result.CandidateUpdated)
+		writeList(stdout, "Stable current-layer units updated", result.StableUpdated)
+		writeList(stdout, "Main specs updated", result.MainSpecsUpdated)
+		writeList(stdout, "Status rows updated", result.StatusUpdated)
+		writeList(stdout, "Process files removed", result.ProcessFilesRemoved)
+		return nil
+	case "-h", "--help", "help":
+		writeUnitUsage(stdout)
+		return nil
+	default:
+		writeUnitUsage(stderr)
+		return fmt.Errorf("unknown unit subcommand %q", args[0])
+	}
+}
+
+func runRelation(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		writeRelationUsage(stderr)
+		return errors.New("missing relation subcommand")
+	}
+
+	switch args[0] {
+	case "candidates":
+		fs := flag.NewFlagSet("relation candidates", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		result := relationgraph.Build(mustAbs(*repoRoot))
+		writeRelationCandidatesResult(stdout, result)
+		if result.RelationResult == "error" {
+			return errors.New("relation graph failed")
+		}
+		return nil
+	case "candidate-preflight":
+		fs := flag.NewFlagSet("relation candidate-preflight", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		object := fs.String("object", "", "candidate unit object")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*object) == "" {
+			writeRelationUsage(stderr)
+			return errors.New("object is required")
+		}
+		result := relationgraph.CandidatePreflight(mustAbs(*repoRoot), *object)
+		writeRelationPreflightResult(stdout, result)
+		if !result.MayContinue {
+			return errors.New("candidate relation preflight failed")
+		}
+		return nil
+	case "-h", "--help", "help":
+		writeRelationUsage(stdout)
+		return nil
+	default:
+		writeRelationUsage(stderr)
+		return fmt.Errorf("unknown relation subcommand %q", args[0])
+	}
+}
+
+func writeRelationCandidatesResult(stdout io.Writer, result relationgraph.Result) {
+	fmt.Fprintf(stdout, "relation_result: %s\n", result.RelationResult)
+	writeList(stdout, "ready_candidates", result.ReadyCandidates)
+	writeList(stdout, "candidate_order", result.CandidateOrder)
+	fmt.Fprintf(stdout, "blocked_candidates (%d):\n", len(result.BlockedCandidates))
+	if len(result.BlockedCandidates) == 0 {
+		fmt.Fprintln(stdout, "- none")
+	}
+	for _, item := range result.BlockedCandidates {
+		fmt.Fprintf(stdout, "- %s | blocked_by=%s\n", item.Object, strings.Join(defaultListValue(item.BlockedBy), ", "))
+		for _, source := range item.Sources {
+			fmt.Fprintf(stdout, "  source: %s\n", source.Path)
+		}
+	}
+	writeCandidateCycles(stdout, result.CandidateCycles)
+	writeList(stdout, "diagnostics", result.Diagnostics)
+}
+
+func writeRelationPreflightResult(stdout io.Writer, result relationgraph.PreflightResult) {
+	fmt.Fprintf(stdout, "relation_result: %s\n", result.RelationResult)
+	fmt.Fprintf(stdout, "object: %s\n", noneIfEmpty(result.Object))
+	fmt.Fprintf(stdout, "may_continue: %t\n", result.MayContinue)
+	writeList(stdout, "ready_candidates", result.ReadyCandidates)
+	writeList(stdout, "blocked_by", result.BlockedBy)
+	writeSourceRefs(stdout, "sources", result.Sources)
+	writeCandidateCycles(stdout, result.CandidateCycles)
+	writeList(stdout, "diagnostics", result.Diagnostics)
+}
+
+func writeSourceRefs(stdout io.Writer, title string, sources []relationgraph.SourceRef) {
+	fmt.Fprintf(stdout, "%s (%d):\n", title, len(sources))
+	if len(sources) == 0 {
+		fmt.Fprintln(stdout, "- none")
+		return
+	}
+	for _, source := range sources {
+		fmt.Fprintf(stdout, "- %s\n", source.Path)
+	}
+}
+
+func writeCandidateCycles(stdout io.Writer, cycles []relationgraph.CandidateCycle) {
+	fmt.Fprintf(stdout, "candidate_cycles (%d):\n", len(cycles))
+	if len(cycles) == 0 {
+		fmt.Fprintln(stdout, "- none")
+		return
+	}
+	for _, cycle := range cycles {
+		fmt.Fprintf(stdout, "- %s\n", strings.Join(cycle.Objects, " -> "))
+		for _, source := range cycle.Sources {
+			fmt.Fprintf(stdout, "  source: %s\n", source.Path)
+		}
 	}
 }
 
@@ -1001,17 +1193,17 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  init     Install specFlow files from manifest")
 	fmt.Fprintln(w, "  doctor   Check installed specFlow structure")
-	fmt.Fprintln(w, "  upgrade  Refresh framework-managed files")
 	fmt.Fprintln(w, "  build-release Build platform binaries into specflow/tooling/bin")
 	fmt.Fprintln(w, "  command  Run standard-command mechanical preflight checks and close commands")
 	fmt.Fprintln(w, "  entry    Check or sync registered entry-file managed blocks")
-	fmt.Fprintln(w, "  registry Validate docs/project_standards/_registry.md")
+	fmt.Fprintln(w, "  relation Compute candidate relation order and preflight readiness")
 	fmt.Fprintln(w, "  repository-mapping Validate docs/specs/repository_mapping.md")
 	fmt.Fprintln(w, "  review   Collect governance review scope or maintain run-state files")
 	fmt.Fprintln(w, "  process  Execute deterministic fallback cleanup")
 	fmt.Fprintln(w, "  rule     Execute deterministic rule-impact reconciliation helpers")
 	fmt.Fprintln(w, "  snapshot Rebuild or compare process snapshot fields")
 	fmt.Fprintln(w, "  status   Apply deterministic _status.md row writeback")
+	fmt.Fprintln(w, "  unit     Execute deterministic unit dependency reconciliation helpers")
 }
 
 func writeCommandUsage(w io.Writer) {
@@ -1026,9 +1218,10 @@ func writeEntryUsage(w io.Writer) {
 	fmt.Fprintln(w, "  specflowctl entry sync [--repo-root PATH] [--source FILE]")
 }
 
-func writeRegistryUsage(w io.Writer) {
+func writeRelationUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl registry validate [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl relation candidates [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl relation candidate-preflight --object UNIT [--repo-root PATH]")
 }
 
 func writeRepositoryMappingUsage(w io.Writer) {
@@ -1074,8 +1267,6 @@ func writeReviewScope(stdout io.Writer, repoRoot, flow string) error {
 	writeList(stdout, "Project entry files", scope.ProjectEntryFiles)
 	writeList(stdout, "Agent operability files", scope.AgentOperabilityFiles)
 	writeList(stdout, "Project-instance compatibility files", scope.ProjectInstanceCompatibilityFiles)
-	writeList(stdout, "Project registry files", scope.ProjectRegistryFiles)
-	writeList(stdout, "Project registry diagnostics", scope.RegistryDiagnostics)
 	writeList(stdout, "Tooling contract files", scope.ToolingContractFiles)
 	writeList(stdout, "Tooling source files", scope.ToolingSourceFiles)
 	if len(scope.ToolingScriptFiles) > 0 {
@@ -1084,7 +1275,6 @@ func writeReviewScope(stdout io.Writer, repoRoot, flow string) error {
 	if len(scope.ToolingRuntimeFiles) > 0 {
 		writeList(stdout, "Tooling runtime files", scope.ToolingRuntimeFiles)
 	}
-	writeList(stdout, "Active project-local governance-input files", scope.ActiveProjectStandardFiles)
 	return nil
 }
 
@@ -1105,16 +1295,25 @@ func requireReviewFlow(flow string, stderr io.Writer) error {
 
 func writeProcessUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl process check-work-init --object-type unit --object OBJECT [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl process check-work-validate --object-type unit --object OBJECT [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl process check-work-refresh --object-type unit --object OBJECT [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl process check-work-touch --object-type unit --object OBJECT [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl process cleanup-fallback --object-type unit --object OBJECT --from-command COMMAND --reason CODE --failure-layer LAYER [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl process cleanup-success --object-type unit --object OBJECT --mode unit_fork|unit_promote [--repo-root PATH]")
 }
 
 func writeRuleUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl rule sync-impact (--rule-refs c_b_rule_x@0.1.0 | --rule-ids b_rule_x) [--units unit_a,unit_b] [--stable-landing-unit unit_a --stable-landing-rule-refs s_b_rule_x@1.0.0] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl rule sync-impact (--rule-refs c_b_rule_x@0.1.0 | --rule-ids b_rule_x | --deleted-rule-refs c_b_rule_x@0.1.0) [--units unit_a,unit_b] [--stable-landing-unit unit_a --stable-landing-rule-refs s_b_rule_x@1.0.0] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl rule sync-impact --rule-refs c_b_rule_x@0.1.0,s_b_rule_x@0.1.0 --stable-landing-unit unit_a --stable-landing-rule-refs s_b_rule_x@0.1.0 --retargeted-units unit_b [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl rule consumers (--rule-id b_rule_x | --rule-ref s_b_rule_x@1.0.0) [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl rule release-version --rule-id b_rule_x --from-ref s_b_rule_x@0.3.0 --to-ref s_b_rule_x@0.4.0 [--repo-root PATH]")
+}
+
+func writeUnitUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl unit release-version --unit assistant --from-ref s_unit_assistant@0.8.0 --to-ref s_unit_assistant@0.9.0 [--repo-root PATH]")
 }
 
 func writeSnapshotUsage(w io.Writer) {

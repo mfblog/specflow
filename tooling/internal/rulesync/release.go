@@ -362,7 +362,7 @@ func removeProcessArtifacts(repoRoot, objectType, object string) ([]string, erro
 	if objectType != "unit" {
 		return nil, fmt.Errorf("unsupported object type %q", objectType)
 	}
-	kinds := []string{"check", "plan", "verify"}
+	kinds := []string{"check_work", "check", "plan", "verify"}
 	removed := []string{}
 	for _, kind := range kinds {
 		paths, err := snapshot.ProcessArtifactPaths(objectType, object, kind)

@@ -98,6 +98,15 @@ func TestBuildSnapshotConnectsUnitSpecAndRule(t *testing.T) {
 	if truthNode.Label != "assistant (candidate)" {
 		t.Fatalf("expected candidate layer in truth node label, got %q", truthNode.Label)
 	}
+	if snapshot.CandidateRelations.RelationResult != "pass" {
+		t.Fatalf("expected candidate relation snapshot to compute, got %+v", snapshot.CandidateRelations)
+	}
+	if !stringSlicesEqual(snapshot.CandidateRelations.ReadyCandidates, []string{"memory"}) {
+		t.Fatalf("unexpected ready candidate relations: %+v", snapshot.CandidateRelations.ReadyCandidates)
+	}
+	if len(snapshot.CandidateRelations.BlockedCandidates) != 1 || snapshot.CandidateRelations.BlockedCandidates[0].Object != "assistant" {
+		t.Fatalf("expected assistant to be blocked by candidate rule refs in fixture, got %+v", snapshot.CandidateRelations.BlockedCandidates)
+	}
 
 	data, err := json.Marshal(snapshot)
 	if err != nil {

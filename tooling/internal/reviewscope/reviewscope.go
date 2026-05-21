@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/projectstandards"
 )
 
 type SpecFlowScope struct {
@@ -24,13 +22,10 @@ type SpecFlowScope struct {
 	ProjectEntryFiles                 []string
 	AgentOperabilityFiles             []string
 	ProjectInstanceCompatibilityFiles []string
-	ProjectRegistryFiles              []string
-	RegistryDiagnostics               []string
 	ToolingContractFiles              []string
 	ToolingSourceFiles                []string
 	ToolingScriptFiles                []string
 	ToolingRuntimeFiles               []string
-	ActiveProjectStandardFiles        []string
 }
 
 func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
@@ -78,6 +73,7 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	}
 	templateProcessStateFiles := []string{
 		"specflow/templates/docs/specs/_status.md",
+		"specflow/templates/docs/specs/_check_work/README.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
 		"specflow/templates/docs/specs/_plans/README.md",
 		"specflow/templates/docs/specs/_plans/draft/README.md",
@@ -86,9 +82,6 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/templates/docs/specs/_governance_review/README.md",
 	}
 	templateGovernanceFiles := append([]string{}, templateProcessStateFiles...)
-	templateGovernanceFiles = append(templateGovernanceFiles,
-		"specflow/templates/docs/project_standards/_registry.md",
-	)
 	templateProjectInstanceFiles := []string{
 		"specflow/templates/docs/specs/repository_mapping.md",
 		"specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
@@ -103,17 +96,16 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 		"GEMINI.md",
 		"CLAUDE.md",
 	}
-	projectRegistryFiles := []string{
-		"docs/project_standards/_registry.md",
-	}
 	toolingContractFiles := []string{
 		"specflow/framework/tooling_execution_policy.md",
+		"specflow/framework/slice_work_state_protocol.md",
 		"specflow/tooling/README.md",
 	}
 	processStateContractFiles := []string{
 		"specflow/framework/candidate_handoff_contract.md",
 		"specflow/framework/downgrade_policy.md",
 		"specflow/framework/process_snapshot_contract.md",
+		"specflow/framework/slice_work_state_protocol.md",
 		"specflow/framework/recovery_policy.md",
 	}
 	agentOperabilityFiles := collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, candidateIntentFiles, guidanceSkillFiles, ruleFiles, processStateContractFiles, toolingContractFiles)
@@ -161,25 +153,12 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	required = append(required, templateEntryFiles...)
 	required = append(required, projectEntryFiles...)
 	required = append(required, agentOperabilityFiles...)
-	required = append(required, projectRegistryFiles...)
 	required = append(required, toolingContractFiles...)
 	required = append(required, toolingSourceFiles...)
 	required = append(required, toolingScriptFiles...)
 	required = append(required, toolingRuntimeFiles...)
 	if err := ensureRelativeFiles(repoRoot, required); err != nil {
 		return scope, err
-	}
-
-	validation, err := projectstandards.ValidateRegistry(repoRoot)
-	if err != nil {
-		return scope, err
-	}
-
-	activeStandardFiles := make([]string, 0, len(validation.ValidEntries))
-	for _, entry := range validation.ValidEntries {
-		if strings.TrimSpace(entry.File) != "" {
-			activeStandardFiles = append(activeStandardFiles, entry.File)
-		}
 	}
 
 	scope.FrameworkGuidelineFiles = frameworkFiles
@@ -193,13 +172,10 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	scope.ProjectEntryFiles = projectEntryFiles
 	scope.AgentOperabilityFiles = agentOperabilityFiles
 	scope.ProjectInstanceCompatibilityFiles = projectInstanceCompatibilityFiles
-	scope.ProjectRegistryFiles = projectRegistryFiles
-	scope.RegistryDiagnostics = sortAndDedupe(validation.Diagnostics)
 	scope.ToolingContractFiles = toolingContractFiles
 	scope.ToolingSourceFiles = sortAndDedupe(toolingSourceFiles)
 	scope.ToolingScriptFiles = toolingScriptFiles
 	scope.ToolingRuntimeFiles = sortAndDedupe(toolingRuntimeFiles)
-	scope.ActiveProjectStandardFiles = sortAndDedupe(activeStandardFiles)
 	return scope, nil
 }
 
@@ -236,18 +212,23 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 		"specflow/framework/onboarding_decision_policy.md",
 		"specflow/framework/implementation_change_policy.md",
 		"specflow/framework/repository_mapping_policy.md",
+		"specflow/framework/entry_index_registry.md",
+		"specflow/framework/output_baseline.md",
 		"specflow/framework/checkpoint_protocol.md",
+		"specflow/framework/slice_work_state_protocol.md",
 	}
 	designFoundationFiles = append(designFoundationFiles, candidateIntentFiles...)
 	lifecycleContractFiles := []string{
 		"specflow/framework/candidate_handoff_contract.md",
 		"specflow/framework/downgrade_policy.md",
 		"specflow/framework/process_snapshot_contract.md",
+		"specflow/framework/slice_work_state_protocol.md",
 		"specflow/framework/recovery_policy.md",
 		"specflow/framework/checkpoint_protocol.md",
 	}
 	templateProcessStateFiles := []string{
 		"specflow/templates/docs/specs/_status.md",
+		"specflow/templates/docs/specs/_check_work/README.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
 		"specflow/templates/docs/specs/_plans/README.md",
 		"specflow/templates/docs/specs/_plans/draft/README.md",
@@ -265,37 +246,14 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 		"GEMINI.md",
 		"CLAUDE.md",
 	}
-	projectRegistryFiles := []string{
-		"docs/project_standards/_registry.md",
-	}
-	projectStandardPolicyFiles := []string{
-		"specflow/framework/entry_index_registry.md",
-		"specflow/framework/project_standards_policy.md",
-		"specflow/framework/output_baseline.md",
-		"specflow/framework/project_standard_create.md",
-	}
 
 	required := append([]string{}, designFoundationFiles...)
 	required = append(required, lifecycleContractFiles...)
 	required = append(required, templateProcessStateFiles...)
 	required = append(required, templateEntryFiles...)
 	required = append(required, projectEntryFiles...)
-	required = append(required, projectRegistryFiles...)
-	required = append(required, projectStandardPolicyFiles...)
 	if err := ensureRelativeFiles(repoRoot, required); err != nil {
 		return scope, err
-	}
-
-	validation, err := projectstandards.ValidateRegistry(repoRoot)
-	if err != nil {
-		return scope, err
-	}
-
-	activeStandardFiles := make([]string, 0, len(validation.ValidEntries))
-	for _, entry := range validation.ValidEntries {
-		if strings.TrimSpace(entry.File) != "" {
-			activeStandardFiles = append(activeStandardFiles, entry.File)
-		}
 	}
 
 	scope.FrameworkGuidelineFiles = sortAndDedupe(designFoundationFiles)
@@ -304,9 +262,6 @@ func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
 	scope.TemplateGovernanceFiles = sortAndDedupe(append(lifecycleContractFiles, templateProcessStateFiles...))
 	scope.TemplateEntryFiles = templateEntryFiles
 	scope.ProjectEntryFiles = projectEntryFiles
-	scope.ProjectRegistryFiles = sortAndDedupe(append(projectRegistryFiles, projectStandardPolicyFiles...))
-	scope.RegistryDiagnostics = sortAndDedupe(validation.Diagnostics)
-	scope.ActiveProjectStandardFiles = sortAndDedupe(activeStandardFiles)
 	return scope, nil
 }
 
@@ -322,6 +277,7 @@ func collectAgentOperabilityFiles(projectEntryFiles, templateEntryFiles, templat
 		"specflow/framework/onboarding_decision_policy.md",
 		"specflow/framework/implementation_change_policy.md",
 		"specflow/framework/checkpoint_protocol.md",
+		"specflow/framework/slice_work_state_protocol.md",
 	}
 	files = append(files, projectEntryFiles...)
 	files = append(files, templateEntryFiles...)

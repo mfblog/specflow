@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/relationgraph"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
@@ -44,6 +45,7 @@ func BuildSnapshot(repoRoot string) Snapshot {
 		},
 		Diagnostics: append(mapping.Diagnostics, docDiagnostics...),
 	}
+	snapshot.CandidateRelations = relationgraph.Build(repoRoot)
 
 	statuses, err := statusfile.LoadObjectStatuses(repoRoot)
 	if err != nil {

@@ -40,8 +40,8 @@ type cleanupRule struct {
 
 var layeredRules = map[string]map[string]cleanupRule{
 	"unit": {
-		"truth_layer":          {NextCommand: "unit_check", FileKinds: []string{"check", "plan", "verify"}},
-		"gate_layer":           {NextCommand: "unit_check", FileKinds: []string{"check"}},
+		"truth_layer":          {NextCommand: "unit_check", FileKinds: []string{"check_work", "check", "plan", "verify"}},
+		"gate_layer":           {NextCommand: "unit_check", FileKinds: []string{"check_work", "check"}},
 		"plan_layer":           {NextCommand: "unit_plan", FileKinds: []string{"plan", "verify"}},
 		"implementation_layer": {NextCommand: "unit_impl", FileKinds: []string{"verify"}},
 		"evidence_layer":       {NextCommand: "unit_verify", FileKinds: []string{"verify"}},
@@ -193,7 +193,7 @@ func successCleanupPaths(repoRoot, objectType, object, mode string) ([]string, e
 		if objectType != "unit" {
 			return nil, fmt.Errorf("mode %q requires object type unit", mode)
 		}
-		paths = append(paths, filePathsForObject(objectType, object, []string{"check", "plan", "verify"})...)
+		paths = append(paths, filePathsForObject(objectType, object, []string{"check_work", "check", "plan", "verify"})...)
 	case "unit_promote":
 		if objectType != "unit" {
 			return nil, fmt.Errorf("mode %q requires object type unit", mode)
@@ -203,7 +203,7 @@ func successCleanupPaths(repoRoot, objectType, object, mode string) ([]string, e
 			return nil, err
 		}
 		paths = append(paths, candidateMainRef)
-		paths = append(paths, filePathsForObject(objectType, object, []string{"check", "plan", "verify"})...)
+		paths = append(paths, filePathsForObject(objectType, object, []string{"check_work", "check", "plan", "verify"})...)
 		appendixPaths, err := candidateAppendixPaths(repoRoot, objectType, object)
 		if err != nil {
 			return nil, err

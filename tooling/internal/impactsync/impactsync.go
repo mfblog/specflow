@@ -217,11 +217,11 @@ func applyCandidateFallback(repoRoot string, result ModuleResult, fallbackReason
 	result.FallbackReasonCode = fallbackReason
 	result.FailureLayer = failureLayer
 	result.Outcome = "invalidated"
-	processKinds := []string{"check", "plan", "verify"}
+	processKinds := []string{"check_work", "check", "plan", "verify"}
 	switch failureLayer {
 	case "gate_layer":
 		result.NextCommand = "unit_check"
-		processKinds = []string{"check"}
+		processKinds = []string{"check_work", "check"}
 	case "plan_layer":
 		result.NextCommand = "unit_plan"
 		processKinds = []string{"plan", "verify"}

@@ -1,15 +1,18 @@
 package reader
 
+import "github.com/Bingordinary/SpecFlow/specflow/tooling/internal/relationgraph"
+
 type Snapshot struct {
-	Version     int64          `json:"version"`
-	GeneratedAt string         `json:"generated_at"`
-	Project     ProjectInfo    `json:"project"`
-	Objects     []ObjectView   `json:"objects"`
-	Registry    []RegistryItem `json:"registry"`
-	Nodes       []GraphNode    `json:"nodes"`
-	Edges       []GraphEdge    `json:"edges"`
-	Sources     []SourceRef    `json:"sources"`
-	Diagnostics []Diagnostic   `json:"diagnostics"`
+	Version            int64                `json:"version"`
+	GeneratedAt        string               `json:"generated_at"`
+	Project            ProjectInfo          `json:"project"`
+	Objects            []ObjectView         `json:"objects"`
+	Registry           []RegistryItem       `json:"registry"`
+	CandidateRelations relationgraph.Result `json:"candidate_relations"`
+	Nodes              []GraphNode          `json:"nodes"`
+	Edges              []GraphEdge          `json:"edges"`
+	Sources            []SourceRef          `json:"sources"`
+	Diagnostics        []Diagnostic         `json:"diagnostics"`
 }
 
 type ProjectInfo struct {

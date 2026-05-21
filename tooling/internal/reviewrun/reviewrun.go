@@ -719,7 +719,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Does the default governance baseline scope include every required governance input family.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateProjectInstanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ProjectRegistryFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingScriptFiles, scope.ToolingRuntimeFiles, scope.ActiveProjectStandardFiles)
+				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateProjectInstanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingScriptFiles, scope.ToolingRuntimeFiles)
 			},
 		},
 		{
@@ -776,6 +776,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 				return union([]string{
 					"specflow/framework/impact_sync_policy.md",
 					"specflow/framework/process_snapshot_contract.md",
+					"specflow/framework/slice_work_state_protocol.md",
 					"specflow/framework/recovery_policy.md",
 				}, scope.TemplateGovernanceFiles)
 			},
@@ -799,13 +800,12 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 		{
 			ID:             "entry_and_project_extension",
 			SliceType:      "local",
-			ReviewQuestion: "Do entry files and project-local extensions stay bounded by framework governance.",
+			ReviewQuestion: "Do entry files and project-level agent rules stay bounded by framework governance.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
 					"specflow/framework/entry_index_registry.md",
-					"specflow/framework/project_standards_policy.md",
-					"specflow/framework/project_standard_create.md",
-				}, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.ProjectRegistryFiles, scope.ActiveProjectStandardFiles)
+					"specflow/framework/output_baseline.md",
+				}, scope.TemplateEntryFiles, scope.ProjectEntryFiles)
 			},
 		},
 		{
@@ -918,9 +918,12 @@ func specFlowDesignReviewBaselineDefinitions() []sliceDefinition {
 		{
 			ID:             "human_operability_and_extension",
 			SliceType:      "local",
-			ReviewQuestion: "Can normal users and executors operate the entry and extension surfaces without excessive burden.",
+			ReviewQuestion: "Can normal users and executors operate the entry surfaces without excessive burden.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.ProjectRegistryFiles, scope.ActiveProjectStandardFiles, scope.ProjectEntryFiles, scope.TemplateEntryFiles)
+				return union([]string{
+					"specflow/framework/entry_index_registry.md",
+					"specflow/framework/output_baseline.md",
+				}, scope.ProjectEntryFiles, scope.TemplateEntryFiles)
 			},
 		},
 		{

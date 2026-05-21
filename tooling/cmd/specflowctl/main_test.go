@@ -69,6 +69,134 @@ func TestReviewRunRequiresFlowCLI(t *testing.T) {
 	}
 }
 
+func TestProcessCheckWorkCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepo(t)
+	for _, relPath := range []string{
+		"specflow/framework/commands/unit_check.md",
+		"specflow/framework/commands/unit_plan.md",
+		"specflow/framework/process_snapshot_contract.md",
+		"specflow/framework/slice_work_state_protocol.md",
+		"specflow/framework/candidate_handoff_contract.md",
+		"specflow/framework/spec_writing_guide.md",
+		"specflow/framework/candidate_intent_policy.md",
+	} {
+		writeCLITestFile(t, filepath.Join(repoRoot, filepath.FromSlash(relPath)), "# "+filepath.Base(relPath)+"\n")
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if err := runProcess([]string{"check-work-init", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("check-work-init failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Check work-state created:") {
+		t.Fatalf("expected created output, got %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := runProcess([]string{"check-work-validate", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("check-work-validate failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Check work-state is valid:") {
+		t.Fatalf("expected valid output, got %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := runProcess([]string{"check-work-refresh", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("check-work-refresh failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Check work-state refreshed:") {
+		t.Fatalf("expected refreshed output, got %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := runProcess([]string{"check-work-touch", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("check-work-touch failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Check work-state touched:") {
+		t.Fatalf("expected touched output, got %s", stdout.String())
+	}
+}
+
+func TestUnitReleaseVersionCLI(t *testing.T) {
+	repoRoot := createCLITestRepo(t)
+	writeCLIStatusRows(t, repoRoot, ""+
+		"| `unit` | `assistant` | `yes` | `no` | `stable` | `unit_fork` | test |\n"+
+		"| `unit` | `agent` | `yes` | `no` | `stable` | `unit_fork` | test |\n")
+	writeCLIUnitReleaseSpec(t, repoRoot, "stable", "assistant", "0.9.0", nil)
+	writeCLIUnitReleaseSpec(t, repoRoot, "stable", "agent", "0.1.0", []string{"s_unit_assistant@0.8.0"})
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if err := runUnit([]string{"release-version", "--unit", "assistant", "--from-ref", "s_unit_assistant@0.8.0", "--to-ref", "s_unit_assistant@0.9.0", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("unit release-version failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "Released unit version: assistant from s_unit_assistant@0.8.0 to s_unit_assistant@0.9.0") {
+		t.Fatalf("expected release output, got %s", output)
+	}
+	if !strings.Contains(output, "- unit:agent") {
+		t.Fatalf("expected updated unit output, got %s", output)
+	}
+	content := mustReadCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_agent.md"))
+	if !strings.Contains(content, "  - s_unit_assistant@0.9.0") {
+		t.Fatalf("expected updated unit_refs, got %s", content)
+	}
+}
+
+func TestUnitReleaseVersionCLIRequiresInputs(t *testing.T) {
+	repoRoot := createCLITestRepo(t)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	err := runUnit([]string{"release-version", "--unit", "assistant", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "unit, from-ref, and to-ref are required") {
+		t.Fatalf("expected required input error, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
+	}
+}
+
+func TestRuleSyncImpactDeletedRuleRefsCLI(t *testing.T) {
+	repoRoot := createCLITestRepo(t)
+	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | test |\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), strings.Join([]string{
+		"---",
+		"rule_id: g_rule_repository_baseline",
+		"rule_scope: global",
+		"layer: stable",
+		"rule_version: 1.0.0",
+		"---",
+		"",
+		"# Global Rules",
+		"",
+	}, "\n"))
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), strings.Join([]string{
+		"---",
+		"id: demo",
+		"layer: candidate",
+		"version: 0.1.0",
+		"rule_refs: none",
+		"---",
+		"",
+		"# Demo",
+		"",
+	}, "\n"))
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if err := runRule([]string{"sync-impact", "--deleted-rule-refs", "c_b_rule_demo@0.1.0", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("rule sync-impact failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "Deleted rule refs verified no-impact") || !strings.Contains(output, "- c_b_rule_demo@0.1.0") {
+		t.Fatalf("expected deleted-rule no-impact output, got %s", output)
+	}
+	if !strings.Contains(output, "Unit results (0):") {
+		t.Fatalf("expected no unit results, got %s", output)
+	}
+}
+
 func TestReviewCollectDefaultScopePrintsToolingScriptAndRuntimeFilesCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
@@ -165,6 +293,75 @@ func TestRepositoryMappingValidateCLI(t *testing.T) {
 	}
 }
 
+func TestRelationCandidatesCLI(t *testing.T) {
+	repoRoot := createCLITestRepo(t)
+	writeCLIRelationRepo(t, repoRoot, false)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if err := runRelation([]string{"candidates", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("relation candidates failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	for _, expected := range []string{
+		"relation_result: pass",
+		"ready_candidates (1):",
+		"- beta",
+		"blocked_candidates (1):",
+		"- alpha | blocked_by=unit:beta",
+		"candidate_cycles (0):",
+	} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("expected %q in output:\n%s", expected, output)
+		}
+	}
+}
+
+func TestRelationCandidatePreflightCLIBlocksWhenUpstreamCandidateIsNotStable(t *testing.T) {
+	repoRoot := createCLITestRepo(t)
+	writeCLIRelationRepo(t, repoRoot, false)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := runRelation([]string{"candidate-preflight", "--object", "alpha", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "candidate relation preflight failed") {
+		t.Fatalf("expected preflight failure, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	for _, expected := range []string{
+		"relation_result: fail",
+		"object: alpha",
+		"may_continue: false",
+		"blocked_by (1):",
+		"- unit:beta",
+	} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("expected %q in output:\n%s", expected, output)
+		}
+	}
+}
+
+func TestRelationCandidatesCLIReportsCycles(t *testing.T) {
+	repoRoot := createCLITestRepo(t)
+	writeCLIRelationRepo(t, repoRoot, true)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if err := runRelation([]string{"candidates", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("relation candidates should report cycles without command error: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	for _, expected := range []string{
+		"relation_result: fail",
+		"candidate_cycles (1):",
+		"alpha -> beta -> alpha",
+	} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("expected %q in output:\n%s", expected, output)
+		}
+	}
+}
+
 func TestDesignReviewRunInitAndValidateCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
@@ -189,6 +386,41 @@ func TestDesignReviewRunInitAndValidateCLI(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Review run-state is valid:") {
 		t.Fatalf("expected valid output, got %s", stdout.String())
 	}
+}
+
+func writeCLIRelationRepo(t *testing.T, repoRoot string, cycle bool) {
+	t.Helper()
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
+		"# Spec Status\n\n"+
+		"## Formal Objects\n\n"+
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n"+
+		"|---|---|---|---|---|---|---|\n"+
+		"| `unit` | `alpha` | `yes` | `yes` | `candidate` | `unit_check` | alpha |\n"+
+		"| `unit` | `beta` | `yes` | `yes` | `candidate` | `unit_check` | beta |\n")
+	betaBody := "No candidate dependencies."
+	if cycle {
+		betaBody = "`c_unit_alpha@0.1.0`"
+	}
+	writeCLICandidateUnit(t, repoRoot, "alpha", "0.1.0", "`c_unit_beta@0.1.0`")
+	writeCLICandidateUnit(t, repoRoot, "beta", "0.1.0", betaBody)
+}
+
+func writeCLICandidateUnit(t *testing.T, repoRoot, object, version, body string) {
+	t.Helper()
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_"+object+".md"), strings.Join([]string{
+		"---",
+		"id: " + object,
+		"layer: candidate",
+		"version: " + version,
+		"evidence_appendix_ref: none",
+		"unit_refs: none",
+		"rule_refs: none",
+		"---",
+		"",
+		"# " + object,
+		"",
+		body,
+	}, "\n")+"\n")
 }
 
 func TestSnapshotValidateProcessUsesObjectFlagsCLI(t *testing.T) {
@@ -736,6 +968,7 @@ func createCLITestRepo(t *testing.T) string {
 		"checkpoint_protocol.md",
 		"output_baseline.md",
 		"tooling_execution_policy.md",
+		"slice_work_state_protocol.md",
 		"severity_policy.md",
 		"spec_policy.md",
 		"spec_writing_guide.md",
@@ -746,8 +979,6 @@ func createCLITestRepo(t *testing.T) string {
 		"impact_sync_policy.md",
 		"process_snapshot_contract.md",
 		"entry_index_registry.md",
-		"project_standards_policy.md",
-		"project_standard_create.md",
 		"rule_new.md",
 		"rule_extract.md",
 		"rule_bind.md",
@@ -777,6 +1008,7 @@ func createCLITestRepo(t *testing.T) string {
 	writeCLITestFile(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check\n")
 	for _, relPath := range []string{
 		"specflow/templates/docs/specs/_status.md",
+		"specflow/templates/docs/specs/_check_work/README.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
 		"specflow/templates/docs/specs/_plans/README.md",
 		"specflow/templates/docs/specs/_plans/draft/README.md",
@@ -785,7 +1017,6 @@ func createCLITestRepo(t *testing.T) string {
 		"specflow/templates/docs/specs/_governance_review/README.md",
 		"specflow/templates/docs/specs/repository_mapping.md",
 		"specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
-		"specflow/templates/docs/project_standards/_registry.md",
 		"specflow/templates/AGENTS.md",
 		"specflow/templates/GEMINI.md",
 		"specflow/templates/CLAUDE.md",
@@ -804,11 +1035,6 @@ func createCLITestRepo(t *testing.T) string {
 		writeCLITestFile(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
 	writeCLIReaderWebFiles(t, repoRoot)
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
-		"# Registry\n\n"+
-		"## Active Standards\n\n"+
-		"| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule | notes |\n"+
-		"|---|---|---|---|---|---|---|---|---|\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
 		"# Spec Status\n\n"+
 		"## Formal Objects\n\n"+
@@ -938,6 +1164,36 @@ func writeCLIUnitVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snap
 		"  - id: demo.core",
 		"    status: pass",
 	}, "\n")+"\n```\n")
+}
+
+func writeCLIUnitReleaseSpec(t *testing.T, repoRoot, layer, unit, version string, unitRefs []string) {
+	t.Helper()
+	dir := "stable"
+	prefix := "s_unit_"
+	if layer == "candidate" {
+		dir = "candidate"
+		prefix = "c_unit_"
+	}
+	unitRefsBlock := "unit_refs: none"
+	if len(unitRefs) > 0 {
+		lines := []string{"unit_refs:"}
+		for _, ref := range unitRefs {
+			lines = append(lines, "  - "+ref)
+		}
+		unitRefsBlock = strings.Join(lines, "\n")
+	}
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units", dir, prefix+unit+".md"), strings.Join([]string{
+		"---",
+		"id: " + unit,
+		"layer: " + layer,
+		"version: " + version,
+		unitRefsBlock,
+		"rule_refs: none",
+		"---",
+		"",
+		"# " + unit,
+		"",
+	}, "\n"))
 }
 
 func mustReadCLITestFile(t *testing.T, path string) string {

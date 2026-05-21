@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceInputs(t *testing.T) {
+func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_review.md"), "# review\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_design_review.md"), "# design review\n")
@@ -22,6 +22,7 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/command_policy.md"), "# command policy\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/implementation_change_policy.md"), "# implementation policy\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/checkpoint_protocol.md"), "# checkpoint\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/slice_work_state_protocol.md"), "# slice protocol\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/tooling_execution_policy.md"), "# tooling\n")
 	for _, name := range []string{
 		"candidate_handoff_contract.md",
@@ -45,12 +46,12 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_status.md"), "# status\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_check_result/README.md"), "# check\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_check_work/README.md"), "# check work\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/README.md"), "# plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/draft/README.md"), "# draft plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/active/README.md"), "# active plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_verify_result/README.md"), "# verify\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_governance_review/README.md"), "# governance review\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/project_standards/_registry.md"), "# template registry\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/repository_mapping.md"), "# repository mapping template\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# global rule template\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_check_result/README.md"), "# project check\n")
@@ -69,13 +70,6 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# Global Rules\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
-		"# Registry\n\n"+
-		"## Active Standards\n\n"+
-		"| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule | notes |\n"+
-		"|---|---|---|---|---|---|---|---|---|---|\n"+
-		"| `bad_prompt_rule` | `review_standard` | `candidate_closure_review` | `docs/project_standards/prompt_guidelines.md` | `unit_check` | `review_profile:not_supported_here` | `tighten` | `framework_wins` | invalid profile |\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/prompt_guidelines.md"), "# prompt\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/README.md"), "# tooling\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\nfunc main() {}\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/internal/demo/demo.go"), "package demo\nfunc Value() string { return \"demo\" }\n")
@@ -88,12 +82,6 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	scope, err := CollectDefaultSpecFlowScope(repoRoot)
 	if err != nil {
 		t.Fatalf("CollectDefaultSpecFlowScope: %v", err)
-	}
-	if len(scope.ActiveProjectStandardFiles) != 0 {
-		t.Fatalf("expected invalid entry to be excluded from active standard files, got %+v", scope.ActiveProjectStandardFiles)
-	}
-	if len(scope.RegistryDiagnostics) == 0 {
-		t.Fatalf("expected registry diagnostics, got none")
 	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/agent_operability_standard.md") {
 		t.Fatalf("expected agent operability file in scope, got %+v", scope.AgentOperabilityFiles)
@@ -142,6 +130,12 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/tooling_execution_policy.md") {
 		t.Fatalf("expected tooling execution policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/slice_work_state_protocol.md") {
+		t.Fatalf("expected slice work-state protocol in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.ToolingContractFiles, "specflow/framework/slice_work_state_protocol.md") {
+		t.Fatalf("expected slice work-state protocol in tooling contract scope, got %+v", scope.ToolingContractFiles)
 	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/tooling/README.md") {
 		t.Fatalf("expected tooling README in agent operability scope, got %+v", scope.AgentOperabilityFiles)
@@ -211,93 +205,6 @@ func TestCollectDefaultSpecFlowScopeExcludesInvalidRegistryEntryFromGovernanceIn
 	}
 }
 
-func TestCollectDefaultSpecFlowScopeExcludesUnsupportedSpecFlowReviewEntry(t *testing.T) {
-	repoRoot := t.TempDir()
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_review.md"), "# review\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_design_review.md"), "# design review\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_migrate.md"), "# migrate\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/agent_operability_standard.md"), "# operability\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/natural_language_routing.md"), "# routing\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/advance_policy.md"), "# advance\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/onboarding_decision_policy.md"), "# onboarding\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intent_policy.md"), "# candidate intent\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/repair.md"), "# repair\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/change.md"), "# change\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/command_policy.md"), "# command policy\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/implementation_change_policy.md"), "# implementation policy\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/checkpoint_protocol.md"), "# checkpoint\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/tooling_execution_policy.md"), "# tooling\n")
-	for _, name := range []string{
-		"candidate_handoff_contract.md",
-		"downgrade_policy.md",
-		"process_snapshot_contract.md",
-		"recovery_policy.md",
-	} {
-		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
-	}
-	for _, name := range []string{
-		"rule_new.md",
-		"rule_extract.md",
-		"rule_bind.md",
-		"rule_topology.md",
-		"rule_sync.md",
-		"rule_escape.md",
-	} {
-		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
-	}
-	writeGuidanceSkillFiles(t, repoRoot)
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_status.md"), "# status\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_check_result/README.md"), "# check\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/README.md"), "# plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/draft/README.md"), "# draft plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/active/README.md"), "# active plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_verify_result/README.md"), "# verify\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_governance_review/README.md"), "# governance review\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/project_standards/_registry.md"), "# template registry\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/repository_mapping.md"), "# repository mapping template\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# global rule template\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_check_result/README.md"), "# project check\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/README.md"), "# project plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/README.md"), "# project draft plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/active/README.md"), "# project active plans\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_verify_result/README.md"), "# project verify\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWrite(t, filepath.Join(repoRoot, "AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWrite(t, filepath.Join(repoRoot, "GEMINI.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWrite(t, filepath.Join(repoRoot, "CLAUDE.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), "# Repository Mapping\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# Global Rules\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
-		"# Registry\n\n"+
-		"## Active Standards\n\n"+
-		"| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule | notes |\n"+
-		"|---|---|---|---|---|---|---|---|---|---|\n"+
-		"| `bad_overlay_rule` | `review_standard` | `governance_baseline_review` | `docs/project_standards/prompt_guidelines.md` | `spec_flow_review` | `review_profile:` | `tighten` | `framework_wins` | malformed selector |\n")
-	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/prompt_guidelines.md"), "# prompt\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/README.md"), "# tooling\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\nfunc main() {}\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/internal/demo/demo.go"), "package demo\nfunc Value() string { return \"demo\" }\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module example.com/specflow\n\ngo 1.22\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
-	writeToolingScriptFiles(t, repoRoot)
-	writeReaderWebFiles(t, repoRoot)
-
-	scope, err := CollectDefaultSpecFlowScope(repoRoot)
-	if err != nil {
-		t.Fatalf("CollectDefaultSpecFlowScope: %v", err)
-	}
-	if len(scope.ActiveProjectStandardFiles) != 0 {
-		t.Fatalf("expected unsupported spec_flow_review entry to be excluded from active standard files, got %+v", scope.ActiveProjectStandardFiles)
-	}
-	if len(scope.RegistryDiagnostics) == 0 {
-		t.Fatalf("expected registry diagnostics, got none")
-	}
-}
-
 func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContract(t *testing.T) {
 	repoRoot := t.TempDir()
 	for _, relPath := range []string{
@@ -314,6 +221,7 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 		"specflow/framework/repository_mapping_policy.md",
 		"specflow/framework/output_baseline.md",
 		"specflow/framework/checkpoint_protocol.md",
+		"specflow/framework/slice_work_state_protocol.md",
 		"specflow/framework/candidate_intent_policy.md",
 		"specflow/framework/candidate_intents/repair.md",
 		"specflow/framework/candidate_intents/change.md",
@@ -322,11 +230,10 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 		"specflow/framework/process_snapshot_contract.md",
 		"specflow/framework/recovery_policy.md",
 		"specflow/framework/entry_index_registry.md",
-		"specflow/framework/project_standards_policy.md",
-		"specflow/framework/project_standard_create.md",
 		"specflow/framework/commands/unit_check.md",
 		"specflow/templates/docs/specs/_status.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
+		"specflow/templates/docs/specs/_check_work/README.md",
 		"specflow/templates/docs/specs/_plans/README.md",
 		"specflow/templates/docs/specs/_plans/draft/README.md",
 		"specflow/templates/docs/specs/_plans/active/README.md",
@@ -341,11 +248,6 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	} {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
-	mustWrite(t, filepath.Join(repoRoot, "docs/project_standards/_registry.md"), ""+
-		"# Registry\n\n"+
-		"## Active Standards\n\n"+
-		"| standard_id | type | surface | file | consumed_by | applies_to | effect | conflict_rule | notes |\n"+
-		"|---|---|---|---|---|---|---|---|---|\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
 		"# Spec Status\n\n"+
 		"## Formal Objects\n\n"+
@@ -377,8 +279,14 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/candidate_intents/change.md") {
 		t.Fatalf("expected change candidate intent in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
-	if !containsString(scope.ProjectRegistryFiles, "specflow/framework/output_baseline.md") {
-		t.Fatalf("expected output baseline in design human-operability scope, got %+v", scope.ProjectRegistryFiles)
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/output_baseline.md") {
+		t.Fatalf("expected output baseline in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/slice_work_state_protocol.md") {
+		t.Fatalf("expected slice work-state protocol in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.TemplateGovernanceFiles, "specflow/framework/slice_work_state_protocol.md") {
+		t.Fatalf("expected slice work-state protocol in lifecycle contract scope, got %+v", scope.TemplateGovernanceFiles)
 	}
 }
 

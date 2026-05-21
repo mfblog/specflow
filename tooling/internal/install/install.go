@@ -17,11 +17,6 @@ type InitResult struct {
 	Skipped int
 }
 
-type UpgradeResult struct {
-	Updated int
-	Skipped int
-}
-
 type DoctorResult struct {
 	Failures []string
 	Warnings []string
@@ -63,74 +58,6 @@ func Init(repoRoot string, force bool) (InitResult, error) {
 	return result, nil
 }
 
-func Upgrade(repoRoot string) (UpgradeResult, error) {
-	items, err := manifest.Load(repoRoot)
-	if err != nil {
-		return UpgradeResult{}, err
-	}
-
-	result := UpgradeResult{}
-	for _, item := range items {
-		source := filepath.Join(repoRoot, "specflow", filepath.FromSlash(item.SourceRelative))
-		dest := filepath.Join(repoRoot, filepath.FromSlash(item.DestinationRelative))
-		if _, err := os.Stat(dest); os.IsNotExist(err) {
-			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-				return result, fmt.Errorf("mkdir %s: %w", item.DestinationRelative, err)
-			}
-			if err := copyFile(source, dest); err != nil {
-				return result, fmt.Errorf("install missing %s: %w", item.DestinationRelative, err)
-			}
-			result.Updated++
-			continue
-		}
-
-		if isManagedEntryFile(item.DestinationRelative) {
-			sourceContent, err := os.ReadFile(source)
-			if err != nil {
-				return result, err
-			}
-			destContent, err := os.ReadFile(dest)
-			if err != nil {
-				return result, err
-			}
-			sourceBlock, err := managedblock.Extract(string(sourceContent))
-			if err != nil {
-				return result, err
-			}
-			destBlock, err := managedblock.Extract(string(destContent))
-			if err != nil {
-				return result, err
-			}
-			if sourceBlock == destBlock {
-				continue
-			}
-			if err := replaceManagedBlockFile(source, dest); err != nil {
-				return result, fmt.Errorf("update managed block %s: %w", item.DestinationRelative, err)
-			}
-			result.Updated++
-			continue
-		}
-
-		if item.Mode != "framework" {
-			result.Skipped++
-			continue
-		}
-		same, err := fileContentsEqual(source, dest)
-		if err != nil {
-			return result, err
-		}
-		if same {
-			continue
-		}
-		if err := copyFile(source, dest); err != nil {
-			return result, fmt.Errorf("update %s: %w", item.DestinationRelative, err)
-		}
-		result.Updated++
-	}
-
-	return result, nil
-}
-
 func Doctor(repoRoot string) (DoctorResult, error) {
 	items, err := manifest.Load(repoRoot)
 	if err != nil {
@@ -160,26 +87,6 @@ func isManagedEntryFile(path string) bool {
 	default:
 		return false
 	}
-}
-
-func replaceManagedBlockFile(source, dest string) error {
-	sourceContent, err := os.ReadFile(source)
-	if err != nil {
-		return err
-	}
-	destContent, err := os.ReadFile(dest)
-	if err != nil {
-		return err
-	}
-	block, err := managedblock.Extract(string(sourceContent))
-	if err != nil {
-		return err
-	}
-	updated, err := managedblock.Replace(string(destContent), block)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(dest, []byte(updated), 0o644)
 }
 
 func syncManagedEntryFile(source, dest string) error {
@@ -230,18 +137,6 @@ func copyFile(source, dest string) error {
 		return err
 	}
 	return os.WriteFile(dest, content, 0o644)
-}
-
-func fileContentsEqual(left, right string) (bool, error) {
-	leftContent, err := os.ReadFile(left)
-	if err != nil {
-		return false, err
-	}
-	rightContent, err := os.ReadFile(right)
-	if err != nil {
-		return false, err
-	}
-	return string(leftContent) == string(rightContent), nil
 }
 
 func checkManagedEntryConsistency(repoRoot string, result *DoctorResult) error {
