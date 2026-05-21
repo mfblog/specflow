@@ -60,7 +60,9 @@ The tooling layer may:
 6. cleanup
 7. sync
 8. render read-only local views
-9. maintain mechanical review run-state fields
+9. maintain mechanical slice work-state fields when the adopting owner defines the state carrier and stale rules
+10. maintain mechanical review run-state fields
+11. maintain mechanical unit-check work-state fields
 
 The tooling layer must not:
 
@@ -70,6 +72,11 @@ The tooling layer must not:
 4. replace review severity or final conclusion judgment owned by the active review policy
 5. become a second semantic source of truth
 6. write reader-derived conclusions back into project files
+
+Slice work-state tooling follows `specflow/framework/slice_work_state_protocol.md`.
+The protocol defines generic carrier, slice, stale, and tooling-boundary standards.
+Each command or review policy still owns its own adoption rules, carrier paths, slice catalog, closure criteria, and final conclusions.
+The CLI must not infer adoption or create a new durable state carrier from the protocol alone.
 
 `impact_sync` is a governance concept first.
 The current CLI exposes only the deterministic pieces already justified by rules.
@@ -85,62 +92,80 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - bootstrap framework-managed files
 2. `doctor`
    - inspect installation and binary freshness health
-3. `upgrade`
-   - refresh framework-managed files and managed blocks
-4. `build-release`
+3. `build-release`
    - rebuild cross-platform binaries
-5. `entry check`
+4. `entry check`
    - inspect registered entry managed-block consistency
-6. `entry sync`
+5. `entry sync`
    - sync registered project-side entry managed blocks from one explicit source
-7. `registry validate`
-   - validate `docs/project_standards/_registry.md`
-8. `repository-mapping validate`
+6. `repository-mapping validate`
    - validate `docs/specs/repository_mapping.md` path rules against `_status.md` and declared rule files
-9. `review collect-default-scope --flow <review_flow>`
+7. `review collect-default-scope --flow <review_flow>`
    - collect the deterministic default scope for the explicit review flow
-10. `review run-init --flow <review_flow>`
+8. `review run-init --flow <review_flow>`
    - create or reuse the full-scope run-state file for the explicit review flow
-11. `review run-validate --flow <review_flow>`
+9. `review run-validate --flow <review_flow>`
    - validate required run-state fields, timestamps, all fixed statuses including closed statuses, baseline slices, score state when present, and dynamic slice parent links
-12. `review run-refresh --flow <review_flow>`
+11. `review run-refresh --flow <review_flow>`
    - recompute slice input fingerprints for an open run-state file, mark changed `passed` slices as `stale`, and refresh `last_updated_at`
    - for `spec_flow_review`, the generated baseline includes `supporting_truth_lifecycle_convergence` so stable/candidate supporting truth paths are reviewed as an explicit cross-convergence slice
-13. `review run-touch --flow <review_flow>`
+12. `review run-touch --flow <review_flow>`
    - refresh only `last_updated_at`
-14. `command preflight`
+13. `command preflight`
    - mechanically verify a standard command's entry state from `_status.md` and required process snapshot validation results
    - this entry does not judge candidate completeness, evidence sufficiency, downgrade, or promotion readiness
-15. `command close`
+14. `command close`
    - close one standard command from explicit standardized outcome flags
    - default mode is dry-run; `--apply` is required before `_status.md` or process files are changed
    - this entry validates fixed state combinations and process gates, but it does not choose outcomes, judge evidence, or repair contradictory caller input
-16. `snapshot rebuild`
+15. `snapshot rebuild`
    - rebuild current process snapshots from bound truth
-17. `snapshot validate-process`
+16. `snapshot validate-process`
    - compare one process file against rebuilt current truth
-18. `process cleanup-fallback`
+17. `process cleanup-fallback`
    - execute deterministic layered fallback cleanup for one unit
-19. `process cleanup-success`
+18. `process cleanup-success`
    - execute deterministic success cleanup for one unit
-20. `status set-unit`
+19. `process check-work-init`
+   - create or reuse `docs/specs/_check_work/unit/{unit}.md` for `unit_check`
+   - writes only the baseline slice skeleton, timestamps, truth fingerprint, and input fingerprints
+20. `process check-work-validate`
+   - validate `unit_check` work-state shape, legal statuses, repository-relative input paths, and dynamic slice parent links
+21. `process check-work-refresh`
+   - recompute work-state fingerprints, mark changed `passed` slices as `stale`, propagate stale status to dependent cross-check slices, and update `last_updated_at`
+22. `process check-work-touch`
+   - refresh only `last_updated_at` for a valid `unit_check` work-state file
+   - the `process check-work-*` commands use the `unit_check` adoption rules for `slice_work_state_protocol.md`; they do not create a general-purpose work-state carrier
+23. `status set-unit`
    - write one deterministic `unit` row in `_status.md` as a low-level status tool
-21. `status set-object`
+24. `status set-object`
    - write one unified object row in `_status.md` as a low-level status tool
-22. `rule sync-impact`
+25. `rule sync-impact`
    - compute rule-specific scope, resolve rule-only exceptions into generic impact input, then execute deterministic downstream fallback for the fixed affected objects through internal `impact_sync`
+   - when a rule-governance topology round deleted an exact Rule ref only after proving it has no current-layer unit consumers, the caller may pass that ref through `--deleted-rule-refs`; the command verifies the ref is absent from rule files and current-layer unit `rule_refs`, then reports a no-impact result with no unit fallback
    - when stable landing self-exemption is needed, the caller must pass both `--stable-landing-unit` and exact `--stable-landing-rule-refs`
    - when the same stable landing round retargeted candidate units to those stable landing rule refs, the caller must pass those units through `--retargeted-units` and must select both the old candidate Rule refs and the new stable Rule refs through exact `--rule-refs`
-   - the caller may narrow the derived unit subset with `--units`, but at least one rule trigger input must still be provided through `--rule-refs` or `--rule-ids`; retargeted stable landing requires exact `--rule-refs`
-23. `rule consumers`
+   - the caller may narrow the derived unit subset with `--units`, but at least one rule trigger input must still be provided through `--rule-refs`, `--rule-ids`, or `--deleted-rule-refs`; retargeted stable landing requires exact `--rule-refs`
+26. `rule consumers`
    - read current-layer `unit` frontmatter `rule_refs` and print the consumers for one `rule_id` or exact `rule_ref`
-24. `rule release-version`
+27. `rule release-version`
    - publish an already-existing stable Rule version by retargeting current-layer consumers from `--from-ref` to `--to-ref`
    - candidate current-layer objects are rewritten directly
    - stable current-layer objects are auto-forked to candidate before their candidate `rule_refs` are rewritten
    - same-object stable appendices explicitly linked by the stable main Spec are retargeted into candidate appendices during the auto-fork, including Markdown link targets and direct same-object path literals
    - stale same-object candidate appendices are removed before the auto-fork writes current candidate appendices
    - stable unit forks additionally write `candidate_intent=change`
+28. `unit release-version`
+   - publish an already-existing stable unit version by retargeting current-layer `unit_refs` from `--from-ref` to `--to-ref`
+   - candidate current-layer units are rewritten directly, unsafe current-round check work, check, plan, and verify process files are removed when present, and the unit is routed to `unit_check`
+   - stable current-layer units are rewritten directly without forking or candidate creation and are routed to `unit_stable_verify`
+   - when no current-layer unit still uses the old stable unit ref, the command reports a no-op result
+29. `relation candidates`
+   - compute the current candidate advancement relation graph from explicit refs
+   - print `relation_result`, `ready_candidates`, `blocked_candidates`, `candidate_cycles`, and `diagnostics`
+30. `relation candidate-preflight`
+   - check whether one current candidate unit is in the ready set
+   - print the same relation fields narrowed to the requested object and fail when the target is blocked
 
 ## Reader Command Surface
 
@@ -163,6 +188,7 @@ Rules:
 7. the server does not watch files and does not expose a server-sent event stream.
 8. `/api/source` may return source text only from allowed truth and support files under the requested repository root.
 9. the hidden build-fingerprint query command is reserved for freshness checks.
+10. the snapshot includes `candidate_relations`, which is rebuilt from the same read-only relation calculation used by `specflowctl relation`.
 
 Reader front-end rules:
 
@@ -216,6 +242,7 @@ Rules:
 12. after reusing an open run-state file, callers must run `review run-refresh` before continuing review work so changed inputs become stale slices instead of hidden drift
 13. `review run-refresh` is the authoritative command for updating `input_fingerprint`; callers must not write manual hash output into run-state files
 14. `spec_flow_review` baseline run state includes `supporting_truth_lifecycle_convergence` to force explicit review of fork, promote, cleanup, rule release, and tooling paths for stable and candidate supporting truth
+15. review run-state slice fields follow the generic protocol only through the adoption rules in the active review policy
 
 ## Command Preflight
 
@@ -240,6 +267,29 @@ Rules:
 2. a failed preflight is not cleanup by itself; cleanup remains owned by command policy and `process cleanup-fallback`
 3. manual hashes, shell checksums, editor display, and temporary scripts may diagnose a mismatch but must not replace this entry
 
+## Relation Commands
+
+`relation candidates` and `relation candidate-preflight` are read-only mechanical relation commands.
+They calculate candidate advancement order from already-written explicit references.
+
+Recognized reference inputs are current candidate unit main Specs, same-layer non-evidence appendix files linked from those Specs, `unit_refs`, `rule_refs`, Markdown `.md` links, and version refs such as `c_unit_trace@0.3.0` or `c_b_rule_runtime_model@0.4.0`.
+Evidence appendix references are reported as reference-only edges and do not block advancement.
+Natural-language prose alone is not a relation input.
+
+Usage:
+
+```bash
+./specflow/tooling/bin/specflowctl-linux-amd64 relation candidates
+./specflow/tooling/bin/specflowctl-linux-amd64 relation candidate-preflight --object trace
+```
+
+Rules:
+
+1. the commands never edit project files
+2. the commands never judge candidate completeness, evidence quality, or promotion readiness
+3. `candidate-preflight` must fail when the requested candidate is blocked by another current candidate unit, a candidate Rule, or a candidate progression cycle
+4. the reader todo panel may use the same result to group candidates as ready, blocked, or cycle, and must show `unit_advance:{unit}` only for ready candidates
+
 ## Tooling Input Set
 
 The default `spec_flow_review` tooling review input set is:
@@ -263,7 +313,7 @@ The tooling helper script input set is:
 2. `specflow/tooling/scripts/tooling_fingerprint.sh`
 3. `specflow/tooling/scripts/tooling_fingerprint.ps1`
 
-The manifest is included because it controls which framework-managed and project-managed files `init`, `upgrade`, and `doctor` inspect or write.
+The manifest is included because it controls which framework-managed and project-managed files `init` and `doctor` inspect or write.
 Reader front-end files under `specflow/tooling/reader/web/**` are runtime files, not binary freshness inputs.
 Tooling helper scripts are review inputs because they rebuild or select binaries for the installed tooling source.
 They are not binary freshness inputs unless they change compiled binary behavior.
@@ -360,9 +410,11 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --object-type unit --object ai --from-command unit_promote --reason evidence_incomplete --failure-layer evidence_layer
 ./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type unit --object ai --stable yes --candidate no --active-layer stable --next-command unit_fork
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_app_config_topology@0.2.0 --units ai
+./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --deleted-rule-refs c_b_rule_unused@0.1.0
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_runtime_model@0.3.0,s_b_rule_runtime_model@0.3.0 --stable-landing-unit skill --stable-landing-rule-refs s_b_rule_runtime_model@0.3.0 --retargeted-units agent
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule consumers --rule-ref s_b_rule_runtime_model@0.4.0
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule release-version --rule-id b_rule_runtime_model --from-ref s_b_rule_runtime_model@0.3.0 --to-ref s_b_rule_runtime_model@0.4.0
+./specflow/tooling/bin/specflowctl-linux-amd64 unit release-version --unit assistant --from-ref s_unit_assistant@0.8.0 --to-ref s_unit_assistant@0.9.0
 ```
 
 ## Freshness Rule

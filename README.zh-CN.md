@@ -63,7 +63,33 @@
 
 ## 接入仓库
 
-对大多数团队来说，最简单的接入方式是：
+对大多数团队来说，最简单的首次接入方式是在项目根目录直接运行安装脚本。
+它采用默认的本地 framework 方式，也就是把 `specflow/` 加进你的项目 `.gitignore`：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Bingordinary/SpecFlow/main/tooling/scripts/install.sh | bash
+```
+
+Windows PowerShell：
+
+```powershell
+irm https://raw.githubusercontent.com/Bingordinary/SpecFlow/main/tooling/scripts/install.ps1 | iex
+```
+
+安装脚本只做这些事：
+
+1. 把这个仓库 clone 到 `./specflow`
+2. 把 `specflow/` 写入 `.gitignore`
+3. 安装当前平台需要的 `specflowctl`、`specflow-reader` 和 `SHA256SUMS`
+4. 执行 `specflowctl init`
+
+安装脚本只用于首次接入。
+如果 `./specflow` 已经存在，它会停下来，并提示你继续使用已有的 pull helper。
+
+从 GitHub 链接直接运行脚本是可行的，因为 `raw.githubusercontent.com` 返回的是脚本文本。
+但这本质上是在执行远程代码：运行前应该先检查脚本内容；如果你的环境需要固定来源，就不要用 `main`，而是把 URL 固定到可信的 tag 或 commit。
+
+如果你想自己控制每一步，或者想把 `specflow/` 提交进项目仓库，而不是忽略它，可以继续使用手动接入方式：
 
 1. 在你的项目根目录里，把这个仓库 clone 到名为 `specflow` 的目录
 2. 确认最终路径是 `./specflow`
@@ -119,7 +145,8 @@ Add-Content .gitignore "specflow/"
 ## 准备本地二进制文件
 
 `specflow/tooling/bin/` 不提交到 git。
-执行 `init` 前，在你的项目根目录运行 pull 脚本：
+如果你使用了上面的安装脚本，这一步已经完成。
+如果你使用手动接入，或者要刷新已有的本地 `specflow/` 目录，在项目根目录运行 pull 脚本：
 
 ```bash
 specflow/tooling/scripts/pull_with_release.sh
@@ -136,7 +163,8 @@ Release 绑定的是 tooling 输入 fingerprint，不是每一次 `specflow` 源
 
 ## 快速开始
 
-当 `specflow/` 已经进入你的仓库、本地二进制文件也已就位后，在仓库根目录执行：
+如果你使用了安装脚本，`init` 已经执行过。
+如果你使用手动接入，当 `specflow/` 已经进入你的仓库、本地二进制文件也已就位后，在仓库根目录执行：
 
 ```bash
 <specflow-binary> init

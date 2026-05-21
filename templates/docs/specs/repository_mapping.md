@@ -36,3 +36,12 @@ Explain which paths are governed roots, support surfaces, ignored paths, and for
 ## 4. Path Ownership
 
 List implementation paths and support paths that are not fully captured by the Object Registry.
+
+Process support paths include:
+
+1. `docs/specs/_status.md`
+2. `docs/specs/_check_work/**`
+3. `docs/specs/_check_result/**`
+4. `docs/specs/_plans/**`
+5. `docs/specs/_verify_result/**`
+6. `docs/specs/_governance_review/**`

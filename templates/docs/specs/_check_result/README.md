@@ -1,6 +1,7 @@
 # Check Result Directory
 
 This directory stores unit check pass snapshots.
+In-progress `unit_check` slice work is stored under `docs/specs/_check_work/unit/{unit}.md`; that work-state file is not a pass gate.
 
 Allowed object type:
 

@@ -1,7 +1,5 @@
 ## Host Instructions
 
-If the current command or governance flow explicitly consumes project-local standards, follow only the registered files selected by `docs/project_standards/_registry.md` for the current `surface`, `consumed_by`, and `applies_to` scope.
-
 Content outside the managed block below belongs to the host repository.
 
 Keep repository-specific rules outside the managed block. `specFlow` tooling may update only the managed block.
@@ -73,6 +71,6 @@ It must not be required for the user to understand the answer.
 
 ### 6. Detailed Rule Owners
 
-Detailed routing, object, command, advance, checkpoint, implementation, migration, rule-governance, project-standard, and entry-sync rules live under `specflow/framework/`.
+Detailed routing, object, command, advance, checkpoint, implementation, migration, rule-governance, and entry-sync rules live under `specflow/framework/`.
 Project truth inputs live under `docs/specs/`.
 <!-- SPECFLOW:END -->

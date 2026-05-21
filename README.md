@@ -64,7 +64,33 @@ Natural language is the safety net: when you are unsure which step to take, desc
 
 ## Add To Your Repository
 
-For most teams, the simplest setup is:
+For most teams, the simplest first-time setup is to run the installer from your project root.
+It uses the default local-framework setup, where `specflow/` is ignored by your project repository:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Bingordinary/SpecFlow/main/tooling/scripts/install.sh | bash
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/Bingordinary/SpecFlow/main/tooling/scripts/install.ps1 | iex
+```
+
+The installer does exactly this:
+
+1. clone this repository into `./specflow`
+2. add `specflow/` to `.gitignore`
+3. install the current platform's `specflowctl`, `specflow-reader`, and `SHA256SUMS`
+4. run `specflowctl init`
+
+The installer is only for first-time setup.
+If `./specflow` already exists, it stops and tells you to use the existing pull helper instead.
+
+Running the script directly from a GitHub link works because `raw.githubusercontent.com` serves the script as plain text.
+Treat that command as remote code execution: inspect the script before running it, or pin the URL to a trusted tag or commit instead of `main` when your environment needs a fixed source.
+
+Manual setup is still available when you want to control each step yourself, or when you want to commit `specflow/` into your project instead of ignoring it:
 
 1. from your project root, clone this repository into a directory named `specflow`
 2. make sure the final path is `./specflow`
@@ -120,7 +146,8 @@ See [tooling/README.md](./tooling/README.md) for tooling details.
 ## Prepare Local Binaries
 
 `specflow/tooling/bin/` is not committed to git.
-Before running `init`, run the pull helper from your project root:
+If you used the installer above, this step is already complete.
+After manual setup, or when refreshing an existing local `specflow/` checkout, run the pull helper from your project root:
 
 ```bash
 specflow/tooling/scripts/pull_with_release.sh
@@ -137,7 +164,8 @@ The Release is tied to the tooling input fingerprint, not to every `specflow` so
 
 ## Quick Start
 
-After the binaries are in place and `specflow/` is in your repository, run from the project root:
+If you used the installer, `init` has already run.
+After manual setup, once the binaries are in place and `specflow/` is in your repository, run from the project root:
 
 ```bash
 <specflow-binary> init

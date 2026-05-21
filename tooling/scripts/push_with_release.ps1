@@ -10,6 +10,8 @@ function Show-Usage {
 Usage: push_with_release.ps1
 
 Push the current SpecFlow branch to origin.
+Before pushing, update existing project entry files' specFlow Addendum blocks
+from the current templates.
 When the current branch is main, if the current tooling fingerprint does not
 already have a remote release tag, create and push specflow-tooling-<fingerprint>
 to trigger the GitHub Release workflow.
@@ -70,6 +72,131 @@ function New-FingerprintRoot {
     }
 }
 
+$ManagedBegin = "<!-- SPECFLOW:BEGIN -->"
+$ManagedEnd = "<!-- SPECFLOW:END -->"
+
+function Get-ManagedBlockLines {
+    param(
+        [string]$Path
+    )
+
+    $lines = [string[]][System.IO.File]::ReadAllLines($Path)
+    $begin = -1
+    $end = -1
+    for ($i = 0; $i -lt $lines.Length; $i++) {
+        if ($lines[$i] -eq $ManagedBegin) {
+            if ($begin -ne -1) {
+                throw "Managed block begin marker must appear exactly once in $Path."
+            }
+            $begin = $i
+        }
+        if ($lines[$i] -eq $ManagedEnd) {
+            if ($end -ne -1) {
+                throw "Managed block end marker must appear exactly once in $Path."
+            }
+            $end = $i
+        }
+    }
+
+    if ($begin -eq -1 -or $end -eq -1 -or $begin -ge $end) {
+        throw "Managed block markers are missing or out of order in $Path."
+    }
+
+    [string[]]$lines[$begin..$end]
+}
+
+function Set-ManagedBlock {
+    param(
+        [string]$Path,
+        [string[]]$BlockLines
+    )
+
+    $lines = [string[]][System.IO.File]::ReadAllLines($Path)
+    $begin = -1
+    $end = -1
+    for ($i = 0; $i -lt $lines.Length; $i++) {
+        if ($lines[$i] -eq $ManagedBegin) {
+            if ($begin -ne -1) {
+                throw "Managed block begin marker must appear exactly once in $Path."
+            }
+            $begin = $i
+        }
+        if ($lines[$i] -eq $ManagedEnd) {
+            if ($end -ne -1) {
+                throw "Managed block end marker must appear exactly once in $Path."
+            }
+            $end = $i
+        }
+    }
+
+    if ($begin -eq -1 -or $end -eq -1 -or $begin -ge $end) {
+        throw "Managed block markers are missing or out of order in $Path."
+    }
+
+    $updated = [System.Collections.Generic.List[string]]::new()
+    if ($begin -gt 0) {
+        $updated.AddRange([string[]]$lines[0..($begin - 1)])
+    }
+    $updated.AddRange($BlockLines)
+    if ($end -lt ($lines.Length - 1)) {
+        $updated.AddRange([string[]]$lines[($end + 1)..($lines.Length - 1)])
+    }
+
+    $originalText = [System.IO.File]::ReadAllText($Path)
+    if ($originalText.Contains("`r`n")) {
+        $newline = "`r`n"
+    }
+    else {
+        $newline = "`n"
+    }
+    $updatedText = ([string[]]$updated.ToArray()) -join $newline
+    if ($originalText.EndsWith("`r`n") -or $originalText.EndsWith("`n")) {
+        $updatedText += $newline
+    }
+
+    if ($updatedText -eq $originalText) {
+        return $false
+    }
+
+    $encoding = [System.Text.UTF8Encoding]::new($false)
+    [System.IO.File]::WriteAllText($Path, $updatedText, $encoding)
+    return $true
+}
+
+function Sync-ExistingEntryBlocks {
+    param(
+        [string]$SpecFlowRoot,
+        [string]$ProjectRoot
+    )
+
+    $changed = $false
+    $found = $false
+    foreach ($entry in @("AGENTS.md", "CLAUDE.md", "GEMINI.md")) {
+        $source = Join-Path (Join-Path $SpecFlowRoot "templates") $entry
+        $target = Join-Path $ProjectRoot $entry
+        if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+            continue
+        }
+        $found = $true
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "Entry template missing: $source"
+        }
+
+        $block = Get-ManagedBlockLines $source
+        if (Set-ManagedBlock $target $block) {
+            Write-Host "Updated $entry specFlow Addendum."
+            $changed = $true
+        }
+    }
+
+    if (-not $found) {
+        Write-Host "No existing project entry files found to update."
+    }
+    elseif (-not $changed) {
+        Write-Host "Existing project entry Addendum blocks are already current."
+    }
+}
+
 if ($Help) {
     Show-Usage
     exit 0
@@ -77,6 +204,7 @@ if ($Help) {
 
 $scriptDir = Split-Path -Parent $PSCommandPath
 $repoRoot = (Resolve-Path (Join-Path $scriptDir "../..")).Path
+$projectRoot = (Resolve-Path (Join-Path $repoRoot "..")).Path
 $fingerprintRoot = $null
 
 try {
@@ -96,6 +224,8 @@ try {
     if ([string]::IsNullOrWhiteSpace($remoteUrl)) {
         throw "Git remote 'origin' is missing."
     }
+
+    Sync-ExistingEntryBlocks $repoRoot $projectRoot
 
     Write-Host "Pushing $branch to origin..."
     Invoke-CheckedNative "git" @("push", "-u", "origin", $branch)
