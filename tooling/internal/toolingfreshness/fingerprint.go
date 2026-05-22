@@ -17,10 +17,6 @@ var fingerprintRoots = []string{
 	"specflow/tooling/internal",
 }
 
-var fingerprintRuntimeRoots = []string{
-	"specflow/tooling/reader/web",
-}
-
 var fingerprintSingleFiles = []string{
 	"specflow/tooling/go.mod",
 	"specflow/tooling/manifest.tsv",
@@ -43,14 +39,6 @@ func SourceInputFiles(repoRoot string) ([]string, error) {
 	files := []string{}
 	for _, relDir := range fingerprintRoots {
 		inputFiles, err := sourceFilesUnder(repoRoot, relDir, ".go")
-		if err != nil {
-			return nil, err
-		}
-		files = append(files, inputFiles...)
-	}
-
-	for _, relDir := range fingerprintRuntimeRoots {
-		inputFiles, err := sourceFilesUnder(repoRoot, relDir, "")
 		if err != nil {
 			return nil, err
 		}

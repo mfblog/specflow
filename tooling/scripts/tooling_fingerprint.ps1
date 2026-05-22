@@ -24,22 +24,6 @@ function Add-GoTree {
     }
 }
 
-function Add-FileTree {
-    param(
-        [string]$RelativeRoot
-    )
-
-    $absoluteRoot = Join-Path $repoRoot ($RelativeRoot -replace '/', [System.IO.Path]::DirectorySeparatorChar)
-    if (-not (Test-Path -LiteralPath $absoluteRoot -PathType Container)) {
-        throw "Required tooling runtime directory missing: $RelativeRoot"
-    }
-
-    Get-ChildItem -LiteralPath $absoluteRoot -Recurse -File | ForEach-Object {
-        $relativePath = $_.FullName.Substring($repoRoot.Length + 1).Replace('\', '/')
-        $records.Add($relativePath)
-    }
-}
-
 function Add-RequiredFile {
     param(
         [string]$RelativePath
@@ -65,7 +49,6 @@ function Add-OptionalFile {
 
 Add-GoTree "specflow/tooling/cmd"
 Add-GoTree "specflow/tooling/internal"
-Add-FileTree "specflow/tooling/reader/web"
 Add-RequiredFile "specflow/tooling/go.mod"
 Add-RequiredFile "specflow/tooling/manifest.tsv"
 Add-OptionalFile "specflow/tooling/go.sum"

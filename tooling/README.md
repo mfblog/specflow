@@ -20,7 +20,7 @@ Official platform binaries are GitHub Release assets.
 Release tags use the tooling fingerprint form `specflow-tooling-<12-character-fingerprint>`.
 The release workflow builds binaries from the tagged source and uploads the binaries plus `SHA256SUMS`.
 The release is tied to the tooling input fingerprint, not to every source commit.
-The fingerprint includes Go command code, Go internal code, required tooling metadata, and Reader web runtime files.
+The fingerprint includes Go command code, Go internal code, and required tooling metadata.
 
 Pull the repository and install the current platform binaries for the pulled tooling source:
 
@@ -307,11 +307,13 @@ The current tooling source input set is:
 4. `specflow/tooling/manifest.tsv`
 5. `specflow/tooling/go.sum` when it exists
 
-The tooling helper script input set is:
+The tooling helper script input set is every regular file under:
 
-1. `specflow/tooling/scripts/build_release.sh`
-2. `specflow/tooling/scripts/tooling_fingerprint.sh`
-3. `specflow/tooling/scripts/tooling_fingerprint.ps1`
+```text
+specflow/tooling/scripts/**
+```
+
+This includes install, pull-with-release, push-with-release, build-release, and tooling-fingerprint scripts.
 
 The manifest is included because it controls which framework-managed and project-managed files `init` and `doctor` inspect or write.
 Reader front-end files under `specflow/tooling/reader/web/**` are runtime files, not binary freshness inputs.
