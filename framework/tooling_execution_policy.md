@@ -152,9 +152,7 @@ The required tooling-contract document set is:
    - `specflow/tooling/manifest.tsv`
    - `specflow/tooling/go.sum` when it exists
 5. the tooling helper script files:
-   - `specflow/tooling/scripts/build_release.sh`
-   - `specflow/tooling/scripts/tooling_fingerprint.sh`
-   - `specflow/tooling/scripts/tooling_fingerprint.ps1`
+   - all regular files under `specflow/tooling/scripts/**`
 6. the runtime reader web files:
    - `specflow/tooling/reader/web/**`
 

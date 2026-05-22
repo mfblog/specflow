@@ -338,9 +338,7 @@ The default scope includes:
    - `specflow/tooling/go.mod`
    - `specflow/tooling/manifest.tsv`
    - `specflow/tooling/go.sum` when it exists
-   - `specflow/tooling/scripts/build_release.sh`
-   - `specflow/tooling/scripts/tooling_fingerprint.sh`
-   - `specflow/tooling/scripts/tooling_fingerprint.ps1`
+   - `specflow/tooling/scripts/**`
    - `specflow/tooling/reader/web/**`
 
 Default scope excludes project-instance truth and project-instance state files under `docs/specs/` from business-truth review.
@@ -424,7 +422,7 @@ Local slices review one owner area for internal closure, side effects, contract 
    - reviews `natural_language_routing.md`, `advance_policy.md`, `onboarding_decision_policy.md`, `command_policy.md`, `spec_flow_migrate.md`, `candidate_intent_policy.md`, `candidate_intents/*.md`, `commands/*.md`, and `skills/*/SKILL.md`
    - verifies exact command routing, exact advance routing, exact project-instance migration routing, natural-language routing, onboarding source routing, unit command progression, and guidance entry behavior
 4. `truth_and_implementation_gates`
-   - reviews `spec_policy.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `onboarding_decision_policy.md`, `candidate_intent_policy.md`, `candidate_intents/*.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, and `recovery_policy.md`
+   - reviews `spec_policy.md`, `spec_writing_guide.md`, `spec_authoring_baseline.md`, `repository_mapping_policy.md`, `implementation_change_policy.md`, `onboarding_decision_policy.md`, `candidate_intent_policy.md`, `candidate_intents/*.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, and `recovery_policy.md`
    - verifies truth ownership, candidate source fields, evidence appendix ownership, implementation diversion, handoff, fallback, and recovery rules
 5. `shared_governance`
    - reviews `natural_language_routing.md` only where it defines the rule-governance branch

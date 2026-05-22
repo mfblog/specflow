@@ -191,6 +191,11 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	if !containsString(scope.ToolingScriptFiles, "specflow/tooling/scripts/build_release.sh") {
 		t.Fatalf("expected build release script in tooling script scope, got %+v", scope.ToolingScriptFiles)
 	}
+	for _, relPath := range currentToolingScriptFiles() {
+		if !containsString(scope.ToolingScriptFiles, relPath) {
+			t.Fatalf("expected current tooling script in tooling script scope: %s, got %+v", relPath, scope.ToolingScriptFiles)
+		}
+	}
 	if containsString(scope.ToolingSourceFiles, "specflow/tooling/scripts/tooling_fingerprint.sh") {
 		t.Fatalf("expected shell fingerprint script outside tooling source scope, got %+v", scope.ToolingSourceFiles)
 	}
@@ -335,9 +340,23 @@ func writeReaderWebFiles(t *testing.T, repoRoot string) {
 
 func writeToolingScriptFiles(t *testing.T, repoRoot string) {
 	t.Helper()
-	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/build_release.sh"), "#!/usr/bin/env bash\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/tooling_fingerprint.sh"), "#!/usr/bin/env bash\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/tooling/scripts/tooling_fingerprint.ps1"), "param()\n")
+	for _, relPath := range currentToolingScriptFiles() {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# script\n")
+	}
+}
+
+func currentToolingScriptFiles() []string {
+	return []string{
+		"specflow/tooling/scripts/build_release.sh",
+		"specflow/tooling/scripts/install.ps1",
+		"specflow/tooling/scripts/install.sh",
+		"specflow/tooling/scripts/pull_with_release.ps1",
+		"specflow/tooling/scripts/pull_with_release.sh",
+		"specflow/tooling/scripts/push_with_release.ps1",
+		"specflow/tooling/scripts/push_with_release.sh",
+		"specflow/tooling/scripts/tooling_fingerprint.ps1",
+		"specflow/tooling/scripts/tooling_fingerprint.sh",
+	}
 }
 
 func containsString(values []string, target string) bool {

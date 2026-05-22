@@ -224,6 +224,11 @@ func TestReviewCollectDefaultScopePrintsToolingScriptAndRuntimeFilesCLI(t *testi
 	if !strings.Contains(output, "specflow/tooling/scripts/build_release.sh") {
 		t.Fatalf("expected build release script in collect-default-scope output, got %s", output)
 	}
+	for _, relPath := range currentCLIToolingScriptFiles() {
+		if !strings.Contains(output, relPath) {
+			t.Fatalf("expected tooling script in collect-default-scope output: %s, got %s", relPath, output)
+		}
+	}
 	if !strings.Contains(output, "Tooling runtime files") {
 		t.Fatalf("expected tooling runtime heading, got %s", output)
 	}
@@ -972,6 +977,7 @@ func createCLITestRepo(t *testing.T) string {
 		"severity_policy.md",
 		"spec_policy.md",
 		"spec_writing_guide.md",
+		"spec_authoring_baseline.md",
 		"repository_mapping_policy.md",
 		"candidate_handoff_contract.md",
 		"downgrade_policy.md",
@@ -1006,7 +1012,7 @@ func createCLITestRepo(t *testing.T) string {
 		writeCLITestFile(t, filepath.Join(repoRoot, relPath), "# skill\n")
 	}
 	writeCLITestFile(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check\n")
-	for _, relPath := range []string{
+	for _, relPath := range append([]string{
 		"specflow/templates/docs/specs/_status.md",
 		"specflow/templates/docs/specs/_check_work/README.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
@@ -1026,12 +1032,9 @@ func createCLITestRepo(t *testing.T) string {
 		"specflow/tooling/README.md",
 		"specflow/tooling/cmd/specflowctl/main.go",
 		"specflow/tooling/internal/demo/demo.go",
-		"specflow/tooling/scripts/build_release.sh",
-		"specflow/tooling/scripts/tooling_fingerprint.sh",
-		"specflow/tooling/scripts/tooling_fingerprint.ps1",
 		"specflow/tooling/go.mod",
 		"specflow/tooling/manifest.tsv",
-	} {
+	}, currentCLIToolingScriptFiles()...) {
 		writeCLITestFile(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
 	writeCLIReaderWebFiles(t, repoRoot)
@@ -1048,6 +1051,20 @@ func createCLITestRepo(t *testing.T) string {
 
 func createCLISnapshotRepo(t *testing.T) string {
 	return createCLISnapshotRepoWithStatus(t, "unit_impl")
+}
+
+func currentCLIToolingScriptFiles() []string {
+	return []string{
+		"specflow/tooling/scripts/build_release.sh",
+		"specflow/tooling/scripts/install.ps1",
+		"specflow/tooling/scripts/install.sh",
+		"specflow/tooling/scripts/pull_with_release.ps1",
+		"specflow/tooling/scripts/pull_with_release.sh",
+		"specflow/tooling/scripts/push_with_release.ps1",
+		"specflow/tooling/scripts/push_with_release.sh",
+		"specflow/tooling/scripts/tooling_fingerprint.ps1",
+		"specflow/tooling/scripts/tooling_fingerprint.sh",
+	}
 }
 
 func createCLISnapshotRepoWithStatus(t *testing.T, unitNextCommand string) string {

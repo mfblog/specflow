@@ -132,10 +132,12 @@ func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
 	if len(toolingSourceFiles) == 0 {
 		return scope, fmt.Errorf("default tooling source files are incomplete")
 	}
-	toolingScriptFiles := []string{
-		"specflow/tooling/scripts/build_release.sh",
-		"specflow/tooling/scripts/tooling_fingerprint.sh",
-		"specflow/tooling/scripts/tooling_fingerprint.ps1",
+	toolingScriptFiles, err := walkRelativeFiles(repoRoot, "specflow/tooling/scripts", "")
+	if err != nil {
+		return scope, err
+	}
+	if len(toolingScriptFiles) == 0 {
+		return scope, fmt.Errorf("default tooling script files are incomplete")
 	}
 	toolingRuntimeFiles, err := walkRelativeFiles(repoRoot, "specflow/tooling/reader/web", "")
 	if err != nil {

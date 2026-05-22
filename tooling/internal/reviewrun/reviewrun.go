@@ -751,6 +751,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 				return union([]string{
 					"specflow/framework/spec_policy.md",
 					"specflow/framework/spec_writing_guide.md",
+					"specflow/framework/spec_authoring_baseline.md",
 					"specflow/framework/repository_mapping_policy.md",
 					"specflow/framework/implementation_change_policy.md",
 					"specflow/framework/onboarding_decision_policy.md",
@@ -835,8 +836,8 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			ID:             "command_to_process_state_convergence",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Do command outcomes and process-state contracts converge into resumable execution.",
-			DependsOn:      []string{"routing_and_command_policy", "process_and_impact_state"},
-			InputFiles:     reviewDependencyFiles("routing_and_command_policy", "process_and_impact_state"),
+			DependsOn:      []string{"routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates"},
+			InputFiles:     reviewDependencyFiles("routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates"),
 		},
 		{
 			ID:             "truth_to_implementation_convergence",
