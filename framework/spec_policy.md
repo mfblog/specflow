@@ -64,7 +64,10 @@ unit_refs:
 
 A `rule` is a shared constraint.
 
-Rules are not lifecycle command targets. Rule governance files may create, bind, extract, sync, or retarget rules, but rule consumers are derived only from current-layer unit `rule_refs`.
+Rules are not lifecycle command targets.
+Rule governance files may create, bind, extract, sync, or retarget rules.
+Stable global rules are default inputs for every current-layer unit.
+Bound shared rule consumers are derived only from current-layer unit `rule_refs`.
 
 Rule files use these paths:
 
@@ -76,7 +79,9 @@ Rule scope is resolved from rule truth:
 1. `rule_scope: global` or an id beginning with `g_rule_` means repository-wide rule
 2. `rule_scope: bound` or an id beginning with `b_rule_` means bound shared rule
 
-Rule files must not store consumer lists. `bound_objects` is not the source of rule consumers. The consumer graph is always reconstructed from current-layer unit frontmatter `rule_refs`.
+Rule files must not store consumer lists.
+`bound_objects` is not the source of rule consumers.
+The bound shared rule consumer graph is reconstructed from current-layer unit frontmatter `rule_refs`.
 
 `promotion_owner_unit` remains valid rule frontmatter. It identifies the unit responsible for promoting or owning a rule promotion decision. It does not create a consumer binding.
 

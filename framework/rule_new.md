@@ -40,7 +40,7 @@ Before any write, read:
 9. `docs/specs/repository_mapping.md` when a new rule id is created or the rule object map may change
 10. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
-Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
+Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
 ## 3. Rule Identity
 
@@ -61,14 +61,14 @@ When a stable sibling already exists, the candidate file must carry the exact in
 2. Build the repository-wide duplicate-truth review set from current `_status.md` rows and current-layer unit Specs.
 3. Check that the same formal rule truth is not already present in another rule file or duplicated as unit-local formal truth.
 4. Choose the smallest stable rule boundary. One rule file must carry one coherent shared constraint.
-5. If the target rule already has a stable sibling, derive the current consumer set from current-layer unit `rule_refs` and choose exactly one valid `promotion_owner_unit`.
+5. If the target bound shared rule already has a stable sibling, derive the current consumer set from current-layer unit `rule_refs` and choose exactly one valid `promotion_owner_unit`.
 6. Before the first file mutation, capture the recovery baseline required by `recovery_policy.md` Section 6.5.
 7. Create or update the candidate rule file.
-8. If the rule has no formal current consumers after this write, keep it only when the file explicitly records intentional unbound retention with:
+8. If the bound shared rule has no formal current consumers after this write, keep it only when the file explicitly records intentional unbound retention with:
    - `unbound_retention: intentional`
    - `unbound_retention_reason: <why this rule is intentionally independent now>`
    - `unbound_retention_owner: rule_new`
-9. If the rule has formal current consumers, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields.
+9. If the bound shared rule has formal current consumers, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields.
 10. Do not write consumer lists or `bound_objects` into the rule file.
 11. Update `docs/specs/repository_mapping.md` in the same round when the rule object map changed.
 12. Run `rule_sync` after any rule-file write or rule object-map write.
@@ -95,7 +95,7 @@ The output must report:
 4. whether a stable sibling exists
 5. the `promotion_owner_unit` result when required
 6. the duplicate-truth review set used for the decision
-7. whether the rule is formally consumed through current-layer unit `rule_refs`
+7. whether the bound shared rule is formally consumed through current-layer unit `rule_refs`
 8. any repository mapping writeback
 9. confirmation that the rule file does not carry `bound_objects`
 10. the `rule_sync` result or the recovery and rerouting result

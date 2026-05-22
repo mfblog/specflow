@@ -64,7 +64,9 @@ Commands must apply these rules:
 
 ## 4. Rule Consumption
 
-Rule consumers are derived only from current-layer unit frontmatter `rule_refs`.
+Stable global rules are repository-wide default inputs for every current-layer unit.
+
+Bound shared rule consumers are derived only from current-layer unit frontmatter `rule_refs`.
 
 Commands and governance flows must not read consumers from rule files. Rule files must not carry `bound_objects` as consumer truth.
 
@@ -141,8 +143,9 @@ Rules:
 1. if a command depends on bound `rule` truth, it must read the exact currently bound rule files
 2. if a command depends on the formal global baseline, it must read `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 3. if a command depends on repository path ownership, it must read `docs/specs/repository_mapping.md`
-4. Rule consumers are derived only from current-layer unit frontmatter `rule_refs`
-5. Rule files must not record `bound_objects` as consumer truth
+4. Stable global rules are repository-wide default inputs for every current-layer unit
+5. Bound shared rule consumers are derived only from current-layer unit frontmatter `rule_refs`
+6. Rule files must not record `bound_objects` as consumer truth
 
 ### 8.4 Impact Reconciliation
 

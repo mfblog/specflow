@@ -37,11 +37,11 @@ Before any write, read:
 8. the target unit current-layer main Spec
 9. the target rule file
 10. any currently bound rule file that may be replaced by this binding
-11. every current-layer unit main Spec needed to derive the repository-wide consumer set for each touched rule from `rule_refs`
+11. every current-layer unit main Spec needed to derive the repository-wide bound shared rule consumer set for each touched rule from `rule_refs`
 12. `specflow/framework/commands/unit_fork.md` when the target unit is currently stable
 13. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may affect a repository-wide default rule
 
-Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
+Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
 ## 3. Procedure
 
@@ -49,16 +49,16 @@ Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 2. Resolve the target unit's current layer from `_status.md`.
 3. If the target unit is stable, stop before writeback and return control to `rule_escape` to raise a `prerequisite_action` checkpoint requiring `unit_fork:{unit}`.
 4. Read the target unit's current `rule_refs` and record any previous rule ref that this round will remove or replace.
-5. Build the repository-wide consumer set for the target rule and every previous touched rule from current-layer unit `rule_refs`.
+5. Build the repository-wide bound shared rule consumer set for the target rule and every previous touched rule from current-layer unit `rule_refs`.
 6. Before the first file mutation, capture the recovery baseline required by `recovery_policy.md` Section 6.5.
 7. Rewrite the target candidate unit `rule_refs` using exact rule refs and the sorting rules from `spec_writing_guide.md`.
 8. Rewrite the target candidate unit body so the relevant behavior or acceptance chain explains the rule consumption.
 9. If a touched candidate rule has a stable sibling, validate that exactly one `promotion_owner_unit` remains correct after this binding change. If that cannot be proven from current truth, stop and return to `rule_escape`.
-10. If removing or retargeting the previous ref would leave a touched rule with no formal current consumers, do not leave its terminal state implicit:
+10. If removing or retargeting the previous ref would leave a touched bound shared rule with no formal current consumers, do not leave its terminal state implicit:
     - delete it only when cleanup is already proven legal by current repository truth
     - otherwise write intentional unbound-retention fields when current truth proves the rule should remain independently authored
     - otherwise stop and return to `rule_escape` so the terminal-state decision can route to `rule_topology`
-11. Remove unbound-retention fields from any touched rule that still has formal current consumers after the binding change.
+11. Remove unbound-retention fields from any touched bound shared rule that still has formal current consumers after the binding change.
 12. Do not write consumer lists or `bound_objects` into touched rule files.
 13. Run `rule_sync` after any unit `rule_refs` write or touched rule-file write.
 14. Ensure target unit candidate process state falls back after the candidate main Spec changes. If the `rule_sync` handoff does not include that target unit, use the candidate fallback rules from `impact_sync_policy.md` and `recovery_policy.md`.

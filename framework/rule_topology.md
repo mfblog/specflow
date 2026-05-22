@@ -32,10 +32,12 @@ It is used when the rule structure itself must change, such as splitting, mergin
 The topology graph is:
 
 ```text
-rule -> unit
+bound rule -> unit
 ```
 
-The graph is derived only from current-layer unit frontmatter `rule_refs`.
+The bound rule graph is derived only from current-layer unit frontmatter `rule_refs`.
+
+Stable global rules are repository-wide defaults and affect every current-layer unit.
 
 Rule files must not store consumer truth. `bound_objects` must not be read or written as a consumer list.
 
@@ -51,14 +53,14 @@ Before any write, read:
 6. `docs/specs/_status.md`
 7. `docs/specs/repository_mapping.md`
 8. every touched rule file that may be split, merged, renamed, replaced, retired, or intentionally kept
-9. every current-layer unit main Spec needed to derive the full current consumer graph for touched rules
+9. every current-layer unit main Spec needed to derive the full current bound shared rule graph for touched rules, or every current-layer `_status.md` unit row when a touched rule is a stable global rule
 10. `specflow/framework/commands/unit_fork.md` when any affected stable unit would require binding writeback
 11. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the topology change may become a repository-wide default rule
 
 ## 4. Procedure
 
 1. Confirm that the request is a topology change or terminal-state decision, not simple rule authoring, extraction, binding, or sync.
-2. Resolve the complete affected unit set from current-layer unit `rule_refs`.
+2. Resolve the complete affected unit set from current-layer unit `rule_refs` for bound shared rules, or from every current-layer `_status.md` unit row for stable global rules.
 3. If current repository truth cannot prove the complete affected unit set, stop before writeback and return to `rule_escape`.
 4. If any affected unit is stable and the topology plan requires changing that unit's binding or body truth, stop before writeback and return control to `rule_escape` to raise a `prerequisite_action` checkpoint requiring `unit_fork:{unit}` for each such unit.
 5. Decide the topology plan explicitly:
@@ -72,12 +74,12 @@ Before any write, read:
 8. When a new candidate rule is created for a brand-new rule object, write `rule_version: 0.1.0`.
 9. When a candidate rule has a stable sibling, write or validate exactly one valid `promotion_owner_unit`.
 10. Rewrite every affected candidate unit `rule_refs` and body explanation required by the topology plan.
-11. For every touched rule file with no formal current consumers after writeback, either delete it or write intentional unbound-retention fields in the same round.
-12. For every touched rule file with formal current consumers after writeback, remove or stop carrying unbound-retention fields.
+11. For every touched bound shared rule file with no formal current consumers after writeback, either delete it or write intentional unbound-retention fields in the same round.
+12. For every touched bound shared rule file with formal current consumers after writeback, remove or stop carrying unbound-retention fields.
 13. Do not write consumer lists or `bound_objects` into rule files.
 14. Update `docs/specs/repository_mapping.md` in the same round when the topology plan changes the rule object map.
 15. Run `rule_sync` after any rule-file write, unit `rule_refs` write, or rule object-map write.
-    - when the only remaining effect for a touched Rule is terminal deletion after Step 11 has already proven that no current-layer unit consumes the deleted exact rule ref, run the `rule_sync` terminal no-impact path with that exact deleted ref
+    - when the only remaining effect for a touched bound shared Rule is terminal deletion after Step 11 has already proven that no current-layer unit consumes the deleted exact rule ref, run the `rule_sync` terminal no-impact path with that exact deleted ref
     - that no-impact path may close only when affected candidate units are `none`, affected stable units are `none`, and no current-layer unit `rule_refs` still contains the deleted ref
     - if the deleted ref still has a current-layer consumer, the topology round must not claim no-impact closure; it must route through the normal affected-unit reconciliation or recover before rerouting
 
@@ -100,7 +102,7 @@ The output must report:
 
 1. the recognized topology intent
 2. the touched rule objects
-3. the affected unit set derived from current-layer `rule_refs`
+3. the affected unit set derived from current-layer `rule_refs` for bound shared rules or from all current-layer units for stable global rules
 4. the topology result for each touched rule file
 5. every rule file created, updated, deleted, or intentionally retained
 6. the written `rule_version` for each created or updated candidate rule
@@ -108,6 +110,6 @@ The output must report:
 8. every unit candidate binding rewrite
 9. any repository mapping writeback
 10. confirmation that touched rule files do not carry `bound_objects`
-11. the deleted Rule no-impact result when a touched Rule file was deleted after having no current consumers
+11. the deleted bound shared Rule no-impact result when a touched Rule file was deleted after having no current consumers
 12. the `rule_escape` prerequisite checkpoint result when stable unit fork prerequisites block writeback
 13. the `rule_sync` result or the recovery and rerouting result

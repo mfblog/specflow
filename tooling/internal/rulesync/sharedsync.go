@@ -56,6 +56,7 @@ type moduleBinding struct {
 
 type sharedFile struct {
 	RuleID             string
+	RuleScope          string
 	Layer              string
 	FileRef            string
 	VersionRef         string
@@ -384,6 +385,11 @@ func loadModuleBindings(repoRoot string) (map[string]moduleBinding, map[string][
 
 func buildScopeModules(moduleBindings map[string]moduleBinding, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile, options Options, removedBindingScope map[string]bool) ([]string, error) {
 	affected := map[string]bool{}
+	if len(stableGlobalRuleRefsForScope(options.RuleRefs, options.RuleIDs, sharedFilesByRef, sharedFilesByID)) > 0 {
+		for module := range moduleBindings {
+			affected[module] = true
+		}
+	}
 	for module, binding := range moduleBindings {
 		selectedRefs, err := selectedRuleRefsForObject(binding.RuleRefs, options.RuleRefs, options.RuleIDs, sharedFilesByRef, sharedFilesByID)
 		if err != nil {
@@ -411,13 +417,17 @@ func buildScopeModules(moduleBindings map[string]moduleBinding, sharedFilesByRef
 func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]moduleBinding, options Options, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile, boundModulesOnlyFileRefs map[string]bool, removedBindingScope map[string]bool, retargetedUnitSet map[string]bool) ([]impactsync.ScopedModule, error) {
 	result := make([]impactsync.ScopedModule, 0, len(scopeModules))
 	stableLandingSharedRefSet := makeStringSet(options.StableLandingRuleRefs)
+	stableGlobalRuleRefs := stableGlobalRuleRefsForScope(options.RuleRefs, options.RuleIDs, sharedFilesByRef, sharedFilesByID)
 	for _, module := range scopeModules {
 		binding := moduleBindings[module]
 		selectedRuleRefs, err := selectedRuleRefsForObject(binding.RuleRefs, options.RuleRefs, options.RuleIDs, sharedFilesByRef, sharedFilesByID)
 		if err != nil {
 			return nil, err
 		}
-		invalidatingRuleRefs := filterInvalidatingRuleRefs(selectedRuleRefs, sharedFilesByRef, boundModulesOnlyFileRefs)
+		invalidatingRuleRefs := unionSortedStrings(
+			filterInvalidatingRuleRefs(selectedRuleRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
+			stableGlobalRuleRefs,
+		)
 		if binding.Status.ActiveLayer == "stable" && options.StableLandingModule == module {
 			invalidatingRuleRefs = subtractStringSet(invalidatingRuleRefs, stableLandingSharedRefSet)
 		}
@@ -434,6 +444,37 @@ func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]mod
 		})
 	}
 	return result, nil
+}
+
+func stableGlobalRuleRefsForScope(scopedRefs, scopedIDs []string, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile) []string {
+	refs := []string{}
+	for _, ref := range scopedRefs {
+		shared, ok := sharedFilesByRef[ref]
+		if ok && isStableGlobalRule(shared) {
+			refs = append(refs, shared.VersionRef)
+		}
+	}
+	for _, sharedID := range scopedIDs {
+		for _, shared := range sharedFilesByID[sharedID] {
+			if isStableGlobalRule(shared) {
+				refs = append(refs, shared.VersionRef)
+			}
+		}
+	}
+	return normalizeStrings(refs)
+}
+
+func isStableGlobalRule(shared sharedFile) bool {
+	if shared.Layer != "stable" {
+		return false
+	}
+	if shared.RuleScope == "global" {
+		return true
+	}
+	if strings.HasPrefix(shared.RuleID, "g_rule_") {
+		return true
+	}
+	return strings.HasPrefix(shared.VersionRef, "s_g_rule_")
 }
 
 func validateRetargetedUnits(moduleBindings map[string]moduleBinding, sharedFilesByRef map[string]sharedFile, options Options) (map[string]bool, error) {
@@ -679,6 +720,8 @@ func parseSharedFile(relPath, content string) (sharedFile, error) {
 		switch key {
 		case "rule_id":
 			shared.RuleID = value
+		case "rule_scope":
+			shared.RuleScope = value
 		case "layer":
 			shared.Layer = value
 		case "rule_version":

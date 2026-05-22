@@ -66,7 +66,8 @@ or lists.
 
 `unit_snapshot` records stable unit dependencies resolved from current unit `unit_refs`.
 
-`rule_snapshot` records rules resolved from current unit `rule_refs`.
+`rule_snapshot` records stable global rules plus bound shared rules resolved from current unit `rule_refs`.
+Stable global rules are included even when the unit has `rule_refs: none`.
 
 If a snapshot field is present, tooling must validate it against current truth.
 
@@ -317,7 +318,7 @@ At minimum, validation must rebuild:
 2. `spec_file_ref`, `spec_version_ref`, and `spec_fingerprint` for active plan files
 3. `unit_appendix_snapshot` from explicitly referenced unit appendix files
 4. `unit_snapshot` from current unit `unit_refs`
-5. `rule_snapshot` from current unit `rule_refs`
+5. `rule_snapshot` from stable global rules and current unit `rule_refs`
 6. `acceptance_item_set` from the current unit truth for check and verify files
 7. `acceptance_item_plan_coverage` against the current candidate acceptance item ids for active plan files
 

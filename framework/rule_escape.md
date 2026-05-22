@@ -37,7 +37,7 @@ Before routing or checkpointing, read only the smallest durable truth needed for
 8. `docs/specs/repository_mapping.md` when path ownership or rule object registration matters
 9. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
-Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
+Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
 ## 3. Routing Decisions
 

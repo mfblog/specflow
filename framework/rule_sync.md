@@ -9,7 +9,7 @@ It is the rule-specific impact discovery layer. Once the affected unit set is fi
 `rule_sync` may:
 
 1. resolve the changed or explicitly in-scope rule refs and rule ids
-2. rebuild the repository-wide rule consumer graph from current-layer unit `rule_refs`
+2. rebuild the bound-rule consumer graph from current-layer unit `rule_refs`
 3. determine which current-layer units are affected by the rule change
 4. interpret rule-specific execution-local exceptions
 5. pass the fixed affected unit set and resolved exceptions to `impact_sync`
@@ -35,7 +35,7 @@ Before impact is computed, read:
 5. `docs/specs/repository_mapping.md`
 6. `docs/specs/_status.md`
 7. every in-scope rule file
-8. every current-layer unit main Spec needed to rebuild the consumer graph from `rule_refs`
+8. every current-layer unit main Spec needed to rebuild the bound-rule consumer graph from `rule_refs`
 
 If the caller changed rule truth, unit bindings, or the rule object map, that writeback must already be present before `rule_sync` computes impact.
 
@@ -43,7 +43,10 @@ If the rule object map changed, `docs/specs/repository_mapping.md` must already 
 
 ## 3. Consumer Source
 
-The only formal consumer source is current-layer unit frontmatter `rule_refs`.
+Stable global rules are default inputs for every current-layer unit.
+When a changed or explicitly in-scope rule ref or rule id resolves to a stable global rule, the affected unit set is every current-layer unit row in `docs/specs/_status.md`.
+
+For bound shared rules, the only formal consumer source is current-layer unit frontmatter `rule_refs`.
 
 Rule files must not provide consumer truth. `bound_objects` is ignored as a consumer source and must not be reconciled.
 
@@ -52,13 +55,14 @@ Rule files must not provide consumer truth. `bound_objects` is ignored as a cons
 The caller may provide:
 
 1. `rule_refs`
-   - exact changed or in-scope refs such as `s_b_rule_runtime_model@0.4.0`
+   - exact changed or in-scope refs such as `s_b_rule_runtime_model@0.4.0` or `s_g_rule_repository_baseline@1.1.0`
 2. `rule_ids`
    - changed or in-scope rule ids when exact refs are not enough by themselves
+   - a rule id that resolves to a stable global rule selects the all-current-unit impact path
 3. `units`
    - an optional narrowing set after at least one rule trigger is known
 4. `deleted_rule_refs`
-   - exact rule refs for Rule files deleted by the caller after the caller already proved from current-layer unit `rule_refs` that those refs have no current consumers
+   - exact bound shared rule refs for Rule files deleted by the caller after the caller already proved from current-layer unit `rule_refs` that those refs have no current consumers
 5. `current_stable_landing_unit`
    - the unit whose stable truth was written in the same round
 6. `stable_landing_rule_refs`
@@ -81,16 +85,17 @@ If any deleted ref still exists as a Rule file or still has a current-layer unit
 1. Load the in-scope rule files and record their exact refs.
 2. Validate that `docs/specs/repository_mapping.md` is current enough for the in-scope rule object map. If it is missing or conflicting, stop and return control to `rule_escape`.
 3. Read `_status.md` and every needed current-layer unit main Spec.
-4. Rebuild the real consumer graph from unit `rule_refs`.
+4. Rebuild the real bound shared rule consumer graph from unit `rule_refs`.
 5. For `deleted_rule_refs`, verify the terminal no-impact condition:
    - the deleted ref is no longer present under `docs/specs/rules/**`
    - no current-layer unit frontmatter `rule_refs` contains the deleted ref
    - when every input is only `deleted_rule_refs`, close with affected candidate units `none`, affected stable units `none`, and no `impact_sync` fallback
 6. Derive the affected unit set:
+   - include every current-layer unit when a selected rule ref or rule id resolves to a stable global rule
    - include units that currently bind a changed exact rule ref
    - include units that currently bind a changed rule id when the change applies across that id's current relevant refs
    - include units explicitly retargeted by a same-round stable landing
-   - do not include a sibling rule layer only because it has the same `rule_id`
+   - do not include a sibling rule layer only because it has the same `rule_id`, except for the stable global rule all-unit path above
 7. Apply only the proven execution-local exceptions:
    - stable landing self-exemption for the exact `current_stable_landing_unit` and exact `stable_landing_rule_refs`
    - explicit candidate fallback for validated `retargeted_units`
@@ -102,7 +107,7 @@ If any deleted ref still exists as a Rule file or still has a current-layer unit
 9. Hand the fixed result to `impact_sync`.
 10. When using tooling, run `specflowctl rule sync-impact` with the exact `--rule-refs`, `--rule-ids`, or `--deleted-rule-refs` and any already-proven exception flags.
 
-If repository truth is insufficient, return control to `rule_escape` without performing fallback cleanup. The caller that already mutated truth must then apply its rule-governance recovery baseline before rerouting.
+If repository truth is insufficient, return control to `rule_escape` without performing fallback cleanup. A caller that already mutated truth must follow its own post-mutation recovery rule or caller-owned blocked transition before rerouting. If the caller has no such post-mutation rule, it must stop before mutation instead of leaving mutated truth without an owner.
 
 ## 6. Fallback Result
 

@@ -40,7 +40,7 @@ Before any write, read:
 11. `specflow/framework/commands/unit_fork.md` when any writeback-required unit is currently stable
 12. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
-Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
+Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
 ## 3. Procedure
 
@@ -59,7 +59,7 @@ Consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 10. Update `docs/specs/repository_mapping.md` in the same round when the rule object map changed.
 11. Rewrite each source candidate unit so the extracted truth no longer remains as duplicated unit-local formal truth.
 12. Rewrite each affected candidate unit's `rule_refs` and body explanation required by the extraction result.
-13. Remove unbound-retention fields from the target rule when the resulting current-layer unit `rule_refs` graph has consumers.
+13. Remove unbound-retention fields from the target rule when the resulting current-layer unit `rule_refs` graph has bound shared rule consumers.
 14. If the resulting rule remains intentionally unbound, write intentional unbound-retention fields in the target rule; otherwise reject closure.
 15. Do not write consumer lists or `bound_objects` into any rule file.
 16. Run `rule_sync` after any rule-file write or unit `rule_refs` write.

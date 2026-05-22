@@ -15,7 +15,10 @@ Impact sync may be triggered by changes to:
 
 ## 2. Rule Consumers
 
-Rule consumers are derived only from current-layer unit frontmatter `rule_refs`.
+Stable global rules are repository-wide defaults.
+When stable global rule truth changes, every current-layer unit listed in `docs/specs/_status.md` is an affected unit.
+
+Bound shared rule consumers are derived only from current-layer unit frontmatter `rule_refs`.
 
 Rule files do not own consumer lists.
 

@@ -314,6 +314,48 @@ Body changed.
 	}
 }
 
+func TestSyncImpactStableGlobalRuleAffectsEveryCurrentUnit(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		options Options
+	}{
+		{
+			name:    "exact ref",
+			options: Options{RuleRefs: []string{"s_g_rule_repository_baseline@1.1.0"}},
+		},
+		{
+			name:    "rule id",
+			options: Options{RuleIDs: []string{"g_rule_repository_baseline"}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			setupStableGlobalRuleRepo(t, repoRoot)
+
+			result, err := SyncImpact(repoRoot, tc.options)
+			if err != nil {
+				t.Fatalf("SyncImpact: %v", err)
+			}
+			if strings.Join(result.ScopedModules, ",") != "agent,demo" {
+				t.Fatalf("expected every current unit in scope, got %+v", result.ScopedModules)
+			}
+
+			resultsByUnit := map[string]ModuleResult{}
+			for _, item := range result.ModuleResults {
+				resultsByUnit[item.Module] = item
+			}
+			agent := resultsByUnit["agent"]
+			if agent.Outcome != "rerouted" || agent.FallbackReasonCode != "rule_drift" || agent.NextCommand != "unit_stable_verify" {
+				t.Fatalf("expected stable agent to reroute to unit_stable_verify, got %+v", agent)
+			}
+			demo := resultsByUnit["demo"]
+			if demo.Outcome != "invalidated" || demo.FallbackReasonCode != "rule_drift" || demo.NextCommand != "unit_check" {
+				t.Fatalf("expected candidate demo to fall back to unit_check, got %+v", demo)
+			}
+		})
+	}
+}
+
 func TestSyncImpactRejectsStableModuleBindingCandidateShared(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir)))
@@ -1495,6 +1537,42 @@ Body stays the same.
 
 	initGitRepo(t, repoRoot)
 	return "s_b_rule_demo@1.0.0"
+}
+
+func setupStableGlobalRuleRepo(t *testing.T, repoRoot string) string {
+	t.Helper()
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/stable"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `agent` | `yes` | `no` | `stable` | `unit_fork` | stable round |",
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
+	}, "\n")+"\n")
+
+	writeUnitSpecWithRuleRefs(t, repoRoot, "stable", "agent", nil)
+	writeUnitSpecWithRuleRefs(t, repoRoot, "candidate", "demo", nil)
+	writeSharedFileAtPath(t, repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md", `---
+rule_id: g_rule_repository_baseline
+rule_scope: global
+layer: stable
+rule_version: 1.1.0
+---
+
+# Repository Baseline
+
+Global baseline.
+`)
+
+	initGitRepo(t, repoRoot)
+	return "s_g_rule_repository_baseline@1.1.0"
 }
 
 func setupStableLandingRetargetRepo(t *testing.T, repoRoot string, retargetAgentToStable, agentStable bool) (string, string) {
