@@ -6,6 +6,11 @@ Files under `specflow/` are framework and delivery documents and are written in 
 
 Files under `docs/` are project communication documents and are written in Chinese unless a specific delivery artifact requires otherwise.
 
+This file defines formal Spec shape and reference rules.
+The semantic authoring baseline for whether a Spec is ready for downstream check, planning, implementation, and verification is defined in `specflow/framework/spec_authoring_baseline.md`.
+
+Format compliance does not by itself prove handoff completeness.
+
 ## 1. Formal Spec Paths
 
 Unit main Specs:
@@ -66,7 +71,9 @@ If the body says the unit relies on another unit's official behavior, `unit_refs
 
 ## 4. Rule References
 
-`rule_refs` is the only formal consumer binding for rules.
+Stable global rules are default inputs for every current-layer unit and are not repeated in each unit's `rule_refs`.
+
+`rule_refs` is the only formal consumer binding for bound shared rules.
 
 Rules:
 
@@ -74,7 +81,7 @@ Rules:
 2. no formal `rule_refs` list should be duplicated in the body
 3. refs must use exact layer and version
 4. refs must be sorted lexically when written as a list
-5. `rule_refs: none` means the unit binds no rule
+5. `rule_refs: none` means the unit binds no bound shared rule
 
 Rule files must not record consumer truth through `bound_objects`.
 
@@ -128,6 +135,6 @@ Process files may include:
 
 `unit_snapshot` records resolved stable unit dependencies from `unit_refs`.
 
-`rule_snapshot` records resolved rule dependencies from `rule_refs`.
+`rule_snapshot` records resolved stable global rules and resolved bound shared rule dependencies from `rule_refs`.
 
 Snapshots prove what one command reviewed. They do not create or replace formal truth.

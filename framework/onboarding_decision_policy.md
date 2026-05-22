@@ -1,8 +1,11 @@
 # Onboarding Decision Policy
 
-This policy decides how a unit candidate records the source of selected behavior truth.
+This policy decides how unit onboarding handles the source of selected behavior truth.
 
-Only unit candidates are supported.
+It owns two decisions:
+
+1. how a unit candidate records the source of selected behavior truth
+2. whether a historical unit may land directly as the first stable Spec
 
 No scenario onboarding path is supported.
 
@@ -59,7 +62,37 @@ Evidence appendix rules:
 3. `new_design` requires `evidence_appendix_ref=none`.
 4. `replacement` requires `evidence_appendix_ref=none`.
 
-## 4. Stable-Fork Candidate Source
+## 4. Direct First-Stable Onboarding
+
+`unit_init` may create the first stable Spec for a historical unit only when the selected behavior baseline is already accepted and fully reviewable before stable writeback.
+For this policy, accepted means the command can state the selected behavior without resolving business intent, evidence conflicts, material unknowns, or ownership boundaries during the stable writeback.
+
+Direct first-stable onboarding is allowed only when all of the following are true:
+
+1. the target is a historical unit whose current behavior is being captured, not redesigned
+2. the selected behavior can be written into the stable main Spec and any explicitly referenced stable appendices in the same round without relying on raw implementation evidence as stable truth
+3. implementation, test, runtime, or historical evidence has no unresolved conflict that affects selected behavior, unit responsibility, boundaries, acceptance, rule binding, or repository ownership
+4. every material unknown is either resolved before stable writeback or explicitly irrelevant to the stable behavior being captured
+5. any shared rule, global rule, reusable mechanism, exception, or cross-unit boundary needed by the first stable Spec is already resolved through the proper rule-governance path before stable writeback
+6. repository mapping and path ownership are explicit enough to write the unit registration and any required implementation path or support-surface registration without guessing
+7. the resulting stable Spec satisfies `specflow/framework/spec_authoring_baseline.md`
+
+Direct first-stable onboarding must stop before stable writeback when any of the following are true:
+
+1. the selected behavior exists only as raw implementation inspection, test observation, runtime observation, or historical material that still needs interpretation
+2. evidence is incomplete, conflicting, or still needs business confirmation
+3. the stable Spec would need the executor to invent a behavior, boundary, acceptance, ownership, or rule decision while writing it
+4. shared or global truth is unresolved
+5. repository mapping or path ownership cannot be written from current repository truth without guessing
+
+When direct first-stable onboarding stops because the accepted baseline is not ready for stable writeback, route to candidate creation instead.
+Candidate creation must use the `source_basis` and `evidence_appendix_ref` rules in this policy.
+If the candidate selects behavior from implementation, tests, runtime behavior, or historical material, the candidate must use `source_basis=existing_implementation` or `source_basis=mixed` and create the required evidence appendix in the same round.
+
+Raw evidence used during first-stable onboarding is not stable behavior truth by itself.
+Any behavior selected for stable writeback must be stated directly in the stable main Spec or in an explicitly referenced stable appendix created or confirmed in the same round.
+
+## 5. Stable-Fork Candidate Source
 
 When `unit_fork` creates a candidate from an existing stable Spec, the stable Spec is formal truth.
 

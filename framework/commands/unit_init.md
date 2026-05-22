@@ -43,22 +43,23 @@ Before execution:
 4. the goal is to capture current truth, not define future design
 5. read `specflow/framework/onboarding_decision_policy.md`
 6. read `specflow/framework/repository_mapping_policy.md`
-7. read `docs/specs/repository_mapping.md`
-8. confirm the target unit is not already present in `Object Registry` and does not conflict with any current `unit`, `rule`, support-surface, or ignore rule
-9. direct first-stable onboarding is allowed only when `onboarding_decision_policy.md` proves that the accepted behavior baseline is complete, conflicts are closed, material unknowns are closed or irrelevant, and shared/global truth is resolved
-10. if the target only has raw implementation evidence, incomplete evidence, unresolved conflicts, or retained behavior that still needs business confirmation, do not start `unit_init`; route to candidate creation with the required `source_basis` and evidence appendix
-11. if onboarding current truth would create duplicated formal truth across units, or if the shared/unit boundary is still unstable, do not start `unit_init`; resolve that rule-truth boundary through natural-language rule governance first
-12. if the first `stable` reuses already-existing rule truth, read the relevant `rule` files before writing `rule_refs`
-13. if the task also touches global baseline, shared mechanisms, or exceptions, read `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
-14. if the unit involves technical choices, shared infrastructure, cross-unit reuse, global exceptions, or system-level constraint relationships, the first `stable` must include `Rule Alignment` or an equivalent section
-15. if the round creates, updates, or deletes any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `specflow/framework/rule_sync.md` first
-16. if the round may remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
+7. read `specflow/framework/spec_authoring_baseline.md`
+8. read `docs/specs/repository_mapping.md`
+9. confirm the target unit is not already present in `Object Registry` and does not conflict with any current `unit`, `rule`, support-surface, or ignore rule
+10. direct first-stable onboarding is allowed only when `onboarding_decision_policy.md` Section 4 proves that the accepted behavior baseline is complete, conflicts are closed, material unknowns are closed or irrelevant, shared/global truth is resolved, and repository mapping can be written without guessing
+11. if the target only has raw implementation evidence, incomplete evidence, unresolved conflicts, or retained behavior that still needs business confirmation, do not start `unit_init`; route to candidate creation with the required `source_basis` and evidence appendix
+12. if onboarding current truth would create duplicated formal truth across units, or if the shared/unit boundary is still unstable, do not start `unit_init`; resolve that rule-truth boundary through natural-language rule governance first
+13. if the first `stable` reuses already-existing rule truth, read the relevant `rule` files before writing `rule_refs`
+14. if the task also touches global baseline, shared mechanisms, or exceptions, read `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
+15. if the unit involves technical choices, shared infrastructure, cross-unit reuse, global exceptions, or system-level constraint relationships, the first `stable` must include `Rule Alignment` or an equivalent section
+16. if the round creates, updates, or deletes any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `specflow/framework/rule_sync.md` first
+17. if the round may remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
 
 ## 4. Procedure
 
 1. summarize the unit's already-effective behavior baseline
 2. if needed, read `s_g_rule_repository_baseline.md` as an upstream input
-3. confirm that first-stable onboarding is allowed by `onboarding_decision_policy.md`; if not, stop before writing stable truth and route to candidate creation
+3. confirm that first-stable onboarding is allowed by `onboarding_decision_policy.md` Section 4; if not, stop before writing stable truth and route to candidate creation
 4. if onboarding current truth shows that one or more existing formal units already depend on the same formal truth and that truth is not yet formalized as one stable rule object, stop and reroute through natural-language rule governance from current repository truth instead of writing duplicated unit-local `stable` truth
 5. prepare the `docs/specs/repository_mapping.md` writeback for the historical unit before stable truth or `_status.md` mutation:
    - add or update one `Object Registry` row for the target unit
@@ -77,6 +78,7 @@ Before execution:
    - `State Machine / Business Flow`
    - `Edge Cases & Error Handling`
    - `Testability / Acceptance Criteria` with explicit acceptance items that satisfy `spec_writing_guide.md` Section 6
+   - semantic authoring baseline requirements from `specflow/framework/spec_authoring_baseline.md`
 8. if needed, add `Rule Alignment` with at least:
    - `rule_refs` written according to the Rule References contract in `specflow/framework/spec_writing_guide.md` Section 4
    - `rule_reuse_summary`
@@ -97,6 +99,8 @@ Before execution:
    - pass execution-local `current_stable_landing_unit={unit}` into that `rule_sync` run because this same round just wrote the unit's first stable truth together with its current stable Rule binding
    - pass execution-local `stable_landing_rule_refs=<exact-shared-ref-list-written-by-this-landing>` into that same `rule_sync` run; `current_stable_landing_unit` alone is not sufficient
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule sync-impact --rule-refs <rule-ref> --units {unit} --stable-landing-unit {unit} --stable-landing-rule-refs <exact-stable-landing-rule-ref-list>` or the corresponding `--rule-ids` form, and at least one rule trigger input must already be known before this deterministic execution starts
+   - if that post-init `rule_sync` returns control because repository truth is still insufficient to continue safely, stop `unit_init` as `blocked`, keep the first stable landing and `_status.md` row as the current formal state, do not claim Rule side effects are closed, do not clean up stable truth or `_status.md` through this branch, and reroute through natural-language rule governance from current repository truth
+   - after this blocked result, later entry into `unit_fork` is not legal until the rule-governance reroute has closed the insufficient repository truth and any affected-state reconciliation required by that closure has completed
 
 ## 5. Stop Conditions
 
@@ -108,23 +112,26 @@ Before execution:
 6. if onboarding evidence was insufficient for first-stable landing, the command stopped before stable writeback and routed to candidate creation with evidence handling
 7. if repository truth was insufficient to write the required repository mapping update safely, the command stopped before stable truth and `_status.md` writeback instead of guessing
 8. the command does not automatically open a candidate round
+9. if post-init `rule_sync` could not continue safely, the command result is `blocked`, the first stable landing and `_status.md` row remain the current formal state, Rule side effects are not closed, no `unit_init` cleanup is performed by this branch, and the required next step is rerunning natural-language routing from current repository truth so it can re-enter rule governance
 
 ## 6. Output Contract
 
 1. onboarding judgment
 2. created file path
-3. first-stable eligibility result from `onboarding_decision_policy.md`
+3. first-stable eligibility result from `onboarding_decision_policy.md` Section 4
 4. acceptance-item structure result for the first stable Spec
-5. whether `Rule Alignment` was required and why
-6. whether the command had to stop and reroute through natural-language rule governance because rule-truth boundary closure was required before onboarding could continue
-7. whether the command had to stop and route to candidate creation because evidence was not sufficient for direct stable onboarding
-8. `docs/specs/repository_mapping.md` writeback result, including the new `Object Registry` row and any path-ownership entries written in this round
-9. `_status.md` update result
-10. Rule reconciliation result when the round changed rule truth or bindings
-11. next-step suggestion
-12. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
+5. semantic authoring baseline result for the first stable Spec
+6. whether `Rule Alignment` was required and why
+7. whether the command had to stop and reroute through natural-language rule governance because rule-truth boundary closure was required before onboarding could continue
+8. whether the command had to stop and route to candidate creation because evidence was not sufficient for direct stable onboarding
+9. `docs/specs/repository_mapping.md` writeback result, including the new `Object Registry` row and any path-ownership entries written in this round
+10. `_status.md` update result
+11. Rule reconciliation result when the round changed rule truth or bindings
+12. when post-init `rule_sync` could not continue safely, that the command stopped as `blocked`, kept the stable-layer state in place, did not close Rule side effects, and must resume through natural-language rule governance before `unit_fork`
+13. next-step suggestion
+14. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
    - `current state` must explicitly confirm the stable-layer landing written to `_status.md`
-   - if the round stopped and rerouted through natural-language rule governance, `next step` must name that reroute directly instead of implying that onboarding closed
+   - if the round stopped and rerouted through natural-language rule governance, `next step` must name that reroute directly instead of implying that onboarding closed or that `unit_fork` is immediately legal
 
 ## 7. Non-Goals
 

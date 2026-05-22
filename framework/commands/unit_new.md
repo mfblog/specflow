@@ -40,12 +40,13 @@ This file states only `unit_new`-local entry, output, and stop rules.
 6. read `docs/specs/repository_mapping.md`
 7. confirm the target unit is not already present in `Object Registry` and does not conflict with any current `unit`, `rule`, support-surface, or ignore rule
 8. read `specflow/framework/onboarding_decision_policy.md` and decide the first candidate's `source_basis` and `evidence_appendix_ref`
-9. read `specflow/framework/candidate_intent_policy.md`; first candidates use `candidate_intent=change`
-10. if the first candidate uses `source_basis=existing_implementation` or `source_basis=mixed`, prepare the required evidence appendix in the same round
-11. if the first candidate depends on rule truth that is not yet formalized as `rule`, or if the shared/unit boundary is still unstable, do not start `unit_new`; resolve that rule truth through natural-language rule governance first
-12. if the first candidate reuses already-existing rule truth, read the relevant `rule` files before writing `rule_refs`
-13. if the round will create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `rule_sync.md`
-14. if the round may remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
+9. read `specflow/framework/spec_authoring_baseline.md`
+10. read `specflow/framework/candidate_intent_policy.md`; first candidates use `candidate_intent=change`
+11. if the first candidate uses `source_basis=existing_implementation` or `source_basis=mixed`, prepare the required evidence appendix in the same round
+12. if the first candidate depends on rule truth that is not yet formalized as `rule`, or if the shared/unit boundary is still unstable, do not start `unit_new`; resolve that rule truth through natural-language rule governance first
+13. if the first candidate reuses already-existing rule truth, read the relevant `rule` files before writing `rule_refs`
+14. if the round will create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `rule_sync.md`
+15. if the round may remove intentional-unbound retention fields from a touched Rule file, read every current-layer unit main file needed to derive the real repository-wide binding set of each touched Rule from `rule_refs`
 
 ## 4. Procedure
 
@@ -68,7 +69,7 @@ This file states only `unit_new`-local entry, output, and stop rules.
 7. initialize `frontmatter.candidate_intent=change`
 8. initialize `frontmatter.source_basis` and `frontmatter.evidence_appendix_ref` according to `onboarding_decision_policy.md`
 9. if `source_basis=existing_implementation` or `source_basis=mixed`, create the evidence appendix named by `evidence_appendix_ref`; if `source_basis=new_design` or `source_basis=replacement`, write `evidence_appendix_ref=none`
-10. ensure the file covers the core sections of a formal Spec, including `Testability / Acceptance Criteria` with explicit acceptance items that satisfy `spec_writing_guide.md` Section 6
+10. ensure the file covers the core sections of a formal Spec, including `Testability / Acceptance Criteria` with explicit acceptance items that satisfy `spec_writing_guide.md` Section 6, and ensure the written candidate satisfies `specflow/framework/spec_authoring_baseline.md`
 11. initialize `Rule Alignment`:
    - write `rule_refs=none` only when the first candidate does not yet reuse rule truth
    - if the first candidate already reuses existing rule truth, write the explicit `rule_refs` set according to the Rule References contract in `specflow/framework/spec_writing_guide.md` Section 4 and explain that reuse in the candidate body in the same round
@@ -88,6 +89,8 @@ This file states only `unit_new`-local entry, output, and stop rules.
    - the deterministic command closure may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_new --object-type unit --object {unit} --outcome candidate_created --notes <status-note> --apply`
 15. if the round changed any unit `rule_refs` value or any file under `docs/specs/rules/**`, run `rule_sync` after `_status.md` has been updated, even when no additional affected object is known yet
    - the deterministic reconciliation part may be executed with `specflow/tooling/bin/specflowctl-<os>-<arch> rule sync-impact --rule-refs <rule-ref> --units {unit}` or the corresponding `--rule-ids` form, and at least one rule trigger input must already be known before this deterministic execution starts
+   - if that post-new `rule_sync` returns control because repository truth is still insufficient to continue safely, stop `unit_new` as `blocked`, keep the newly created candidate-layer state and `_status.md` row as the current formal state, do not claim Rule side effects are closed, do not clean up candidate truth or `_status.md` through this branch, and reroute through natural-language rule governance from current repository truth
+   - after this blocked result, later entry into `unit_check` is not legal until the rule-governance reroute has closed the insufficient repository truth and any affected-state reconciliation required by that closure has completed
 
 ## 5. Stop Conditions
 
@@ -99,6 +102,7 @@ This file states only `unit_new`-local entry, output, and stop rules.
 6. the command does not automatically continue into implementation
 7. if repository truth was insufficient to write the required repository mapping update safely, the command stopped before candidate and `_status.md` writeback instead of guessing
 8. if repository truth was insufficient to close rule-truth binding metadata safely, the command stopped and rerouted through natural-language rule governance instead of guessing
+9. if post-new `rule_sync` could not continue safely, the command result is `blocked`, the candidate-layer state and `_status.md` row remain the current formal state, Rule side effects are not closed, no `unit_new` cleanup is performed by this branch, and the required next step is rerunning natural-language routing from current repository truth so it can re-enter rule governance
 
 ## 6. Output Contract
 
@@ -110,14 +114,17 @@ This file states only `unit_new`-local entry, output, and stop rules.
 6. initialized `evidence_appendix_ref` and evidence appendix write result when required
 7. initialized formal global baseline reference or `none`
 8. initialized acceptance-item structure result
-9. initialized explicit Rule binding set or confirmed `rule_refs=none`
-10. whether the command had to stop and reroute through natural-language rule governance because repository truth was insufficient to close rule-truth binding metadata safely
-11. `docs/specs/repository_mapping.md` writeback result, including the new `Object Registry` row and any path-ownership entries written in this round
-12. `_status.md` update result
-13. Rule reconciliation result when the round changed rule truth or bindings
-14. remaining closure items
-15. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
+9. initialized semantic authoring baseline result
+10. initialized explicit Rule binding set or confirmed `rule_refs=none`
+11. whether the command had to stop and reroute through natural-language rule governance because repository truth was insufficient to close rule-truth binding metadata safely
+12. `docs/specs/repository_mapping.md` writeback result, including the new `Object Registry` row and any path-ownership entries written in this round
+13. `_status.md` update result
+14. Rule reconciliation result when the round changed rule truth or bindings
+15. when post-new `rule_sync` could not continue safely, that the command stopped as `blocked`, kept the candidate-layer state in place, did not close Rule side effects, and must resume through natural-language rule governance before `unit_check`
+16. remaining closure items
+17. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
    - `current state` must explicitly confirm `Active Layer=candidate` and `Next Command=unit_check`
+   - if post-new follow-up is blocked on rule governance, the block must name natural-language rule-governance rerouting as the immediate `next step`
    - `next-stage entry gap` must explicitly confirm that entry into the later different command `unit_check` is already satisfied after `unit_new` closes
 
 ## 7. Non-Goals

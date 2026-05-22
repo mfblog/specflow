@@ -2,13 +2,14 @@
 
 This file routes user requests into specFlow owners.
 
-The supported owners are:
+The supported routing targets are:
 
 1. `unit`
 2. `rule`
 3. `repository_mapping`
 4. framework governance flows
-5. implementation-only work after permission is proven
+5. guidance before formal truth writeback
+6. implementation-only work after permission is proven
 
 `scenario` is not a supported owner.
 
@@ -20,7 +21,15 @@ If the request exactly matches a supported unit command from `specflow/framework
 
 If the request exactly matches a rule governance entry, read that rule file.
 
-If the request exactly matches `spec_flow_migrate`, read `specflow/framework/spec_flow_migrate.md`.
+If the request explicitly invokes one of these framework governance entries, with or without a narrowing phrase, read the matching framework file:
+
+1. `spec_flow_review` -> `specflow/framework/spec_flow_review.md`
+2. `spec_flow_design_review` -> `specflow/framework/spec_flow_design_review.md`
+3. `spec_flow_migrate` -> `specflow/framework/spec_flow_migrate.md`
+
+Explicit invocation means the request contains the literal entry name as the operation being requested.
+Ordinary-language descriptions such as "review governance", "review design", or "migrate specs" do not route to these entries by implication.
+When a request describes governance review, design review, or migration-like work without the literal entry name, continue through the normal route chosen by the concrete requested change, or stop if the owner is unclear.
 
 If the request uses `scenario_*`, `scenario_advance:{id}`, or `object-type=scenario`, stop and report that scenario lifecycle support has been removed.
 
@@ -51,7 +60,8 @@ Route to rule governance when the request changes shared constraints, reusable p
 For non-exact rule-governance requests, read `specflow/framework/rule_escape.md` first.
 `rule_escape.md` owns selecting `rule_new`, `rule_extract`, `rule_bind`, `rule_topology`, `rule_sync`, unit lifecycle, or repository mapping governance.
 
-Rule consumer discovery must use current-layer unit `rule_refs`.
+Stable global rule changes affect every current-layer unit.
+Bound shared rule consumer discovery must use current-layer unit `rule_refs`.
 
 ## 5. Repository Mapping Route
 
@@ -59,13 +69,39 @@ Route to repository mapping when the request changes path ownership, object regi
 
 Repository mapping does not change unit behavior or rule meaning by itself.
 
-## 6. Implementation-Only Route
+## 6. Guidance Route
+
+Route to guidance when the request asks to shape a design before formal truth is clear.
+
+Guidance applies when the request is about one of these work shapes before candidate truth, rule truth, global rule truth, or repository mapping truth is ready to write:
+
+1. framing a vague project or feature idea
+2. cutting scope for a first useful version
+3. choosing between materially different solution directions
+4. reviewing a discussion-stage design before writing it into candidate truth
+5. turning an approved discussion conclusion into formal truth
+
+When guidance applies, read `specflow/framework/skills/using-specflow-guidance/SKILL.md`.
+That file owns selecting the specific guidance skill and the guidance completion result.
+
+Guidance must not:
+
+1. replace an exact standard command or exact framework governance entry
+2. advance `_status.md`
+3. write `_check_result`, `_plans/active`, or `_verify_result`
+4. authorize implementation-side edits
+5. treat chat-only agreement as durable truth
+6. ask the user to choose internal object-family names when an ordinary-language goal, scope, outcome, or success decision would identify the missing input
+
+If a guidance conclusion affects behavior truth, boundary truth, acceptance truth, rule truth, global rule truth, or repository ownership, route that conclusion into the proper formal truth writeback path before implementation.
+
+## 7. Implementation-Only Route
 
 If the request asks only for implementation-side edits and does not require truth, boundary, shared rule, system rule, migration, governance, or guidance work, enter `specflow/framework/implementation_change_policy.md`.
 
 Implementation permission must be proven before editing implementation files.
 
-## 7. Hard Stops
+## 8. Hard Stops
 
 Stop and ask or reroute when:
 
@@ -76,7 +112,7 @@ Stop and ask or reroute when:
 5. a rule or repository mapping change is required first
 6. the request tries to use scenario lifecycle concepts
 
-## 8. User-Facing Reports
+## 9. User-Facing Reports
 
 Reports must use plain project language.
 
@@ -90,7 +126,7 @@ They should state:
 
 Internal file names may appear in a separate execution note, but the user-facing answer must not require the user to understand internal policy names.
 
-## 9. Response Baseline
+## 10. Response Baseline
 
 Natural-language routing output inherits the framework output baseline defined by `specflow/framework/output_baseline.md`.
 This routing file may tighten or clarify only:
@@ -106,9 +142,9 @@ Output wording rules must not:
 2. change the chosen first step
 3. create a new command or governance-flow result
 4. affect lifecycle state
-5. replace the required ordinary-language fields in Section 11.1
+5. replace the required ordinary-language fields in Section 12.1
 
-## 10. Execution Notes
+## 11. Execution Notes
 
 Execution notes are optional trace material.
 
@@ -127,7 +163,7 @@ Execution note rules:
 2. it must be short enough that it does not become the answer body
 3. it must not be required for the user to understand the current state, next action, reason, expected result, or remaining blocker
 
-## 11. Output Contract
+## 12. Output Contract
 
 When natural-language routing is the active entry, the output must include:
 
@@ -142,7 +178,7 @@ Natural-language routing also inherits:
 
 1. the framework output baseline defined by `specflow/framework/output_baseline.md`
 
-### 11.1 User-Facing Report Contract
+### 12.1 User-Facing Report Contract
 
 The user-facing part of the output must include ordinary-language statements for:
 

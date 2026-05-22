@@ -31,6 +31,7 @@ By default this command reviews:
 7. whether the candidate records a coherent current design rather than an over-broad, unresolved, or chat-dependent proposal
 8. whether the candidate source fields and evidence appendix requirements from `onboarding_decision_policy.md` are satisfied
 9. whether `Testability / Acceptance Criteria` contains explicit acceptance items that satisfy `spec_writing_guide.md` Section 6
+10. whether the candidate main Spec and its explicitly referenced appendix files satisfy the handoff completeness baseline in `specflow/framework/spec_authoring_baseline.md`
 
 ### 2.1 Command Read Summary
 
@@ -160,7 +161,7 @@ The chain is closed only when all of the following are true:
 4. boundary protocols name the public contract, port, adapter, event, store, trace, or support surface used at each boundary
 5. output artifacts are named and have a producer, consumer, persistence or reporting boundary, and freshness meaning
 6. acceptance items prove the stated responsibility and output artifacts, not only that files or headings exist
-7. the candidate contains enough handoff information for `unit_plan` to plan implementation without inventing missing adapters, test entrypoints, outputs, or ownership decisions
+7. the candidate contains enough handoff information for `unit_plan` to plan implementation without inventing missing behavior, boundary, state, output, verification, or ownership decisions, as required by `specflow/framework/spec_authoring_baseline.md`
 
 Any missing link in this chain is a main logic-chain breakpoint.
 A candidate with a main logic-chain breakpoint cannot pass.
@@ -227,7 +228,7 @@ Baseline slices are required unless a slice is explicitly marked `skipped_not_ap
 7. `acceptance_and_testability`
    - checks acceptance item structure, test entrypoints, runnable status, proof method, and whether acceptance proves the goal
 8. `implementation_handoff`
-   - checks whether `unit_plan` can plan implementation from the candidate without filling missing design, adapter, output, or test choices
+   - checks whether `unit_plan` can plan implementation from the candidate without filling missing design, boundary, state, output, or test choices according to `specflow/framework/spec_authoring_baseline.md`
 
 Cross-check slices are required because locally plausible text can still fail to compose:
 
@@ -246,7 +247,7 @@ The executor must add a dynamic slice when any of the following appears:
 1. a new dependency boundary
 2. an owner conflict
 3. an uncovered flow node
-4. a mechanism-style artifact such as a report, trace, run-state, harness output, or adapter contract
+4. a coordinated behavior whose result depends on multiple objects, boundaries, ordered steps, or shared state
 5. an acceptance item that cannot prove the stated target
 6. a cross-unit or rule relationship that does not converge
 7. any other path where a local slice could pass while the whole logic chain still fails
@@ -271,10 +272,11 @@ It must not replace a baseline slice or allow a baseline slice to be skipped wit
 5. if this round may raise a checkpoint, read `specflow/framework/checkpoint_protocol.md`
 6. if referenced appendix files have directory drift, fix that first and rerun the pre-check
 7. read `specflow/framework/onboarding_decision_policy.md`
-8. read `specflow/framework/candidate_intent_policy.md` and the selected intent standard for the current candidate
-9. create or refresh `docs/specs/_check_work/unit/{unit}.md` before semantic slice review
-10. validate the work-state shape before using it as a resume aid
-11. run `specflowctl relation candidate-preflight --object {unit}` before semantic slice review
+8. read `specflow/framework/spec_authoring_baseline.md`
+9. read `specflow/framework/candidate_intent_policy.md` and the selected intent standard for the current candidate
+10. create or refresh `docs/specs/_check_work/unit/{unit}.md` before semantic slice review
+11. validate the work-state shape before using it as a resume aid
+12. run `specflowctl relation candidate-preflight --object {unit}` before semantic slice review
 
 ## 4. Procedure
 
@@ -305,6 +307,7 @@ It must not replace a baseline slice or allow a baseline slice to be skipped wit
    - `Acceptance Basis Completeness`
    - `Content Organization Completeness`
      - the candidate main Spec and its appendix files must satisfy `spec_writing_guide.md` Section 6
+     - the candidate main Spec and its explicitly referenced appendix files must satisfy the semantic authoring baseline in `specflow/framework/spec_authoring_baseline.md`
      - explanatory and normative content must be separated at the subsection level
      - mixed-paragraph violations are an `important` completeness gap by default
 11. complete `Candidate Design Quality` review as part of the framework baseline:
@@ -323,7 +326,8 @@ It must not replace a baseline slice or allow a baseline slice to be skipped wit
 14. execute every cross-check slice from Section 2.6 after the local baseline slices it depends on have been reviewed
 15. perform Logic Chain Closure from Section 2.4
 16. perform Dependency Truth Boundary from Section 2.5
-17. complete the framework-baseline closure checks owned by `unit_check`, including the fixed completeness review objects, `Candidate Design Quality`, baseline, rule, candidate intent, rule-truth checks, slice closure checks, dependency boundary checks, and logic-chain checks
+17. complete the framework-baseline closure checks owned by `unit_check`, including the fixed completeness review objects, `Candidate Design Quality`, baseline, rule, candidate intent, rule-truth checks, slice closure checks, dependency boundary checks, semantic authoring baseline checks, and logic-chain checks
+   - if the candidate fails `specflow/framework/spec_authoring_baseline.md`, the result can only be `blocked` or `fix_required` with `fallback_reason_code=truth_incomplete`
 18. process formal global baseline alignment and any candidate-carried global rule proposal:
    - if the formal global baseline exists and the candidate is still compatible, a mechanical update to the current version is allowed
    - if incompatible, the result can only be `blocked` or `fix_required`

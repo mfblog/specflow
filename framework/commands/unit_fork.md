@@ -33,7 +33,8 @@ This file states only `unit_fork`-local entry, output, and stop rules.
 7. if the round will create, update, or delete any unit `rule_refs` value or any file under `docs/specs/rules/**`, read `rule_sync.md`
 8. if the round may remove, retarget, or otherwise change an existing Rule binding, read every current-layer unit main file needed to derive the real binding set of each touched Rule from `rule_refs`
 9. read `specflow/framework/onboarding_decision_policy.md` for stable-fork candidate source handling
-10. read `specflow/framework/candidate_intent_policy.md`; after selecting the target `candidate_intent`, read the selected intent standard named by that policy
+10. read `specflow/framework/spec_authoring_baseline.md`
+11. read `specflow/framework/candidate_intent_policy.md`; after selecting the target `candidate_intent`, read the selected intent standard named by that policy
 
 ## 4. Procedure
 
@@ -64,7 +65,7 @@ This file states only `unit_fork`-local entry, output, and stop rules.
    - retarget copied appendix markdown links and direct same-unit main or appendix path literals that point to the stable main Spec or copied same-unit stable appendices so they point to the candidate main Spec or copied candidate appendices
    - do not leave the candidate main Spec dependent on a stable-layer appendix as current-layer supporting truth
 9. set candidate `frontmatter.version` to that target version
-10. ensure the candidate `Testability / Acceptance Criteria` section uses explicit acceptance items that satisfy `spec_writing_guide.md` Section 6
+10. ensure the candidate `Testability / Acceptance Criteria` section uses explicit acceptance items that satisfy `spec_writing_guide.md` Section 6, and ensure the written candidate satisfies `specflow/framework/spec_authoring_baseline.md`
    - if the stable source already has structured acceptance items, carry them forward and edit only the items affected by the new round
    - if the stable source still has historical prose-only acceptance text, convert the relevant current acceptance scope into explicit items in the candidate instead of preserving the ambiguity
 11. re-check `rule_refs`:
@@ -122,13 +123,14 @@ This file states only `unit_fork`-local entry, output, and stop rules.
 7. initialized `evidence_appendix_ref` and evidence appendix write result when required
 8. appendix retarget result, including copied candidate appendix paths and removed previous-round candidate appendix paths
 9. candidate acceptance-item structure result
-10. written formal global baseline reference or `none`
-11. Rule terminal-state result when the round changed rule bindings or rule files
-12. cleanup result
-13. `_status.md` update result
-14. Rule reconciliation result when the round changed rule truth or bindings
-15. when post-fork `rule_sync` could not continue safely, that the command stopped as `blocked` and must resume through natural-language rule governance
-16. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
+10. candidate semantic authoring baseline result
+11. written formal global baseline reference or `none`
+12. Rule terminal-state result when the round changed rule bindings or rule files
+13. cleanup result
+14. `_status.md` update result
+15. Rule reconciliation result when the round changed rule truth or bindings
+16. when post-fork `rule_sync` could not continue safely, that the command stopped as `blocked` and must resume through natural-language rule governance
+17. the `user-facing close-out block` required by Section 8.6 of `specflow/framework/command_policy.md`
    - `current state` must explicitly confirm the candidate-layer state written to `_status.md`
    - if post-fork follow-up is blocked on rule governance, the block must name natural-language rule-governance rerouting as the immediate `next step`
 
