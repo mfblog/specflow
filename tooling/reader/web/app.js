@@ -322,6 +322,11 @@ const TRANSLATIONS = {
         stable: "已确认",
         stableRule: "已确认"
       },
+      docKinds: {
+        main: "主文",
+        appendix: "附录",
+        evidence: "证据"
+      },
       targets: {
         candidate: "这是当前正在确认的 Spec，确认完成前不能当作正式基线。",
         stable: "这是已经确认的正式 Spec，可作为当前正式基线查看。",
@@ -724,6 +729,11 @@ const TRANSLATIONS = {
         candidate: "To confirm",
         stable: "Accepted",
         stableRule: "Accepted"
+      },
+      docKinds: {
+        main: "Main",
+        appendix: "Appendix",
+        evidence: "Evidence"
       },
       targets: {
         candidate: "This Spec is still being confirmed and is not the formal baseline yet.",
@@ -1148,6 +1158,7 @@ function renderReviewNavSection(type, items) {
       const button = document.createElement("button");
       button.className = `nav-item ${objectKindClass(item.object.kind)}${item.id === selectedNodeID ? " active" : ""}`;
       button.type = "button";
+      button.title = `${item.fileLabel}\n${item.path}`;
       button.innerHTML = `${renderNavItemTitle(item.fileLabel, item.object.kind)}<span>${escapeHTML(reviewNavSubtitle(item))}</span>`;
       button.addEventListener("click", () => focusReviewItem(item.id));
       section.appendChild(button);
@@ -2874,11 +2885,12 @@ function reviewItems() {
     const key = `${item.reviewType}:${item.path}:${item.object ? item.object.id : item.objectLabel}`;
     if (seen.has(key)) return;
     seen.add(key);
+    const source = item.source || { path: item.path };
     items.push({
       ...item,
       id: `spec:${item.reviewType}:${item.path}:${item.object ? item.object.id : item.objectLabel}`,
-      fileLabel: fileName(item.path),
-      source: item.source || { path: item.path },
+      fileLabel: reviewFileLabel(source, item.object),
+      source,
       nextCommand: item.object ? item.object.next_command : "",
       stateLabel: t(`review.states.${item.reviewType}`),
       targetType: item.targetType || reviewTargetTypeForObject(item.object)
@@ -3000,7 +3012,53 @@ function reviewFocusItems(type) {
 
 function reviewNavSubtitle(item) {
   const state = item.stateLabel || reviewTypeLabel(item.reviewType);
-  return `${state} · ${item.objectLabel}`;
+  return [state, reviewDocKindLabel(item), item.objectLabel].filter(Boolean).join(" · ");
+}
+
+function reviewDocKindLabel(item) {
+  return t(`review.docKinds.${reviewDocKind(item && item.source ? item.source : item)}`);
+}
+
+function reviewDocKind(source) {
+  if (isEvidenceReference(source)) return "evidence";
+  if (isAppendixReference(source)) return "appendix";
+  return "main";
+}
+
+function reviewFileLabel(source, object) {
+  const namePart = reviewFileNamePart(source, object);
+  if (namePart) return namePart;
+  return compactTruthFileLabel(fileName(source && source.path));
+}
+
+function reviewFileNamePart(source, object) {
+  const stem = reviewFileStem(source);
+  if (!stem) return "";
+  const prefix = reviewFilePrefix(source, object);
+  if (!prefix) return stem;
+  if (stem === prefix) return normalizedObjectID(object);
+  if (stem.startsWith(`${prefix}_`)) return stem.slice(prefix.length + 1);
+  return stem;
+}
+
+function reviewFileStem(source) {
+  const path = String(source && source.path ? source.path : "");
+  return fileName(path).replace(/\.md$/, "");
+}
+
+function reviewFilePrefix(source, object) {
+  const objectID = normalizedObjectID(object);
+  if (!objectID) return "";
+  const path = String(source && source.path ? source.path : "");
+  const stem = reviewFileStem(source);
+  const layerPrefix = path.includes("/stable/") || stem.startsWith("s_") ? "s" : "c";
+  if (object && object.kind === "unit") return `${layerPrefix}_unit_${objectID}`;
+  if (object && object.kind === "rule") return `${layerPrefix}_${objectID}`;
+  return `${layerPrefix}_${objectID}`;
+}
+
+function normalizedObjectID(object) {
+  return String(object && object.id ? object.id : "").replace(/-/g, "_");
 }
 
 function reviewNextCommandText(item) {
