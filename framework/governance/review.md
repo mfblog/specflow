@@ -4,24 +4,27 @@ Framework review checks whether specFlow governance is coherent and operable.
 
 ## Default Mode
 
-Ordinary governance or design review uses `scoped_review` by default.
+Ordinary `spec_flow_review` and governance review use `scoped_review` by default.
 
 Read `framework/governance/review_scope.md` first. Review only the changed files, direct owner files, necessary boundary refs, and minimal convergence refs needed to answer the request.
 
 `scoped_review` does not use `_governance_review/` run-state, baseline slice tables, dynamic slice tables, or score-state tables by default.
+
+Plain exact `spec_flow_design_review` is not scoped.
+It always delegates to `framework/spec_flow_design_review.md` and runs the default full-scope design-baseline review.
+There is no narrowed or scoped `spec_flow_design_review` mode.
 
 ## Entries
 
 1. `spec_flow_review` checks mechanism correctness.
 2. `spec_flow_design_review` checks design quality and agent operability.
 
-Plain exact entries route through this file first. They remain scoped unless the user explicitly asks for `full-scope`, `baseline`, `deep audit`, release-level governance audit, `resumable review`, or run-state-backed review.
-For mechanism review, exact `spec_flow_review:full` is also explicit deep-audit intent.
+Plain exact `spec_flow_review` routes through this file first and remains scoped.
+The only full-scope mechanism review entry is exact `spec_flow_review:full`.
 
-When deep audit is explicit:
+Plain exact `spec_flow_design_review` routes through this file first, then directly delegates to `framework/spec_flow_design_review.md`.
 
-1. `spec_flow_review` delegates to `framework/spec_flow_review.md`.
-2. `spec_flow_design_review` delegates to `framework/spec_flow_design_review.md`.
+When the entry is exact `spec_flow_review:full`, `spec_flow_review` delegates to `framework/spec_flow_review.md`.
 
 ## Review Layout
 
@@ -42,11 +45,12 @@ Supported layouts:
 
 `specflowctl review ... --layout auto` detects the layout. Callers may pass `--layout installed` or `--layout source` to force one layout.
 
-Review layout applies to explicit deep audit and run-state-backed review only. It does not widen ordinary `scoped_review`.
+Review layout applies to exact `spec_flow_review:full` mechanism deep audit and every `spec_flow_design_review`.
+It does not widen ordinary `spec_flow_review` scoped review.
 
 ## Active Scope
 
-Default review scope uses the layered framework structure:
+Default `spec_flow_review` scoped review uses the layered framework structure:
 
 1. `core/`
 2. `lifecycle/`
@@ -56,4 +60,5 @@ Default review scope uses the layered framework structure:
 6. templates
 7. tooling contracts and source
 
-`spec_flow_review.md` and `spec_flow_design_review.md` are deep-audit owners. They are not ordinary default context for scoped review.
+`framework/spec_flow_review.md` is the mechanism deep-audit owner and is not ordinary default context for scoped review.
+`framework/spec_flow_design_review.md` is the ordinary owner for every `spec_flow_design_review`.

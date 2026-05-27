@@ -371,6 +371,12 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	if !containsString(designFoundation.InputFiles, "specflow/framework/governance/review.md") {
 		t.Fatalf("expected governance review in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
+	if !containsString(designFoundation.InputFiles, "specflow/framework/governance/review_scope.md") {
+		t.Fatalf("expected review scope policy in design foundation input files, got %+v", designFoundation.InputFiles)
+	}
+	if !containsString(designFoundation.InputFiles, "specflow/framework/governance/rule_system.md") {
+		t.Fatalf("expected rule system policy in design foundation input files, got %+v", designFoundation.InputFiles)
+	}
 	if !containsString(designFoundation.InputFiles, "specflow/framework/lifecycle/overview.md") {
 		t.Fatalf("expected lifecycle overview in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
@@ -385,6 +391,10 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	}
 	if !containsString(designFoundation.InputFiles, "specflow/framework/candidate_intents/repair.md") {
 		t.Fatalf("expected repair intent standard in design foundation input files, got %+v", designFoundation.InputFiles)
+	}
+	lifecycleAndGate := findSlice(t, state, "lifecycle_and_gate_design")
+	if !containsString(lifecycleAndGate.InputFiles, "specflow/framework/operations/output_standard.md") {
+		t.Fatalf("expected output standard in lifecycle and gate input files, got %+v", lifecycleAndGate.InputFiles)
 	}
 	humanOperability := findSlice(t, state, "human_operability_and_extension")
 	if !containsString(humanOperability.InputFiles, "specflow/framework/operations/output_standard.md") {

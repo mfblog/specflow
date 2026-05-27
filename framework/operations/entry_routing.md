@@ -97,7 +97,9 @@ Implementation permission must be proven before editing implementation files.
 ## Framework Governance
 
 Requests that explicitly invoke `spec_flow_review` or `spec_flow_design_review` route to `framework/governance/review.md`.
-`framework/governance/review.md` decides the default scoped review path and delegates to deep-audit owners only when explicit deep-audit intent is present.
+`framework/governance/review.md` decides the default path for each review entry.
+For `spec_flow_review`, the default is `scoped_review`; it delegates to `framework/spec_flow_review.md` only for exact `spec_flow_review:full`.
+For `spec_flow_design_review`, there is no scoped mode; `framework/governance/review.md` delegates to `framework/spec_flow_design_review.md` for the default full-scope design-baseline review.
 
 Requests that explicitly invoke `spec_flow_migrate` route to `framework/operations/migration.md`.
 

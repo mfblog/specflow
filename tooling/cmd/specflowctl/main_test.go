@@ -307,6 +307,25 @@ func TestReviewCollectDefaultScopePrintsSourceLayoutCLI(t *testing.T) {
 	}
 }
 
+func TestReviewScopeAliasIsNotSupportedCLI(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	err := runReview([]string{"scope"}, &stdout, &stderr)
+	if err == nil {
+		t.Fatalf("expected review scope alias to be rejected")
+	}
+	if !strings.Contains(err.Error(), `unknown review subcommand "scope"`) {
+		t.Fatalf("expected unknown subcommand error, got %v", err)
+	}
+	if strings.Contains(stderr.String(), "specflowctl review scope") {
+		t.Fatalf("review usage must not advertise removed scope alias, got %s", stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("expected no stdout for rejected alias, got %s", stdout.String())
+	}
+}
+
 func TestEntryCheckSourceRepoUsesTemplateEntriesCLI(t *testing.T) {
 	repoRoot := createCLISourceReviewRepo(t)
 	writeCLITestFile(t, filepath.Join(repoRoot, "framework/entry_index_registry.md"), `# Entry Index Registry

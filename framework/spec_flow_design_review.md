@@ -3,8 +3,9 @@
 ## 1. Purpose
 
 `spec_flow_design_review` reviews whether the current `specFlow` design is a sound human-serving governance system.
-This file owns explicit `deep_audit` review for design quality.
-Ordinary or plain exact `spec_flow_design_review` entry routes through `framework/governance/review.md` first and stays `scoped_review` unless the user explicitly asks for full-scope, baseline, deep audit, release-level governance audit, resumable review, or run-state-backed review.
+This file owns the only `spec_flow_design_review` mode: the default full-scope design-baseline review.
+Ordinary or plain exact `spec_flow_design_review` entry routes through `framework/governance/review.md` first, then enters this file.
+It must not be narrowed into `scoped_review`.
 
 It answers five questions:
 
@@ -14,7 +15,8 @@ It answers five questions:
 4. whether the design remains operable for normal users and executors without excessive mental or operational burden
 5. whether the repository may still claim that the current `specFlow` design is worth using as designed
 
-Deep audit must be explicit. Plain exact entry without explicit deep-audit intent must not automatically start full-scope run-state review.
+Plain exact `spec_flow_design_review` starts the full-scope design-baseline review.
+It uses the run-state, baseline slice table, dynamic risk slice table, score state, hard-blocker rules, and pass gate defined in this file.
 
 This flow does not replace `spec_flow_review`.
 `spec_flow_review` answers whether the governance rule set still closes coherently.
@@ -25,7 +27,7 @@ It reviews the design of the governance mechanism that governs business truth.
 
 ## 2. Default Scope
 
-This section applies only to explicit `deep_audit`.
+This section applies to every `spec_flow_design_review`.
 
 The default scope includes the design main chain only.
 It is layout-normalized:
@@ -48,6 +50,8 @@ That default scope includes:
 
 1. core governance and boundary rules
    - `spec_flow_design_review.md`
+   - `governance/review.md`
+   - `governance/review_scope.md`
    - `agent_operability_standard.md`
    - `spec_policy.md`
    - `lifecycle/overview.md`
@@ -112,6 +116,8 @@ For the default design-baseline review, the execution-local `review_plan` must u
 
 1. `design_foundation`
    - `spec_flow_design_review.md`
+   - `governance/review.md`
+   - `governance/review_scope.md`
    - `agent_operability_standard.md`
    - `spec_policy.md`
    - `lifecycle/overview.md`
@@ -171,16 +177,17 @@ For the default design-baseline review, the minimum cross-block convergence chec
 2. `design_foundation <-> human_operability_and_extension`
 3. `lifecycle_and_gate_design <-> human_operability_and_extension`
 
-If a narrowed review still crosses one of those boundaries and the owner block is not included, the review must stop without `pass`.
+The review must include all three design blocks before any `pass` or `pass-with-optimization` conclusion.
+If one of those block boundaries is not reviewed, the review must stop without a passing conclusion.
 
 ## 5. Preconditions
 
 ### 5.1 Full-Scope Review Run State
 
-`spec_flow_design_review` adopts `<framework-root>/slice_work_state_protocol.md` when it uses a review run-state file.
+`spec_flow_design_review` adopts `<framework-root>/slice_work_state_protocol.md` for its review run-state file.
 This review file owns the adoption details, design review blocks, scoring model, hard-blocker rules, optimization rules, and final conclusion rules.
 
-Default full-scope `spec_flow_design_review` uses a run-state process file.
+Every `spec_flow_design_review` uses a run-state process file.
 
 The process file is not a Spec, not durable behavior truth, and not a substitute for the review output.
 It records review progress, baseline slice status, dynamic risk slice status, score-state progress, input fingerprints, findings, non-blocking optimization references, blocked reason, and resume position for one full-scope design review run.
@@ -213,11 +220,9 @@ The file name must not contain the run ID, because the run ID identifies the rev
 
 Rules:
 
-1. full-scope default `spec_flow_design_review` must use this run-state file procedure
-2. narrowed `spec_flow_design_review` does not use full-scope run state by default
-3. a narrowed review may use a run-state file only when the user explicitly asks for resumable design review
-4. the run-state file must not replace the fixed review blocks, the eight fixed design questions, the hard-blocker rules, or the pass gate
-5. deterministic tooling may maintain only mechanical fields:
+1. every `spec_flow_design_review` must use this run-state file procedure
+2. the run-state file must not replace the fixed review blocks, the eight fixed design questions, the hard-blocker rules, or the pass gate
+3. deterministic tooling may maintain only mechanical fields:
    - UTC timestamps
    - `review_layout`
    - baseline slice skeleton rows
@@ -225,7 +230,7 @@ Rules:
    - input fingerprints
    - structural validation
    - stale status changes caused by changed or missing input files
-6. deterministic tooling must not write or modify:
+4. deterministic tooling must not write or modify:
    - question scores
    - `score_basis`
    - design finding content
@@ -233,27 +238,26 @@ Rules:
    - non-blocking optimization content
    - hard-blocker judgment
    - final `pass | pass-with-optimization | blocked` conclusion
-7. the startup procedure must inspect only `docs/specs/_governance_review/spec_flow_design_review.md`
-8. if the fixed run-state file does not exist, the startup procedure must create a new run-state file and begin at `design_foundation`
-9. if the fixed run-state file is closed or structurally invalid, the startup procedure must delete it, report the deletion reason, create a new run-state file, and begin at `design_foundation`
-10. if the fixed run-state file is valid, open, and last updated no more than two hours before startup, the startup procedure may reuse it automatically; before review work continues, the executor must refresh fingerprints, mark stale slices, and resume from the recorded active slice
-11. if the fixed run-state file is valid, open, and last updated more than two hours but no more than seven days before startup, the startup procedure must stop for an explicit manual decision to either reuse the file or delete it and start a new run
+5. the startup procedure must inspect only `docs/specs/_governance_review/spec_flow_design_review.md`
+6. if the fixed run-state file does not exist, the startup procedure must create a new run-state file and begin at `design_foundation`
+7. if the fixed run-state file is closed or structurally invalid, the startup procedure must delete it, report the deletion reason, create a new run-state file, and begin at `design_foundation`
+8. if the fixed run-state file is valid, open, and last updated no more than two hours before startup, the startup procedure may reuse it automatically; before review work continues, the executor must refresh fingerprints, mark stale slices, and resume from the recorded active slice
+9. if the fixed run-state file is valid, open, and last updated more than two hours but no more than seven days before startup, the startup procedure must stop for an explicit manual decision to either reuse the file or delete it and start a new run
     - if the decision is reuse, the executor must refresh fingerprints, mark stale slices, and resume from the recorded active slice
     - if the decision is delete, the startup procedure must delete the file, create a new run-state file, and begin at `design_foundation`
-12. if the fixed run-state file is valid, open, and last updated more than seven days before startup, the startup procedure must delete it as expired, report the deletion reason, create a new run-state file, and begin at `design_foundation`
-13. the startup procedure must not scan a per-flow subdirectory or preserve old closed run-state files as review history
+10. if the fixed run-state file is valid, open, and last updated more than seven days before startup, the startup procedure must delete it as expired, report the deletion reason, create a new run-state file, and begin at `design_foundation`
+11. the startup procedure must not scan a per-flow subdirectory or preserve old closed run-state files as review history
 
 Design-review adoption rules:
 
 1. the state carrier for the default full-scope review is `docs/specs/_governance_review/spec_flow_design_review.md`
-2. narrowed reviews do not use that carrier unless the user explicitly asks for resumable design review
-3. required run-state fields, baseline slice rows, dynamic risk slice rows, and score-state rows are defined in this file
-4. baseline slices are defined in Section 5.2
-5. dynamic risk slices are allowed only under Section 5.3
-6. required cross-block convergence checks are defined in Section 4 and represented by the applicable baseline or dynamic risk slices
-7. freshness and stale handling are performed through the review run-state procedure
-8. slice-set closure can support `pass` or `pass-with-optimization` only when the hard-blocker review, scoring model, group checks, weighted score, findings review, optimization review, and cross-block convergence also pass
-9. missing design truth, unclear in-scope ownership, or excluded-scope dependency gaps must become a dynamic risk slice, finding, optimization, blocked result, or explicit scope stop; they must not be hidden as ordinary score evidence
+2. required run-state fields, baseline slice rows, dynamic risk slice rows, and score-state rows are defined in this file
+3. baseline slices are defined in Section 5.2
+4. dynamic risk slices are allowed only under Section 5.3
+5. required cross-block convergence checks are defined in Section 4 and represented by the applicable baseline or dynamic risk slices
+6. freshness and stale handling are performed through the review run-state procedure
+7. slice-set closure can support `pass` or `pass-with-optimization` only when the hard-blocker review, scoring model, group checks, weighted score, findings review, optimization review, and cross-block convergence also pass
+8. missing design truth, unclear in-scope ownership, or excluded-scope dependency gaps must become a dynamic risk slice, finding, optimization, blocked result, or explicit scope stop; they must not be hidden as ordinary score evidence
 
 Structural validation rule:
 
@@ -326,15 +330,15 @@ Before execution:
 2. build one execution-local `review_plan`
 3. map in-scope files into the fixed review blocks
 4. name the required cross-block convergence checks before final conclusions
-5. if the default scope is used, explicitly confirm that the review stayed inside the design main chain and did not silently rely on excluded tooling or internal rule-flow files
-6. for default full-scope review, create or reuse the run-state file from Section 5.1 before reviewing the first baseline slice
+5. explicitly confirm that the review stayed inside the design main chain and did not silently rely on excluded tooling or internal rule-flow files
+6. create or reuse the run-state file from Section 5.1 before reviewing the first baseline slice
 
 If any in-scope file cannot be assigned to a review block, do not issue `pass`.
 
 ## 6. Procedure
 
 1. collect the in-scope governance files
-2. for default full-scope review, execute the run-state startup procedure from Section 5.1
+2. execute the run-state startup procedure from Section 5.1
 3. build the `review_plan`
 4. review each fixed block for:
    - design necessity
@@ -590,22 +594,22 @@ Otherwise the result is `blocked`.
 
 ## 8. Output Contract
 
-This output contract applies to explicit `deep_audit`.
+This output contract applies to every `spec_flow_design_review`.
 
 The output must report at least:
 
 1. `review scope`
 2. `review layout`
 3. `framework root`, `template root`, `tooling root`, and `project-instance compatibility mode`
-4. whether full-scope run state was created, reused, deleted and recreated, or not used
-5. the run-state file path when full-scope run state is used
+4. whether full-scope run state was created, reused, or deleted and recreated
+5. the run-state file path
 6. `review_plan`
 7. the fixed review blocks used
 8. the file coverage per block
-9. the baseline slice table and slice statuses when run state is used
-10. the dynamic risk slice table and slice statuses, or explicit `none`, when run state is used
-11. the score-state table when run state is used
-12. the stale slice result when run state is used
+9. the baseline slice table and slice statuses
+10. the dynamic risk slice table and slice statuses, or explicit `none`
+11. the score-state table
+12. the stale slice result
 13. the hard-blocker result
 14. the `routine_work_path_check` result:
    - report `not_triggered` when the trigger condition did not apply
@@ -708,4 +712,4 @@ This flow does not:
 6. update `_status.md`
 7. write `_check_result`, `_plans`, `_verify_result`, or `_stable_verify_result`
 8. use checkpoints in v1
-9. replace the default `scoped_review` front door in `framework/governance/review.md`
+9. create a scoped or narrowed `spec_flow_design_review` mode

@@ -352,11 +352,12 @@ flowchart TD
 
 ### Maintenance
 
-Tooling commands: `init`, `doctor`, `upgrade`. Reader is also in the tooling layer but is read-only.
+Tooling commands: `init`, `doctor`, `build-release`. Reader is also in the tooling layer but is read-only.
 
 After updating `specflow/`, check the tooling fingerprint to see whether local binaries need refreshing, then ask the agent to run `spec_flow_migrate` to update project-side files to match the current framework contracts.
 
-For routine framework changes, governance review uses scoped review by default: changed files, direct owners, boundary refs, and minimal convergence refs.
-Full-scope governance or design deep audit is explicit; ask for `full-scope`, `baseline`, `deep audit`, `resumable review`, or run-state-backed review when you want the heavier slice/run-state path.
+For routine framework changes and plain `spec_flow_review`, governance review uses scoped review by default: changed files, direct owners, boundary refs, and minimal convergence refs.
+The only full-scope mechanism review entry is exact `spec_flow_review:full`; use that exact entry when you want the governance slice/run-state path.
+`spec_flow_design_review` always runs the default full-scope design-baseline review.
 
 For advanced governance flows — `spec_flow_review`, `spec_flow_design_review`, and rule governance — enter them through natural language.

@@ -443,19 +443,6 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 	}
 
 	switch args[0] {
-	case "scope":
-		fs := flag.NewFlagSet("review scope", flag.ContinueOnError)
-		fs.SetOutput(stderr)
-		repoRoot := fs.String("repo-root", ".", "repository root")
-		flow := fs.String("flow", reviewrun.FlowSpecFlowReview, "review flow")
-		layout := fs.String("layout", reviewscope.LayoutAuto, "review layout: auto, installed, or source")
-		if err := fs.Parse(args[1:]); err != nil {
-			return err
-		}
-		if err := requireReviewFlow(*flow, stderr); err != nil {
-			return err
-		}
-		return writeReviewScope(stdout, mustAbs(*repoRoot), *flow, *layout)
 	case "collect-default-scope":
 		fs := flag.NewFlagSet("review collect-default-scope", flag.ContinueOnError)
 		fs.SetOutput(stderr)
@@ -1248,7 +1235,6 @@ func writeRepositoryMappingUsage(w io.Writer) {
 
 func writeReviewUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl review scope [--flow spec_flow_review|spec_flow_design_review] [--layout auto|installed|source] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl review collect-default-scope --flow spec_flow_review|spec_flow_design_review [--layout auto|installed|source] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl review run-init --flow spec_flow_review|spec_flow_design_review [--layout auto|installed|source] [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl review run-validate --flow spec_flow_review|spec_flow_design_review [--layout auto|installed|source] [--repo-root PATH]")

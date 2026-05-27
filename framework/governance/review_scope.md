@@ -1,10 +1,15 @@
 # Governance Review Scope
 
-Governance review has two modes: `scoped_review` and `deep_audit`.
+Mechanism governance review has two modes: `scoped_review` and `deep_audit`.
+`spec_flow_design_review` has one mode: default full-scope design-baseline review owned by `framework/spec_flow_design_review.md`.
 
-`scoped_review` is the default for ordinary framework changes, explicit file or directory review, and recently changed governance material.
+`scoped_review` is the default for ordinary framework changes, explicit file or directory review, recently changed governance material, and plain `spec_flow_review`.
+It is not a `spec_flow_design_review` mode.
 
-`deep_audit` is explicit. Use it only when the user asks for full-scope, baseline, deep audit, release-level governance audit, resumable review, or run-state-backed review.
+`deep_audit` is explicit for mechanism review. Use it only for exact `spec_flow_review:full`.
+
+Plain `spec_flow_design_review` must not be narrowed through this file.
+It delegates to `framework/spec_flow_design_review.md` and uses the design review run-state, baseline slices, score state, and pass gate defined there.
 
 ## `scoped_review`
 
@@ -65,22 +70,15 @@ It must not claim full governance-baseline pass or full design-baseline pass.
 
 `deep_audit` preserves the full-scope review machinery.
 
-Use `deep_audit` when the user explicitly requests one of:
-
-1. `full-scope`
-2. `baseline`
-3. `deep audit`
-4. release-level governance audit
-5. resumable review
-6. run-state-backed review
-7. exact `spec_flow_review:full` for mechanism correctness
+Use `deep_audit` only when the user explicitly requests exact `spec_flow_review:full` for mechanism correctness.
 
 For mechanism correctness, deep audit is owned by `framework/spec_flow_review.md`.
-For design quality, deep audit is owned by `framework/spec_flow_design_review.md`.
+For design quality, plain `spec_flow_design_review` is already full-scope and is owned by `framework/spec_flow_design_review.md`.
 
 Deep audit may use `docs/specs/_governance_review/` run-state and existing `specflowctl review run-*` tooling.
+`spec_flow_design_review` uses that run-state tooling by default.
 
-Deep-audit tooling must resolve a review layout before collecting full-scope inputs:
+Deep-audit tooling for exact `spec_flow_review:full` must resolve a review layout before collecting full-scope inputs:
 
 1. `installed_project` uses `specflow/framework/`, `specflow/templates/`, `specflow/tooling/`, and real project `docs/specs/` compatibility inputs.
 2. `source_repo` uses local `framework/`, `templates/`, and `tooling/`; its compatibility input is template bootstrap compatibility under `templates/docs/specs/`, not real project `docs/specs/`.
@@ -97,3 +95,4 @@ A scoped review must stop with `needs_deep_audit` when:
 4. the user asks for resumability, slice state, score state, or run-state tooling.
 
 Do not silently widen a scoped review into deep audit.
+Do not silently narrow `spec_flow_design_review` into scoped review.

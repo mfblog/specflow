@@ -351,11 +351,12 @@ flowchart TD
 
 ### 维护工具
 
-tooling 命令：`init`、`doctor`、`upgrade`。Reader 也在 tooling 层，但它是只读视图。
+tooling 命令：`init`、`doctor`、`build-release`。Reader 也在 tooling 层，但它是只读视图。
 
 更新 `specflow/` 后，先检查 tooling fingerprint 确认是否需要刷新本地二进制文件，然后让 agent 执行 `spec_flow_migrate`，使项目侧文件适配当前 framework 契约。
 
-普通框架修改默认使用 scoped review：只审查变更文件、直接 owner、边界引用和最小收敛引用。
-full-scope governance 或 design deep audit 必须显式要求；当你确实需要更重的 slice/run-state 路径时，明确说 `full-scope`、`baseline`、`deep audit`、`resumable review` 或 run-state-backed review。
+普通框架修改和 plain `spec_flow_review` 默认使用 scoped review：只审查变更文件、直接 owner、边界引用和最小收敛引用。
+`spec_flow_review:full` 是唯一的 full-scope mechanism review 入口；需要治理 slice/run-state 路径时，使用这个精确入口。
+`spec_flow_design_review` 始终运行默认的 full-scope design-baseline review。
 
 进阶治理 flow（`spec_flow_review`、`spec_flow_design_review`、rule 治理）通过自然语言进入。

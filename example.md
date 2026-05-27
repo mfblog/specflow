@@ -7,10 +7,16 @@ Personal preferences should stay in local `AGENTS.md`, `CLAUDE.md`, or `GEMINI.m
 
 This is the specFlow source repository, so use local `framework/...` paths.
 
-For `spec_flow_review`, `spec_flow_design_review`, or any governance/design review request:
+For `spec_flow_review` or ordinary governance review requests:
 
 1. Read `framework/governance/review.md`.
 2. Read `framework/governance/review_scope.md`.
 3. Default to `scoped_review`.
 
-Use `framework/spec_flow_review.md`, `framework/spec_flow_design_review.md`, `_governance_review/` run-state files, baseline slice tables, dynamic slice tables, or score-state tables only when the user explicitly asks for `full-scope`, `baseline`, `deep audit`, release-level governance audit, `resumable review`, run-state-backed review, or exact `spec_flow_review:full`.
+Use `framework/spec_flow_review.md`, `_governance_review/` run-state files, baseline slice tables, or dynamic slice tables only for exact `spec_flow_review:full`.
+
+For `spec_flow_design_review`:
+
+1. Read `framework/governance/review.md`.
+2. Read `framework/spec_flow_design_review.md`.
+3. Run the default full-scope design-baseline review. Do not narrow it to `scoped_review`.

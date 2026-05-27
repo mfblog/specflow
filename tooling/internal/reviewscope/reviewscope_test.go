@@ -257,6 +257,12 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/operations/migration.md") {
 		t.Fatalf("expected migration policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/governance/review_scope.md") {
+		t.Fatalf("expected review scope policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/governance/rule_system.md") {
+		t.Fatalf("expected rule system policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
 	if containsString(scope.FrameworkGuidelineFiles, deletedCommandPolicyPath("specflow/framework")) {
 		t.Fatalf("deleted flat command owner must stay outside design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
@@ -280,6 +286,9 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	}
 	if !containsString(scope.TemplateGovernanceFiles, "specflow/framework/slice_work_state_protocol.md") {
 		t.Fatalf("expected slice work-state protocol in lifecycle contract scope, got %+v", scope.TemplateGovernanceFiles)
+	}
+	if !containsString(scope.TemplateGovernanceFiles, "specflow/framework/operations/output_standard.md") {
+		t.Fatalf("expected output standard in lifecycle contract scope, got %+v", scope.TemplateGovernanceFiles)
 	}
 }
 
@@ -371,6 +380,12 @@ func TestCollectDefaultSpecFlowDesignScopeAutoDetectsSourceRepoLayout(t *testing
 	}
 	if !containsString(scope.FrameworkGuidelineFiles, "framework/operations/output_standard.md") {
 		t.Fatalf("expected source output standard in design scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.FrameworkGuidelineFiles, "framework/governance/rule_system.md") {
+		t.Fatalf("expected source rule system in design scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.TemplateGovernanceFiles, "framework/operations/output_standard.md") {
+		t.Fatalf("expected source output standard in lifecycle contract scope, got %+v", scope.TemplateGovernanceFiles)
 	}
 	if containsString(scope.FrameworkGuidelineFiles, deletedCommandPolicyPath("framework")) {
 		t.Fatalf("deleted flat command owner must stay outside source design scope, got %+v", scope.FrameworkGuidelineFiles)

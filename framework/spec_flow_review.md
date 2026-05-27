@@ -4,7 +4,8 @@
 
 `spec_flow_review` reviews the governance mechanism itself.
 This file owns explicit `deep_audit` review for mechanism correctness.
-Ordinary or plain exact `spec_flow_review` entry routes through `framework/governance/review.md` first and stays `scoped_review` unless the user explicitly asks for full-scope, baseline, deep audit, release-level governance audit, resumable review, or run-state-backed review.
+Ordinary or plain exact `spec_flow_review` entry routes through `framework/governance/review.md` first and stays `scoped_review`.
+The only full-scope mechanism review entry is exact `spec_flow_review:full`.
 
 It answers five questions:
 
@@ -14,7 +15,7 @@ It answers five questions:
 4. whether governance documents can make an executor operational without prior `specFlow` knowledge or avoidable reading cost
 5. whether the repository may still claim one coherent governance baseline
 
-Deep audit must be explicit. Plain exact entry without explicit deep-audit intent must not automatically start full-scope run-state review.
+Deep audit must use exact `spec_flow_review:full`. Plain exact entry must not automatically start full-scope run-state review.
 
 This flow does not review business truth by default.
 It reviews the mechanism that governs business truth.
@@ -290,8 +291,8 @@ Coverage without the standards in this section is not sufficient for `pass`.
 
 Command-specific adoption rules:
 
-1. the state carrier for the default full-scope review is `docs/specs/_governance_review/spec_flow_review.md`
-2. narrowed reviews do not use that carrier unless the user explicitly asks for resumable slice review
+1. the state carrier for exact `spec_flow_review:full` is `docs/specs/_governance_review/spec_flow_review.md`
+2. ordinary scoped `spec_flow_review` does not use that carrier
 3. required run fields and slice fields are defined in Section 8
 4. baseline local and cross-convergence slices are defined in Section 4
 5. dynamic slices are allowed only under Section 5
@@ -569,10 +570,9 @@ The file name must not contain the run ID, because the run ID identifies the rev
 
 Rules:
 
-1. full-scope default `spec_flow_review` must use the run-state file procedure in this section
-2. narrowed `spec_flow_review` does not use full-scope run state by default
-3. a narrowed review may use a run-state file only when the user explicitly asks for resumable slice review
-4. project-instance truth under `docs/specs/` remains outside default governance-baseline review even though the run-state file itself is read for resume handling
+1. exact `spec_flow_review:full` must use the run-state file procedure in this section
+2. ordinary scoped `spec_flow_review` must use `framework/governance/review_scope.md` and must not use full-scope run state
+3. project-instance truth under `docs/specs/` remains outside default governance-baseline review even though the run-state file itself is read for full-scope resume handling
 
 ### 6.1.1 Run-State Tooling Boundary
 
@@ -768,13 +768,8 @@ For full-scope review:
    - do not collapse a real finding into a one-line conclusion with no repair guidance
 10. issue the final result only after all required baseline and dynamic slices are closed
 
-For narrowed review:
-
-1. make the narrowed scope explicit
-2. map the narrowed scope to the relevant baseline slice or slices
-3. add dynamic slices when the narrowed review discovers uncovered risks inside the narrowed scope
-4. do not claim default governance-baseline `pass`
-5. for ordinary scoped review, use `framework/governance/review_scope.md` instead of this full-scope slice procedure
+For ordinary scoped review, use `framework/governance/review_scope.md` instead of this full-scope slice procedure.
+Ordinary scoped review must not use the full-scope run-state file, baseline slice table, dynamic slice table, or this final `pass | blocked` conclusion contract.
 
 ## 8. Output Contract
 

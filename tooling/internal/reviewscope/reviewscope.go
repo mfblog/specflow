@@ -279,6 +279,8 @@ func CollectDefaultSpecFlowDesignScopeForLayout(repoRoot, requestedLayout string
 	designFoundationFiles := []string{
 		scope.FrameworkPath("spec_flow_design_review.md"),
 		scope.FrameworkPath("governance/review.md"),
+		scope.FrameworkPath("governance/review_scope.md"),
+		scope.FrameworkPath("governance/rule_system.md"),
 		scope.FrameworkPath("agent_operability_standard.md"),
 		scope.FrameworkPath("spec_policy.md"),
 		scope.FrameworkPath("advance_policy.md"),
@@ -303,6 +305,7 @@ func CollectDefaultSpecFlowDesignScopeForLayout(repoRoot, requestedLayout string
 		scope.FrameworkPath("process_snapshot_contract.md"),
 		scope.FrameworkPath("slice_work_state_protocol.md"),
 		scope.FrameworkPath("lifecycle/recovery.md"),
+		scope.FrameworkPath("operations/output_standard.md"),
 	}
 	templateProcessStateFiles := templateProcessStateFiles(scope)
 	templateEntryFiles := templateEntryFiles(scope)

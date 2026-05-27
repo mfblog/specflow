@@ -576,12 +576,15 @@ func TestNaturalLanguageUnitRoutingSelectsLifecycleContextCard(t *testing.T) {
 	}
 }
 
-func TestCompatibilityRoutingUsesScopedGovernanceFrontDoor(t *testing.T) {
+func TestCompatibilityRoutingUsesGovernanceFrontDoor(t *testing.T) {
 	repoRoot := findRepoRoot(t)
 	content := readDocContractFile(t, repoRoot, "framework/operations/entry_routing.md")
 	for _, phrase := range []string{
 		"`spec_flow_review` -> `framework/governance/review.md`",
 		"`spec_flow_design_review` -> `framework/governance/review.md`",
+		"`framework/governance/review.md` decides the default path for each review entry.",
+		"For `spec_flow_review`, the default is `scoped_review`; it delegates to `framework/spec_flow_review.md` only for exact `spec_flow_review:full`.",
+		"For `spec_flow_design_review`, there is no scoped mode; `framework/governance/review.md` delegates to `framework/spec_flow_design_review.md` for the default full-scope design-baseline review.",
 	} {
 		if !strings.Contains(content, phrase) {
 			t.Fatalf("entry_routing.md missing scoped governance front-door route %q", phrase)
@@ -592,6 +595,8 @@ func TestCompatibilityRoutingUsesScopedGovernanceFrontDoor(t *testing.T) {
 		"`spec_flow_design_review` -> `framework/spec_flow_design_review.md`",
 		"`spec_flow_review` -> `specflow/framework/spec_flow_review.md`",
 		"`spec_flow_design_review` -> `specflow/framework/spec_flow_design_review.md`",
+		"`framework/governance/review.md` decides the default scoped review path and delegates to deep-audit owners only when explicit deep-audit intent is present.",
+		"only when explicit mechanism deep-audit intent is present",
 	} {
 		if strings.Contains(content, forbidden) {
 			t.Fatalf("entry_routing.md must not route plain governance review directly to %q", forbidden)
@@ -1096,7 +1101,8 @@ func TestGovernanceReviewDefaultsToScopedReview(t *testing.T) {
 		"`blocking: yes|no`",
 		"Severity uses `framework/severity_policy.md`.",
 		"Severity describes harm level; it does not replace explicit blocking status.",
-		"exact `spec_flow_review:full` for mechanism correctness",
+		"Use it only for exact `spec_flow_review:full`.",
+		"Use `deep_audit` only when the user explicitly requests exact `spec_flow_review:full` for mechanism correctness.",
 		"scoped_pass | scoped_blocked | needs_deep_audit",
 		"It must not claim full governance-baseline pass or full design-baseline pass.",
 		"`scoped_blocked` means at least one in-scope finding has `blocking: yes`.",
@@ -1108,12 +1114,15 @@ func TestGovernanceReviewDefaultsToScopedReview(t *testing.T) {
 
 	frontDoor := readDocContractFile(t, repoRoot, "framework/governance/review.md")
 	for _, phrase := range []string{
-		"Ordinary governance or design review uses `scoped_review` by default.",
+		"Ordinary `spec_flow_review` and governance review use `scoped_review` by default.",
 		"Read `framework/governance/review_scope.md` first.",
 		"`scoped_review` does not use `_governance_review/` run-state",
-		"Plain exact entries route through this file first.",
-		"exact `spec_flow_review:full` is also explicit deep-audit intent.",
-		"`spec_flow_review.md` and `spec_flow_design_review.md` are deep-audit owners.",
+		"Plain exact `spec_flow_review` routes through this file first and remains scoped.",
+		"Plain exact `spec_flow_design_review` routes through this file first, then directly delegates to `framework/spec_flow_design_review.md`.",
+		"The only full-scope mechanism review entry is exact `spec_flow_review:full`.",
+		"When the entry is exact `spec_flow_review:full`, `spec_flow_review` delegates to `framework/spec_flow_review.md`.",
+		"`framework/spec_flow_review.md` is the mechanism deep-audit owner",
+		"`framework/spec_flow_design_review.md` is the ordinary owner for every `spec_flow_design_review`.",
 	} {
 		if !strings.Contains(frontDoor, phrase) {
 			t.Fatalf("governance/review.md missing scoped front-door phrase %q", phrase)
@@ -1125,8 +1134,16 @@ func TestGovernanceReviewDefaultsToScopedReview(t *testing.T) {
 		if !strings.Contains(content, "scoped review") {
 			t.Fatalf("%s must describe scoped review as the routine governance review default", relPath)
 		}
-		if !strings.Contains(content, "deep audit") {
-			t.Fatalf("%s must describe deep audit as explicit", relPath)
+		if !strings.Contains(content, "spec_flow_review:full") {
+			t.Fatalf("%s must name exact spec_flow_review:full as the full-scope mechanism review entry", relPath)
+		}
+		for _, forbidden := range []string{
+			"ask for `full-scope`, `baseline`, `deep audit`, `resumable review`, or run-state-backed review",
+			"明确说 `full-scope`、`baseline`、`deep audit`、`resumable review` 或 run-state-backed review",
+		} {
+			if strings.Contains(content, forbidden) {
+				t.Fatalf("%s still advertises natural-language full-scope mechanism triggers %q", relPath, forbidden)
+			}
 		}
 	}
 }
@@ -1185,35 +1202,47 @@ func TestSpecFlowReviewFindingsRequireNarrativeStory(t *testing.T) {
 	}
 }
 
-func TestGovernanceDeepAuditRequiresExplicitIntent(t *testing.T) {
+func TestGovernanceReviewDeepAuditRequiresExplicitIntent(t *testing.T) {
 	repoRoot := findRepoRoot(t)
-	for _, relPath := range []string{"framework/spec_flow_review.md", "framework/spec_flow_design_review.md"} {
-		content := readDocContractFile(t, repoRoot, relPath)
-		for _, phrase := range []string{
-			"This file owns explicit `deep_audit` review",
-			"routes through `framework/governance/review.md` first and stays `scoped_review`",
-			"Deep audit must be explicit.",
-			"Plain exact entry without explicit deep-audit intent must not automatically start full-scope run-state review.",
-			"This section applies only to explicit `deep_audit`.",
-			"This output contract applies to explicit `deep_audit`.",
-			"replace the default `scoped_review` front door in `framework/governance/review.md`",
-			"required for every real finding and must be one of `P0`, `P1`, `P2`, or `P3`",
-			"`P0` and `P1` are normally blocking",
-			"`P2` and `P3` are normally non-blocking",
-		} {
-			if !strings.Contains(content, phrase) {
-				t.Fatalf("%s missing explicit deep-audit phrase %q", relPath, phrase)
-			}
+	content := readDocContractFile(t, repoRoot, "framework/spec_flow_review.md")
+	for _, phrase := range []string{
+		"This file owns explicit `deep_audit` review",
+		"Ordinary or plain exact `spec_flow_review` entry routes through `framework/governance/review.md` first and stays `scoped_review`.",
+		"The only full-scope mechanism review entry is exact `spec_flow_review:full`.",
+		"Deep audit must use exact `spec_flow_review:full`.",
+		"Plain exact entry must not automatically start full-scope run-state review.",
+		"the state carrier for exact `spec_flow_review:full` is `docs/specs/_governance_review/spec_flow_review.md`",
+		"ordinary scoped `spec_flow_review` does not use that carrier",
+		"exact `spec_flow_review:full` must use the run-state file procedure in this section",
+		"ordinary scoped `spec_flow_review` must use `framework/governance/review_scope.md` and must not use full-scope run state",
+		"This section applies only to explicit `deep_audit`.",
+		"This output contract applies to explicit `deep_audit`.",
+		"replace the default `scoped_review` front door in `framework/governance/review.md`",
+		"required for every real finding and must be one of `P0`, `P1`, `P2`, or `P3`",
+		"`P0` and `P1` are normally blocking",
+		"`P2` and `P3` are normally non-blocking",
+	} {
+		if !strings.Contains(content, phrase) {
+			t.Fatalf("framework/spec_flow_review.md missing explicit deep-audit phrase %q", phrase)
+		}
+	}
+	for _, forbidden := range []string{
+		"resumable slice review",
+		"narrowed reviews do not use",
+		"a narrowed review may use a run-state file",
+		"For narrowed review:",
+	} {
+		if strings.Contains(content, forbidden) {
+			t.Fatalf("framework/spec_flow_review.md still contains obsolete narrowed/resumable phrase %q", forbidden)
 		}
 	}
 
 	files := activeDocFiles(t, repoRoot)
 	patterns := []*regexp.Regexp{
 		regexp.MustCompile("(?is)Plain input `spec_flow_review` means the default governance-baseline review"),
-		regexp.MustCompile("(?is)Plain input `spec_flow_design_review` means the default design-baseline review"),
 		regexp.MustCompile("(?is)Plain exact entry.{0,120}automatically starts? full-scope"),
 		regexp.MustCompile("(?is)plain `spec_flow_review`.{0,120}full-scope run-state"),
-		regexp.MustCompile("(?is)plain `spec_flow_design_review`.{0,120}full-scope run-state"),
+		regexp.MustCompile("(?is)spec_flow_review.{0,120}asks? for `full-scope`, `baseline`, `deep audit`"),
 	}
 	for _, relPath := range files {
 		content := readDocContractFile(t, repoRoot, relPath)
@@ -1222,6 +1251,67 @@ func TestGovernanceDeepAuditRequiresExplicitIntent(t *testing.T) {
 			if pattern.MatchString(content) {
 				t.Fatalf("%s reintroduces implicit full-scope governance review with pattern %q", relPath, pattern.String())
 			}
+		}
+	}
+}
+
+func TestDesignReviewAlwaysUsesFullScopeBaseline(t *testing.T) {
+	repoRoot := findRepoRoot(t)
+	content := readDocContractFile(t, repoRoot, "framework/spec_flow_design_review.md")
+	for _, phrase := range []string{
+		"This file owns the only `spec_flow_design_review` mode: the default full-scope design-baseline review.",
+		"Ordinary or plain exact `spec_flow_design_review` entry routes through `framework/governance/review.md` first, then enters this file.",
+		"It must not be narrowed into `scoped_review`.",
+		"Plain exact `spec_flow_design_review` starts the full-scope design-baseline review.",
+		"This section applies to every `spec_flow_design_review`.",
+		"Every `spec_flow_design_review` uses a run-state process file.",
+		"This output contract applies to every `spec_flow_design_review`.",
+		"whether full-scope run state was created, reused, or deleted and recreated",
+		"the run-state file path",
+		"the baseline slice table and slice statuses",
+		"the dynamic risk slice table and slice statuses, or explicit `none`",
+		"the score-state table",
+		"the stale slice result",
+		"create a scoped or narrowed `spec_flow_design_review` mode",
+		"required for every real finding and must be one of `P0`, `P1`, `P2`, or `P3`",
+		"`P0` and `P1` are normally blocking",
+		"`P2` and `P3` are normally non-blocking",
+	} {
+		if !strings.Contains(content, phrase) {
+			t.Fatalf("framework/spec_flow_design_review.md missing full-scope design phrase %q", phrase)
+		}
+	}
+	defaultScope := sectionBetween(t, content, "That default scope includes:", "The default scope excludes:", "framework/spec_flow_design_review.md")
+	designFoundation := sectionBetween(t, content, "1. `design_foundation`", "2. `lifecycle_and_gate_design`", "framework/spec_flow_design_review.md")
+	for _, section := range []struct {
+		name    string
+		content string
+	}{
+		{name: "default scope", content: defaultScope},
+		{name: "design_foundation block", content: designFoundation},
+	} {
+		for _, phrase := range []string{
+			"`governance/review.md`",
+			"`governance/review_scope.md`",
+		} {
+			if !strings.Contains(section.content, phrase) {
+				t.Fatalf("framework/spec_flow_design_review.md %s missing governance review input %q", section.name, phrase)
+			}
+		}
+	}
+	for _, forbidden := range []string{
+		"stays `scoped_review`",
+		"Plain exact entry without explicit deep-audit intent",
+		"This section applies only to explicit `deep_audit`.",
+		"This output contract applies to explicit `deep_audit`.",
+		"narrowed reviews do not use",
+		"replace the default `scoped_review` front door",
+		"or not used",
+		"when full-scope run state is used",
+		"when run state is used",
+	} {
+		if strings.Contains(content, forbidden) {
+			t.Fatalf("framework/spec_flow_design_review.md still contains obsolete scoped-design phrase %q", forbidden)
 		}
 	}
 }
@@ -1257,20 +1347,33 @@ func TestScopedReviewDoesNotRequireRunStateOrSliceTables(t *testing.T) {
 	}
 }
 
-func TestGovernanceReviewRunStateIsDeepAuditOnly(t *testing.T) {
+func TestGovernanceReviewRunStatePolicy(t *testing.T) {
 	repoRoot := findRepoRoot(t)
 	content := readDocContractFile(t, repoRoot, "templates/docs/specs/_governance_review/README.md")
 	for _, phrase := range []string{
-		"only for explicit deep-audit or resumable governance reviews",
+		"process files for explicit full-scope mechanism reviews and every `spec_flow_design_review`",
 		"Explicit deep-audit `spec_flow_review` uses:",
-		"Explicit deep-audit `spec_flow_design_review` uses:",
-		"Scoped governance reviews do not use full-scope run state by default.",
-		"Deep-audit review mechanical writes are maintained by `specflowctl review run-* --flow <review_flow> --layout auto|installed|source`",
+		"Every `spec_flow_design_review` uses:",
+		"Scoped `spec_flow_review` and ordinary scoped governance reviews do not use full-scope run state by default.",
+		"Full-scope review mechanical writes are maintained by `specflowctl review run-* --flow <review_flow> --layout auto|installed|source`",
+		"When an explicit full-scope mechanism review or any `spec_flow_design_review` resumes a run-state file",
+		"A full-scope review result must not claim a passing conclusion until every required baseline slice and dynamic slice is closed by the owning review policy.",
+		"Starting a new full-scope review deletes the previous fixed file before the new run state is written.",
 		"Each run-state file records `review_layout`.",
 		"`source_repo` layout reviews template bootstrap compatibility under `templates/docs/specs/`",
 	} {
 		if !strings.Contains(content, phrase) {
 			t.Fatalf("_governance_review README missing deep-audit run-state phrase %q", phrase)
+		}
+	}
+	for _, forbidden := range []string{
+		"resumable governance reviews",
+		"When a deep-audit review resumes a run-state file",
+		"A deep-audit review result must not claim a passing conclusion",
+		"Starting a new deep-audit review deletes the previous fixed file",
+	} {
+		if strings.Contains(content, forbidden) {
+			t.Fatalf("_governance_review README still contains deep-audit-only run-state phrase %q", forbidden)
 		}
 	}
 }
@@ -1295,7 +1398,7 @@ func TestGovernanceReviewDoesNotInventNewReviewCli(t *testing.T) {
 	}
 }
 
-func TestSourceRepoEntryExampleRoutesGovernanceReviewToScopedReview(t *testing.T) {
+func TestSourceRepoEntryExampleRoutesGovernanceAndDesignReview(t *testing.T) {
 	repoRoot := findRepoRoot(t)
 	content := readDocContractFile(t, repoRoot, "example.md")
 	for _, phrase := range []string{
@@ -1303,12 +1406,14 @@ func TestSourceRepoEntryExampleRoutesGovernanceReviewToScopedReview(t *testing.T
 		"Personal preferences should stay in local `AGENTS.md`, `CLAUDE.md`, or `GEMINI.md` files",
 		"# Governance Review Shortcut",
 		"This is the specFlow source repository, so use local `framework/...` paths.",
-		"`spec_flow_review`",
-		"`spec_flow_design_review`",
+		"For `spec_flow_review` or ordinary governance review requests:",
 		"Read `framework/governance/review.md`.",
 		"Read `framework/governance/review_scope.md`.",
 		"Default to `scoped_review`.",
-		"Use `framework/spec_flow_review.md`, `framework/spec_flow_design_review.md`, `_governance_review/` run-state files, baseline slice tables, dynamic slice tables, or score-state tables only when the user explicitly asks",
+		"Use `framework/spec_flow_review.md`, `_governance_review/` run-state files, baseline slice tables, or dynamic slice tables only for exact `spec_flow_review:full`.",
+		"For `spec_flow_design_review`:",
+		"Read `framework/spec_flow_design_review.md`.",
+		"Run the default full-scope design-baseline review. Do not narrow it to `scoped_review`.",
 	} {
 		if !strings.Contains(content, phrase) {
 			t.Fatalf("example.md missing source-repo entry phrase %q", phrase)
