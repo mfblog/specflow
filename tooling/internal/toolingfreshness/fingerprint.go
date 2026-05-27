@@ -8,71 +8,95 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
 )
 
-const toolingGoModPath = "specflow/tooling/go.mod"
-
 var fingerprintRoots = []string{
-	"specflow/tooling/cmd",
-	"specflow/tooling/internal",
+	"cmd",
+	"internal",
 }
 
 var fingerprintSingleFiles = []string{
-	"specflow/tooling/go.mod",
-	"specflow/tooling/manifest.tsv",
+	"go.mod",
+	"manifest.tsv",
 }
 
 var optionalFingerprintSingleFiles = []string{
-	"specflow/tooling/go.sum",
+	"go.sum",
 }
 
-func IsToolingRepo(repoRoot string) bool {
-	_, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(toolingGoModPath)))
-	return err == nil
+type sourceInput struct {
+	repositoryRelative string
+	toolingRelative    string
 }
 
 func SourceInputFiles(repoRoot string) ([]string, error) {
-	if !IsToolingRepo(repoRoot) {
-		return nil, fmt.Errorf("tooling repo marker missing: %s", toolingGoModPath)
+	inputs, err := sourceInputs(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+	files := make([]string, 0, len(inputs))
+	for _, input := range inputs {
+		files = append(files, input.repositoryRelative)
+	}
+	return files, nil
+}
+
+func sourceInputs(repoRoot string) ([]sourceInput, error) {
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return nil, err
 	}
 
-	files := []string{}
+	inputs := []sourceInput{}
 	for _, relDir := range fingerprintRoots {
-		inputFiles, err := sourceFilesUnder(repoRoot, relDir, ".go")
+		inputFiles, err := sourceFilesUnder(repoRoot, layout.ToolingRoot, relDir, ".go")
 		if err != nil {
 			return nil, err
 		}
-		files = append(files, inputFiles...)
+		inputs = append(inputs, inputFiles...)
 	}
 
 	for _, relPath := range fingerprintSingleFiles {
-		path := filepath.Join(repoRoot, filepath.FromSlash(relPath))
+		repoPath := specflowlayout.Relative(layout.ToolingRoot, relPath)
+		path := filepath.Join(repoRoot, filepath.FromSlash(repoPath))
 		if _, err := os.Stat(path); err == nil {
-			files = append(files, relPath)
+			inputs = append(inputs, sourceInput{
+				repositoryRelative: repoPath,
+				toolingRelative:    relPath,
+			})
 			continue
 		} else {
-			return nil, fmt.Errorf("required tooling source file missing: %s", relPath)
+			return nil, fmt.Errorf("required tooling source file missing: %s", repoPath)
 		}
 	}
 
 	for _, relPath := range optionalFingerprintSingleFiles {
-		path := filepath.Join(repoRoot, filepath.FromSlash(relPath))
+		repoPath := specflowlayout.Relative(layout.ToolingRoot, relPath)
+		path := filepath.Join(repoRoot, filepath.FromSlash(repoPath))
 		if _, err := os.Stat(path); err == nil {
-			files = append(files, relPath)
+			inputs = append(inputs, sourceInput{
+				repositoryRelative: repoPath,
+				toolingRelative:    relPath,
+			})
 		}
 	}
 
-	sort.Strings(files)
-	return dedupeSorted(files), nil
+	sort.Slice(inputs, func(i, j int) bool {
+		return inputs[i].toolingRelative < inputs[j].toolingRelative
+	})
+	return dedupeSortedInputs(inputs), nil
 }
 
-func sourceFilesUnder(repoRoot, relDir, suffix string) ([]string, error) {
-	root := filepath.Join(repoRoot, filepath.FromSlash(relDir))
+func sourceFilesUnder(repoRoot, toolingRoot, relDir, suffix string) ([]sourceInput, error) {
+	repoDir := specflowlayout.Relative(toolingRoot, relDir)
+	root := filepath.Join(repoRoot, filepath.FromSlash(repoDir))
 	if _, err := os.Stat(root); err != nil {
-		return nil, fmt.Errorf("required tooling source directory missing: %s", relDir)
+		return nil, fmt.Errorf("required tooling source directory missing: %s", repoDir)
 	}
 
-	files := []string{}
+	files := []sourceInput{}
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -83,11 +107,18 @@ func sourceFilesUnder(repoRoot, relDir, suffix string) ([]string, error) {
 		if suffix != "" && !strings.HasSuffix(info.Name(), suffix) {
 			return nil
 		}
-		rel, err := filepath.Rel(repoRoot, path)
+		repoRel, err := filepath.Rel(repoRoot, path)
 		if err != nil {
 			return err
 		}
-		files = append(files, filepath.ToSlash(rel))
+		toolingRel, err := filepath.Rel(filepath.Join(repoRoot, filepath.FromSlash(toolingRoot)), path)
+		if err != nil {
+			return err
+		}
+		files = append(files, sourceInput{
+			repositoryRelative: filepath.ToSlash(repoRel),
+			toolingRelative:    filepath.ToSlash(toolingRel),
+		})
 		return nil
 	})
 	if err != nil {
@@ -97,33 +128,35 @@ func sourceFilesUnder(repoRoot, relDir, suffix string) ([]string, error) {
 }
 
 func LiveFingerprint(repoRoot string) (string, []string, error) {
-	files, err := SourceInputFiles(repoRoot)
+	inputs, err := sourceInputs(repoRoot)
 	if err != nil {
 		return "", nil, err
 	}
 
 	hasher := sha256.New()
-	for _, relPath := range files {
-		content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(relPath)))
+	files := make([]string, 0, len(inputs))
+	for _, input := range inputs {
+		content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(input.repositoryRelative)))
 		if err != nil {
-			return "", nil, fmt.Errorf("read %s: %w", relPath, err)
+			return "", nil, fmt.Errorf("read %s: %w", input.repositoryRelative, err)
 		}
-		hasher.Write([]byte(relPath))
+		hasher.Write([]byte(input.toolingRelative))
 		hasher.Write([]byte{0})
 		hasher.Write(content)
 		hasher.Write([]byte{0})
+		files = append(files, input.repositoryRelative)
 	}
 
 	return hex.EncodeToString(hasher.Sum(nil)), files, nil
 }
 
-func dedupeSorted(items []string) []string {
+func dedupeSortedInputs(items []sourceInput) []sourceInput {
 	if len(items) == 0 {
 		return nil
 	}
-	result := []string{items[0]}
+	result := []sourceInput{items[0]}
 	for i := 1; i < len(items); i++ {
-		if items[i] == items[i-1] {
+		if items[i].toolingRelative == items[i-1].toolingRelative {
 			continue
 		}
 		result = append(result, items[i])

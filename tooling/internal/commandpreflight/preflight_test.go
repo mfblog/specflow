@@ -32,6 +32,27 @@ func TestRunUnitPlanDoesNotTreatCheckWorkAsGate(t *testing.T) {
 	}
 }
 
+func TestRunUnitStableVerifyHasNoInputProcessDependencies(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustWritePreflightFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `demo` | `yes` | `no` | `stable` | `unit_stable_verify` | note |",
+	}, "\n")+"\n")
+
+	result := Run(repoRoot, "unit_stable_verify", "unit", "demo")
+	if !result.MayContinue {
+		t.Fatalf("unit_stable_verify preflight should not require input process files: %+v", result)
+	}
+	if len(result.ValidatedProcesses) != 0 {
+		t.Fatalf("unit_stable_verify should not validate input process files, got %+v", result.ValidatedProcesses)
+	}
+}
+
 func mustWritePreflightFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

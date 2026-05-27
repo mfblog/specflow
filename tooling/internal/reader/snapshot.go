@@ -114,7 +114,7 @@ func BuildSnapshot(repoRoot string) Snapshot {
 		}
 	}
 
-	sharedObjects := buildSharedObjects(mapping, docs)
+	sharedObjects := buildSharedObjects(mapping, docs, boundObjectsByRuleID(snapshot.Objects))
 	snapshot.Project.RuleCount = len(sharedObjects)
 	for _, object := range sharedObjects {
 		snapshot.Objects = append(snapshot.Objects, object)
@@ -240,7 +240,26 @@ func isAppendixPath(path string) bool {
 	return strings.Contains(path, "/appendix/")
 }
 
-func buildSharedObjects(mapping repositoryMapping, docs []markdownDoc) []ObjectView {
+func boundObjectsByRuleID(objects []ObjectView) map[string][]string {
+	result := map[string][]string{}
+	for _, object := range objects {
+		if object.Kind != "unit" {
+			continue
+		}
+		for _, ruleID := range object.RuleRefs {
+			if ruleID == "" {
+				continue
+			}
+			result[ruleID] = appendUnique(result[ruleID], "unit:"+object.ID)
+		}
+	}
+	for ruleID := range result {
+		sort.Strings(result[ruleID])
+	}
+	return result
+}
+
+func buildSharedObjects(mapping repositoryMapping, docs []markdownDoc, boundObjects map[string][]string) []ObjectView {
 	objects := map[string]ObjectView{}
 	for id, shared := range mapping.Rules {
 		objects[id] = ObjectView{
@@ -264,9 +283,16 @@ func buildSharedObjects(mapping repositoryMapping, docs []markdownDoc) []ObjectV
 		object.Layer = doc.Frontmatter.Scalars["layer"]
 		object.HumanState = humanLayer(object.Layer)
 		object.Version = doc.Frontmatter.Scalars["rule_version"]
-		object.BoundObjects = appendUnique(object.BoundObjects, doc.Frontmatter.BoundObjects...)
 		object.TruthPaths = appendSourceUnique(object.TruthPaths, SourceRef{Path: doc.RelPath, Label: doc.Title})
 		object.Sources = appendSourceUnique(object.Sources, SourceRef{Path: doc.RelPath, Label: doc.Title})
+		objects[id] = object
+	}
+	for id, bound := range boundObjects {
+		object := objects[id]
+		object.ID = id
+		object.Kind = "rule"
+		object.Label = id
+		object.BoundObjects = appendUnique(object.BoundObjects, bound...)
 		objects[id] = object
 	}
 	result := make([]ObjectView, 0, len(objects))

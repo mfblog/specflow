@@ -186,6 +186,8 @@ func writeCommandPreflightResult(stdout io.Writer, result commandpreflight.Resul
 			fmt.Fprintf(stdout, "  result: %s\n", process.Result)
 			fmt.Fprintf(stdout, "  failure_layer: %s\n", noneIfEmpty(process.FailureLayer))
 			fmt.Fprintf(stdout, "  recommended_next_command: %s\n", noneIfEmpty(process.RecommendedNextCommand))
+			fmt.Fprintf(stdout, "  freshness_impact: %s\n", noneIfEmpty(process.FreshnessImpact))
+			fmt.Fprintf(stdout, "  evidence_reuse: %s\n", noneIfEmpty(process.EvidenceReuse))
 			for _, diagnostic := range process.Diagnostics {
 				fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)
 			}
@@ -210,6 +212,7 @@ func writeCommandCloseResult(stdout io.Writer, result commandclose.Result, close
 	fmt.Fprintf(stdout, "input_validation_action: %s\n", noneIfEmpty(result.InputValidationAction))
 	fmt.Fprintf(stdout, "validation_action: %s\n", noneIfEmpty(result.ValidationAction))
 	fmt.Fprintf(stdout, "cleanup_action: %s\n", noneIfEmpty(result.CleanupAction))
+	fmt.Fprintf(stdout, "promotion_summary_file: %s\n", noneIfEmpty(result.PromotionSummaryFile))
 	fmt.Fprintf(stdout, "status_updated: %t\n", result.StatusUpdated)
 	fmt.Fprintln(stdout, "status_before:")
 	if result.StatusBeforePresent {
@@ -240,6 +243,8 @@ func writeCommandCloseInputProcesses(stdout io.Writer, processes []commandprefli
 		fmt.Fprintf(stdout, "  result: %s\n", process.Result)
 		fmt.Fprintf(stdout, "  failure_layer: %s\n", noneIfEmpty(process.FailureLayer))
 		fmt.Fprintf(stdout, "  recommended_next_command: %s\n", noneIfEmpty(process.RecommendedNextCommand))
+		fmt.Fprintf(stdout, "  freshness_impact: %s\n", noneIfEmpty(process.FreshnessImpact))
+		fmt.Fprintf(stdout, "  evidence_reuse: %s\n", noneIfEmpty(process.EvidenceReuse))
 		for _, diagnostic := range process.Diagnostics {
 			fmt.Fprintf(stdout, "  diagnostic: %s\n", diagnostic)
 		}
@@ -443,18 +448,20 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		flow := fs.String("flow", reviewrun.FlowSpecFlowReview, "review flow")
+		layout := fs.String("layout", reviewscope.LayoutAuto, "review layout: auto, installed, or source")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 		if err := requireReviewFlow(*flow, stderr); err != nil {
 			return err
 		}
-		return writeReviewScope(stdout, mustAbs(*repoRoot), *flow)
+		return writeReviewScope(stdout, mustAbs(*repoRoot), *flow, *layout)
 	case "collect-default-scope":
 		fs := flag.NewFlagSet("review collect-default-scope", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		flow := fs.String("flow", "", "review flow")
+		layout := fs.String("layout", reviewscope.LayoutAuto, "review layout: auto, installed, or source")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -462,19 +469,20 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 
-		return writeReviewScope(stdout, mustAbs(*repoRoot), *flow)
+		return writeReviewScope(stdout, mustAbs(*repoRoot), *flow, *layout)
 	case "run-init":
 		fs := flag.NewFlagSet("review run-init", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		flow := fs.String("flow", "", "review flow")
+		layout := fs.String("layout", reviewscope.LayoutAuto, "review layout: auto, installed, or source")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 		if err := requireReviewFlow(*flow, stderr); err != nil {
 			return err
 		}
-		result, err := reviewrun.Init(mustAbs(*repoRoot), *flow, time.Now().UTC())
+		result, err := reviewrun.InitWithLayout(mustAbs(*repoRoot), *flow, *layout, time.Now().UTC())
 		if err != nil {
 			return err
 		}
@@ -495,6 +503,7 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		flow := fs.String("flow", "", "review flow")
+		layout := fs.String("layout", reviewscope.LayoutAuto, "review layout: auto, installed, or source")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -506,7 +515,7 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		result := reviewrun.ValidateFile(absRepoRoot, *flow, file, time.Now().UTC())
+		result := reviewrun.ValidateFileWithLayout(absRepoRoot, *flow, file, *layout, time.Now().UTC())
 		if result.Valid {
 			fmt.Fprintf(stdout, "Review run-state is valid: %s\n", result.File)
 			return nil
@@ -521,6 +530,7 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		flow := fs.String("flow", "", "review flow")
+		layout := fs.String("layout", reviewscope.LayoutAuto, "review layout: auto, installed, or source")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -532,7 +542,7 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		result, err := reviewrun.Refresh(absRepoRoot, *flow, file, time.Now().UTC())
+		result, err := reviewrun.RefreshWithLayout(absRepoRoot, *flow, file, *layout, time.Now().UTC())
 		if err != nil {
 			return err
 		}
@@ -547,6 +557,7 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		flow := fs.String("flow", "", "review flow")
+		layout := fs.String("layout", reviewscope.LayoutAuto, "review layout: auto, installed, or source")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -558,7 +569,7 @@ func runReview(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		result, err := reviewrun.Touch(absRepoRoot, *flow, file, time.Now().UTC())
+		result, err := reviewrun.TouchWithLayout(absRepoRoot, *flow, file, *layout, time.Now().UTC())
 		if err != nil {
 			return err
 		}
@@ -599,14 +610,14 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 		if result.Created {
-			fmt.Fprintf(stdout, "Check work-state created: %s\n", result.File)
+			fmt.Fprintf(stdout, "Check checklist created: %s\n", result.File)
 		} else if result.Reused {
-			fmt.Fprintf(stdout, "Check work-state reused: %s\n", result.File)
+			fmt.Fprintf(stdout, "Check checklist reused: %s\n", result.File)
 		} else {
-			fmt.Fprintf(stdout, "Check work-state ready: %s\n", result.File)
+			fmt.Fprintf(stdout, "Check checklist ready: %s\n", result.File)
 		}
 		if len(result.DeletedFiles) > 0 {
-			fmt.Fprintf(stdout, "Deleted check work-state files (%d):\n", len(result.DeletedFiles))
+			fmt.Fprintf(stdout, "Deleted check checklist files (%d):\n", len(result.DeletedFiles))
 			for _, deleted := range result.DeletedFiles {
 				fmt.Fprintf(stdout, "- %s | reason=%s\n", deleted.File, deleted.Reason)
 			}
@@ -627,14 +638,14 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		}
 		result := checkwork.Validate(mustAbs(*repoRoot), *objectType, *object, time.Now().UTC())
 		if result.Valid {
-			fmt.Fprintf(stdout, "Check work-state is valid: %s\n", result.File)
+			fmt.Fprintf(stdout, "Check checklist is valid: %s\n", result.File)
 			return nil
 		}
-		fmt.Fprintf(stdout, "Check work-state is invalid: %s\n", result.File)
+		fmt.Fprintf(stdout, "Check checklist is invalid: %s\n", result.File)
 		for _, diagnostic := range result.Diagnostics {
 			fmt.Fprintf(stdout, "- %s\n", diagnostic)
 		}
-		return errors.New("check work-state validation failed")
+		return errors.New("check checklist validation failed")
 	case "check-work-refresh":
 		fs := flag.NewFlagSet("process check-work-refresh", flag.ContinueOnError)
 		fs.SetOutput(stderr)
@@ -652,10 +663,10 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "Check work-state refreshed: %s\n", result.File)
+		fmt.Fprintf(stdout, "Check checklist refreshed: %s\n", result.File)
 		fmt.Fprintf(stdout, "last_updated_at: %s\n", result.LastUpdatedAtUTC)
-		writeList(stdout, "Changed fingerprint slices", result.ChangedSlices)
-		writeList(stdout, "Stale slices", result.StaleSlices)
+		writeList(stdout, "Changed fingerprint checklist items", result.ChangedItems)
+		writeList(stdout, "Stale checklist items", result.StaleItems)
 		writeList(stdout, "Missing inputs", result.MissingInputs)
 		return nil
 	case "check-work-touch":
@@ -675,7 +686,7 @@ func runProcess(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "Check work-state touched: %s\n", result.File)
+		fmt.Fprintf(stdout, "Check checklist touched: %s\n", result.File)
 		fmt.Fprintf(stdout, "last_updated_at: %s\n", result.LastUpdatedAtUTC)
 		return nil
 	case "cleanup-fallback":
@@ -892,7 +903,7 @@ func runUnit(args []string, stdout, stderr io.Writer) error {
 			fmt.Fprintln(stdout, "No current-layer unit_refs used the old ref.")
 		}
 		writeList(stdout, "Candidate current-layer units updated", result.CandidateUpdated)
-		writeList(stdout, "Stable current-layer units updated", result.StableUpdated)
+		writeList(stdout, "Stable current-layer units rerouted", result.StableRerouted)
 		writeList(stdout, "Main specs updated", result.MainSpecsUpdated)
 		writeList(stdout, "Status rows updated", result.StatusUpdated)
 		writeList(stdout, "Process files removed", result.ProcessFilesRemoved)
@@ -1039,7 +1050,7 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		objectType := fs.String("object-type", "", "formal object type: unit")
 		object := fs.String("object", "", "formal object name")
-		processKind := fs.String("process", "", "check | plan | verify")
+		processKind := fs.String("process", "", "check | plan | verify | stable_verify")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -1053,12 +1064,18 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 		}
 		if result.Valid {
 			fmt.Fprintf(stdout, "Process snapshot is valid. file=%s\n", result.ProcessFile)
+			if result.EvidenceReuse == "accepted" {
+				fmt.Fprintf(stdout, "Freshness impact: %s\n", result.FreshnessImpact)
+				fmt.Fprintf(stdout, "Evidence reuse: %s\n", result.EvidenceReuse)
+			}
 			return nil
 		}
 		fmt.Fprintf(stdout, "Process snapshot is invalid. file=%s\n", result.ProcessFile)
 		for _, mismatch := range result.Mismatches {
 			fmt.Fprintf(stdout, "- %s\n", mismatch)
 		}
+		fmt.Fprintf(stdout, "Freshness impact: %s\n", result.FreshnessImpact)
+		fmt.Fprintf(stdout, "Evidence reuse: %s\n", result.EvidenceReuse)
 		fmt.Fprintf(stdout, "Failure layer: %s\n", result.FailureLayer)
 		if result.NextCommand != "" {
 			fmt.Fprintf(stdout, "Recommended Next Command: %s\n", result.NextCommand)
@@ -1193,7 +1210,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  init     Install specFlow files from manifest")
 	fmt.Fprintln(w, "  doctor   Check installed specFlow structure")
-	fmt.Fprintln(w, "  build-release Build platform binaries into specflow/tooling/bin")
+	fmt.Fprintln(w, "  build-release Build platform binaries into <tooling-root>/bin")
 	fmt.Fprintln(w, "  command  Run standard-command mechanical preflight checks and close commands")
 	fmt.Fprintln(w, "  entry    Check or sync registered entry-file managed blocks")
 	fmt.Fprintln(w, "  relation Compute candidate relation order and preflight readiness")
@@ -1231,22 +1248,22 @@ func writeRepositoryMappingUsage(w io.Writer) {
 
 func writeReviewUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl review scope [--flow spec_flow_review|spec_flow_design_review] [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl review collect-default-scope --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl review run-init --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl review run-validate --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl review run-refresh --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl review run-touch --flow spec_flow_review|spec_flow_design_review [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl review scope [--flow spec_flow_review|spec_flow_design_review] [--layout auto|installed|source] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl review collect-default-scope --flow spec_flow_review|spec_flow_design_review [--layout auto|installed|source] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl review run-init --flow spec_flow_review|spec_flow_design_review [--layout auto|installed|source] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl review run-validate --flow spec_flow_review|spec_flow_design_review [--layout auto|installed|source] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl review run-refresh --flow spec_flow_review|spec_flow_design_review [--layout auto|installed|source] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl review run-touch --flow spec_flow_review|spec_flow_design_review [--layout auto|installed|source] [--repo-root PATH]")
 }
 
-func writeReviewScope(stdout io.Writer, repoRoot, flow string) error {
+func writeReviewScope(stdout io.Writer, repoRoot, flow, layout string) error {
 	var scope reviewscope.SpecFlowScope
 	var err error
 	switch flow {
 	case reviewrun.FlowSpecFlowReview:
-		scope, err = reviewscope.CollectDefaultSpecFlowScope(repoRoot)
+		scope, err = reviewscope.CollectDefaultSpecFlowScopeForLayout(repoRoot, layout)
 	case reviewrun.FlowSpecFlowDesignReview:
-		scope, err = reviewscope.CollectDefaultSpecFlowDesignScope(repoRoot)
+		scope, err = reviewscope.CollectDefaultSpecFlowDesignScopeForLayout(repoRoot, layout)
 	default:
 		return fmt.Errorf("unsupported review flow %q", flow)
 	}
@@ -1256,6 +1273,11 @@ func writeReviewScope(stdout io.Writer, repoRoot, flow string) error {
 
 	fmt.Fprintf(stdout, "Review flow: %s\n", flow)
 	fmt.Fprintf(stdout, "Review profile: %s\n", scope.Profile)
+	fmt.Fprintf(stdout, "Review layout: %s\n", scope.Layout)
+	fmt.Fprintf(stdout, "Framework root: %s\n", scope.FrameworkRoot)
+	fmt.Fprintf(stdout, "Template root: %s\n", scope.TemplateRoot)
+	fmt.Fprintf(stdout, "Tooling root: %s\n", scope.ToolingRoot)
+	fmt.Fprintf(stdout, "Project-instance compatibility mode: %s\n", scope.ProjectInstanceCompatibilityMode)
 	writeList(stdout, "Framework guideline files", scope.FrameworkGuidelineFiles)
 	writeList(stdout, "Command files", scope.CommandFiles)
 	writeList(stdout, "Candidate intent files", scope.CandidateIntentFiles)
@@ -1265,6 +1287,7 @@ func writeReviewScope(stdout io.Writer, repoRoot, flow string) error {
 	writeList(stdout, "Template project-instance files", scope.TemplateProjectInstanceFiles)
 	writeList(stdout, "Template entry files", scope.TemplateEntryFiles)
 	writeList(stdout, "Project entry files", scope.ProjectEntryFiles)
+	writeList(stdout, "Source repo entry example files", scope.SourceRepoEntryExampleFiles)
 	writeList(stdout, "Agent operability files", scope.AgentOperabilityFiles)
 	writeList(stdout, "Project-instance compatibility files", scope.ProjectInstanceCompatibilityFiles)
 	writeList(stdout, "Tooling contract files", scope.ToolingContractFiles)
@@ -1319,7 +1342,7 @@ func writeUnitUsage(w io.Writer) {
 func writeSnapshotUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl snapshot rebuild --object-type unit --object OBJECT [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl snapshot validate-process --object-type unit --object OBJECT --process check|plan|verify [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl snapshot validate-process --object-type unit --object OBJECT --process check|plan|verify|stable_verify [--repo-root PATH]")
 }
 
 func writeStatusUsage(w io.Writer) {

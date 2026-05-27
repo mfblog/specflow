@@ -206,6 +206,7 @@ func hasEdge(edges []GraphEdge, from, to, kind string) bool {
 func createReaderRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
+	writeReaderTestFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
 		"# Spec Status",
 		"",
@@ -315,7 +316,7 @@ func createReaderRepo(t *testing.T) string {
 		"layer: candidate",
 		"rule_version: 0.1.0",
 		"bound_objects:",
-		"  - unit:assistant",
+		"  - unit:tool",
 		"---",
 		"",
 		"# Shared Runtime Model",

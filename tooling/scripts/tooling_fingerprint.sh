@@ -28,7 +28,7 @@ for arg in "$@"; do
 done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+TOOLING_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 FILE_LIST="$(mktemp)"
 SORTED_FILE_LIST="$(mktemp)"
@@ -36,7 +36,7 @@ trap 'rm -f "${FILE_LIST}" "${SORTED_FILE_LIST}"' EXIT
 
 add_go_tree() {
   local rel_root="$1"
-  local abs_root="${REPO_ROOT}/${rel_root}"
+  local abs_root="${TOOLING_ROOT}/${rel_root}"
 
   if [[ ! -d "${abs_root}" ]]; then
     echo "Error: required tooling source directory missing: ${rel_root}" >&2
@@ -44,13 +44,13 @@ add_go_tree() {
   fi
 
   find "${abs_root}" -type f -name '*.go' | while IFS= read -r abs_path; do
-    printf '%s\n' "${abs_path#"${REPO_ROOT}/"}"
+    printf '%s\n' "${abs_path#"${TOOLING_ROOT}/"}"
   done >>"${FILE_LIST}"
 }
 
 add_required_file() {
   local rel_path="$1"
-  if [[ ! -f "${REPO_ROOT}/${rel_path}" ]]; then
+  if [[ ! -f "${TOOLING_ROOT}/${rel_path}" ]]; then
     echo "Error: required tooling source file missing: ${rel_path}" >&2
     exit 1
   fi
@@ -59,16 +59,16 @@ add_required_file() {
 
 add_optional_file() {
   local rel_path="$1"
-  if [[ -f "${REPO_ROOT}/${rel_path}" ]]; then
+  if [[ -f "${TOOLING_ROOT}/${rel_path}" ]]; then
     printf '%s\n' "${rel_path}" >>"${FILE_LIST}"
   fi
 }
 
-add_go_tree "specflow/tooling/cmd"
-add_go_tree "specflow/tooling/internal"
-add_required_file "specflow/tooling/go.mod"
-add_required_file "specflow/tooling/manifest.tsv"
-add_optional_file "specflow/tooling/go.sum"
+add_go_tree "cmd"
+add_go_tree "internal"
+add_required_file "go.mod"
+add_required_file "manifest.tsv"
+add_optional_file "go.sum"
 
 LC_ALL=C sort -u "${FILE_LIST}" >"${SORTED_FILE_LIST}"
 
@@ -84,7 +84,7 @@ fi
 fingerprint="$(
   while IFS= read -r rel_path; do
     printf '%s\0' "${rel_path}"
-    cat "${REPO_ROOT}/${rel_path}"
+    cat "${TOOLING_ROOT}/${rel_path}"
     printf '\0'
   done <"${SORTED_FILE_LIST}" | "${HASH_CMD[@]}" | awk '{print $1}'
 )"

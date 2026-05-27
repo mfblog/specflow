@@ -1847,6 +1847,12 @@ func renderModuleProcessSnapshotForTest(t *testing.T, repoRoot, processKind, mod
 		"truth_file_ref: " + mainSpecRef,
 		"truth_version_ref: c_unit_" + module + "@0.1.0",
 		"truth_fingerprint: " + truthFingerprint,
+		"evaluation_mode: independent",
+		"reviewer_result: pass",
+		"reviewer_context: minimal_context",
+		"review_input_refs: " + mainSpecRef,
+		"review_findings: none",
+		"human_decision_refs: none",
 	}
 	if processKind == "verify" {
 		scalars = append(scalars, "verification_scope_ref: current candidate")

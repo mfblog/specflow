@@ -9,7 +9,7 @@ Rules:
 3. A draft plan may record:
    - changed execution surfaces for the round
    - current known paths and target paths
-   - legacy dependencies that look ready for retirement
+   - retired dependencies that look ready for removal
    - known implementation findings
    - open implementation unknowns
    - blocking summary
@@ -26,7 +26,7 @@ Rules:
    - `changed_execution_surfaces`
    - `current_known_paths`
    - `target_paths`
-   - `legacy_candidates`
+   - `retirement_candidates`
    - `retirement_goals`
    - `known_findings`
    - `open_modeling_unknowns`

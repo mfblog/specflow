@@ -9,41 +9,10 @@ import (
 
 func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *testing.T) {
 	repoRoot := t.TempDir()
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_review.md"), "# review\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_design_review.md"), "# design review\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_migrate.md"), "# migrate\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/agent_operability_standard.md"), "# operability\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/natural_language_routing.md"), "# routing\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/advance_policy.md"), "# advance\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/onboarding_decision_policy.md"), "# onboarding\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intent_policy.md"), "# candidate intent\n")
+	writeLayeredFrameworkFiles(t, repoRoot)
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/repair.md"), "# repair\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/change.md"), "# change\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/command_policy.md"), "# command policy\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/implementation_change_policy.md"), "# implementation policy\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/checkpoint_protocol.md"), "# checkpoint\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/slice_work_state_protocol.md"), "# slice protocol\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/tooling_execution_policy.md"), "# tooling\n")
-	for _, name := range []string{
-		"candidate_handoff_contract.md",
-		"downgrade_policy.md",
-		"process_snapshot_contract.md",
-		"recovery_policy.md",
-	} {
-		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
-	}
-	for _, name := range []string{
-		"rule_new.md",
-		"rule_extract.md",
-		"rule_bind.md",
-		"rule_topology.md",
-		"rule_sync.md",
-		"rule_escape.md",
-	} {
-		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
-	}
 	writeGuidanceSkillFiles(t, repoRoot)
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_status.md"), "# status\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_check_result/README.md"), "# check\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_check_work/README.md"), "# check work\n")
@@ -51,6 +20,7 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/draft/README.md"), "# draft plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_plans/active/README.md"), "# active plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_verify_result/README.md"), "# verify\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_stable_verify_result/README.md"), "# stable verify\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_governance_review/README.md"), "# governance review\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/repository_mapping.md"), "# repository mapping template\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# global rule template\n")
@@ -59,6 +29,7 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/README.md"), "# project draft plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_plans/active/README.md"), "# project active plans\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_verify_result/README.md"), "# project verify\n")
+	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/README.md"), "# project stable verify\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_governance_review/spec_flow_review.md"), "# ignored run state\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# demo candidate\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
@@ -86,8 +57,35 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/agent_operability_standard.md") {
 		t.Fatalf("expected agent operability file in scope, got %+v", scope.AgentOperabilityFiles)
 	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/commands/unit_check.md") {
-		t.Fatalf("expected command files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	for _, input := range []string{
+		"specflow/framework/advance_policy.md",
+		"specflow/framework/core/adoption_modes.md",
+		"specflow/framework/core/context_card.md",
+		"specflow/framework/core/freshness.md",
+		"specflow/framework/core/independent_evaluation.md",
+		"specflow/framework/governance/review_scope.md",
+		"specflow/framework/spec_flow_review.md",
+		"specflow/framework/spec_policy.md",
+		"specflow/framework/spec_writing_guide.md",
+	} {
+		if !containsString(scope.AgentOperabilityFiles, input) {
+			t.Fatalf("expected agent operability input %s, got %+v", input, scope.AgentOperabilityFiles)
+		}
+	}
+	if containsString(scope.FrameworkGuidelineFiles, deletedCommandPolicyPath("specflow/framework")) {
+		t.Fatalf("deleted flat command owner must stay outside default scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/spec_flow_review.md") {
+		t.Fatalf("expected root review owner in default scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/lifecycle/unit_check.md") {
+		t.Fatalf("expected lifecycle command files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if containsString(scope.AgentOperabilityFiles, deletedCommandFilePath("specflow/framework", "unit_check.md")) {
+		t.Fatalf("deleted command files must stay outside active agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.CommandFiles, "specflow/framework/lifecycle/unit_plan.md") {
+		t.Fatalf("expected lifecycle files in command scope, got %+v", scope.CommandFiles)
 	}
 	if !containsString(scope.GuidanceSkillFiles, "specflow/framework/skills/using-specflow-guidance/SKILL.md") {
 		t.Fatalf("expected guidance skill files in scope, got %+v", scope.GuidanceSkillFiles)
@@ -113,17 +111,17 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	if containsString(scope.RuleGovernanceFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding decision policy outside rule-governance scope, got %+v", scope.RuleGovernanceFiles)
 	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/onboarding_decision_policy.md") {
-		t.Fatalf("expected onboarding decision policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
-	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/spec_flow_migrate.md") {
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/operations/migration.md") {
 		t.Fatalf("expected migration policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/advance_policy.md") {
-		t.Fatalf("expected advance policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/operations/entry_routing.md") {
+		t.Fatalf("expected layered entry routing in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/rule_sync.md") {
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/governance/rule_system.md") {
 		t.Fatalf("expected rule-governance files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/governance/rules/rule_sync.md") {
+		t.Fatalf("expected rule flow files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/process_snapshot_contract.md") {
 		t.Fatalf("expected process-state contract files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
@@ -142,6 +140,9 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	}
 	if containsString(scope.AgentOperabilityFiles, "docs/specs/_verify_result/README.md") {
 		t.Fatalf("expected project-side process files to stay outside agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/templates/docs/specs/_stable_verify_result/README.md") {
+		t.Fatalf("expected stable verify process contract in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
 	if !containsString(scope.AgentOperabilityFiles, "specflow/templates/docs/specs/_governance_review/README.md") {
 		t.Fatalf("expected governance review process contract in agent operability scope, got %+v", scope.AgentOperabilityFiles)
@@ -172,6 +173,9 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	}
 	if !containsString(scope.ProjectEntryFiles, "AGENTS.md") {
 		t.Fatalf("expected project entry files in scope, got %+v", scope.ProjectEntryFiles)
+	}
+	if len(scope.SourceRepoEntryExampleFiles) != 0 {
+		t.Fatalf("installed project scope must not include source repo entry examples, got %+v", scope.SourceRepoEntryExampleFiles)
 	}
 	if !containsString(scope.ToolingSourceFiles, "specflow/tooling/go.mod") {
 		t.Fatalf("expected tooling go.mod in tooling source scope, got %+v", scope.ToolingSourceFiles)
@@ -212,30 +216,10 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 
 func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContract(t *testing.T) {
 	repoRoot := t.TempDir()
+	writeLayeredFrameworkFiles(t, repoRoot)
 	for _, relPath := range []string{
-		"specflow/framework/spec_flow_design_review.md",
-		"specflow/framework/spec_flow_migrate.md",
-		"specflow/framework/agent_operability_standard.md",
-		"specflow/framework/spec_policy.md",
-		"specflow/framework/spec_writing_guide.md",
-		"specflow/framework/command_policy.md",
-		"specflow/framework/advance_policy.md",
-		"specflow/framework/natural_language_routing.md",
-		"specflow/framework/onboarding_decision_policy.md",
-		"specflow/framework/implementation_change_policy.md",
-		"specflow/framework/repository_mapping_policy.md",
-		"specflow/framework/output_baseline.md",
-		"specflow/framework/checkpoint_protocol.md",
-		"specflow/framework/slice_work_state_protocol.md",
-		"specflow/framework/candidate_intent_policy.md",
 		"specflow/framework/candidate_intents/repair.md",
 		"specflow/framework/candidate_intents/change.md",
-		"specflow/framework/candidate_handoff_contract.md",
-		"specflow/framework/downgrade_policy.md",
-		"specflow/framework/process_snapshot_contract.md",
-		"specflow/framework/recovery_policy.md",
-		"specflow/framework/entry_index_registry.md",
-		"specflow/framework/commands/unit_check.md",
 		"specflow/templates/docs/specs/_status.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
 		"specflow/templates/docs/specs/_check_work/README.md",
@@ -243,6 +227,7 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 		"specflow/templates/docs/specs/_plans/draft/README.md",
 		"specflow/templates/docs/specs/_plans/active/README.md",
 		"specflow/templates/docs/specs/_verify_result/README.md",
+		"specflow/templates/docs/specs/_stable_verify_result/README.md",
 		"specflow/templates/docs/specs/_governance_review/README.md",
 		"specflow/templates/AGENTS.md",
 		"specflow/templates/GEMINI.md",
@@ -266,14 +251,17 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	if !containsString(scope.TemplateGovernanceFiles, "specflow/templates/docs/specs/_governance_review/README.md") {
 		t.Fatalf("expected governance review process contract in design scope, got %+v", scope.TemplateGovernanceFiles)
 	}
-	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/onboarding_decision_policy.md") {
-		t.Fatalf("expected onboarding decision policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	if !containsString(scope.TemplateGovernanceFiles, "specflow/templates/docs/specs/_stable_verify_result/README.md") {
+		t.Fatalf("expected stable verify process contract in design scope, got %+v", scope.TemplateGovernanceFiles)
 	}
-	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/spec_flow_migrate.md") {
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/operations/migration.md") {
 		t.Fatalf("expected migration policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
-	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/advance_policy.md") {
-		t.Fatalf("expected advance policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	if containsString(scope.FrameworkGuidelineFiles, deletedCommandPolicyPath("specflow/framework")) {
+		t.Fatalf("deleted flat command owner must stay outside design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/lifecycle/overview.md") {
+		t.Fatalf("expected lifecycle overview in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
 	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intent_policy.md") {
 		t.Fatalf("expected candidate intent policy in design candidate intent scope, got %+v", scope.CandidateIntentFiles)
@@ -284,8 +272,8 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/candidate_intents/change.md") {
 		t.Fatalf("expected change candidate intent in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
-	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/output_baseline.md") {
-		t.Fatalf("expected output baseline in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/operations/output_standard.md") {
+		t.Fatalf("expected output standard in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
 	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/slice_work_state_protocol.md") {
 		t.Fatalf("expected slice work-state protocol in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
@@ -297,11 +285,282 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 
 func TestCollectDefaultSpecFlowDesignScopeRequiresCandidateIntentStandards(t *testing.T) {
 	repoRoot := t.TempDir()
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check\n")
+	writeLayeredFrameworkFiles(t, repoRoot)
+	for _, relPath := range []string{
+		"specflow/templates/docs/specs/_status.md",
+		"specflow/templates/docs/specs/_check_work/README.md",
+		"specflow/templates/docs/specs/_check_result/README.md",
+		"specflow/templates/docs/specs/_plans/README.md",
+		"specflow/templates/docs/specs/_plans/draft/README.md",
+		"specflow/templates/docs/specs/_plans/active/README.md",
+		"specflow/templates/docs/specs/_verify_result/README.md",
+		"specflow/templates/docs/specs/_stable_verify_result/README.md",
+		"specflow/templates/docs/specs/_governance_review/README.md",
+		"specflow/templates/AGENTS.md",
+		"specflow/templates/GEMINI.md",
+		"specflow/templates/CLAUDE.md",
+		"AGENTS.md",
+		"GEMINI.md",
+		"CLAUDE.md",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
+	}
 
 	_, err := CollectDefaultSpecFlowDesignScope(repoRoot)
 	if err == nil || !strings.Contains(err.Error(), "default design candidate intent files are incomplete") {
 		t.Fatalf("expected missing candidate intent standards error, got %v", err)
+	}
+}
+
+func TestCollectDefaultSpecFlowScopeSupportsSourceRepoLayout(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeSourceScopeRepo(t, repoRoot)
+
+	scope, err := CollectDefaultSpecFlowScopeForLayout(repoRoot, "source")
+	if err != nil {
+		t.Fatalf("CollectDefaultSpecFlowScopeForLayout source: %v", err)
+	}
+	if scope.Layout != LayoutSourceRepo {
+		t.Fatalf("expected source_repo layout, got %s", scope.Layout)
+	}
+	if scope.FrameworkRoot != "framework" || scope.TemplateRoot != "templates" || scope.ToolingRoot != "tooling" {
+		t.Fatalf("unexpected source roots: %+v", scope)
+	}
+	if scope.ProjectInstanceCompatibilityMode != CompatibilityTemplateBootstrap {
+		t.Fatalf("expected template compatibility mode, got %s", scope.ProjectInstanceCompatibilityMode)
+	}
+	if !containsString(scope.CommandFiles, "framework/lifecycle/unit_check.md") {
+		t.Fatalf("expected local lifecycle file in source scope, got %+v", scope.CommandFiles)
+	}
+	if containsString(scope.FrameworkGuidelineFiles, deletedCommandPolicyPath("framework")) {
+		t.Fatalf("deleted flat command owner must stay outside source scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if containsString(scope.CommandFiles, "specflow/framework/lifecycle/unit_check.md") {
+		t.Fatalf("expected source scope to avoid installed paths, got %+v", scope.CommandFiles)
+	}
+	if !containsString(scope.ProjectInstanceCompatibilityFiles, "templates/docs/specs/_status.md") {
+		t.Fatalf("expected template status compatibility input, got %+v", scope.ProjectInstanceCompatibilityFiles)
+	}
+	if containsString(scope.ProjectInstanceCompatibilityFiles, "docs/specs/_status.md") {
+		t.Fatalf("source compatibility must not require project docs/specs, got %+v", scope.ProjectInstanceCompatibilityFiles)
+	}
+	if !containsString(scope.ToolingSourceFiles, "tooling/go.mod") {
+		t.Fatalf("expected local tooling source, got %+v", scope.ToolingSourceFiles)
+	}
+	if len(scope.ProjectEntryFiles) != 0 {
+		t.Fatalf("source scope must not require local ignored project entry files, got %+v", scope.ProjectEntryFiles)
+	}
+	if !containsString(scope.SourceRepoEntryExampleFiles, "example.md") {
+		t.Fatalf("expected source repo entry example in source scope, got %+v", scope.SourceRepoEntryExampleFiles)
+	}
+	if !containsString(scope.AgentOperabilityFiles, "example.md") {
+		t.Fatalf("expected source repo entry example in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
+}
+
+func TestCollectDefaultSpecFlowDesignScopeAutoDetectsSourceRepoLayout(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeSourceScopeRepo(t, repoRoot)
+
+	scope, err := CollectDefaultSpecFlowDesignScope(repoRoot)
+	if err != nil {
+		t.Fatalf("CollectDefaultSpecFlowDesignScope source auto: %v", err)
+	}
+	if scope.Layout != LayoutSourceRepo {
+		t.Fatalf("expected auto source layout, got %s", scope.Layout)
+	}
+	if !containsString(scope.FrameworkGuidelineFiles, "framework/operations/output_standard.md") {
+		t.Fatalf("expected source output standard in design scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if containsString(scope.FrameworkGuidelineFiles, deletedCommandPolicyPath("framework")) {
+		t.Fatalf("deleted flat command owner must stay outside source design scope, got %+v", scope.FrameworkGuidelineFiles)
+	}
+	if len(scope.ProjectEntryFiles) != 0 {
+		t.Fatalf("source design scope must not require local ignored project entry files, got %+v", scope.ProjectEntryFiles)
+	}
+	if !containsString(scope.SourceRepoEntryExampleFiles, "example.md") {
+		t.Fatalf("expected source repo entry example in source design scope, got %+v", scope.SourceRepoEntryExampleFiles)
+	}
+}
+
+func TestCollectDefaultSpecFlowScopeAutoRejectsAmbiguousLayout(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeSourceScopeRepo(t, repoRoot)
+	for _, relDir := range []string{
+		"specflow/framework/core",
+		"specflow/framework/lifecycle",
+		"specflow/framework/governance",
+		"specflow/framework/operations",
+		"specflow/templates",
+		"specflow/tooling",
+	} {
+		if err := os.MkdirAll(filepath.Join(repoRoot, relDir), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", relDir, err)
+		}
+	}
+
+	_, err := CollectDefaultSpecFlowScope(repoRoot)
+	if err == nil || !strings.Contains(err.Error(), "ambiguous review layout") {
+		t.Fatalf("expected ambiguous layout error, got %v", err)
+	}
+}
+
+func writeLayeredFrameworkFiles(t *testing.T, repoRoot string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Join(repoRoot, "specflow/tooling"), 0o755); err != nil {
+		t.Fatalf("mkdir tooling marker: %v", err)
+	}
+	for _, relPath := range []string{
+		"specflow/framework/advance_policy.md",
+		"specflow/framework/core/adoption_modes.md",
+		"specflow/framework/core/context_card.md",
+		"specflow/framework/core/freshness.md",
+		"specflow/framework/core/independent_evaluation.md",
+		"specflow/framework/core/object_model.md",
+		"specflow/framework/core/status.md",
+		"specflow/framework/core/repository_mapping.md",
+		"specflow/framework/core/lifecycle_authority.md",
+		"specflow/framework/lifecycle/overview.md",
+		"specflow/framework/lifecycle/unit_init_new_fork.md",
+		"specflow/framework/lifecycle/unit_check.md",
+		"specflow/framework/lifecycle/unit_plan.md",
+		"specflow/framework/lifecycle/unit_impl.md",
+		"specflow/framework/lifecycle/unit_verify.md",
+		"specflow/framework/lifecycle/unit_promote.md",
+		"specflow/framework/lifecycle/unit_stable_verify.md",
+		"specflow/framework/lifecycle/recovery.md",
+		"specflow/framework/governance/rule_system.md",
+		"specflow/framework/governance/impact_sync.md",
+		"specflow/framework/governance/review.md",
+		"specflow/framework/governance/review_scope.md",
+		"specflow/framework/governance/rules/rule_bind.md",
+		"specflow/framework/governance/rules/rule_escape.md",
+		"specflow/framework/governance/rules/rule_extract.md",
+		"specflow/framework/governance/rules/rule_new.md",
+		"specflow/framework/governance/rules/rule_sync.md",
+		"specflow/framework/governance/rules/rule_topology.md",
+		"specflow/framework/operations/entry_routing.md",
+		"specflow/framework/operations/implementation_change.md",
+		"specflow/framework/operations/output_standard.md",
+		"specflow/framework/operations/migration.md",
+		"specflow/framework/severity_policy.md",
+		"specflow/framework/spec_authoring_baseline.md",
+		"specflow/framework/spec_flow_design_review.md",
+		"specflow/framework/spec_flow_review.md",
+		"specflow/framework/spec_policy.md",
+		"specflow/framework/spec_writing_guide.md",
+		"specflow/framework/agent_operability_standard.md",
+		"specflow/framework/onboarding_decision_policy.md",
+		"specflow/framework/candidate_intent_policy.md",
+		"specflow/framework/candidate_handoff_contract.md",
+		"specflow/framework/downgrade_policy.md",
+		"specflow/framework/process_snapshot_contract.md",
+		"specflow/framework/slice_work_state_protocol.md",
+		"specflow/framework/tooling_execution_policy.md",
+		"specflow/framework/entry_index_registry.md",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
+	}
+}
+
+func writeSourceScopeRepo(t *testing.T, repoRoot string) {
+	t.Helper()
+	for _, relPath := range []string{
+		"framework/advance_policy.md",
+		"framework/core/adoption_modes.md",
+		"framework/core/context_card.md",
+		"framework/core/freshness.md",
+		"framework/core/independent_evaluation.md",
+		"framework/core/object_model.md",
+		"framework/core/status.md",
+		"framework/core/repository_mapping.md",
+		"framework/core/lifecycle_authority.md",
+		"framework/lifecycle/overview.md",
+		"framework/lifecycle/unit_init_new_fork.md",
+		"framework/lifecycle/unit_check.md",
+		"framework/lifecycle/unit_plan.md",
+		"framework/lifecycle/unit_impl.md",
+		"framework/lifecycle/unit_verify.md",
+		"framework/lifecycle/unit_promote.md",
+		"framework/lifecycle/unit_stable_verify.md",
+		"framework/lifecycle/recovery.md",
+		"framework/governance/rule_system.md",
+		"framework/governance/impact_sync.md",
+		"framework/governance/review.md",
+		"framework/governance/review_scope.md",
+		"framework/governance/rules/rule_bind.md",
+		"framework/governance/rules/rule_escape.md",
+		"framework/governance/rules/rule_extract.md",
+		"framework/governance/rules/rule_new.md",
+		"framework/governance/rules/rule_sync.md",
+		"framework/governance/rules/rule_topology.md",
+		"framework/operations/entry_routing.md",
+		"framework/operations/implementation_change.md",
+		"framework/operations/output_standard.md",
+		"framework/operations/migration.md",
+		"framework/spec_flow_review.md",
+		"framework/spec_flow_design_review.md",
+		"framework/spec_policy.md",
+		"framework/spec_writing_guide.md",
+		"framework/spec_authoring_baseline.md",
+		"framework/agent_operability_standard.md",
+		"framework/onboarding_decision_policy.md",
+		"framework/candidate_intent_policy.md",
+		"framework/candidate_handoff_contract.md",
+		"framework/downgrade_policy.md",
+		"framework/process_snapshot_contract.md",
+		"framework/slice_work_state_protocol.md",
+		"framework/tooling_execution_policy.md",
+		"framework/entry_index_registry.md",
+		"framework/severity_policy.md",
+		"framework/candidate_intents/repair.md",
+		"framework/candidate_intents/change.md",
+		"framework/skills/using-specflow-guidance/SKILL.md",
+		"framework/skills/project-framing/SKILL.md",
+		"framework/skills/scope-cutting/SKILL.md",
+		"framework/skills/solution-design/SKILL.md",
+		"framework/skills/design-quality-review/SKILL.md",
+		"framework/skills/spec-writeback-guidance/SKILL.md",
+		"templates/docs/specs/_status.md",
+		"templates/docs/specs/_check_result/README.md",
+		"templates/docs/specs/_check_work/README.md",
+		"templates/docs/specs/_plans/README.md",
+		"templates/docs/specs/_plans/draft/README.md",
+		"templates/docs/specs/_plans/active/README.md",
+		"templates/docs/specs/_verify_result/README.md",
+		"templates/docs/specs/_stable_verify_result/README.md",
+		"templates/docs/specs/_governance_review/README.md",
+		"templates/docs/specs/repository_mapping.md",
+		"templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
+		"templates/AGENTS.md",
+		"templates/GEMINI.md",
+		"templates/CLAUDE.md",
+		"example.md",
+		"tooling/README.md",
+		"tooling/cmd/specflowctl/main.go",
+		"tooling/internal/demo/demo.go",
+		"tooling/go.mod",
+		"tooling/manifest.tsv",
+		"tooling/reader/web/index.html",
+		"tooling/reader/web/styles.css",
+		"tooling/reader/web/app.js",
+		"tooling/reader/web/cytoscape.min.js",
+		"tooling/reader/web/mermaid.min.js",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
+	}
+	for _, relPath := range []string{
+		"tooling/scripts/build_release.sh",
+		"tooling/scripts/install.ps1",
+		"tooling/scripts/install.sh",
+		"tooling/scripts/pull_with_release.ps1",
+		"tooling/scripts/pull_with_release.sh",
+		"tooling/scripts/push_with_release.ps1",
+		"tooling/scripts/push_with_release.sh",
+		"tooling/scripts/tooling_fingerprint.ps1",
+		"tooling/scripts/tooling_fingerprint.sh",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# script\n")
 	}
 }
 
@@ -366,4 +625,12 @@ func containsString(values []string, target string) bool {
 		}
 	}
 	return false
+}
+
+func deletedCommandPolicyPath(root string) string {
+	return root + "/" + "command_" + "policy.md"
+}
+
+func deletedCommandFilePath(root, name string) string {
+	return root + "/" + "command" + "s/" + name
 }

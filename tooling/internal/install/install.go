@@ -9,6 +9,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/buildrelease"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/managedblock"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/manifest"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
 )
 
@@ -23,6 +24,10 @@ type DoctorResult struct {
 }
 
 func Init(repoRoot string, force bool) (InitResult, error) {
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return InitResult{}, err
+	}
 	items, err := manifest.Load(repoRoot)
 	if err != nil {
 		return InitResult{}, err
@@ -30,7 +35,8 @@ func Init(repoRoot string, force bool) (InitResult, error) {
 
 	result := InitResult{}
 	for _, item := range items {
-		source := filepath.Join(repoRoot, "specflow", filepath.FromSlash(item.SourceRelative))
+		sourceRelative := specflowlayout.Relative(layout.ContentRoot, item.SourceRelative)
+		source := filepath.Join(repoRoot, filepath.FromSlash(sourceRelative))
 		dest := filepath.Join(repoRoot, filepath.FromSlash(item.DestinationRelative))
 		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 			return result, fmt.Errorf("mkdir %s: %w", item.DestinationRelative, err)
@@ -59,6 +65,10 @@ func Init(repoRoot string, force bool) (InitResult, error) {
 }
 
 func Doctor(repoRoot string) (DoctorResult, error) {
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return DoctorResult{}, err
+	}
 	items, err := manifest.Load(repoRoot)
 	if err != nil {
 		return DoctorResult{}, err
@@ -66,17 +76,21 @@ func Doctor(repoRoot string) (DoctorResult, error) {
 
 	result := DoctorResult{}
 	for _, item := range items {
-		dest := filepath.Join(repoRoot, filepath.FromSlash(item.DestinationRelative))
-		if _, err := os.Stat(dest); err != nil {
-			result.Failures = append(result.Failures, fmt.Sprintf("MISSING %s", item.DestinationRelative))
+		expectedRelative := item.DestinationRelative
+		if layout.Kind == specflowlayout.SourceRepo {
+			expectedRelative = specflowlayout.Relative(layout.ContentRoot, item.SourceRelative)
+		}
+		expected := filepath.Join(repoRoot, filepath.FromSlash(expectedRelative))
+		if _, err := os.Stat(expected); err != nil {
+			result.Failures = append(result.Failures, fmt.Sprintf("MISSING %s", expectedRelative))
 		}
 	}
 
-	if err := checkManagedEntryConsistency(repoRoot, &result); err != nil {
+	if err := checkManagedEntryConsistency(repoRoot, layout, &result); err != nil {
 		return result, err
 	}
-	checkBinary(repoRoot, &result)
-	checkReaderWeb(repoRoot, &result)
+	checkBinary(repoRoot, layout, &result)
+	checkReaderWeb(repoRoot, layout, &result)
 	return result, nil
 }
 
@@ -139,8 +153,12 @@ func copyFile(source, dest string) error {
 	return os.WriteFile(dest, content, 0o644)
 }
 
-func checkManagedEntryConsistency(repoRoot string, result *DoctorResult) error {
-	agentsPath := filepath.Join(repoRoot, "AGENTS.md")
+func checkManagedEntryConsistency(repoRoot string, layout specflowlayout.Layout, result *DoctorResult) error {
+	entryRoot := repoRoot
+	if layout.Kind == specflowlayout.SourceRepo {
+		entryRoot = filepath.Join(repoRoot, filepath.FromSlash(layout.TemplateRoot))
+	}
+	agentsPath := filepath.Join(entryRoot, "AGENTS.md")
 	if _, err := os.Stat(agentsPath); err != nil {
 		return nil
 	}
@@ -156,7 +174,7 @@ func checkManagedEntryConsistency(repoRoot string, result *DoctorResult) error {
 	}
 
 	for _, peer := range []string{"GEMINI.md", "CLAUDE.md"} {
-		peerPath := filepath.Join(repoRoot, peer)
+		peerPath := filepath.Join(entryRoot, peer)
 		if _, err := os.Stat(peerPath); err != nil {
 			continue
 		}
@@ -176,19 +194,15 @@ func checkManagedEntryConsistency(repoRoot string, result *DoctorResult) error {
 	return nil
 }
 
-func checkBinary(repoRoot string, result *DoctorResult) {
-	checkOneBinary(repoRoot, filepath.ToSlash(filepath.Join("specflow/tooling/bin", buildrelease.CurrentBinaryName())), result)
-	checkOneBinary(repoRoot, filepath.ToSlash(filepath.Join("specflow/tooling/bin", buildrelease.CurrentReaderBinaryName())), result)
+func checkBinary(repoRoot string, layout specflowlayout.Layout, result *DoctorResult) {
+	checkOneBinary(repoRoot, specflowlayout.Relative(layout.ToolingRoot, filepath.ToSlash(filepath.Join("bin", buildrelease.CurrentBinaryName()))), result)
+	checkOneBinary(repoRoot, specflowlayout.Relative(layout.ToolingRoot, filepath.ToSlash(filepath.Join("bin", buildrelease.CurrentReaderBinaryName()))), result)
 }
 
 func checkOneBinary(repoRoot, relPath string, result *DoctorResult) {
 	binaryPath := filepath.Join(repoRoot, filepath.FromSlash(relPath))
 	if _, err := os.Stat(binaryPath); err != nil {
 		result.Failures = append(result.Failures, fmt.Sprintf("MISSING %s", relPath))
-		return
-	}
-
-	if !toolingfreshness.IsToolingRepo(repoRoot) {
 		return
 	}
 
@@ -217,14 +231,15 @@ func checkOneBinary(repoRoot, relPath string, result *DoctorResult) {
 	}
 }
 
-func checkReaderWeb(repoRoot string, result *DoctorResult) {
-	for _, relPath := range []string{
-		"specflow/tooling/reader/web/index.html",
-		"specflow/tooling/reader/web/styles.css",
-		"specflow/tooling/reader/web/app.js",
-		"specflow/tooling/reader/web/cytoscape.min.js",
-		"specflow/tooling/reader/web/mermaid.min.js",
+func checkReaderWeb(repoRoot string, layout specflowlayout.Layout, result *DoctorResult) {
+	for _, asset := range []string{
+		"index.html",
+		"styles.css",
+		"app.js",
+		"cytoscape.min.js",
+		"mermaid.min.js",
 	} {
+		relPath := specflowlayout.Relative(layout.ToolingRoot, filepath.ToSlash(filepath.Join("reader", "web", asset)))
 		path := filepath.Join(repoRoot, filepath.FromSlash(relPath))
 		info, err := os.Stat(path)
 		if err != nil {

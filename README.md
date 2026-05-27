@@ -11,7 +11,7 @@
 
 **English** · [简体中文](./README.zh-CN.md)
 
-[Add To Your Repository](#add-to-your-repository) · [Quick Start](#quick-start) · [Core Concepts](#core-concepts) · [Standard Commands](#standard-commands) · [Development Workflow](#development-workflow) · [Reader](#reader) · [Advanced](#advanced-usage)
+[Add To Your Repository](#add-to-your-repository) · [Quick Start](#quick-start) · [Adoption Modes](#adoption-modes) · [Core Concepts](#core-concepts) · [Standard Commands](#standard-commands) · [Development Workflow](#development-workflow) · [Reader](#reader) · [Advanced](#advanced-usage)
 
 ---
 
@@ -57,6 +57,8 @@ In plain language:
 - `specFlow` defines how work should move inside the repository
 - the runtime reads those rules and performs file edits, code changes, and verification
 - humans state the goal, confirm important boundaries, and accept or redirect the result
+
+The active model is progressive disclosure plus independent evaluation: each step reads only its Context Card, and advancing gates require an independent reviewer receipt in process evidence.
 
 You will need to learn a few core concepts and the basic development workflow.
 Once those are clear, you can drive most work with standard commands.
@@ -180,7 +182,8 @@ See [tooling/README.md](./tooling/README.md) for exact filenames.
 - `docs/specs/`
 - other workflow support files
 
-After this step, read [Core Concepts](#core-concepts) and [Development Workflow](#development-workflow) before starting daily work.
+After this step, choose an [Adoption Mode](#adoption-modes).
+`init` prepares the shared skeleton; it does not require you to run the whole lifecycle immediately.
 
 For daily work, use standard commands with the module name you want to work on:
 
@@ -198,6 +201,45 @@ I want to add rate limiting to auth, but I am not sure what should move first. R
 ```
 
 The agent reads the installed entry files and current repository truth, then decides which command to enter, whether to write Spec truth, check a boundary, or ask a required clarification.
+
+## Adoption Modes
+
+You can start small. Installing specFlow does not commit a project to promotion, stable verification, governance review, or full lifecycle use.
+
+| Mode | Use When | What It Allows |
+|---|---|---|
+| `reader-only` | You want visibility before changing process | Start `specflow-reader`, inspect state and truth, make no lifecycle writes |
+| `implementation-only` | The request fits already-written formal truth | Use natural language for a code or test change; stop if truth, boundary, acceptance, rule, or ownership must change |
+| `single-unit-trial` | You want to try specFlow on one unit | Govern one named unit through the needed steps while leaving the rest of the repo outside specFlow |
+| `unit-check-only` | You only want to test whether a Spec is a good requirement | Run `unit_check:{unit}` and stop after pass, blocked, or fix-required evidence |
+
+The formal contract is `specflow/framework/core/adoption_modes.md`.
+These modes are entry choices, not new lifecycle states, process schema, or CLI mode switches.
+Promotion, stable verification, and governance review remain explicit later choices, not default requirements for these starts.
+
+Example reader-only start:
+
+```bash
+<specflow-reader-binary> --repo-root . --addr 127.0.0.1:17863
+```
+
+Example implementation-only request:
+
+```text
+Make the existing retry test less flaky without changing the documented behavior. If this needs truth changes, stop and tell me the smallest specFlow step.
+```
+
+Example single-unit trial:
+
+```text
+Use specFlow only for the payment_retry unit for now. Do not promote or enter governance review unless I ask.
+```
+
+Example unit-check-only request:
+
+```text
+Run unit_check:payment_retry and stop after the check result. Do not plan or implement yet.
+```
 
 ## Core Concepts
 
@@ -225,6 +267,8 @@ unit_new / unit_fork → unit_check → unit_plan → unit_impl → unit_verify 
 
 - **stable** is the currently accepted behavior truth on disk
 - **candidate** is the next truth being prepared (new requirements, behavior changes)
+- **check** decides whether candidate truth is clear enough to plan from
+- **plan** turns checked truth into an executable implementation handoff
 - **verify** checks the implementation against the candidate
 - **promote** makes the accepted candidate the new stable
 
@@ -255,6 +299,8 @@ This means the same two concepts and one lifecycle pattern can govern a single f
 | Check whether implementation still matches stable truth | `unit_stable_verify:{unit}` |
 
 The command form is `{command}:{unit}`, for example `unit_check:payment`.
+
+`unit_check` and `unit_plan` are intentionally separate. `unit_check` closes the behavior and acceptance truth; `unit_plan` consumes that validated check result and decides how to implement it. This keeps truth review from being hidden inside planning.
 
 ## Development Workflow
 
@@ -309,5 +355,8 @@ flowchart TD
 Tooling commands: `init`, `doctor`, `upgrade`. Reader is also in the tooling layer but is read-only.
 
 After updating `specflow/`, check the tooling fingerprint to see whether local binaries need refreshing, then ask the agent to run `spec_flow_migrate` to update project-side files to match the current framework contracts.
+
+For routine framework changes, governance review uses scoped review by default: changed files, direct owners, boundary refs, and minimal convergence refs.
+Full-scope governance or design deep audit is explicit; ask for `full-scope`, `baseline`, `deep audit`, `resumable review`, or run-state-backed review when you want the heavier slice/run-state path.
 
 For advanced governance flows — `spec_flow_review`, `spec_flow_design_review`, and rule governance — enter them through natural language.

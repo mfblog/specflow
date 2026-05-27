@@ -31,9 +31,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PROJECT_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
 BIN_DIR="${REPO_ROOT}/tooling/bin"
-temp_fingerprint_root=""
 download_dir=""
-trap 'rm -rf "${temp_fingerprint_root:-}" "${download_dir:-}"' EXIT
+trap 'rm -rf "${download_dir:-}"' EXIT
 
 extract_managed_block() {
   local path="$1"
@@ -209,19 +208,6 @@ platform_suffix() {
   fi
 }
 
-fingerprint_root() {
-  local parent_root temp_root
-  parent_root="$(cd "${REPO_ROOT}/.." && pwd)"
-  if [[ -f "${parent_root}/specflow/tooling/manifest.tsv" ]]; then
-    printf '%s\n' "${parent_root}"
-    return 0
-  fi
-
-  temp_root="$(mktemp -d)"
-  ln -s "${REPO_ROOT}" "${temp_root}/specflow"
-  printf '%s\n' "${temp_root}"
-}
-
 read_binary_fingerprint() {
   local binary_path="$1"
   if [[ ! -x "${binary_path}" ]]; then
@@ -314,12 +300,7 @@ git pull --ff-only origin "${branch}"
 
 sync_existing_entry_blocks
 
-fingerprint_root_path="$(fingerprint_root)"
-if [[ "${fingerprint_root_path}" != "$(cd "${REPO_ROOT}/.." && pwd)" ]]; then
-  temp_fingerprint_root="${fingerprint_root_path}"
-fi
-
-fingerprint="$("${fingerprint_root_path}/specflow/tooling/scripts/tooling_fingerprint.sh")"
+fingerprint="$("${REPO_ROOT}/tooling/scripts/tooling_fingerprint.sh")"
 short_fingerprint="${fingerprint:0:12}"
 tag="specflow-tooling-${short_fingerprint}"
 suffix="$(platform_suffix)"

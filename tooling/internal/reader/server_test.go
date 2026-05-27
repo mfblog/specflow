@@ -162,9 +162,29 @@ func TestNewHandlerRequiresReaderWebAssets(t *testing.T) {
 	}
 }
 
+func TestReaderWebRootSupportsSourceRepoLayout(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeReaderTestFile(t, filepath.Join(repoRoot, "tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
+	createReaderWebAt(t, repoRoot, "tooling/reader/web")
+
+	webRoot, err := ReaderWebRoot(repoRoot)
+	if err != nil {
+		t.Fatalf("ReaderWebRoot returned error: %v", err)
+	}
+	want := filepath.Join(repoRoot, "tooling/reader/web")
+	if webRoot != want {
+		t.Fatalf("ReaderWebRoot = %q, want %q", webRoot, want)
+	}
+}
+
 func createReaderWeb(t *testing.T, repoRoot string) {
 	t.Helper()
-	webRoot := filepath.Join(repoRoot, "specflow/tooling/reader/web")
+	createReaderWebAt(t, repoRoot, "specflow/tooling/reader/web")
+}
+
+func createReaderWebAt(t *testing.T, repoRoot, relativeRoot string) {
+	t.Helper()
+	webRoot := filepath.Join(repoRoot, filepath.FromSlash(relativeRoot))
 	writeReaderTestFile(t, filepath.Join(webRoot, "index.html"), "<!doctype html><script src=\"/app.js\"></script>\n")
 	writeReaderTestFile(t, filepath.Join(webRoot, "styles.css"), "body { color: #111; }\n")
 	writeReaderTestFile(t, filepath.Join(webRoot, "app.js"), "console.log('disk asset');\n")

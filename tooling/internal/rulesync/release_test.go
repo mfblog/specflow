@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 )
 
 func TestConsumersReadsCurrentFrontmatterRuleRefs(t *testing.T) {
@@ -195,6 +197,101 @@ rule_version: 0.2.0
 	}
 }
 
+func TestReleaseVersionRejectsControlledRepairStableConsumerBeforeWriting(t *testing.T) {
+	repoRoot := setupReleaseStableAutoForkRepo(t, "unit_fork")
+	writeReleaseStableVerifyProcess(t, repoRoot, "agent", "controlled_repair_required")
+	writeReleaseStableSharedVersion(t, repoRoot, "0.2.0")
+
+	statusBefore := readReleaseTestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"))
+	traceBefore := readReleaseTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_trace.md"))
+	traceCheckPath := filepath.Join(repoRoot, "docs/specs/_check_result/unit/trace.md")
+	traceCheckBefore := readReleaseTestFile(t, traceCheckPath)
+	stableVerifyPath := releaseStableVerifyAbsPath(t, repoRoot, "agent")
+	stableVerifyBefore := readReleaseTestFile(t, stableVerifyPath)
+
+	result, err := ReleaseVersion(repoRoot, ReleaseVersionOptions{
+		RuleID:  "shared_demo",
+		FromRef: "s_b_rule_demo@0.1.0",
+		ToRef:   "s_b_rule_demo@0.2.0",
+	})
+	if err == nil ||
+		!strings.Contains(err.Error(), "controlled_repair_required") ||
+		!strings.Contains(err.Error(), "candidate_intent=repair") {
+		t.Fatalf("expected controlled repair rejection, got result=%+v err=%v", result, err)
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_agent.md")); !os.IsNotExist(err) {
+		t.Fatalf("candidate agent must not be written, stat err=%v", err)
+	}
+	if got := readReleaseTestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md")); got != statusBefore {
+		t.Fatalf("status must not change\nbefore:\n%s\nafter:\n%s", statusBefore, got)
+	}
+	if got := readReleaseTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_trace.md")); got != traceBefore {
+		t.Fatalf("candidate trace must not change\nbefore:\n%s\nafter:\n%s", traceBefore, got)
+	}
+	if got := readReleaseTestFile(t, traceCheckPath); got != traceCheckBefore {
+		t.Fatalf("trace process file must not change\nbefore:\n%s\nafter:\n%s", traceCheckBefore, got)
+	}
+	if got := readReleaseTestFile(t, stableVerifyPath); got != stableVerifyBefore {
+		t.Fatalf("stable verify evidence must not change\nbefore:\n%s\nafter:\n%s", stableVerifyBefore, got)
+	}
+}
+
+func TestReleaseVersionAllowsControlledChangeStableConsumer(t *testing.T) {
+	repoRoot := setupReleaseStableAutoForkRepo(t, "unit_fork")
+	writeReleaseStableVerifyProcess(t, repoRoot, "agent", "controlled_change_required")
+	writeReleaseStableSharedVersion(t, repoRoot, "0.2.0")
+
+	result, err := ReleaseVersion(repoRoot, ReleaseVersionOptions{
+		RuleID:  "shared_demo",
+		FromRef: "s_b_rule_demo@0.1.0",
+		ToRef:   "s_b_rule_demo@0.2.0",
+	})
+	if err != nil {
+		t.Fatalf("ReleaseVersion: %v", err)
+	}
+	if len(result.StableForked) != 1 || result.StableForked[0] != "unit:agent" {
+		t.Fatalf("expected stable agent fork, got %+v", result.StableForked)
+	}
+	agentCandidate := readReleaseTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_agent.md"))
+	if !strings.Contains(agentCandidate, "candidate_intent: change") ||
+		!strings.Contains(agentCandidate, "  - s_b_rule_demo@0.2.0") {
+		t.Fatalf("candidate agent was not written as a change fork:\n%s", agentCandidate)
+	}
+	if _, err := os.Stat(releaseStableVerifyAbsPath(t, repoRoot, "agent")); !os.IsNotExist(err) {
+		t.Fatalf("expected stable verify evidence to be cleaned up by unit_fork close, stat err=%v", err)
+	}
+	status := readReleaseTestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"))
+	if !strings.Contains(status, "| `unit` | `agent` | `yes` | `yes` | `candidate` | `unit_check` | Auto-forked by rule release-version from s_b_rule_demo@0.1.0 to s_b_rule_demo@0.2.0; rerun check. |") {
+		t.Fatalf("agent status was not routed through unit_fork close:\n%s", status)
+	}
+}
+
+func TestReleaseVersionRejectsStableConsumerWhenNextCommandIsNotUnitForkBeforeWriting(t *testing.T) {
+	repoRoot := setupReleaseStableAutoForkRepo(t, "unit_stable_verify")
+	writeReleaseStableSharedVersion(t, repoRoot, "0.2.0")
+
+	statusBefore := readReleaseTestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"))
+	traceBefore := readReleaseTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_trace.md"))
+
+	result, err := ReleaseVersion(repoRoot, ReleaseVersionOptions{
+		RuleID:  "shared_demo",
+		FromRef: "s_b_rule_demo@0.1.0",
+		ToRef:   "s_b_rule_demo@0.2.0",
+	})
+	if err == nil || !strings.Contains(err.Error(), "requires current Next Command unit_fork") {
+		t.Fatalf("expected unit_fork next-command rejection, got result=%+v err=%v", result, err)
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_agent.md")); !os.IsNotExist(err) {
+		t.Fatalf("candidate agent must not be written, stat err=%v", err)
+	}
+	if got := readReleaseTestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md")); got != statusBefore {
+		t.Fatalf("status must not change\nbefore:\n%s\nafter:\n%s", statusBefore, got)
+	}
+	if got := readReleaseTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_trace.md")); got != traceBefore {
+		t.Fatalf("candidate trace must not change\nbefore:\n%s\nafter:\n%s", traceBefore, got)
+	}
+}
+
 func TestReleaseVersionRejectsFromRefFromDifferentRuleWithoutWritingConsumers(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
@@ -249,4 +346,225 @@ rule_version: 0.2.0
 	if string(after) != string(before) {
 		t.Fatalf("release-version must not rewrite consumers after from-ref rule mismatch\nbefore:\n%s\nafter:\n%s", string(before), string(after))
 	}
+}
+
+func setupReleaseStableAutoForkRepo(t *testing.T, stableNextCommand string) string {
+	t.Helper()
+	repoRoot := t.TempDir()
+	for _, dir := range []string{
+		"docs/specs",
+		"docs/specs/rules/stable",
+		"docs/specs/units/stable",
+		"docs/specs/units/candidate",
+		"docs/specs/_check_result/unit",
+		"docs/specs/_plans/active",
+		"docs/specs/_stable_verify_result/unit",
+		"docs/specs/_verify_result/unit",
+	} {
+		mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(dir)))
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `agent` | `yes` | `no` | `stable` | `" + stableNextCommand + "` | stable |",
+		"| `unit` | `trace` | `no` | `yes` | `candidate` | `unit_plan` | candidate |",
+	}, "\n")+"\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_agent.md"), strings.Join([]string{
+		"---",
+		"id: agent",
+		"layer: stable",
+		"version: 0.1.0",
+		"rule_refs:",
+		"  - s_b_rule_demo@0.1.0",
+		"---",
+		"",
+		"# agent",
+		"",
+		"## Testability / Acceptance Criteria",
+		"",
+		"acceptance_item_set:",
+		"  - id: agent.acceptance",
+		"    target: agent behavior is accepted.",
+		"    verification_surface: internal_flow",
+		"    implementation_surface: AgentCore/internal/agent",
+		"    verification_method: Go test for agent behavior.",
+		"    pass_condition: agent behavior passes the declared checks.",
+		"    not_runnable_yet: no",
+		"",
+	}, "\n"))
+	writeUnitSpecWithRuleRefs(t, repoRoot, "candidate", "trace", []string{"s_b_rule_demo@0.1.0"})
+	writeReleaseStableSharedVersion(t, repoRoot, "0.1.0")
+	writeRepositoryMappingFile(t, repoRoot, "0.1.0")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/trace.md"), "check")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/trace.md"), "plan")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/trace.md"), "verify")
+	return repoRoot
+}
+
+func writeReleaseStableSharedVersion(t *testing.T, repoRoot, version string) {
+	t.Helper()
+	writeStableSharedFile(t, repoRoot, strings.Join([]string{
+		"---",
+		"rule_id: shared_demo",
+		"rule_scope: bound",
+		"layer: stable",
+		"rule_version: " + version,
+		"---",
+		"",
+		"# Shared",
+		"",
+	}, "\n"))
+}
+
+func writeReleaseStableVerifyProcess(t *testing.T, repoRoot, unit, decision string) {
+	t.Helper()
+	snap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", unit)
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	mapping, err := snapshot.BuildRepositoryMappingSnapshot(repoRoot)
+	if err != nil {
+		t.Fatalf("BuildRepositoryMappingSnapshot: %v", err)
+	}
+	allowNext := "false"
+	nextCommand := "unit_stable_verify"
+	if decision == "aligned" || decision == "controlled_repair_required" || decision == "controlled_change_required" {
+		allowNext = "true"
+		nextCommand = "unit_fork"
+	}
+	lines := []string{
+		"object_type: unit",
+		"object_ref: " + unit,
+		"gate: unit_stable_verify",
+		"decision: " + decision,
+		"allow_next: " + allowNext,
+		"next_command: " + nextCommand,
+		"blocking_summary: none",
+		"coverage_summary: current stable implementation",
+		"truth_layer_ref: stable",
+		"truth_file_ref: " + snap.SpecFileRef,
+		"truth_version_ref: " + snap.SpecVersionRef,
+		"truth_fingerprint: " + snap.SpecFingerprint,
+		"acceptance_behavior_fingerprint: " + snap.AcceptanceBehaviorFingerprint,
+		"repository_mapping_snapshot:",
+		"  file_ref: " + mapping.FileRef,
+		"  version_ref: " + mapping.VersionRef,
+		"  fingerprint: " + mapping.Fingerprint,
+	}
+	lines = append(lines, renderReleaseAcceptanceItems(snap.AcceptanceItemSet)...)
+	lines = append(lines, renderReleaseAppendixSnapshot(snap.ModuleAppendixSnapshot)...)
+	lines = append(lines, renderReleaseUnitSnapshot(snap.UnitSnapshot)...)
+	lines = append(lines, renderReleaseRuleSnapshot(snap.RuleSnapshot)...)
+	lines = append(lines, renderReleaseAcceptanceEvidence(snap.AcceptanceItemSet)...)
+	lines = append(lines,
+		"implementation_surface_refs: AgentCore/internal/"+unit,
+		"evidence_refs: go test ./...",
+		"evaluation_mode: independent",
+		"reviewer_result: pass",
+		"reviewer_context: minimal_context",
+		"review_input_refs: "+snap.SpecFileRef,
+		"review_findings: none",
+		"human_decision_refs: none",
+	)
+	processPath := releaseStableVerifyAbsPath(t, repoRoot, unit)
+	mustWriteFile(t, processPath, "# stable verify\n\n```yaml\n"+strings.Join(lines, "\n")+"\n```\n")
+}
+
+func renderReleaseAcceptanceItems(entries []snapshot.AcceptanceItemEntry) []string {
+	if len(entries) == 0 {
+		return []string{"acceptance_item_set: none"}
+	}
+	lines := []string{"acceptance_item_set:"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - id: "+entry.ID,
+			"    verification_surface: "+entry.VerificationSurface,
+			"    not_runnable_yet: "+entry.NotRunnableYet,
+		)
+	}
+	return lines
+}
+
+func renderReleaseAppendixSnapshot(entries []snapshot.AppendixEntry) []string {
+	if len(entries) == 0 {
+		return []string{"unit_appendix_snapshot: none"}
+	}
+	lines := []string{"unit_appendix_snapshot:"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - file_ref: "+entry.FileRef,
+			"    fingerprint: "+entry.Fingerprint,
+		)
+	}
+	return lines
+}
+
+func renderReleaseUnitSnapshot(entries []snapshot.ObjectSnapshotEntry) []string {
+	if len(entries) == 0 {
+		return []string{"unit_snapshot: none"}
+	}
+	lines := []string{"unit_snapshot:"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - unit: "+entry.ObjectRef,
+			"    layer: "+entry.Layer,
+			"    file_ref: "+entry.FileRef,
+			"    version_ref: "+entry.VersionRef,
+			"    fingerprint: "+entry.Fingerprint,
+		)
+	}
+	return lines
+}
+
+func renderReleaseRuleSnapshot(entries []snapshot.RuleEntry) []string {
+	if len(entries) == 0 {
+		return []string{"rule_snapshot: none"}
+	}
+	lines := []string{"rule_snapshot:"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - rule_id: "+entry.RuleID,
+			"    layer: "+entry.Layer,
+			"    file_ref: "+entry.FileRef,
+			"    version_ref: "+entry.VersionRef,
+			"    fingerprint: "+entry.Fingerprint,
+		)
+	}
+	return lines
+}
+
+func renderReleaseAcceptanceEvidence(entries []snapshot.AcceptanceItemEntry) []string {
+	if len(entries) == 0 {
+		return []string{"acceptance_item_evidence_matrix: none"}
+	}
+	lines := []string{"acceptance_item_evidence_matrix:"}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - id: "+entry.ID,
+			"    status: pass",
+		)
+	}
+	return lines
+}
+
+func releaseStableVerifyAbsPath(t *testing.T, repoRoot, unit string) string {
+	t.Helper()
+	fileRef, err := snapshot.ProcessFilePath("unit", unit, "stable_verify")
+	if err != nil {
+		t.Fatalf("stable verify path: %v", err)
+	}
+	return filepath.Join(repoRoot, filepath.FromSlash(fileRef))
+}
+
+func readReleaseTestFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	return string(data)
 }

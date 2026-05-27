@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
 )
 
@@ -60,12 +61,18 @@ func BuildAll(repoRoot string, targets []Target) (BuildResult, error) {
 		targets = DefaultTargets
 	}
 
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return BuildResult{}, err
+	}
+
 	fingerprint, _, err := toolingfreshness.LiveFingerprint(repoRoot)
 	if err != nil {
 		return BuildResult{}, err
 	}
 
-	binDir := filepath.Join(repoRoot, "specflow/tooling/bin")
+	binRelative := specflowlayout.Relative(layout.ToolingRoot, "bin")
+	binDir := filepath.Join(repoRoot, filepath.FromSlash(binRelative))
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		return BuildResult{}, fmt.Errorf("mkdir bin dir: %w", err)
 	}
@@ -85,7 +92,7 @@ func BuildAll(repoRoot string, targets []Target) (BuildResult, error) {
 			outputPath := filepath.Join(binDir, build.outputName)
 			ldflags := ldflagsForFingerprint(fingerprint)
 			cmd := exec.Command("go", buildCommandArgs(ldflags, outputPath, build.packagePath)...)
-			cmd.Dir = filepath.Join(repoRoot, "specflow/tooling")
+			cmd.Dir = filepath.Join(repoRoot, filepath.FromSlash(layout.ToolingRoot))
 			cmd.Env = append(os.Environ(),
 				"GOOS="+target.GOOS,
 				"GOARCH="+target.GOARCH,
@@ -96,7 +103,7 @@ func BuildAll(repoRoot string, targets []Target) (BuildResult, error) {
 			if output, err := cmd.CombinedOutput(); err != nil {
 				return result, fmt.Errorf("build %s/%s %s failed: %v: %s", target.GOOS, target.GOARCH, build.packagePath, err, string(output))
 			}
-			result.Targets = append(result.Targets, filepath.ToSlash(filepath.Join("specflow/tooling/bin", build.outputName)))
+			result.Targets = append(result.Targets, specflowlayout.Relative(binRelative, build.outputName))
 		}
 	}
 

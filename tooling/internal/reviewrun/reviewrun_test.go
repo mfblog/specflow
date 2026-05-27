@@ -23,19 +23,51 @@ func TestInitCreatesValidRunState(t *testing.T) {
 	if !strings.Contains(content, "2026-04-26T10:30:00Z") {
 		t.Fatalf("expected UTC timestamp in run-state:\n%s", content)
 	}
+	if !strings.Contains(content, "| review_layout | installed_project |") {
+		t.Fatalf("expected installed_project review layout in run-state:\n%s", content)
+	}
 	if !strings.Contains(content, "| scope_inventory | baseline | local | pending |") {
 		t.Fatalf("expected baseline slice table in run-state:\n%s", content)
 	}
 	state := mustParse(t, result.File)
-	routingSlice := findSlice(t, state, "routing_and_command_policy")
-	if !containsString(routingSlice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
-		t.Fatalf("expected onboarding policy in routing slice, got %+v", routingSlice.InputFiles)
+	reviewEntrySlice := findSlice(t, state, "review_entry_policy")
+	for _, input := range []string{
+		"specflow/framework/spec_flow_review.md",
+		"specflow/framework/spec_flow_design_review.md",
+		"specflow/framework/governance/review.md",
+		"specflow/framework/governance/review_scope.md",
+		"specflow/framework/operations/output_standard.md",
+		"specflow/framework/severity_policy.md",
+	} {
+		if !containsString(reviewEntrySlice.InputFiles, input) {
+			t.Fatalf("expected review entry input %s, got %+v", input, reviewEntrySlice.InputFiles)
+		}
 	}
-	if !containsString(routingSlice.InputFiles, "specflow/framework/spec_flow_migrate.md") {
+	routingSlice := findSlice(t, state, "routing_and_lifecycle_policy")
+	if !containsString(routingSlice.InputFiles, "specflow/framework/operations/entry_routing.md") {
+		t.Fatalf("expected entry routing in routing slice, got %+v", routingSlice.InputFiles)
+	}
+	if !containsString(routingSlice.InputFiles, "specflow/framework/lifecycle/overview.md") {
+		t.Fatalf("expected lifecycle overview in routing slice, got %+v", routingSlice.InputFiles)
+	}
+	if !containsString(routingSlice.InputFiles, "specflow/framework/operations/migration.md") {
 		t.Fatalf("expected migration policy in routing slice, got %+v", routingSlice.InputFiles)
 	}
 	if !containsString(routingSlice.InputFiles, "specflow/framework/advance_policy.md") {
 		t.Fatalf("expected advance policy in routing slice, got %+v", routingSlice.InputFiles)
+	}
+	if !containsString(routingSlice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
+		t.Fatalf("expected onboarding policy in routing slice, got %+v", routingSlice.InputFiles)
+	}
+	for _, input := range []string{
+		"specflow/framework/core/context_card.md",
+		"specflow/framework/core/lifecycle_authority.md",
+		"specflow/framework/core/independent_evaluation.md",
+		"specflow/framework/core/freshness.md",
+	} {
+		if !containsString(routingSlice.InputFiles, input) {
+			t.Fatalf("expected routing input %s, got %+v", input, routingSlice.InputFiles)
+		}
 	}
 	if !containsString(routingSlice.InputFiles, "specflow/framework/candidate_intent_policy.md") {
 		t.Fatalf("expected candidate intent policy in routing slice, got %+v", routingSlice.InputFiles)
@@ -47,23 +79,180 @@ func TestInitCreatesValidRunState(t *testing.T) {
 	if !containsString(truthSlice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
 		t.Fatalf("expected onboarding policy in truth gate slice, got %+v", truthSlice.InputFiles)
 	}
+	if !containsString(truthSlice.InputFiles, "specflow/framework/lifecycle/unit_check.md") {
+		t.Fatalf("expected unit_check lifecycle gate in truth gate slice, got %+v", truthSlice.InputFiles)
+	}
+	if !containsString(truthSlice.InputFiles, "specflow/framework/lifecycle/unit_plan.md") {
+		t.Fatalf("expected unit_plan lifecycle gate in truth gate slice, got %+v", truthSlice.InputFiles)
+	}
+	if !containsString(truthSlice.InputFiles, "specflow/framework/operations/implementation_change.md") {
+		t.Fatalf("expected implementation change operations file in truth gate slice, got %+v", truthSlice.InputFiles)
+	}
+	for _, input := range []string{
+		"specflow/framework/core/status.md",
+		"specflow/framework/core/lifecycle_authority.md",
+		"specflow/framework/spec_policy.md",
+		"specflow/framework/spec_writing_guide.md",
+		"specflow/framework/spec_authoring_baseline.md",
+	} {
+		if !containsString(truthSlice.InputFiles, input) {
+			t.Fatalf("expected truth gate input %s, got %+v", input, truthSlice.InputFiles)
+		}
+	}
 	if !containsString(truthSlice.InputFiles, "specflow/framework/candidate_intent_policy.md") {
 		t.Fatalf("expected candidate intent policy in truth gate slice, got %+v", truthSlice.InputFiles)
 	}
 	if !containsString(truthSlice.InputFiles, "specflow/framework/candidate_intents/change.md") {
 		t.Fatalf("expected change intent standard in truth gate slice, got %+v", truthSlice.InputFiles)
 	}
-	if !containsString(truthSlice.InputFiles, "specflow/framework/spec_authoring_baseline.md") {
-		t.Fatalf("expected semantic authoring baseline in truth gate slice, got %+v", truthSlice.InputFiles)
-	}
 	operabilitySlice := findSlice(t, state, "agent_operability_local")
+	for _, input := range []string{
+		"specflow/framework/core/context_card.md",
+		"specflow/framework/core/independent_evaluation.md",
+		"specflow/framework/core/freshness.md",
+		"specflow/framework/governance/review_scope.md",
+		"specflow/framework/spec_flow_review.md",
+		"specflow/framework/spec_policy.md",
+	} {
+		if !containsString(operabilitySlice.InputFiles, input) {
+			t.Fatalf("expected agent operability input %s, got %+v", input, operabilitySlice.InputFiles)
+		}
+	}
 	if !containsString(operabilitySlice.InputFiles, "specflow/framework/candidate_intents/repair.md") {
 		t.Fatalf("expected repair intent standard in agent operability slice, got %+v", operabilitySlice.InputFiles)
+	}
+	processSlice := findSlice(t, state, "process_and_impact_state")
+	for _, input := range []string{
+		"specflow/framework/core/independent_evaluation.md",
+		"specflow/framework/core/freshness.md",
+	} {
+		if !containsString(processSlice.InputFiles, input) {
+			t.Fatalf("expected process state input %s, got %+v", input, processSlice.InputFiles)
+		}
 	}
 
 	validation := ValidateFile(repoRoot, FlowSpecFlowReview, result.File, now)
 	if !validation.Valid {
 		t.Fatalf("expected valid run-state, got diagnostics: %+v", validation.Diagnostics)
+	}
+}
+
+func TestInitCreatesSourceRepoRunState(t *testing.T) {
+	repoRoot := createSourceReviewRunRepo(t)
+	now := time.Date(2026, 4, 26, 10, 30, 0, 0, time.UTC)
+
+	result, err := InitWithLayout(repoRoot, FlowSpecFlowReview, "source", now)
+	if err != nil {
+		t.Fatalf("Init source review: %v", err)
+	}
+	content := mustRead(t, result.File)
+	if !strings.Contains(content, "| review_layout | source_repo |") {
+		t.Fatalf("expected source_repo review layout in run-state:\n%s", content)
+	}
+	state := mustParse(t, result.File)
+	routingSlice := findSlice(t, state, "routing_and_lifecycle_policy")
+	if !containsString(routingSlice.InputFiles, "framework/operations/entry_routing.md") {
+		t.Fatalf("expected source entry routing input, got %+v", routingSlice.InputFiles)
+	}
+	if containsString(routingSlice.InputFiles, "specflow/framework/operations/entry_routing.md") {
+		t.Fatalf("source run-state must not use installed framework path, got %+v", routingSlice.InputFiles)
+	}
+	reviewEntrySlice := findSlice(t, state, "review_entry_policy")
+	for _, input := range []string{
+		"framework/spec_flow_review.md",
+		"framework/spec_flow_design_review.md",
+		"framework/governance/review.md",
+		"framework/governance/review_scope.md",
+		"framework/operations/output_standard.md",
+		"framework/severity_policy.md",
+	} {
+		if !containsString(reviewEntrySlice.InputFiles, input) {
+			t.Fatalf("expected source review entry input %s, got %+v", input, reviewEntrySlice.InputFiles)
+		}
+	}
+	compatSlice := findSlice(t, state, "project_instance_contract_compatibility")
+	if !containsString(compatSlice.InputFiles, "templates/docs/specs/_status.md") {
+		t.Fatalf("expected source compatibility to use template status, got %+v", compatSlice.InputFiles)
+	}
+	if containsString(compatSlice.InputFiles, "docs/specs/_status.md") {
+		t.Fatalf("source compatibility must not require project status, got %+v", compatSlice.InputFiles)
+	}
+	for _, input := range []string{
+		"framework/core/object_model.md",
+		"framework/core/status.md",
+		"framework/core/repository_mapping.md",
+		"framework/spec_policy.md",
+		"framework/spec_writing_guide.md",
+	} {
+		if !containsString(compatSlice.InputFiles, input) {
+			t.Fatalf("expected source compatibility contract input %s, got %+v", input, compatSlice.InputFiles)
+		}
+	}
+	operabilitySlice := findSlice(t, state, "agent_operability_local")
+	for _, input := range []string{
+		"framework/core/context_card.md",
+		"framework/core/independent_evaluation.md",
+		"framework/core/freshness.md",
+		"framework/governance/review_scope.md",
+		"framework/spec_flow_review.md",
+		"framework/spec_policy.md",
+	} {
+		if !containsString(operabilitySlice.InputFiles, input) {
+			t.Fatalf("expected source agent operability input %s, got %+v", input, operabilitySlice.InputFiles)
+		}
+	}
+
+	validation := ValidateFileWithLayout(repoRoot, FlowSpecFlowReview, result.File, "source", now)
+	if !validation.Valid {
+		t.Fatalf("expected valid source run-state, got diagnostics: %+v", validation.Diagnostics)
+	}
+}
+
+func TestRefreshSourceRunStateUsesRecordedLayout(t *testing.T) {
+	repoRoot := createSourceReviewRunRepo(t)
+	now := time.Date(2026, 4, 26, 10, 30, 0, 0, time.UTC)
+	result, err := InitWithLayout(repoRoot, FlowSpecFlowReview, "source", now)
+	if err != nil {
+		t.Fatalf("Init source review: %v", err)
+	}
+	state := mustParse(t, result.File)
+	setSliceStatus(t, &state, "routing_and_lifecycle_policy", slicePassed)
+	mustWrite(t, result.File, renderState(mustConfig(t, FlowSpecFlowReview), state))
+	mustWrite(t, filepath.Join(repoRoot, "framework/lifecycle/overview.md"), "# source overview changed\n")
+
+	refresh, err := Refresh(repoRoot, FlowSpecFlowReview, result.File, now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("Refresh source review: %v", err)
+	}
+	if !containsString(refresh.StaleSlices, "routing_and_lifecycle_policy") {
+		t.Fatalf("expected source routing slice stale, got %+v", refresh.StaleSlices)
+	}
+}
+
+func TestValidateRejectsExplicitLayoutConflict(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+
+	validation := ValidateFileWithLayout(repoRoot, FlowSpecFlowReview, file, "source", now)
+	if validation.Valid || !containsDiagnostic(validation.Diagnostics, "review_layout is installed_project but requested layout is source_repo") {
+		t.Fatalf("expected layout conflict diagnostic, got %+v", validation.Diagnostics)
+	}
+}
+
+func TestInitRecreatesRunStateMissingReviewLayout(t *testing.T) {
+	repoRoot, file, now := createInitializedRun(t)
+	content := mustRead(t, file)
+	content = strings.Replace(content, "| review_layout | installed_project |\n", "", 1)
+	mustWrite(t, file, content)
+
+	result, err := InitWithLayout(repoRoot, FlowSpecFlowReview, "installed", now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("Init should recreate missing layout run-state: %v", err)
+	}
+	if !result.Created || len(result.DeletedFiles) != 1 || result.DeletedFiles[0].Reason != "invalid_run_state" {
+		t.Fatalf("expected invalid run-state recreation, got %+v", result)
+	}
+	if !strings.Contains(mustRead(t, result.File), "| review_layout | installed_project |") {
+		t.Fatalf("expected recreated run-state to include review_layout")
 	}
 }
 
@@ -76,7 +265,7 @@ func TestInitIncludesStateSpaceClosureSlice(t *testing.T) {
 		t.Fatalf("expected state_space_closure to be cross_convergence, got %s", slice.SliceType)
 	}
 	for _, dependency := range []string{
-		"routing_and_command_policy",
+		"routing_and_lifecycle_policy",
 		"truth_and_implementation_gates",
 		"process_and_impact_state",
 		"project_instance_contract_compatibility",
@@ -86,20 +275,21 @@ func TestInitIncludesStateSpaceClosureSlice(t *testing.T) {
 		}
 	}
 	for _, input := range []string{
-		"specflow/framework/command_policy.md",
-		"specflow/framework/implementation_change_policy.md",
+		"specflow/framework/lifecycle/overview.md",
+		"specflow/framework/operations/entry_routing.md",
+		"specflow/framework/operations/implementation_change.md",
 		"specflow/framework/candidate_intent_policy.md",
 		"specflow/framework/candidate_intents/repair.md",
 		"specflow/framework/process_snapshot_contract.md",
 		"docs/specs/_status.md",
-		"specflow/framework/commands/unit_check.md",
+		"specflow/framework/lifecycle/unit_check.md",
 	} {
 		if !containsString(slice.InputFiles, input) {
 			t.Fatalf("expected state_space_closure input %s, got %+v", input, slice.InputFiles)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md")); err != nil {
-		t.Fatalf("expected command fixture file: %v", err)
+	if _, err := os.Stat(filepath.Join(repoRoot, "specflow/framework/lifecycle/unit_check.md")); err != nil {
+		t.Fatalf("expected lifecycle fixture file: %v", err)
 	}
 }
 
@@ -112,7 +302,7 @@ func TestInitIncludesSupportingTruthLifecycleConvergenceSlice(t *testing.T) {
 		t.Fatalf("expected supporting_truth_lifecycle_convergence to be cross_convergence, got %s", slice.SliceType)
 	}
 	for _, dependency := range []string{
-		"routing_and_command_policy",
+		"routing_and_lifecycle_policy",
 		"truth_and_implementation_gates",
 		"process_and_impact_state",
 		"project_instance_contract_compatibility",
@@ -123,10 +313,11 @@ func TestInitIncludesSupportingTruthLifecycleConvergenceSlice(t *testing.T) {
 		}
 	}
 	for _, input := range []string{
-		"specflow/framework/commands/unit_fork.md",
-		"specflow/framework/commands/unit_promote.md",
-		"specflow/framework/recovery_policy.md",
-		"specflow/framework/rule_sync.md",
+		"specflow/framework/lifecycle/unit_init_new_fork.md",
+		"specflow/framework/lifecycle/unit_promote.md",
+		"specflow/framework/lifecycle/recovery.md",
+		"specflow/framework/governance/rule_system.md",
+		"specflow/framework/governance/impact_sync.md",
 		"docs/specs/_status.md",
 		"specflow/tooling/internal/processcleanup/processcleanup.go",
 		"specflow/tooling/internal/rulesync/release.go",
@@ -177,14 +368,17 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	}
 	state := mustParse(t, result.File)
 	designFoundation := findSlice(t, state, "design_foundation")
-	if !containsString(designFoundation.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
-		t.Fatalf("expected onboarding decision policy in design foundation input files, got %+v", designFoundation.InputFiles)
+	if !containsString(designFoundation.InputFiles, "specflow/framework/governance/review.md") {
+		t.Fatalf("expected governance review in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
-	if !containsString(designFoundation.InputFiles, "specflow/framework/spec_flow_migrate.md") {
+	if !containsString(designFoundation.InputFiles, "specflow/framework/lifecycle/overview.md") {
+		t.Fatalf("expected lifecycle overview in design foundation input files, got %+v", designFoundation.InputFiles)
+	}
+	if !containsString(designFoundation.InputFiles, "specflow/framework/operations/entry_routing.md") {
+		t.Fatalf("expected entry routing in design foundation input files, got %+v", designFoundation.InputFiles)
+	}
+	if !containsString(designFoundation.InputFiles, "specflow/framework/operations/migration.md") {
 		t.Fatalf("expected migration policy in design foundation input files, got %+v", designFoundation.InputFiles)
-	}
-	if !containsString(designFoundation.InputFiles, "specflow/framework/advance_policy.md") {
-		t.Fatalf("expected advance policy in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
 	if !containsString(designFoundation.InputFiles, "specflow/framework/candidate_intent_policy.md") {
 		t.Fatalf("expected candidate intent policy in design foundation input files, got %+v", designFoundation.InputFiles)
@@ -193,8 +387,8 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 		t.Fatalf("expected repair intent standard in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
 	humanOperability := findSlice(t, state, "human_operability_and_extension")
-	if !containsString(humanOperability.InputFiles, "specflow/framework/output_baseline.md") {
-		t.Fatalf("expected output baseline in design human-operability input files, got %+v", humanOperability.InputFiles)
+	if !containsString(humanOperability.InputFiles, "specflow/framework/operations/output_standard.md") {
+		t.Fatalf("expected output standard in design human-operability input files, got %+v", humanOperability.InputFiles)
 	}
 
 	validation := ValidateFile(repoRoot, FlowSpecFlowDesignReview, result.File, now)
@@ -213,7 +407,7 @@ func TestRefreshMarksChangedPassedDesignSliceStale(t *testing.T) {
 	state := mustParse(t, result.File)
 	setSliceStatus(t, &state, "design_foundation", slicePassed)
 	mustWrite(t, result.File, renderState(mustConfig(t, FlowSpecFlowDesignReview), state))
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_design_review.md"), "# design changed\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/governance/review.md"), "# design changed\n")
 
 	refresh, err := Refresh(repoRoot, FlowSpecFlowDesignReview, result.File, now.Add(time.Hour))
 	if err != nil {
@@ -240,10 +434,10 @@ func TestRefreshMarksScoredDesignRowsStaleWhenInputsChange(t *testing.T) {
 	state.Score[0].Status = "scored"
 	state.Score[0].Score = "3"
 	state.Score[0].ScoreBasis = "reviewed"
-	state.Score[0].Evidence = "specflow/framework/spec_flow_design_review.md"
+	state.Score[0].Evidence = "specflow/framework/governance/review.md"
 	state.Score[0].ResultSummary = "scored"
 	mustWrite(t, result.File, renderState(mustConfig(t, FlowSpecFlowDesignReview), state))
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_flow_design_review.md"), "# design changed\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/governance/review.md"), "# design changed\n")
 
 	if _, err := Refresh(repoRoot, FlowSpecFlowDesignReview, result.File, now.Add(time.Hour)); err != nil {
 		t.Fatalf("Refresh design review: %v", err)
@@ -269,7 +463,7 @@ func TestRefreshMarksScoredDesignRowsStaleWhenSliceAlreadyStale(t *testing.T) {
 	state.Score[0].Status = "scored"
 	state.Score[0].Score = "3"
 	state.Score[0].ScoreBasis = "reviewed"
-	state.Score[0].Evidence = "specflow/framework/spec_flow_design_review.md"
+	state.Score[0].Evidence = "specflow/framework/governance/review.md"
 	state.Score[0].ResultSummary = "scored"
 	mustWrite(t, result.File, renderState(mustConfig(t, FlowSpecFlowDesignReview), state))
 
@@ -692,7 +886,7 @@ func TestRefreshMarksStateSpaceClosureStaleWhenCommandInputChanges(t *testing.T)
 	state := mustParse(t, file)
 	setSliceStatus(t, &state, "state_space_closure", slicePassed)
 	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_check.md"), "# unit_check changed\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/lifecycle/unit_check.md"), "# unit_check changed\n")
 
 	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
 	if err != nil {
@@ -735,23 +929,23 @@ func TestRefreshMarksCommandProcessConvergenceStaleWhenCandidateHandoffChanges(t
 	}
 }
 
-func TestRefreshMarksTruthGateStaleWhenSpecAuthoringBaselineChanges(t *testing.T) {
+func TestRefreshMarksTruthGateStaleWhenImplementationGateChanges(t *testing.T) {
 	repoRoot, file, now := createInitializedRun(t)
 	state := mustParse(t, file)
 	setSliceStatus(t, &state, "truth_and_implementation_gates", slicePassed)
 	setSliceStatus(t, &state, "truth_to_implementation_convergence", slicePassed)
 	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/spec_authoring_baseline.md"), "# authoring baseline changed\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/operations/implementation_change.md"), "# implementation gate changed\n")
 
 	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("Refresh: %v", err)
 	}
 	if !containsString(result.StaleSlices, "truth_and_implementation_gates") {
-		t.Fatalf("expected truth_and_implementation_gates stale after authoring baseline change, got %+v", result.StaleSlices)
+		t.Fatalf("expected truth_and_implementation_gates stale after implementation gate change, got %+v", result.StaleSlices)
 	}
 	if !containsString(result.StaleSlices, "truth_to_implementation_convergence") {
-		t.Fatalf("expected truth_to_implementation_convergence stale after authoring baseline change, got %+v", result.StaleSlices)
+		t.Fatalf("expected truth_to_implementation_convergence stale after implementation gate change, got %+v", result.StaleSlices)
 	}
 
 	refreshed := mustParse(t, file)
@@ -826,11 +1020,34 @@ func TestRefreshPropagatesStaleThroughDynamicCrossChain(t *testing.T) {
 
 func TestRefreshMarksMissingPassedInputStale(t *testing.T) {
 	repoRoot, file, now := createInitializedRun(t)
+	missingRel := "docs/specs/_governance_review/temp_missing_input.md"
+	mustWrite(t, filepath.Join(repoRoot, filepath.FromSlash(missingRel)), "# temp input\n")
+	originalFingerprint, missing, err := computeFingerprint(repoRoot, []string{missingRel})
+	if err != nil {
+		t.Fatalf("fingerprint: %v", err)
+	}
+	if len(missing) > 0 {
+		t.Fatalf("unexpected missing input before refresh setup: %+v", missing)
+	}
 	state := mustParse(t, file)
-	setSliceStatus(t, &state, "review_entry_policy", slicePassed)
-	originalFingerprint := findSlice(t, state, "review_entry_policy").InputFingerprint
+	state.Dynamic = append(state.Dynamic, sliceEntry{
+		SliceID:          "dynamic_missing_input",
+		SliceOrigin:      "dynamic",
+		SliceType:        "local",
+		Status:           slicePassed,
+		ReviewQuestion:   "Does a dynamic missing input stale correctly.",
+		WhyAdded:         "test missing input",
+		ParentSliceID:    "review_entry_policy",
+		InputFiles:       []string{missingRel},
+		InputFingerprint: originalFingerprint,
+		DependsOn:        nil,
+		FindingRefs:      "none",
+		ResultSummary:    "passed",
+		ExitCondition:    "agent records the result",
+		ResumeNextStep:   "review slice dynamic_missing_input",
+	})
 	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
-	if err := os.Remove(filepath.Join(repoRoot, "specflow/framework/severity_policy.md")); err != nil {
+	if err := os.Remove(filepath.Join(repoRoot, filepath.FromSlash(missingRel))); err != nil {
 		t.Fatalf("remove input: %v", err)
 	}
 
@@ -838,14 +1055,14 @@ func TestRefreshMarksMissingPassedInputStale(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Refresh: %v", err)
 	}
-	if !containsString(result.StaleSlices, "review_entry_policy") {
+	if !containsString(result.StaleSlices, "dynamic_missing_input") {
 		t.Fatalf("expected missing input to stale passed slice, got %+v", result.StaleSlices)
 	}
 	if len(result.MissingInputs) == 0 {
 		t.Fatalf("expected missing input diagnostic")
 	}
 	refreshed := mustParse(t, file)
-	if got := findSlice(t, refreshed, "review_entry_policy").InputFingerprint; got != originalFingerprint {
+	if got := findSlice(t, refreshed, "dynamic_missing_input").InputFingerprint; got != originalFingerprint {
 		t.Fatalf("expected missing input to preserve old fingerprint, got %s want %s", got, originalFingerprint)
 	}
 	if strings.Contains(mustRead(t, file), "file_sha256: missing") {
@@ -862,6 +1079,17 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 	}
 	if !containsString(slice.InputFiles, "docs/specs/_status.md") {
 		t.Fatalf("expected project status input, got %+v", slice.InputFiles)
+	}
+	for _, input := range []string{
+		"specflow/framework/core/object_model.md",
+		"specflow/framework/core/status.md",
+		"specflow/framework/core/repository_mapping.md",
+		"specflow/framework/spec_policy.md",
+		"specflow/framework/spec_writing_guide.md",
+	} {
+		if !containsString(slice.InputFiles, input) {
+			t.Fatalf("expected project compatibility contract input %s, got %+v", input, slice.InputFiles)
+		}
 	}
 	if !containsString(slice.InputFiles, "docs/specs/repository_mapping.md") {
 		t.Fatalf("expected repository mapping input, got %+v", slice.InputFiles)
@@ -887,7 +1115,7 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 	if !containsString(slice.InputFiles, "specflow/framework/candidate_intents/change.md") {
 		t.Fatalf("expected change intent standard input for candidate metadata compatibility, got %+v", slice.InputFiles)
 	}
-	if !containsString(slice.InputFiles, "specflow/framework/spec_flow_migrate.md") {
+	if !containsString(slice.InputFiles, "specflow/framework/operations/migration.md") {
 		t.Fatalf("expected migration policy input for project-instance migration compatibility, got %+v", slice.InputFiles)
 	}
 	if containsString(slice.InputFiles, "docs/specs/_governance_review/spec_flow_review.md") {
@@ -981,7 +1209,7 @@ func TestRefreshMarksSupportingTruthLifecycleAndDependentConvergenceStale(t *tes
 	setSliceStatus(t, &state, "supporting_truth_lifecycle_convergence", slicePassed)
 	setSliceStatus(t, &state, "project_instance_to_framework_convergence", slicePassed)
 	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/commands/unit_fork.md"), "# unit_fork changed\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/lifecycle/unit_init_new_fork.md"), "# unit_init_new_fork changed\n")
 
 	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
 	if err != nil {
@@ -1113,40 +1341,60 @@ func createReviewRunRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
 	frameworkFiles := []string{
+		"advance_policy.md",
 		"spec_flow_review.md",
 		"spec_flow_design_review.md",
-		"spec_flow_migrate.md",
 		"agent_operability_standard.md",
-		"natural_language_routing.md",
-		"advance_policy.md",
 		"onboarding_decision_policy.md",
 		"candidate_intent_policy.md",
-		"command_policy.md",
-		"implementation_change_policy.md",
-		"checkpoint_protocol.md",
-		"output_baseline.md",
 		"tooling_execution_policy.md",
 		"severity_policy.md",
 		"spec_policy.md",
 		"spec_writing_guide.md",
 		"spec_authoring_baseline.md",
-		"repository_mapping_policy.md",
 		"candidate_handoff_contract.md",
 		"downgrade_policy.md",
-		"recovery_policy.md",
-		"impact_sync_policy.md",
 		"process_snapshot_contract.md",
 		"slice_work_state_protocol.md",
 		"entry_index_registry.md",
-		"rule_new.md",
-		"rule_extract.md",
-		"rule_bind.md",
-		"rule_topology.md",
-		"rule_sync.md",
-		"rule_escape.md",
 	}
 	for _, name := range frameworkFiles {
 		mustWrite(t, filepath.Join(repoRoot, "specflow/framework", name), "# "+name+"\n")
+	}
+	for _, relPath := range []string{
+		"specflow/framework/core/adoption_modes.md",
+		"specflow/framework/core/context_card.md",
+		"specflow/framework/core/freshness.md",
+		"specflow/framework/core/independent_evaluation.md",
+		"specflow/framework/core/object_model.md",
+		"specflow/framework/core/status.md",
+		"specflow/framework/core/repository_mapping.md",
+		"specflow/framework/core/lifecycle_authority.md",
+		"specflow/framework/lifecycle/overview.md",
+		"specflow/framework/lifecycle/unit_init_new_fork.md",
+		"specflow/framework/lifecycle/unit_check.md",
+		"specflow/framework/lifecycle/unit_plan.md",
+		"specflow/framework/lifecycle/unit_impl.md",
+		"specflow/framework/lifecycle/unit_verify.md",
+		"specflow/framework/lifecycle/unit_promote.md",
+		"specflow/framework/lifecycle/unit_stable_verify.md",
+		"specflow/framework/lifecycle/recovery.md",
+		"specflow/framework/governance/rule_system.md",
+		"specflow/framework/governance/impact_sync.md",
+		"specflow/framework/governance/review.md",
+		"specflow/framework/governance/review_scope.md",
+		"specflow/framework/governance/rules/rule_new.md",
+		"specflow/framework/governance/rules/rule_extract.md",
+		"specflow/framework/governance/rules/rule_bind.md",
+		"specflow/framework/governance/rules/rule_topology.md",
+		"specflow/framework/governance/rules/rule_sync.md",
+		"specflow/framework/governance/rules/rule_escape.md",
+		"specflow/framework/operations/entry_routing.md",
+		"specflow/framework/operations/implementation_change.md",
+		"specflow/framework/operations/output_standard.md",
+		"specflow/framework/operations/migration.md",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
 	for _, relPath := range []string{
 		"specflow/framework/candidate_intents/repair.md",
@@ -1164,13 +1412,6 @@ func createReviewRunRepo(t *testing.T) string {
 	} {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# skill\n")
 	}
-	for _, relPath := range []string{
-		"specflow/framework/commands/unit_check.md",
-		"specflow/framework/commands/unit_fork.md",
-		"specflow/framework/commands/unit_promote.md",
-	} {
-		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
-	}
 	for _, relPath := range append([]string{
 		"specflow/templates/docs/specs/_status.md",
 		"specflow/templates/docs/specs/_check_work/README.md",
@@ -1179,6 +1420,7 @@ func createReviewRunRepo(t *testing.T) string {
 		"specflow/templates/docs/specs/_plans/draft/README.md",
 		"specflow/templates/docs/specs/_plans/active/README.md",
 		"specflow/templates/docs/specs/_verify_result/README.md",
+		"specflow/templates/docs/specs/_stable_verify_result/README.md",
 		"specflow/templates/docs/specs/_governance_review/README.md",
 		"specflow/templates/docs/specs/repository_mapping.md",
 		"specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
@@ -1208,6 +1450,116 @@ func createReviewRunRepo(t *testing.T) string {
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# Global Rules\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo Candidate\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_governance_review/spec_flow_review.md"), "# ignored run state\n")
+	return repoRoot
+}
+
+func createSourceReviewRunRepo(t *testing.T) string {
+	t.Helper()
+	repoRoot := t.TempDir()
+	frameworkFiles := []string{
+		"advance_policy.md",
+		"spec_flow_review.md",
+		"spec_flow_design_review.md",
+		"agent_operability_standard.md",
+		"onboarding_decision_policy.md",
+		"candidate_intent_policy.md",
+		"tooling_execution_policy.md",
+		"severity_policy.md",
+		"spec_policy.md",
+		"spec_writing_guide.md",
+		"spec_authoring_baseline.md",
+		"candidate_handoff_contract.md",
+		"downgrade_policy.md",
+		"process_snapshot_contract.md",
+		"slice_work_state_protocol.md",
+		"entry_index_registry.md",
+	}
+	for _, name := range frameworkFiles {
+		mustWrite(t, filepath.Join(repoRoot, "framework", name), "# "+name+"\n")
+	}
+	for _, relPath := range []string{
+		"framework/core/adoption_modes.md",
+		"framework/core/context_card.md",
+		"framework/core/freshness.md",
+		"framework/core/independent_evaluation.md",
+		"framework/core/object_model.md",
+		"framework/core/status.md",
+		"framework/core/repository_mapping.md",
+		"framework/core/lifecycle_authority.md",
+		"framework/lifecycle/overview.md",
+		"framework/lifecycle/unit_init_new_fork.md",
+		"framework/lifecycle/unit_check.md",
+		"framework/lifecycle/unit_plan.md",
+		"framework/lifecycle/unit_impl.md",
+		"framework/lifecycle/unit_verify.md",
+		"framework/lifecycle/unit_promote.md",
+		"framework/lifecycle/unit_stable_verify.md",
+		"framework/lifecycle/recovery.md",
+		"framework/governance/rule_system.md",
+		"framework/governance/impact_sync.md",
+		"framework/governance/review.md",
+		"framework/governance/review_scope.md",
+		"framework/governance/rules/rule_new.md",
+		"framework/governance/rules/rule_extract.md",
+		"framework/governance/rules/rule_bind.md",
+		"framework/governance/rules/rule_topology.md",
+		"framework/governance/rules/rule_sync.md",
+		"framework/governance/rules/rule_escape.md",
+		"framework/operations/entry_routing.md",
+		"framework/operations/implementation_change.md",
+		"framework/operations/output_standard.md",
+		"framework/operations/migration.md",
+		"framework/candidate_intents/repair.md",
+		"framework/candidate_intents/change.md",
+		"framework/skills/using-specflow-guidance/SKILL.md",
+		"framework/skills/project-framing/SKILL.md",
+		"framework/skills/scope-cutting/SKILL.md",
+		"framework/skills/solution-design/SKILL.md",
+		"framework/skills/design-quality-review/SKILL.md",
+		"framework/skills/spec-writeback-guidance/SKILL.md",
+		"templates/docs/specs/_status.md",
+		"templates/docs/specs/_check_work/README.md",
+		"templates/docs/specs/_check_result/README.md",
+		"templates/docs/specs/_plans/README.md",
+		"templates/docs/specs/_plans/draft/README.md",
+		"templates/docs/specs/_plans/active/README.md",
+		"templates/docs/specs/_verify_result/README.md",
+		"templates/docs/specs/_stable_verify_result/README.md",
+		"templates/docs/specs/_governance_review/README.md",
+		"templates/docs/specs/repository_mapping.md",
+		"templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
+		"templates/AGENTS.md",
+		"templates/GEMINI.md",
+		"templates/CLAUDE.md",
+		"example.md",
+		"tooling/README.md",
+		"tooling/cmd/specflowctl/main.go",
+		"tooling/internal/demo/demo.go",
+		"tooling/internal/processcleanup/processcleanup.go",
+		"tooling/internal/rulesync/release.go",
+		"tooling/go.mod",
+		"tooling/manifest.tsv",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
+	}
+	for _, relPath := range []string{
+		"tooling/scripts/build_release.sh",
+		"tooling/scripts/install.ps1",
+		"tooling/scripts/install.sh",
+		"tooling/scripts/pull_with_release.ps1",
+		"tooling/scripts/pull_with_release.sh",
+		"tooling/scripts/push_with_release.ps1",
+		"tooling/scripts/push_with_release.sh",
+		"tooling/scripts/tooling_fingerprint.ps1",
+		"tooling/scripts/tooling_fingerprint.sh",
+	} {
+		mustWrite(t, filepath.Join(repoRoot, relPath), "# script\n")
+	}
+	mustWrite(t, filepath.Join(repoRoot, "tooling/reader/web/index.html"), "<!doctype html>\n")
+	mustWrite(t, filepath.Join(repoRoot, "tooling/reader/web/styles.css"), "body { color: #111; }\n")
+	mustWrite(t, filepath.Join(repoRoot, "tooling/reader/web/app.js"), "console.log('demo');\n")
+	mustWrite(t, filepath.Join(repoRoot, "tooling/reader/web/cytoscape.min.js"), "window.cytoscape = function() {};\n")
+	mustWrite(t, filepath.Join(repoRoot, "tooling/reader/web/mermaid.min.js"), "window.mermaid = { initialize() {}, run() {} };\n")
 	return repoRoot
 }
 

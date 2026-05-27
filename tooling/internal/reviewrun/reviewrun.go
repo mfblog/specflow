@@ -74,7 +74,7 @@ type flowConfig struct {
 	ClosedStatuses      []string
 	UsesScoreState      bool
 	RecommendRestartAge time.Duration
-	CollectScope        func(string) (reviewscope.SpecFlowScope, error)
+	CollectScope        func(string, string) (reviewscope.SpecFlowScope, error)
 	BaselineDefinitions func() []sliceDefinition
 }
 
@@ -196,7 +196,7 @@ func configForFlow(flow string) (flowConfig, error) {
 			RunStatuses:         []string{statusInProgress, statusBlockedOnFinding, statusReadyForFinal, statusClosedPass, statusClosedBlocked},
 			ClosedStatuses:      []string{statusClosedPass, statusClosedBlocked},
 			RecommendRestartAge: 24 * time.Hour,
-			CollectScope:        reviewscope.CollectDefaultSpecFlowScope,
+			CollectScope:        reviewscope.CollectDefaultSpecFlowScopeForLayout,
 			BaselineDefinitions: specFlowReviewBaselineDefinitions,
 		}, nil
 	case FlowSpecFlowDesignReview:
@@ -211,7 +211,7 @@ func configForFlow(flow string) (flowConfig, error) {
 			RunStatuses:         []string{statusInProgress, statusBlockedOnFinding, statusReadyForFinal, statusClosedPass, statusClosedPassWithOptimization, statusClosedBlocked},
 			ClosedStatuses:      []string{statusClosedPass, statusClosedPassWithOptimization, statusClosedBlocked},
 			UsesScoreState:      true,
-			CollectScope:        reviewscope.CollectDefaultSpecFlowDesignScope,
+			CollectScope:        reviewscope.CollectDefaultSpecFlowDesignScopeForLayout,
 			BaselineDefinitions: specFlowDesignReviewBaselineDefinitions,
 		}, nil
 	default:
@@ -220,7 +220,15 @@ func configForFlow(flow string) (flowConfig, error) {
 }
 
 func Init(repoRoot, flow string, now time.Time) (InitResult, error) {
+	return InitWithLayout(repoRoot, flow, reviewscope.LayoutAuto, now)
+}
+
+func InitWithLayout(repoRoot, flow, requestedLayout string, now time.Time) (InitResult, error) {
 	config, err := configForFlow(flow)
+	if err != nil {
+		return InitResult{}, err
+	}
+	normalizedLayout, err := reviewscope.NormalizeLayout(requestedLayout)
 	if err != nil {
 		return InitResult{}, err
 	}
@@ -230,7 +238,7 @@ func Init(repoRoot, flow string, now time.Time) (InitResult, error) {
 		return InitResult{}, err
 	}
 
-	existing, err := inspectFixedRunState(repoRoot, config, file, now)
+	existing, err := inspectFixedRunState(repoRoot, config, file, now, normalizedLayout)
 	if err != nil {
 		return InitResult{}, err
 	}
@@ -259,7 +267,11 @@ func Init(repoRoot, flow string, now time.Time) (InitResult, error) {
 		}
 	}
 
-	scope, err := config.CollectScope(repoRoot)
+	resolvedLayout, err := reviewscope.ResolveLayout(repoRoot, normalizedLayout)
+	if err != nil {
+		return InitResult{}, err
+	}
+	scope, err := config.CollectScope(repoRoot, resolvedLayout)
 	if err != nil {
 		return InitResult{}, err
 	}
@@ -268,6 +280,7 @@ func Init(repoRoot, flow string, now time.Time) (InitResult, error) {
 	state := runState{
 		Fields: map[string]string{
 			"review_flow":          config.Flow,
+			"review_layout":        scope.Layout,
 			"review_run_id":        runID,
 			"scope_label":          config.ScopeLabel,
 			"status":               statusInProgress,
@@ -300,8 +313,17 @@ func Init(repoRoot, flow string, now time.Time) (InitResult, error) {
 }
 
 func ValidateFile(repoRoot, flow, file string, now time.Time) ValidationResult {
+	return ValidateFileWithLayout(repoRoot, flow, file, reviewscope.LayoutAuto, now)
+}
+
+func ValidateFileWithLayout(repoRoot, flow, file, requestedLayout string, now time.Time) ValidationResult {
 	result := ValidationResult{File: file}
 	config, err := configForFlow(flow)
+	if err != nil {
+		result.Diagnostics = append(result.Diagnostics, err.Error())
+		return result
+	}
+	normalizedLayout, err := reviewscope.NormalizeLayout(requestedLayout)
 	if err != nil {
 		result.Diagnostics = append(result.Diagnostics, err.Error())
 		return result
@@ -311,13 +333,21 @@ func ValidateFile(repoRoot, flow, file string, now time.Time) ValidationResult {
 		result.Diagnostics = append(result.Diagnostics, err.Error())
 		return result
 	}
-	result.Diagnostics = validateState(repoRoot, config, state, now.UTC(), validateShape)
+	result.Diagnostics = validateState(repoRoot, config, state, now.UTC(), validateShape, normalizedLayout)
 	result.Valid = len(result.Diagnostics) == 0
 	return result
 }
 
 func Refresh(repoRoot, flow, file string, now time.Time) (RefreshResult, error) {
+	return RefreshWithLayout(repoRoot, flow, file, reviewscope.LayoutAuto, now)
+}
+
+func RefreshWithLayout(repoRoot, flow, file, requestedLayout string, now time.Time) (RefreshResult, error) {
 	config, err := configForFlow(flow)
+	if err != nil {
+		return RefreshResult{}, err
+	}
+	normalizedLayout, err := reviewscope.NormalizeLayout(requestedLayout)
 	if err != nil {
 		return RefreshResult{}, err
 	}
@@ -326,10 +356,10 @@ func Refresh(repoRoot, flow, file string, now time.Time) (RefreshResult, error) 
 	if err != nil {
 		return RefreshResult{}, err
 	}
-	if diagnostics := validateState(repoRoot, config, state, now, validateOpenRun); len(diagnostics) > 0 {
+	if diagnostics := validateState(repoRoot, config, state, now, validateOpenRun, normalizedLayout); len(diagnostics) > 0 {
 		return RefreshResult{}, fmt.Errorf("run-state validation failed: %s", strings.Join(diagnostics, "; "))
 	}
-	scope, err := config.CollectScope(repoRoot)
+	scope, err := config.CollectScope(repoRoot, state.Fields["review_layout"])
 	if err != nil {
 		return RefreshResult{}, err
 	}
@@ -425,7 +455,15 @@ func Refresh(repoRoot, flow, file string, now time.Time) (RefreshResult, error) 
 }
 
 func Touch(repoRoot, flow, file string, now time.Time) (TouchResult, error) {
+	return TouchWithLayout(repoRoot, flow, file, reviewscope.LayoutAuto, now)
+}
+
+func TouchWithLayout(repoRoot, flow, file, requestedLayout string, now time.Time) (TouchResult, error) {
 	config, err := configForFlow(flow)
+	if err != nil {
+		return TouchResult{}, err
+	}
+	normalizedLayout, err := reviewscope.NormalizeLayout(requestedLayout)
 	if err != nil {
 		return TouchResult{}, err
 	}
@@ -434,7 +472,7 @@ func Touch(repoRoot, flow, file string, now time.Time) (TouchResult, error) {
 	if err != nil {
 		return TouchResult{}, err
 	}
-	if diagnostics := validateState(repoRoot, config, state, now, validateShape); len(diagnostics) > 0 {
+	if diagnostics := validateState(repoRoot, config, state, now, validateShape, normalizedLayout); len(diagnostics) > 0 {
 		return TouchResult{}, fmt.Errorf("run-state validation failed: %s", strings.Join(diagnostics, "; "))
 	}
 	state.Fields["last_updated_at"] = formatUTC(now)
@@ -444,7 +482,7 @@ func Touch(repoRoot, flow, file string, now time.Time) (TouchResult, error) {
 	return TouchResult{File: file, LastUpdatedAtUTC: formatUTC(now)}, nil
 }
 
-func inspectFixedRunState(repoRoot string, config flowConfig, file string, now time.Time) (*fixedRunStateFile, error) {
+func inspectFixedRunState(repoRoot string, config flowConfig, file string, now time.Time, requestedLayout string) (*fixedRunStateFile, error) {
 	state, err := parseFile(file)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -456,7 +494,10 @@ func inspectFixedRunState(repoRoot string, config flowConfig, file string, now t
 	if isClosedRunStatus(config, status) {
 		return &fixedRunStateFile{Reason: "closed_run_state"}, nil
 	}
-	diagnostics := validateState(repoRoot, config, state, now, validateOpenRun)
+	if requestedLayout != reviewscope.LayoutAuto && strings.TrimSpace(state.Fields["review_layout"]) != "" && state.Fields["review_layout"] != requestedLayout {
+		return nil, fmt.Errorf("open run-state review_layout is %s, requested %s", state.Fields["review_layout"], requestedLayout)
+	}
+	diagnostics := validateState(repoRoot, config, state, now, validateOpenRun, requestedLayout)
 	if len(diagnostics) > 0 {
 		return &fixedRunStateFile{Reason: "invalid_run_state"}, nil
 	}
@@ -467,10 +508,11 @@ func inspectFixedRunState(repoRoot string, config flowConfig, file string, now t
 	return &fixedRunStateFile{LastUpdated: lastUpdated}, nil
 }
 
-func validateState(repoRoot string, config flowConfig, state runState, now time.Time, mode validationMode) []string {
+func validateState(repoRoot string, config flowConfig, state runState, now time.Time, mode validationMode, requestedLayout string) []string {
 	diagnostics := []string{}
 	requiredFields := []string{
 		"review_flow",
+		"review_layout",
 		"review_run_id",
 		"scope_label",
 		"status",
@@ -490,6 +532,12 @@ func validateState(repoRoot string, config flowConfig, state runState, now time.
 	}
 	if state.Fields["review_flow"] != config.Flow {
 		diagnostics = append(diagnostics, "review_flow must be "+config.Flow)
+	}
+	stateLayout, err := reviewscope.NormalizeLayout(state.Fields["review_layout"])
+	if err != nil || stateLayout == reviewscope.LayoutAuto {
+		diagnostics = append(diagnostics, "review_layout must be installed_project or source_repo")
+	} else if requestedLayout != reviewscope.LayoutAuto && stateLayout != requestedLayout {
+		diagnostics = append(diagnostics, fmt.Sprintf("review_layout is %s but requested layout is %s", stateLayout, requestedLayout))
 	}
 	if state.Fields["scope_label"] != config.ScopeLabel {
 		diagnostics = append(diagnostics, "scope_label must be "+config.ScopeLabel)
@@ -719,7 +767,7 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Does the default governance baseline scope include every required governance input family.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateProjectInstanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingScriptFiles, scope.ToolingRuntimeFiles)
+				return union(scope.FrameworkGuidelineFiles, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateProjectInstanceFiles, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.SourceRepoEntryExampleFiles, scope.AgentOperabilityFiles, scope.ProjectInstanceCompatibilityFiles, scope.ToolingContractFiles, scope.ToolingSourceFiles, scope.ToolingScriptFiles, scope.ToolingRuntimeFiles)
 			},
 		},
 		{
@@ -728,19 +776,32 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			ReviewQuestion: "Do the governance review entry policies define a complete review entry and finding contract.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return []string{
-					"specflow/framework/spec_flow_review.md",
-					"specflow/framework/spec_flow_design_review.md",
-					"specflow/framework/severity_policy.md",
-					"specflow/framework/checkpoint_protocol.md",
+					scope.FrameworkPath("spec_flow_review.md"),
+					scope.FrameworkPath("spec_flow_design_review.md"),
+					scope.FrameworkPath("governance/review.md"),
+					scope.FrameworkPath("governance/review_scope.md"),
+					scope.FrameworkPath("operations/output_standard.md"),
+					scope.FrameworkPath("severity_policy.md"),
 				}
 			},
 		},
 		{
-			ID:             "routing_and_command_policy",
+			ID:             "routing_and_lifecycle_policy",
 			SliceType:      "local",
-			ReviewQuestion: "Do routing and command policies send each request to the correct governed next step.",
+			ReviewQuestion: "Do routing and lifecycle policies send each request to the correct governed next step.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union([]string{"specflow/framework/natural_language_routing.md", "specflow/framework/advance_policy.md", "specflow/framework/onboarding_decision_policy.md", "specflow/framework/command_policy.md", "specflow/framework/spec_flow_migrate.md"}, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles)
+				return union([]string{
+					scope.FrameworkPath("advance_policy.md"),
+					scope.FrameworkPath("core/adoption_modes.md"),
+					scope.FrameworkPath("core/context_card.md"),
+					scope.FrameworkPath("core/freshness.md"),
+					scope.FrameworkPath("core/independent_evaluation.md"),
+					scope.FrameworkPath("core/lifecycle_authority.md"),
+					scope.FrameworkPath("operations/entry_routing.md"),
+					scope.FrameworkPath("lifecycle/overview.md"),
+					scope.FrameworkPath("operations/migration.md"),
+					scope.FrameworkPath("onboarding_decision_policy.md"),
+				}, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles)
 			},
 		},
 		{
@@ -749,15 +810,20 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			ReviewQuestion: "Do truth ownership and implementation gates prevent implementation from outrunning accepted truth.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
-					"specflow/framework/spec_policy.md",
-					"specflow/framework/spec_writing_guide.md",
-					"specflow/framework/spec_authoring_baseline.md",
-					"specflow/framework/repository_mapping_policy.md",
-					"specflow/framework/implementation_change_policy.md",
-					"specflow/framework/onboarding_decision_policy.md",
-					"specflow/framework/candidate_handoff_contract.md",
-					"specflow/framework/downgrade_policy.md",
-					"specflow/framework/recovery_policy.md",
+					scope.FrameworkPath("core/object_model.md"),
+					scope.FrameworkPath("core/repository_mapping.md"),
+					scope.FrameworkPath("core/status.md"),
+					scope.FrameworkPath("core/lifecycle_authority.md"),
+					scope.FrameworkPath("spec_policy.md"),
+					scope.FrameworkPath("spec_writing_guide.md"),
+					scope.FrameworkPath("spec_authoring_baseline.md"),
+					scope.FrameworkPath("lifecycle/unit_check.md"),
+					scope.FrameworkPath("lifecycle/unit_plan.md"),
+					scope.FrameworkPath("operations/implementation_change.md"),
+					scope.FrameworkPath("onboarding_decision_policy.md"),
+					scope.FrameworkPath("candidate_handoff_contract.md"),
+					scope.FrameworkPath("downgrade_policy.md"),
+					scope.FrameworkPath("lifecycle/recovery.md"),
 				}, scope.CandidateIntentFiles)
 			},
 		},
@@ -766,7 +832,9 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Do rule-governance flows preserve rule truth ownership and downstream impact.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return scope.RuleGovernanceFiles
+				return union([]string{
+					scope.FrameworkPath("operations/entry_routing.md"),
+				}, scope.RuleGovernanceFiles)
 			},
 		},
 		{
@@ -775,10 +843,12 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			ReviewQuestion: "Do process state, snapshots, and impact rules keep resumable process files trustworthy.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
-					"specflow/framework/impact_sync_policy.md",
-					"specflow/framework/process_snapshot_contract.md",
-					"specflow/framework/slice_work_state_protocol.md",
-					"specflow/framework/recovery_policy.md",
+					scope.FrameworkPath("core/freshness.md"),
+					scope.FrameworkPath("core/independent_evaluation.md"),
+					scope.FrameworkPath("governance/impact_sync.md"),
+					scope.FrameworkPath("process_snapshot_contract.md"),
+					scope.FrameworkPath("slice_work_state_protocol.md"),
+					scope.FrameworkPath("lifecycle/recovery.md"),
 				}, scope.TemplateGovernanceFiles)
 			},
 		},
@@ -788,13 +858,15 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			ReviewQuestion: "Do current project-instance SpecFlow files and migration rules remain format-compatible with framework contracts without judging business truth.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
-					"specflow/framework/command_policy.md",
-					"specflow/framework/onboarding_decision_policy.md",
-					"specflow/framework/process_snapshot_contract.md",
-					"specflow/framework/repository_mapping_policy.md",
-					"specflow/framework/spec_flow_migrate.md",
-					"specflow/framework/spec_policy.md",
-					"specflow/framework/spec_writing_guide.md",
+					scope.FrameworkPath("core/object_model.md"),
+					scope.FrameworkPath("core/status.md"),
+					scope.FrameworkPath("core/repository_mapping.md"),
+					scope.FrameworkPath("spec_policy.md"),
+					scope.FrameworkPath("spec_writing_guide.md"),
+					scope.FrameworkPath("lifecycle/overview.md"),
+					scope.FrameworkPath("onboarding_decision_policy.md"),
+					scope.FrameworkPath("process_snapshot_contract.md"),
+					scope.FrameworkPath("operations/migration.md"),
 				}, scope.CandidateIntentFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateProjectInstanceFiles, scope.ProjectInstanceCompatibilityFiles)
 			},
 		},
@@ -804,9 +876,9 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			ReviewQuestion: "Do entry files and project-level agent rules stay bounded by framework governance.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
-					"specflow/framework/entry_index_registry.md",
-					"specflow/framework/output_baseline.md",
-				}, scope.TemplateEntryFiles, scope.ProjectEntryFiles)
+					scope.FrameworkPath("entry_index_registry.md"),
+					scope.FrameworkPath("operations/output_standard.md"),
+				}, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.SourceRepoEntryExampleFiles)
 			},
 		},
 		{
@@ -828,30 +900,30 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 		{
 			ID:             "routing_to_command_convergence",
 			SliceType:      "cross_convergence",
-			ReviewQuestion: "Do routing decisions and command contracts converge without gaps or conflicting stops.",
-			DependsOn:      []string{"routing_and_command_policy", "review_entry_policy"},
-			InputFiles:     reviewDependencyFiles("routing_and_command_policy", "review_entry_policy"),
+			ReviewQuestion: "Do routing decisions and lifecycle contracts converge without gaps or conflicting stops.",
+			DependsOn:      []string{"routing_and_lifecycle_policy", "review_entry_policy"},
+			InputFiles:     reviewDependencyFiles("routing_and_lifecycle_policy", "review_entry_policy"),
 		},
 		{
 			ID:             "command_to_process_state_convergence",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Do command outcomes and process-state contracts converge into resumable execution.",
-			DependsOn:      []string{"routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates"},
-			InputFiles:     reviewDependencyFiles("routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates"),
+			DependsOn:      []string{"routing_and_lifecycle_policy", "process_and_impact_state", "truth_and_implementation_gates"},
+			InputFiles:     reviewDependencyFiles("routing_and_lifecycle_policy", "process_and_impact_state", "truth_and_implementation_gates"),
 		},
 		{
 			ID:             "truth_to_implementation_convergence",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Do truth gates and implementation permission rules converge before code changes.",
-			DependsOn:      []string{"truth_and_implementation_gates", "routing_and_command_policy"},
-			InputFiles:     reviewDependencyFiles("truth_and_implementation_gates", "routing_and_command_policy"),
+			DependsOn:      []string{"truth_and_implementation_gates", "routing_and_lifecycle_policy"},
+			InputFiles:     reviewDependencyFiles("truth_and_implementation_gates", "routing_and_lifecycle_policy"),
 		},
 		{
 			ID:             "state_space_closure",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Do important SpecFlow states and non-success transitions have legal state-changing next actions.",
-			DependsOn:      []string{"routing_and_command_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility"},
-			InputFiles:     reviewDependencyFiles("routing_and_command_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility"),
+			DependsOn:      []string{"routing_and_lifecycle_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility"},
+			InputFiles:     reviewDependencyFiles("routing_and_lifecycle_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility"),
 		},
 		{
 			ID:             "shared_to_impact_convergence",
@@ -878,22 +950,22 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			ID:             "supporting_truth_lifecycle_convergence",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Do supporting truth files stay layer-correct across fork, promote, cleanup, rule release, and tooling paths.",
-			DependsOn:      []string{"routing_and_command_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility", "tooling_execution"},
-			InputFiles:     reviewDependencyFiles("routing_and_command_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility", "tooling_execution"),
+			DependsOn:      []string{"routing_and_lifecycle_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility", "tooling_execution"},
+			InputFiles:     reviewDependencyFiles("routing_and_lifecycle_policy", "truth_and_implementation_gates", "process_and_impact_state", "project_instance_contract_compatibility", "tooling_execution"),
 		},
 		{
 			ID:             "project_instance_to_framework_convergence",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Does project-instance compatibility converge with routing, command, process-state, mapping, shared, and tooling rules without judging business truth.",
-			DependsOn:      []string{"project_instance_contract_compatibility", "routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates", "shared_governance", "tooling_execution", "supporting_truth_lifecycle_convergence"},
-			InputFiles:     reviewDependencyFiles("project_instance_contract_compatibility", "routing_and_command_policy", "process_and_impact_state", "truth_and_implementation_gates", "shared_governance", "tooling_execution", "supporting_truth_lifecycle_convergence"),
+			DependsOn:      []string{"project_instance_contract_compatibility", "routing_and_lifecycle_policy", "process_and_impact_state", "truth_and_implementation_gates", "shared_governance", "tooling_execution", "supporting_truth_lifecycle_convergence"},
+			InputFiles:     reviewDependencyFiles("project_instance_contract_compatibility", "routing_and_lifecycle_policy", "process_and_impact_state", "truth_and_implementation_gates", "shared_governance", "tooling_execution", "supporting_truth_lifecycle_convergence"),
 		},
 		{
 			ID:             "agent_operability_path_walk",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Can an agent walk from entry instructions through routing, commands, and checkpoints without hidden decisions.",
-			DependsOn:      []string{"agent_operability_local", "routing_and_command_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state", "project_instance_contract_compatibility", "supporting_truth_lifecycle_convergence"},
-			InputFiles:     reviewDependencyFiles("agent_operability_local", "routing_and_command_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state", "project_instance_contract_compatibility", "supporting_truth_lifecycle_convergence"),
+			DependsOn:      []string{"agent_operability_local", "routing_and_lifecycle_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state", "project_instance_contract_compatibility", "supporting_truth_lifecycle_convergence"},
+			InputFiles:     reviewDependencyFiles("agent_operability_local", "routing_and_lifecycle_policy", "truth_and_implementation_gates", "shared_governance", "process_and_impact_state", "project_instance_contract_compatibility", "supporting_truth_lifecycle_convergence"),
 		},
 	}
 }
@@ -905,7 +977,7 @@ func specFlowDesignReviewBaselineDefinitions() []sliceDefinition {
 			SliceType:      "local",
 			ReviewQuestion: "Does the fixed design foundation block support a real human-serving governance design.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
-				return union(scope.FrameworkGuidelineFiles, scope.ProjectEntryFiles, scope.TemplateEntryFiles)
+				return union(scope.FrameworkGuidelineFiles, scope.ProjectEntryFiles, scope.SourceRepoEntryExampleFiles, scope.TemplateEntryFiles)
 			},
 		},
 		{
@@ -922,9 +994,9 @@ func specFlowDesignReviewBaselineDefinitions() []sliceDefinition {
 			ReviewQuestion: "Can normal users and executors operate the entry surfaces without excessive burden.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
-					"specflow/framework/entry_index_registry.md",
-					"specflow/framework/output_baseline.md",
-				}, scope.ProjectEntryFiles, scope.TemplateEntryFiles)
+					scope.FrameworkPath("entry_index_registry.md"),
+					scope.FrameworkPath("operations/output_standard.md"),
+				}, scope.ProjectEntryFiles, scope.SourceRepoEntryExampleFiles, scope.TemplateEntryFiles)
 			},
 		},
 		{
@@ -1223,7 +1295,7 @@ func renderState(config flowConfig, state runState) string {
 	b.WriteString("## Run State\n\n")
 	b.WriteString("| field | value |\n")
 	b.WriteString("|---|---|\n")
-	for _, field := range []string{"review_flow", "review_run_id", "scope_label", "status", "created_at", "last_updated_at", "active_slice", "baseline_slice_table", "dynamic_slice_table", "finding_refs", "blocked_reason", "resume_next_step"} {
+	for _, field := range []string{"review_flow", "review_layout", "review_run_id", "scope_label", "status", "created_at", "last_updated_at", "active_slice", "baseline_slice_table", "dynamic_slice_table", "finding_refs", "blocked_reason", "resume_next_step"} {
 		b.WriteString(fmt.Sprintf("| %s | %s |\n", field, cleanCell(state.Fields[field])))
 	}
 	b.WriteString("\n## Baseline Slices\n\n")

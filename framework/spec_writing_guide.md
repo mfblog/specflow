@@ -7,7 +7,7 @@ Files under `specflow/` are framework and delivery documents and are written in 
 Files under `docs/` are project communication documents and are written in Chinese unless a specific delivery artifact requires otherwise.
 
 This file defines formal Spec shape and reference rules.
-The semantic authoring baseline for whether a Spec is ready for downstream check, planning, implementation, and verification is defined in `specflow/framework/spec_authoring_baseline.md`.
+The semantic authoring baseline for whether a Spec is ready for downstream check, planning, implementation, and verification is defined in `framework/spec_authoring_baseline.md`.
 
 Format compliance does not by itself prove handoff completeness.
 

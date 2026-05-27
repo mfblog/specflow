@@ -42,5 +42,5 @@ Report the framing result in plain language:
 ## Boundaries
 
 1. Do not keep confirmed behavior only in chat once it will constrain implementation.
-2. Do not create a new unit by naming alone; repository mapping and command policy still decide formal ownership.
+2. Do not create a new unit by naming alone; repository mapping and lifecycle routing still decide formal ownership.
 3. Do not write implementation plans from this skill.

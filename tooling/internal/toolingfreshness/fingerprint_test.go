@@ -91,6 +91,38 @@ func TestLiveFingerprintIgnoresReaderAssetChanges(t *testing.T) {
 	}
 }
 
+func TestLiveFingerprintSupportsSourceRepoLayout(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeSourceToolingRepo(t, repoRoot)
+
+	_, files, err := LiveFingerprint(repoRoot)
+	if err != nil {
+		t.Fatalf("LiveFingerprint returned error: %v", err)
+	}
+	if !containsPath(files, "tooling/go.mod") || !containsPath(files, "tooling/manifest.tsv") {
+		t.Fatalf("expected source-repo tooling input paths, got %v", files)
+	}
+}
+
+func TestLiveFingerprintMatchesAcrossLayouts(t *testing.T) {
+	sourceRoot := t.TempDir()
+	installedRoot := t.TempDir()
+	writeSourceToolingRepo(t, sourceRoot)
+	writeToolingRepo(t, installedRoot)
+
+	sourceFingerprint, _, err := LiveFingerprint(sourceRoot)
+	if err != nil {
+		t.Fatalf("source LiveFingerprint returned error: %v", err)
+	}
+	installedFingerprint, _, err := LiveFingerprint(installedRoot)
+	if err != nil {
+		t.Fatalf("installed LiveFingerprint returned error: %v", err)
+	}
+	if sourceFingerprint != installedFingerprint {
+		t.Fatalf("fingerprint differs across layouts: source=%s installed=%s", sourceFingerprint, installedFingerprint)
+	}
+}
+
 func TestShellFingerprintScriptMatchesLiveFingerprint(t *testing.T) {
 	if _, err := exec.LookPath("bash"); err != nil {
 		t.Skip("bash is not available")
@@ -99,7 +131,7 @@ func TestShellFingerprintScriptMatchesLiveFingerprint(t *testing.T) {
 		t.Skipf("bash is not usable in this environment: %v", err)
 	}
 
-	repoRoot, err := filepath.Abs(filepath.Join("..", "..", "..", ".."))
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
 	if err != nil {
 		t.Fatalf("resolve repo root: %v", err)
 	}
@@ -109,8 +141,10 @@ func TestShellFingerprintScriptMatchesLiveFingerprint(t *testing.T) {
 		t.Fatalf("LiveFingerprint returned error: %v", err)
 	}
 
-	scriptPath := filepath.Join(repoRoot, "specflow", "tooling", "scripts", "tooling_fingerprint.sh")
-	out, err := exec.Command("bash", scriptPath).CombinedOutput()
+	scriptPath := "tooling/scripts/tooling_fingerprint.sh"
+	cmd := exec.Command("bash", scriptPath)
+	cmd.Dir = repoRoot
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("tooling_fingerprint.sh failed: %v\n%s", err, string(out))
 	}
@@ -118,7 +152,9 @@ func TestShellFingerprintScriptMatchesLiveFingerprint(t *testing.T) {
 		t.Fatalf("script fingerprint mismatch\ngot  %s\nwant %s", got, want)
 	}
 
-	shortOut, err := exec.Command("bash", scriptPath, "--short").CombinedOutput()
+	shortCmd := exec.Command("bash", scriptPath, "--short")
+	shortCmd.Dir = repoRoot
+	shortOut, err := shortCmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("tooling_fingerprint.sh --short failed: %v\n%s", err, string(shortOut))
 	}
@@ -129,11 +165,30 @@ func TestShellFingerprintScriptMatchesLiveFingerprint(t *testing.T) {
 
 func writeToolingRepo(t *testing.T, repoRoot string) {
 	t.Helper()
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module github.com/Bingordinary/SpecFlow/specflow/tooling\n\ngo 1.22.2\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/internal/demo/demo.go"), "package demo\n\nfunc Value() string { return \"demo\" }\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/app.js"), "console.log('demo');\n")
+	writeToolingRepoAt(t, repoRoot, "specflow/tooling")
+}
+
+func writeSourceToolingRepo(t *testing.T, repoRoot string) {
+	t.Helper()
+	writeToolingRepoAt(t, repoRoot, "tooling")
+}
+
+func writeToolingRepoAt(t *testing.T, repoRoot, toolingRoot string) {
+	t.Helper()
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "go.mod"), "module github.com/Bingordinary/SpecFlow/specflow/tooling\n\ngo 1.22.2\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "internal/demo/demo.go"), "package demo\n\nfunc Value() string { return \"demo\" }\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "reader/web/app.js"), "console.log('demo');\n")
+}
+
+func containsPath(paths []string, expected string) bool {
+	for _, path := range paths {
+		if path == expected {
+			return true
+		}
+	}
+	return false
 }
 
 func mustWriteFile(t *testing.T, path, content string) {

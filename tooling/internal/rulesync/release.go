@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandclose"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulebinding"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
@@ -52,6 +53,28 @@ type ReleaseVersionResult struct {
 	AppendixRemoved     []string
 	ProcessFilesRemoved []string
 	Sync                Result
+}
+
+type candidateReleasePlan struct {
+	key     string
+	status  statusfile.ObjectStatus
+	fileRef string
+	content string
+}
+
+type stableReleasePlan struct {
+	key                string
+	status             statusfile.ObjectStatus
+	candidateFileRef   string
+	content            string
+	appendices         []preparedAppendix
+	appendixRetargeted []string
+	appendixRemoved    []string
+}
+
+type preparedAppendix struct {
+	fileRef string
+	content string
 }
 
 var markdownLinkTargetPattern = regexp.MustCompile(`\]\(([^)\n]+)\)`)
@@ -163,7 +186,8 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 		FromRef: normalized.FromRef,
 		ToRef:   normalized.ToRef,
 	}
-	changedObjects := map[string]statusfile.ObjectStatus{}
+	candidatePlans := []candidateReleasePlan{}
+	stablePlans := []stableReleasePlan{}
 
 	for _, status := range statuses {
 		if status.ObjectType != "unit" {
@@ -191,25 +215,26 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 			if err != nil {
 				return ReleaseVersionResult{}, err
 			}
-			if err := os.WriteFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)), []byte(updated), 0o644); err != nil {
-				return ReleaseVersionResult{}, fmt.Errorf("write %s: %w", fileRef, err)
-			}
-			if removed, err := removeProcessArtifacts(repoRoot, status.ObjectType, status.Object); err != nil {
-				return ReleaseVersionResult{}, err
-			} else {
-				result.ProcessFilesRemoved = append(result.ProcessFilesRemoved, removed...)
-			}
-			status.NextCommand = checkCommandForObject(status.ObjectType)
-			status.Notes = releaseNote(normalized.FromRef, normalized.ToRef, false)
-			if _, err := statusfile.UpsertObjectStatus(repoRoot, status, false); err != nil {
-				return ReleaseVersionResult{}, err
-			}
-			result.CandidateUpdated = append(result.CandidateUpdated, key)
-			changedObjects[key] = status
+			candidatePlans = append(candidatePlans, candidateReleasePlan{
+				key:     key,
+				status:  status,
+				fileRef: fileRef,
+				content: updated,
+			})
 			continue
 		}
 		if status.ActiveLayer != "stable" {
 			return ReleaseVersionResult{}, fmt.Errorf("%s %q has unsupported active layer %q", status.ObjectType, status.Object, status.ActiveLayer)
+		}
+		if status.NextCommand != "unit_fork" {
+			return ReleaseVersionResult{}, fmt.Errorf("rule release-version stable auto-fork for %s %q requires current Next Command unit_fork, got %s", status.ObjectType, status.Object, status.NextCommand)
+		}
+		requirement, err := snapshot.StableVerifyCandidateIntentRequirement(repoRoot, status.ObjectType, status.Object)
+		if err != nil {
+			return ReleaseVersionResult{}, err
+		}
+		if requirement.Required && requirement.RequiredIntent != "change" {
+			return ReleaseVersionResult{}, fmt.Errorf("rule release-version stable auto-fork for %s %q conflicts with stable verify decision %s: required candidate_intent=%s, release-version writes candidate_intent=change", status.ObjectType, status.Object, requirement.Decision, requirement.RequiredIntent)
 		}
 
 		candidateRef, err := specpaths.ObjectMainSpecFileRef(status.ObjectType, "candidate", status.Object)
@@ -235,37 +260,73 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 		if err != nil {
 			return ReleaseVersionResult{}, err
 		}
-		updated, appendixRetargeted, appendixRemoved, err := retargetStableAppendicesForFork(repoRoot, status.ObjectType, status.Object, fileRef, candidateRef, string(contentBytes), updated)
+		updated, appendices, appendixRetargeted, appendixRemoved, err := prepareStableAppendicesForFork(repoRoot, status.ObjectType, status.Object, fileRef, candidateRef, string(contentBytes), updated)
 		if err != nil {
 			return ReleaseVersionResult{}, err
 		}
-		result.AppendixRetargeted = append(result.AppendixRetargeted, appendixRetargeted...)
-		result.AppendixRemoved = append(result.AppendixRemoved, appendixRemoved...)
-		candidateAbs := filepath.Join(repoRoot, filepath.FromSlash(candidateRef))
-		if err := os.MkdirAll(filepath.Dir(candidateAbs), 0o755); err != nil {
-			return ReleaseVersionResult{}, fmt.Errorf("create candidate dir for %s: %w", candidateRef, err)
+		stablePlans = append(stablePlans, stableReleasePlan{
+			key:                key,
+			status:             status,
+			candidateFileRef:   candidateRef,
+			content:            updated,
+			appendices:         appendices,
+			appendixRetargeted: appendixRetargeted,
+			appendixRemoved:    appendixRemoved,
+		})
+	}
+
+	if len(candidatePlans)+len(stablePlans) == 0 {
+		return ReleaseVersionResult{}, fmt.Errorf("no current-layer unit binds from-ref %q", normalized.FromRef)
+	}
+
+	for _, plan := range candidatePlans {
+		if err := os.WriteFile(filepath.Join(repoRoot, filepath.FromSlash(plan.fileRef)), []byte(plan.content), 0o644); err != nil {
+			return ReleaseVersionResult{}, fmt.Errorf("write %s: %w", plan.fileRef, err)
 		}
-		if err := os.WriteFile(candidateAbs, []byte(updated), 0o644); err != nil {
-			return ReleaseVersionResult{}, fmt.Errorf("write %s: %w", candidateRef, err)
-		}
-		if removed, err := removeProcessArtifacts(repoRoot, status.ObjectType, status.Object); err != nil {
+		if removed, err := removeProcessArtifacts(repoRoot, plan.status.ObjectType, plan.status.Object); err != nil {
 			return ReleaseVersionResult{}, err
 		} else {
 			result.ProcessFilesRemoved = append(result.ProcessFilesRemoved, removed...)
 		}
-		status.Candidate = "yes"
-		status.ActiveLayer = "candidate"
+		status := plan.status
 		status.NextCommand = checkCommandForObject(status.ObjectType)
-		status.Notes = releaseNote(normalized.FromRef, normalized.ToRef, true)
+		status.Notes = releaseNote(normalized.FromRef, normalized.ToRef, false)
 		if _, err := statusfile.UpsertObjectStatus(repoRoot, status, false); err != nil {
 			return ReleaseVersionResult{}, err
 		}
-		result.StableForked = append(result.StableForked, key)
-		changedObjects[key] = status
+		result.CandidateUpdated = append(result.CandidateUpdated, plan.key)
 	}
 
-	if len(changedObjects) == 0 {
-		return ReleaseVersionResult{}, fmt.Errorf("no current-layer unit binds from-ref %q", normalized.FromRef)
+	for _, plan := range stablePlans {
+		candidateAbs := filepath.Join(repoRoot, filepath.FromSlash(plan.candidateFileRef))
+		if err := os.MkdirAll(filepath.Dir(candidateAbs), 0o755); err != nil {
+			return ReleaseVersionResult{}, fmt.Errorf("create candidate dir for %s: %w", plan.candidateFileRef, err)
+		}
+		if err := os.WriteFile(candidateAbs, []byte(plan.content), 0o644); err != nil {
+			return ReleaseVersionResult{}, fmt.Errorf("write %s: %w", plan.candidateFileRef, err)
+		}
+		if err := removeAppendixRefs(repoRoot, plan.appendixRemoved); err != nil {
+			return ReleaseVersionResult{}, err
+		}
+		if err := writePreparedAppendices(repoRoot, plan.appendices); err != nil {
+			return ReleaseVersionResult{}, err
+		}
+		closeResult, err := commandclose.Close(commandclose.Options{
+			RepoRoot:   repoRoot,
+			Command:    "unit_fork",
+			ObjectType: plan.status.ObjectType,
+			Object:     plan.status.Object,
+			Outcome:    "candidate_created",
+			Notes:      releaseNote(normalized.FromRef, normalized.ToRef, true),
+			Apply:      true,
+		})
+		if err != nil {
+			return ReleaseVersionResult{}, err
+		}
+		result.ProcessFilesRemoved = append(result.ProcessFilesRemoved, closeResult.SuccessCleanup.DeletedFiles...)
+		result.AppendixRetargeted = append(result.AppendixRetargeted, plan.appendixRetargeted...)
+		result.AppendixRemoved = append(result.AppendixRemoved, plan.appendixRemoved...)
+		result.StableForked = append(result.StableForked, plan.key)
 	}
 
 	syncResult, err := SyncImpact(repoRoot, Options{RuleRefs: []string{normalized.ToRef}})
@@ -362,7 +423,7 @@ func removeProcessArtifacts(repoRoot, objectType, object string) ([]string, erro
 	if objectType != "unit" {
 		return nil, fmt.Errorf("unsupported object type %q", objectType)
 	}
-	kinds := []string{"check_work", "check", "plan", "verify"}
+	kinds := []string{"check_work", "check", "plan", "verify", "stable_verify"}
 	removed := []string{}
 	for _, kind := range kinds {
 		paths, err := snapshot.ProcessArtifactPaths(objectType, object, kind)
@@ -383,27 +444,23 @@ func removeProcessArtifacts(repoRoot, objectType, object string) ([]string, erro
 	return removed, nil
 }
 
-func retargetStableAppendicesForFork(repoRoot, objectType, object, stableMainRef, candidateMainRef, stableContent, candidateContent string) (string, []string, []string, error) {
+func prepareStableAppendicesForFork(repoRoot, objectType, object, stableMainRef, candidateMainRef, stableContent, candidateContent string) (string, []preparedAppendix, []string, []string, error) {
 	stableAppendices := stableAppendixRefsFromContent(objectType, object, stableMainRef, stableContent)
 	refMap := map[string]string{
 		path.Clean(stableMainRef): path.Clean(candidateMainRef),
-	}
-	type preparedAppendix struct {
-		fileRef string
-		content string
 	}
 	prepared := []preparedAppendix{}
 	for _, stableAppendixRef := range stableAppendices {
 		candidateAppendixRef, err := candidateAppendixRefForStable(objectType, object, stableAppendixRef)
 		if err != nil {
-			return "", nil, nil, err
+			return "", nil, nil, nil, err
 		}
 		refMap[stableAppendixRef] = candidateAppendixRef
 	}
 	for _, stableAppendixRef := range stableAppendices {
 		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(stableAppendixRef)))
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("read %s: %w", stableAppendixRef, err)
+			return "", nil, nil, nil, fmt.Errorf("read %s: %w", stableAppendixRef, err)
 		}
 		candidateAppendixRef := refMap[stableAppendixRef]
 		appendixContent := rewriteCandidateAppendixFrontmatter(string(data), objectType, object)
@@ -412,29 +469,22 @@ func retargetStableAppendicesForFork(repoRoot, objectType, object, stableMainRef
 		prepared = append(prepared, preparedAppendix{fileRef: candidateAppendixRef, content: appendixContent})
 	}
 
-	removed, err := removeCandidateAppendices(repoRoot, objectType, object)
+	removed, err := candidateAppendices(repoRoot, objectType, object)
 	if err != nil {
-		return "", nil, nil, err
+		return "", nil, nil, nil, err
 	}
 	if len(stableAppendices) == 0 {
-		return candidateContent, nil, removed, nil
+		return candidateContent, nil, nil, normalizeStrings(removed), nil
 	}
 
 	nextCandidateContent := rewriteMarkdownDocRefs(candidateContent, stableMainRef, candidateMainRef, refMap)
 	nextCandidateContent = rewriteKnownDocRefLiterals(nextCandidateContent, refMap)
 	retargeted := []string{}
 	for _, appendix := range prepared {
-		candidateAppendixAbs := filepath.Join(repoRoot, filepath.FromSlash(appendix.fileRef))
-		if err := os.MkdirAll(filepath.Dir(candidateAppendixAbs), 0o755); err != nil {
-			return "", nil, nil, fmt.Errorf("create candidate appendix dir for %s: %w", appendix.fileRef, err)
-		}
-		if err := os.WriteFile(candidateAppendixAbs, []byte(appendix.content), 0o644); err != nil {
-			return "", nil, nil, fmt.Errorf("write %s: %w", appendix.fileRef, err)
-		}
 		retargeted = append(retargeted, appendix.fileRef)
 	}
 
-	return nextCandidateContent, normalizeStrings(retargeted), normalizeStrings(removed), nil
+	return nextCandidateContent, prepared, normalizeStrings(retargeted), normalizeStrings(removed), nil
 }
 
 func stableAppendixRefsFromContent(objectType, object, fromRef, content string) []string {
@@ -655,6 +705,17 @@ func rewriteCandidateAppendixFrontmatter(content, objectType, object string) str
 }
 
 func removeCandidateAppendices(repoRoot, objectType, object string) ([]string, error) {
+	refs, err := candidateAppendices(repoRoot, objectType, object)
+	if err != nil {
+		return nil, err
+	}
+	if err := removeAppendixRefs(repoRoot, refs); err != nil {
+		return nil, err
+	}
+	return normalizeStrings(refs), nil
+}
+
+func candidateAppendices(repoRoot, objectType, object string) ([]string, error) {
 	glob, err := specpaths.ObjectCandidateAppendixGlob(objectType, object)
 	if err != nil {
 		return nil, err
@@ -670,15 +731,35 @@ func removeCandidateAppendices(repoRoot, objectType, object string) ([]string, e
 			return nil, err
 		}
 		fileRef := filepath.ToSlash(relPath)
-		if err := os.Remove(match); err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return nil, fmt.Errorf("remove %s: %w", fileRef, err)
-		}
 		removed = append(removed, fileRef)
 	}
 	return normalizeStrings(removed), nil
+}
+
+func removeAppendixRefs(repoRoot string, refs []string) error {
+	for _, ref := range refs {
+		abs := filepath.Join(repoRoot, filepath.FromSlash(ref))
+		if err := os.Remove(abs); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("remove %s: %w", ref, err)
+		}
+	}
+	return nil
+}
+
+func writePreparedAppendices(repoRoot string, appendices []preparedAppendix) error {
+	for _, appendix := range appendices {
+		candidateAppendixAbs := filepath.Join(repoRoot, filepath.FromSlash(appendix.fileRef))
+		if err := os.MkdirAll(filepath.Dir(candidateAppendixAbs), 0o755); err != nil {
+			return fmt.Errorf("create candidate appendix dir for %s: %w", appendix.fileRef, err)
+		}
+		if err := os.WriteFile(candidateAppendixAbs, []byte(appendix.content), 0o644); err != nil {
+			return fmt.Errorf("write %s: %w", appendix.fileRef, err)
+		}
+	}
+	return nil
 }
 
 func checkCommandForObject(objectType string) string {

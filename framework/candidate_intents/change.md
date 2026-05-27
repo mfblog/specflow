@@ -23,7 +23,7 @@ evidence_appendix_ref: none | <candidate appendix path>
 Rules:
 
 1. `repair_basis` is forbidden
-2. `source_basis` and `evidence_appendix_ref` follow `specflow/framework/onboarding_decision_policy.md`
+2. `source_basis` and `evidence_appendix_ref` follow `framework/onboarding_decision_policy.md`
 3. if selected behavior depends on current implementation, tests, runtime behavior, or historical material, the candidate must use `source_basis=existing_implementation` or `source_basis=mixed` and provide the required evidence appendix
 4. if the candidate replaces existing behavior without using it as selected truth, it must use `source_basis=replacement` and `evidence_appendix_ref=none`
 

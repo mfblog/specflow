@@ -141,11 +141,11 @@ Commands or flows may add more required fields, but must not weaken this baselin
 
 This policy works together with:
 
-1. `specflow/framework/spec_flow_review.md`
-2. `specflow/framework/spec_flow_design_review.md`
-3. `specflow/framework/commands/unit_check.md`
-4. `specflow/framework/commands/unit_verify.md`
-5. `specflow/framework/commands/unit_stable_verify.md`
+1. `framework/spec_flow_review.md`
+2. `framework/spec_flow_design_review.md`
+3. `framework/lifecycle/unit_check.md`
+4. `framework/lifecycle/unit_verify.md`
+5. `framework/lifecycle/unit_stable_verify.md`
 
 Priority rules:
 

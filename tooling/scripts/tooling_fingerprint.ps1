@@ -5,7 +5,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path
+$toolingRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $records = New-Object System.Collections.Generic.List[string]
 
 function Add-GoTree {
@@ -13,13 +13,13 @@ function Add-GoTree {
         [string]$RelativeRoot
     )
 
-    $absoluteRoot = Join-Path $repoRoot ($RelativeRoot -replace '/', [System.IO.Path]::DirectorySeparatorChar)
+    $absoluteRoot = Join-Path $toolingRoot ($RelativeRoot -replace '/', [System.IO.Path]::DirectorySeparatorChar)
     if (-not (Test-Path -LiteralPath $absoluteRoot -PathType Container)) {
         throw "Required tooling source directory missing: $RelativeRoot"
     }
 
     Get-ChildItem -LiteralPath $absoluteRoot -Recurse -File -Filter "*.go" | ForEach-Object {
-        $relativePath = $_.FullName.Substring($repoRoot.Length + 1).Replace('\', '/')
+        $relativePath = $_.FullName.Substring($toolingRoot.Length + 1).Replace('\', '/')
         $records.Add($relativePath)
     }
 }
@@ -29,7 +29,7 @@ function Add-RequiredFile {
         [string]$RelativePath
     )
 
-    $absolutePath = Join-Path $repoRoot ($RelativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar)
+    $absolutePath = Join-Path $toolingRoot ($RelativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar)
     if (-not (Test-Path -LiteralPath $absolutePath -PathType Leaf)) {
         throw "Required tooling source file missing: $RelativePath"
     }
@@ -41,17 +41,17 @@ function Add-OptionalFile {
         [string]$RelativePath
     )
 
-    $absolutePath = Join-Path $repoRoot ($RelativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar)
+    $absolutePath = Join-Path $toolingRoot ($RelativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar)
     if (Test-Path -LiteralPath $absolutePath -PathType Leaf) {
         $records.Add($RelativePath)
     }
 }
 
-Add-GoTree "specflow/tooling/cmd"
-Add-GoTree "specflow/tooling/internal"
-Add-RequiredFile "specflow/tooling/go.mod"
-Add-RequiredFile "specflow/tooling/manifest.tsv"
-Add-OptionalFile "specflow/tooling/go.sum"
+Add-GoTree "cmd"
+Add-GoTree "internal"
+Add-RequiredFile "go.mod"
+Add-RequiredFile "manifest.tsv"
+Add-OptionalFile "go.sum"
 
 $sortedRecords = [string[]]$records.ToArray()
 [System.Array]::Sort($sortedRecords, [System.StringComparer]::Ordinal)
@@ -68,7 +68,7 @@ $stream = [System.IO.MemoryStream]::new()
 
 try {
     foreach ($relativePath in $files) {
-        $absolutePath = Join-Path $repoRoot ($relativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar)
+        $absolutePath = Join-Path $toolingRoot ($relativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar)
         $pathBytes = [System.Text.Encoding]::UTF8.GetBytes($relativePath)
         $contentBytes = [System.IO.File]::ReadAllBytes($absolutePath)
 

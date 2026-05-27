@@ -20,8 +20,8 @@ The executor must read:
 
 1. `docs/specs/_status.md`
 2. the current-layer unit main Spec
-3. `specflow/framework/command_policy.md`
-4. the command file for the unit's current `Next Command`
+3. `framework/lifecycle/overview.md`
+4. the lifecycle Context Card for the unit's current `Next Command`
 
 When the target row has `Candidate=yes` and `Active Layer=candidate`, the executor must run the computed candidate relation preflight before entering the next command:
 

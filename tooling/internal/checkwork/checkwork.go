@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
@@ -24,30 +25,24 @@ const (
 	statusClosedBlocked     = "closed_blocked"
 	statusClosedFixRequired = "closed_fix_required"
 
-	slicePending              = "pending"
-	slicePassed               = "passed"
-	sliceBlocked              = "blocked"
-	sliceStale                = "stale"
-	sliceSkippedNotApplicable = "skipped_not_applicable"
+	itemPending       = "pending"
+	itemClear         = "clear"
+	itemIncomplete    = "incomplete"
+	itemBlocked       = "blocked"
+	itemStale         = "stale"
+	itemNotApplicable = "not_applicable"
 
 	timestampLayout = "2006-01-02T15:04:05Z"
 )
 
-var sliceColumns = []string{
-	"slice_id",
-	"slice_origin",
-	"slice_type",
+var checklistColumns = []string{
+	"item_id",
 	"status",
-	"review_question",
-	"why_added",
-	"parent_slice_id",
+	"question",
 	"input_files",
 	"input_fingerprint",
-	"depends_on",
 	"finding_refs",
 	"result_summary",
-	"exit_condition",
-	"resume_next_step",
 }
 
 var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
@@ -72,9 +67,9 @@ type ValidationResult struct {
 
 type RefreshResult struct {
 	File             string
-	StaleSlices      []string
+	StaleItems       []string
 	MissingInputs    []string
-	ChangedSlices    []string
+	ChangedItems     []string
 	LastUpdatedAtUTC string
 }
 
@@ -89,36 +84,26 @@ type fixedWorkStateFile struct {
 }
 
 type workState struct {
-	Fields   map[string]string
-	Baseline []sliceEntry
-	Dynamic  []sliceEntry
-	Findings string
-	Resume   string
+	Fields    map[string]string
+	Checklist []checklistItem
+	Findings  string
+	Resume    string
 }
 
-type sliceEntry struct {
-	SliceID          string
-	SliceOrigin      string
-	SliceType        string
+type checklistItem struct {
+	ItemID           string
 	Status           string
-	ReviewQuestion   string
-	WhyAdded         string
-	ParentSliceID    string
+	Question         string
 	InputFiles       []string
 	InputFingerprint string
-	DependsOn        []string
 	FindingRefs      string
 	ResultSummary    string
-	ExitCondition    string
-	ResumeNextStep   string
 }
 
-type sliceDefinition struct {
-	ID             string
-	SliceType      string
-	ReviewQuestion string
-	InputFiles     func(inputContext) []string
-	DependsOn      []string
+type checklistDefinition struct {
+	ID         string
+	Question   string
+	InputFiles func(inputContext) []string
 }
 
 type inputContext struct {
@@ -176,7 +161,7 @@ func Init(repoRoot, objectType, object string, now time.Time) (InitResult, error
 			case age <= 2*time.Hour:
 				return InitResult{File: file, Reused: true}, nil
 			case age <= 7*24*time.Hour:
-				return InitResult{}, fmt.Errorf("open check-work file requires manual reuse decision before check-work-init can continue: %s last_updated_at=%s age=%s", file, formatUTC(existing.LastUpdated), age.Round(time.Second))
+				return InitResult{}, fmt.Errorf("open check checklist requires manual reuse decision before check-work-init can continue: %s last_updated_at=%s age=%s", file, formatUTC(existing.LastUpdated), age.Round(time.Second))
 			default:
 				existing.Reason = "expired_over_7_days"
 			}
@@ -196,28 +181,26 @@ func Init(repoRoot, objectType, object string, now time.Time) (InitResult, error
 	workID := fmt.Sprintf("%s-unit_check-%s", now.Format("20060102-150405"), object)
 	state := workState{
 		Fields: map[string]string{
-			"work_flow":            "unit_check",
-			"work_id":              workID,
-			"object_type":          objectType,
-			"object_ref":           object,
-			"status":               statusInProgress,
-			"created_at":           formatUTC(now),
-			"last_updated_at":      formatUTC(now),
-			"active_slice":         "goal_and_responsibility",
-			"truth_layer_ref":      truth.Layer,
-			"truth_file_ref":       truth.FileRef,
-			"truth_version_ref":    truth.VersionRef,
-			"truth_fingerprint":    truth.Fingerprint,
-			"baseline_slice_table": "present",
-			"dynamic_slice_table":  "none",
-			"finding_refs":         "none",
-			"blocked_reason":       "none",
-			"resume_next_step":     "review slice goal_and_responsibility",
+			"work_flow":         "unit_check",
+			"work_id":           workID,
+			"object_type":       objectType,
+			"object_ref":        object,
+			"status":            statusInProgress,
+			"created_at":        formatUTC(now),
+			"last_updated_at":   formatUTC(now),
+			"truth_layer_ref":   truth.Layer,
+			"truth_file_ref":    truth.FileRef,
+			"truth_version_ref": truth.VersionRef,
+			"truth_fingerprint": truth.Fingerprint,
+			"checklist_table":   "present",
+			"finding_refs":      "none",
+			"blocked_reason":    "none",
+			"resume_next_step":  "review checklist item goal_and_responsibility",
 		},
 		Findings: "none",
 		Resume:   "none",
 	}
-	state.Baseline, err = buildBaselineSlices(repoRoot, truth.Context)
+	state.Checklist, err = buildChecklistItems(repoRoot, truth.Context)
 	if err != nil {
 		return InitResult{}, err
 	}
@@ -258,7 +241,7 @@ func Refresh(repoRoot, objectType, object string, now time.Time) (RefreshResult,
 		return RefreshResult{}, err
 	}
 	if diagnostics := validateState(repoRoot, objectType, object, state, now, true); len(diagnostics) > 0 {
-		return RefreshResult{}, fmt.Errorf("check-work validation failed: %s", strings.Join(diagnostics, "; "))
+		return RefreshResult{}, fmt.Errorf("check checklist validation failed: %s", strings.Join(diagnostics, "; "))
 	}
 
 	truth, err := collectTruthInfo(repoRoot, objectType, object)
@@ -270,94 +253,57 @@ func Refresh(repoRoot, objectType, object string, now time.Time) (RefreshResult,
 	state.Fields["truth_version_ref"] = truth.VersionRef
 	state.Fields["truth_fingerprint"] = truth.Fingerprint
 
-	definitions := baselineDefinitions()
-	definitionsByID := map[string]sliceDefinition{}
+	definitions := checklistDefinitions()
+	definitionsByID := map[string]checklistDefinition{}
 	for _, definition := range definitions {
 		definitionsByID[definition.ID] = definition
 	}
 	inputFilesChanged := map[string]bool{}
-	for i := range state.Baseline {
-		definition, ok := definitionsByID[state.Baseline[i].SliceID]
+	for i := range state.Checklist {
+		definition, ok := definitionsByID[state.Checklist[i].ItemID]
 		if !ok {
 			continue
 		}
 		currentInputFiles := union(definition.InputFiles(truth.Context))
-		if !sameStringSlice(state.Baseline[i].InputFiles, currentInputFiles) {
-			inputFilesChanged[state.Baseline[i].SliceID] = true
+		if !sameStringList(state.Checklist[i].InputFiles, currentInputFiles) {
+			inputFilesChanged[state.Checklist[i].ItemID] = true
 		}
-		state.Baseline[i].SliceType = definition.SliceType
-		state.Baseline[i].ReviewQuestion = definition.ReviewQuestion
-		state.Baseline[i].WhyAdded = "baseline_catalog"
-		state.Baseline[i].ParentSliceID = "none"
-		state.Baseline[i].InputFiles = currentInputFiles
-		state.Baseline[i].DependsOn = definition.DependsOn
+		state.Checklist[i].Question = definition.Question
+		state.Checklist[i].InputFiles = currentInputFiles
 	}
 
 	result := RefreshResult{File: file, LastUpdatedAtUTC: formatUTC(now)}
-	staleSet := map[string]bool{}
-	allSlices := append([]sliceEntry{}, state.Baseline...)
-	allSlices = append(allSlices, state.Dynamic...)
-	for _, slice := range allSlices {
-		if slice.Status == sliceStale {
-			staleSet[slice.SliceID] = true
-		}
-	}
-	for i := range allSlices {
-		fingerprint, missing, err := computeFingerprint(repoRoot, allSlices[i].InputFiles)
+	for i := range state.Checklist {
+		fingerprint, missing, err := computeFingerprint(repoRoot, state.Checklist[i].InputFiles)
 		if err != nil {
 			return RefreshResult{}, err
 		}
-		changed := len(missing) == 0 && (fingerprint != allSlices[i].InputFingerprint || inputFilesChanged[allSlices[i].SliceID])
+		changed := len(missing) == 0 && (fingerprint != state.Checklist[i].InputFingerprint || inputFilesChanged[state.Checklist[i].ItemID])
 		if changed {
-			result.ChangedSlices = append(result.ChangedSlices, allSlices[i].SliceID)
+			result.ChangedItems = append(result.ChangedItems, state.Checklist[i].ItemID)
 		}
 		for _, missingPath := range missing {
-			result.MissingInputs = append(result.MissingInputs, allSlices[i].SliceID+":"+missingPath)
+			result.MissingInputs = append(result.MissingInputs, state.Checklist[i].ItemID+":"+missingPath)
 		}
 		if len(missing) == 0 {
-			allSlices[i].InputFingerprint = fingerprint
+			state.Checklist[i].InputFingerprint = fingerprint
 		}
-		if allSlices[i].Status == slicePassed && (changed || len(missing) > 0) {
-			allSlices[i].Status = sliceStale
-			allSlices[i].ResultSummary = "stale: input changed"
+		if state.Checklist[i].Status == itemClear && (changed || len(missing) > 0) {
+			state.Checklist[i].Status = itemStale
+			state.Checklist[i].ResultSummary = "stale: input changed"
 			if len(missing) > 0 {
-				allSlices[i].ResultSummary = "stale: input missing"
+				state.Checklist[i].ResultSummary = "stale: input missing"
 			}
-			staleSet[allSlices[i].SliceID] = true
-			result.StaleSlices = append(result.StaleSlices, allSlices[i].SliceID)
-		}
-	}
-	for changed := true; changed; {
-		changed = false
-		for i := range allSlices {
-			if allSlices[i].SliceType != "cross_convergence" || allSlices[i].Status != slicePassed {
-				continue
-			}
-			for _, dependency := range allSlices[i].DependsOn {
-				if staleSet[dependency] {
-					allSlices[i].Status = sliceStale
-					allSlices[i].ResultSummary = "stale: dependency stale"
-					staleSet[allSlices[i].SliceID] = true
-					result.StaleSlices = append(result.StaleSlices, allSlices[i].SliceID)
-					changed = true
-					break
-				}
-			}
+			result.StaleItems = append(result.StaleItems, state.Checklist[i].ItemID)
 		}
 	}
 
-	state.Baseline = allSlices[:len(state.Baseline)]
-	state.Dynamic = allSlices[len(state.Baseline):]
 	state.Fields["last_updated_at"] = formatUTC(now)
-	state.Fields["dynamic_slice_table"] = "none"
-	if len(state.Dynamic) > 0 {
-		state.Fields["dynamic_slice_table"] = "present"
-	}
 	if err := os.WriteFile(file, []byte(renderState(state)), 0o644); err != nil {
 		return RefreshResult{}, err
 	}
-	sort.Strings(result.StaleSlices)
-	sort.Strings(result.ChangedSlices)
+	sort.Strings(result.StaleItems)
+	sort.Strings(result.ChangedItems)
 	sort.Strings(result.MissingInputs)
 	return result, nil
 }
@@ -373,7 +319,7 @@ func Touch(repoRoot, objectType, object string, now time.Time) (TouchResult, err
 		return TouchResult{}, err
 	}
 	if diagnostics := validateState(repoRoot, objectType, object, state, now, false); len(diagnostics) > 0 {
-		return TouchResult{}, fmt.Errorf("check-work validation failed: %s", strings.Join(diagnostics, "; "))
+		return TouchResult{}, fmt.Errorf("check checklist validation failed: %s", strings.Join(diagnostics, "; "))
 	}
 	state.Fields["last_updated_at"] = formatUTC(now)
 	if err := os.WriteFile(file, []byte(renderState(state)), 0o644); err != nil {
@@ -442,13 +388,21 @@ func collectTruthInfo(repoRoot, objectType, object string) (truthInfo, error) {
 		return truthInfo{}, err
 	}
 	repositoryMapping := existingFiles(repoRoot, []string{specpaths.RepositoryMappingFileRef})
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return truthInfo{}, err
+	}
+	frameworkPath := func(relPath string) string {
+		return specflowlayout.Relative(layout.FrameworkRoot, relPath)
+	}
 	frameworkFiles := existingFiles(repoRoot, []string{
-		"specflow/framework/commands/unit_check.md",
-		"specflow/framework/process_snapshot_contract.md",
-		"specflow/framework/slice_work_state_protocol.md",
-		"specflow/framework/candidate_handoff_contract.md",
-		"specflow/framework/spec_writing_guide.md",
-		"specflow/framework/candidate_intent_policy.md",
+		frameworkPath("core/object_model.md"),
+		frameworkPath("core/repository_mapping.md"),
+		frameworkPath("lifecycle/unit_check.md"),
+		frameworkPath("process_snapshot_contract.md"),
+		frameworkPath("candidate_handoff_contract.md"),
+		frameworkPath("candidate_intent_policy.md"),
+		frameworkPath("operations/implementation_change.md"),
 	})
 	return truthInfo{
 		Layer:       "candidate",
@@ -464,142 +418,98 @@ func collectTruthInfo(repoRoot, objectType, object string) (truthInfo, error) {
 			GlobalRuleFiles:        globalRules,
 			FrameworkFiles:         frameworkFiles,
 			AcceptanceRuleFiles: existingFiles(repoRoot, []string{
-				"specflow/framework/spec_writing_guide.md",
-				"specflow/framework/commands/unit_check.md",
+				frameworkPath("core/object_model.md"),
+				frameworkPath("lifecycle/unit_check.md"),
 			}),
 			HandoffRuleFiles: existingFiles(repoRoot, []string{
-				"specflow/framework/candidate_handoff_contract.md",
-				"specflow/framework/process_snapshot_contract.md",
-				"specflow/framework/commands/unit_plan.md",
+				frameworkPath("candidate_handoff_contract.md"),
+				frameworkPath("process_snapshot_contract.md"),
+				frameworkPath("lifecycle/unit_plan.md"),
 			}),
 		},
 	}, nil
 }
 
-func baselineDefinitions() []sliceDefinition {
-	local := []sliceDefinition{
+func checklistDefinitions() []checklistDefinition {
+	return []checklistDefinition{
 		{
-			ID:             "goal_and_responsibility",
-			SliceType:      "local",
-			ReviewQuestion: "Does the candidate connect user goal, unit responsibility, scope, non-goals, and owner fit.",
+			ID:       "goal_and_responsibility",
+			Question: "Is the unit goal, responsibility, scope, non-goals, and owner fit clear enough to plan from.",
 			InputFiles: func(ctx inputContext) []string {
 				return union([]string{ctx.TruthFile}, ctx.AppendixFiles, ctx.FrameworkFiles)
 			},
 		},
 		{
-			ID:             "dependency_truth_surface",
-			SliceType:      "local",
-			ReviewQuestion: "Does the candidate depend only on formal stable truth and explicit same-candidate appendix inputs.",
+			ID:       "dependency_truth_surface",
+			Question: "Are unit_refs, rule_refs, stable global rules, appendices, and repository mapping explicit and consistent.",
 			InputFiles: func(ctx inputContext) []string {
 				return union([]string{ctx.TruthFile}, ctx.AppendixFiles, ctx.DependencyUnitFiles, ctx.DependencyRuleFiles, ctx.GlobalRuleFiles, ctx.RepositoryMappingFiles, ctx.FrameworkFiles)
 			},
 		},
 		{
-			ID:             "main_flow_and_state",
-			SliceType:      "local",
-			ReviewQuestion: "Does the candidate define the normal flow, state changes, ordering, and lifecycle semantics.",
+			ID:       "main_flow_and_state",
+			Question: "Are the normal flow, state changes, ordering, lifecycle effects, and important transitions clear.",
 			InputFiles: func(ctx inputContext) []string {
 				return union([]string{ctx.TruthFile}, ctx.AppendixFiles, ctx.FrameworkFiles)
 			},
 		},
 		{
-			ID:             "boundary_and_protocol",
-			SliceType:      "local",
-			ReviewQuestion: "Does every flow boundary name the public contract, port, adapter, store, event, trace source, or owner it needs.",
+			ID:       "boundary_and_protocol",
+			Question: "Are public contracts, ports, adapters, stores, events, trace sources, and owners explicit.",
 			InputFiles: func(ctx inputContext) []string {
 				return union([]string{ctx.TruthFile}, ctx.DependencyUnitFiles, ctx.DependencyRuleFiles, ctx.RepositoryMappingFiles, ctx.FrameworkFiles)
 			},
 		},
 		{
-			ID:             "data_artifact_and_output",
-			SliceType:      "local",
-			ReviewQuestion: "Does the candidate define produced artifacts, evidence, reports, traces, persistence records, and consumers.",
+			ID:       "data_artifact_and_output",
+			Question: "Are produced artifacts, evidence, reports, traces, persistence records, outputs, and consumers clear.",
 			InputFiles: func(ctx inputContext) []string {
 				return union([]string{ctx.TruthFile}, ctx.AppendixFiles, ctx.FrameworkFiles)
 			},
 		},
 		{
-			ID:             "error_edge_and_gap",
-			SliceType:      "local",
-			ReviewQuestion: "Does the candidate define important error states, missing dependency behavior, diagnostic gaps, and failure owners.",
+			ID:       "error_edge_and_gap",
+			Question: "Are important error states, edge cases, missing-dependency behavior, diagnostic gaps, and failure owners clear.",
 			InputFiles: func(ctx inputContext) []string {
 				return union([]string{ctx.TruthFile}, ctx.AppendixFiles, ctx.DependencyUnitFiles, ctx.DependencyRuleFiles, ctx.FrameworkFiles)
 			},
 		},
 		{
-			ID:             "acceptance_and_testability",
-			SliceType:      "local",
-			ReviewQuestion: "Do acceptance items name test surfaces, proof methods, runnable status, and pass conditions that prove the goal.",
+			ID:       "acceptance_and_testability",
+			Question: "Do acceptance items name test surfaces, proof methods, runnable status, and pass conditions.",
 			InputFiles: func(ctx inputContext) []string {
 				return union([]string{ctx.TruthFile}, ctx.AppendixFiles, ctx.AcceptanceRuleFiles)
 			},
 		},
 		{
-			ID:             "implementation_handoff",
-			SliceType:      "local",
-			ReviewQuestion: "Can unit_plan plan implementation without inventing missing design, adapter, output, or test choices.",
+			ID:       "implementation_handoff",
+			Question: "Can unit_plan create an implementation handoff without inventing missing design, adapter, output, or test choices.",
 			InputFiles: func(ctx inputContext) []string {
 				return union([]string{ctx.TruthFile}, ctx.AppendixFiles, ctx.HandoffRuleFiles)
 			},
 		},
 	}
-	byID := map[string]sliceDefinition{}
-	for _, definition := range local {
-		byID[definition.ID] = definition
-	}
-	cross := []sliceDefinition{
-		crossDefinition("goal_to_acceptance_convergence", "Do goal, responsibility, and acceptance items converge.", []string{"goal_and_responsibility", "acceptance_and_testability"}, byID),
-		crossDefinition("flow_to_boundary_convergence", "Do main-flow steps converge with boundary protocols and owners.", []string{"main_flow_and_state", "boundary_and_protocol"}, byID),
-		crossDefinition("dependency_truth_convergence", "Does dependency truth actually support the candidate behavior that relies on it.", []string{"dependency_truth_surface", "boundary_and_protocol"}, byID),
-		crossDefinition("output_to_acceptance_convergence", "Do output artifacts converge with acceptance items and downstream handoff.", []string{"data_artifact_and_output", "acceptance_and_testability", "implementation_handoff"}, byID),
-	}
-	return append(local, cross...)
 }
 
-func crossDefinition(id, question string, dependsOn []string, byID map[string]sliceDefinition) sliceDefinition {
-	return sliceDefinition{
-		ID:             id,
-		SliceType:      "cross_convergence",
-		ReviewQuestion: question,
-		DependsOn:      dependsOn,
-		InputFiles: func(ctx inputContext) []string {
-			sets := make([][]string, 0, len(dependsOn))
-			for _, dependency := range dependsOn {
-				if definition, ok := byID[dependency]; ok {
-					sets = append(sets, definition.InputFiles(ctx))
-				}
-			}
-			return union(sets...)
-		},
-	}
-}
-
-func buildBaselineSlices(repoRoot string, ctx inputContext) ([]sliceEntry, error) {
-	result := []sliceEntry{}
-	for _, definition := range baselineDefinitions() {
+func buildChecklistItems(repoRoot string, ctx inputContext) ([]checklistItem, error) {
+	result := []checklistItem{}
+	for _, definition := range checklistDefinitions() {
 		inputFiles := union(definition.InputFiles(ctx))
 		fingerprint, missing, err := computeFingerprint(repoRoot, inputFiles)
 		if err != nil {
 			return nil, err
 		}
 		if len(missing) > 0 {
-			return nil, fmt.Errorf("baseline slice %s has missing input files: %s", definition.ID, strings.Join(missing, ", "))
+			return nil, fmt.Errorf("checklist item %s has missing input files: %s", definition.ID, strings.Join(missing, ", "))
 		}
-		result = append(result, sliceEntry{
-			SliceID:          definition.ID,
-			SliceOrigin:      "baseline",
-			SliceType:        definition.SliceType,
-			Status:           slicePending,
-			ReviewQuestion:   definition.ReviewQuestion,
-			WhyAdded:         "baseline_catalog",
-			ParentSliceID:    "none",
+		result = append(result, checklistItem{
+			ItemID:           definition.ID,
+			Status:           itemPending,
+			Question:         definition.Question,
 			InputFiles:       inputFiles,
 			InputFingerprint: fingerprint,
-			DependsOn:        definition.DependsOn,
 			FindingRefs:      "none",
 			ResultSummary:    "pending",
-			ExitCondition:    "agent records passed blocked stale or skipped_not_applicable according to unit_check evidence",
-			ResumeNextStep:   "review slice " + definition.ID,
 		})
 	}
 	return result, nil
@@ -615,13 +525,11 @@ func validateState(repoRoot, objectType, object string, state workState, now tim
 		"status",
 		"created_at",
 		"last_updated_at",
-		"active_slice",
 		"truth_layer_ref",
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
-		"baseline_slice_table",
-		"dynamic_slice_table",
+		"checklist_table",
 		"finding_refs",
 		"blocked_reason",
 		"resume_next_step",
@@ -647,7 +555,7 @@ func validateState(repoRoot, objectType, object string, state workState, now tim
 	if !isWorkStatus(status) {
 		diagnostics = append(diagnostics, "invalid work status: "+status)
 	} else if requireOpen && !isOpenStatus(status) {
-		diagnostics = append(diagnostics, "closed check-work files cannot be reused")
+		diagnostics = append(diagnostics, "closed check checklist files cannot be reused")
 	}
 	for _, field := range []string{"created_at", "last_updated_at"} {
 		if _, err := parseTimestamp(state.Fields[field]); err != nil {
@@ -657,100 +565,56 @@ func validateState(repoRoot, objectType, object string, state workState, now tim
 	if lastUpdated, err := parseTimestamp(state.Fields["last_updated_at"]); err == nil && lastUpdated.After(now) {
 		diagnostics = append(diagnostics, "last_updated_at must not be later than current UTC time")
 	}
-	expected := baselineIDSet()
+	expected := checklistIDSet()
 	seen := map[string]bool{}
-	allIDs := map[string]bool{}
-	for _, slice := range state.Baseline {
-		if seen[slice.SliceID] {
-			diagnostics = append(diagnostics, "duplicate baseline slice: "+slice.SliceID)
+	for _, item := range state.Checklist {
+		if seen[item.ItemID] {
+			diagnostics = append(diagnostics, "duplicate checklist item: "+item.ItemID)
 		}
-		seen[slice.SliceID] = true
-		allIDs[slice.SliceID] = true
-		if !expected[slice.SliceID] {
-			diagnostics = append(diagnostics, "unexpected baseline slice: "+slice.SliceID)
+		seen[item.ItemID] = true
+		if !expected[item.ItemID] {
+			diagnostics = append(diagnostics, "unexpected checklist item: "+item.ItemID)
 		}
-		if slice.SliceOrigin != "baseline" {
-			diagnostics = append(diagnostics, "baseline slice must use slice_origin baseline: "+slice.SliceID)
-		}
-		if slice.ParentSliceID != "none" {
-			diagnostics = append(diagnostics, "baseline slice parent_slice_id must be none: "+slice.SliceID)
-		}
-		diagnostics = append(diagnostics, validateSlice(repoRoot, slice)...)
+		diagnostics = append(diagnostics, validateChecklistItem(repoRoot, item)...)
 	}
 	for id := range expected {
 		if !seen[id] {
-			diagnostics = append(diagnostics, "missing baseline slice: "+id)
+			diagnostics = append(diagnostics, "missing checklist item: "+id)
 		}
-	}
-	for _, slice := range state.Dynamic {
-		if allIDs[slice.SliceID] {
-			diagnostics = append(diagnostics, "duplicate slice_id: "+slice.SliceID)
-		}
-		allIDs[slice.SliceID] = true
-	}
-	for _, slice := range state.Dynamic {
-		if slice.SliceOrigin != "dynamic" {
-			diagnostics = append(diagnostics, "dynamic slice must use slice_origin dynamic: "+slice.SliceID)
-		}
-		if slice.ParentSliceID == "" || slice.ParentSliceID == "none" || slice.ParentSliceID == slice.SliceID || !allIDs[slice.ParentSliceID] {
-			diagnostics = append(diagnostics, "dynamic slice parent_slice_id must reference an existing slice: "+slice.SliceID)
-		}
-		for _, field := range []struct {
-			name  string
-			value string
-		}{
-			{"review_question", slice.ReviewQuestion},
-			{"why_added", slice.WhyAdded},
-			{"exit_condition", slice.ExitCondition},
-		} {
-			if strings.TrimSpace(field.value) == "" || strings.TrimSpace(field.value) == "none" {
-				diagnostics = append(diagnostics, "dynamic slice missing "+field.name+": "+slice.SliceID)
-			}
-		}
-		diagnostics = append(diagnostics, validateSlice(repoRoot, slice)...)
 	}
 	return diagnostics
 }
 
-func validateSlice(repoRoot string, slice sliceEntry) []string {
+func validateChecklistItem(repoRoot string, item checklistItem) []string {
 	diagnostics := []string{}
 	for _, field := range []struct {
 		name  string
 		value string
 	}{
-		{"slice_id", slice.SliceID},
-		{"slice_origin", slice.SliceOrigin},
-		{"slice_type", slice.SliceType},
-		{"status", slice.Status},
-		{"review_question", slice.ReviewQuestion},
-		{"why_added", slice.WhyAdded},
-		{"parent_slice_id", slice.ParentSliceID},
-		{"input_fingerprint", slice.InputFingerprint},
-		{"finding_refs", slice.FindingRefs},
-		{"result_summary", slice.ResultSummary},
-		{"exit_condition", slice.ExitCondition},
-		{"resume_next_step", slice.ResumeNextStep},
+		{"item_id", item.ItemID},
+		{"status", item.Status},
+		{"question", item.Question},
+		{"input_fingerprint", item.InputFingerprint},
+		{"finding_refs", item.FindingRefs},
+		{"result_summary", item.ResultSummary},
 	} {
 		if strings.TrimSpace(field.value) == "" {
-			diagnostics = append(diagnostics, field.name+" is required for slice: "+slice.SliceID)
+			diagnostics = append(diagnostics, field.name+" is required for checklist item: "+item.ItemID)
 		}
 	}
-	if slice.SliceType != "local" && slice.SliceType != "cross_convergence" {
-		diagnostics = append(diagnostics, "invalid slice_type for "+slice.SliceID+": "+slice.SliceType)
+	if !isChecklistStatus(item.Status) {
+		diagnostics = append(diagnostics, "invalid checklist status for "+item.ItemID+": "+item.Status)
 	}
-	if !isSliceStatus(slice.Status) {
-		diagnostics = append(diagnostics, "invalid slice status for "+slice.SliceID+": "+slice.Status)
+	if len(item.InputFiles) == 0 {
+		diagnostics = append(diagnostics, "input_files is required for checklist item: "+item.ItemID)
 	}
-	if len(slice.InputFiles) == 0 {
-		diagnostics = append(diagnostics, "input_files is required for slice: "+slice.SliceID)
-	}
-	for _, relPath := range slice.InputFiles {
+	for _, relPath := range item.InputFiles {
 		if strings.TrimSpace(relPath) == "" || filepath.IsAbs(relPath) || strings.Contains(relPath, "\\") {
-			diagnostics = append(diagnostics, "input_files must use repository-relative slash paths: "+slice.SliceID)
+			diagnostics = append(diagnostics, "input_files must use repository-relative slash paths: "+item.ItemID)
 			continue
 		}
 		if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(relPath))); err != nil && !os.IsNotExist(err) {
-			diagnostics = append(diagnostics, "cannot inspect input file for "+slice.SliceID+": "+relPath)
+			diagnostics = append(diagnostics, "cannot inspect input file for "+item.ItemID+": "+relPath)
 		}
 	}
 	return diagnostics
@@ -773,23 +637,13 @@ func parseFile(file string) (workState, error) {
 		return state, err
 	}
 	state.Fields = fields
-	baselineSection, ok := sections["Baseline Slices"]
+	checklistSection, ok := sections["Checklist"]
 	if !ok {
-		return state, fmt.Errorf("missing section: Baseline Slices")
+		return state, fmt.Errorf("missing section: Checklist")
 	}
-	state.Baseline, err = parseSliceTable(baselineSection)
+	state.Checklist, err = parseChecklistTable(checklistSection)
 	if err != nil {
-		return state, fmt.Errorf("baseline slice table: %w", err)
-	}
-	dynamicSection, ok := sections["Dynamic Slices"]
-	if !ok {
-		return state, fmt.Errorf("missing section: Dynamic Slices")
-	}
-	if strings.TrimSpace(dynamicSection) != "none" {
-		state.Dynamic, err = parseSliceTable(dynamicSection)
-		if err != nil {
-			return state, fmt.Errorf("dynamic slice table: %w", err)
-		}
+		return state, fmt.Errorf("checklist table: %w", err)
 	}
 	state.Findings = strings.TrimSpace(sections["Findings"])
 	if state.Findings == "" {
@@ -842,40 +696,33 @@ func parseKeyValueTable(section string) (map[string]string, error) {
 	return result, nil
 }
 
-func parseSliceTable(section string) ([]sliceEntry, error) {
+func parseChecklistTable(section string) ([]checklistItem, error) {
 	rows := parseMarkdownRows(section)
 	if len(rows) == 0 {
-		return nil, fmt.Errorf("slice table is empty")
+		return nil, fmt.Errorf("checklist table is empty")
 	}
 	header := rows[0]
-	if len(header) != len(sliceColumns) {
-		return nil, fmt.Errorf("slice table header has %d columns, want %d", len(header), len(sliceColumns))
+	if len(header) != len(checklistColumns) {
+		return nil, fmt.Errorf("checklist table header has %d columns, want %d", len(header), len(checklistColumns))
 	}
-	for i, column := range sliceColumns {
+	for i, column := range checklistColumns {
 		if header[i] != column {
-			return nil, fmt.Errorf("slice table column %d is %q, want %q", i+1, header[i], column)
+			return nil, fmt.Errorf("checklist table column %d is %q, want %q", i+1, header[i], column)
 		}
 	}
-	result := []sliceEntry{}
+	result := []checklistItem{}
 	for _, row := range rows[1:] {
-		if len(row) != len(sliceColumns) {
-			return nil, fmt.Errorf("slice row has %d columns, want %d", len(row), len(sliceColumns))
+		if len(row) != len(checklistColumns) {
+			return nil, fmt.Errorf("checklist row has %d columns, want %d", len(row), len(checklistColumns))
 		}
-		result = append(result, sliceEntry{
-			SliceID:          row[0],
-			SliceOrigin:      row[1],
-			SliceType:        row[2],
-			Status:           row[3],
-			ReviewQuestion:   row[4],
-			WhyAdded:         row[5],
-			ParentSliceID:    row[6],
-			InputFiles:       parseList(row[7]),
-			InputFingerprint: row[8],
-			DependsOn:        parseList(row[9]),
-			FindingRefs:      row[10],
-			ResultSummary:    row[11],
-			ExitCondition:    row[12],
-			ResumeNextStep:   row[13],
+		result = append(result, checklistItem{
+			ItemID:           row[0],
+			Status:           row[1],
+			Question:         row[2],
+			InputFiles:       parseList(row[3]),
+			InputFingerprint: row[4],
+			FindingRefs:      row[5],
+			ResultSummary:    row[6],
 		})
 	}
 	return result, nil
@@ -908,21 +755,15 @@ func parseMarkdownRows(section string) [][]string {
 
 func renderState(state workState) string {
 	var b strings.Builder
-	b.WriteString("# Unit Check Work State\n\n")
+	b.WriteString("# Unit Check Checklist\n\n")
 	b.WriteString("## Run State\n\n")
 	b.WriteString("| field | value |\n")
 	b.WriteString("|---|---|\n")
-	for _, field := range []string{"work_flow", "work_id", "object_type", "object_ref", "status", "created_at", "last_updated_at", "active_slice", "truth_layer_ref", "truth_file_ref", "truth_version_ref", "truth_fingerprint", "baseline_slice_table", "dynamic_slice_table", "finding_refs", "blocked_reason", "resume_next_step"} {
+	for _, field := range []string{"work_flow", "work_id", "object_type", "object_ref", "status", "created_at", "last_updated_at", "truth_layer_ref", "truth_file_ref", "truth_version_ref", "truth_fingerprint", "checklist_table", "finding_refs", "blocked_reason", "resume_next_step"} {
 		b.WriteString(fmt.Sprintf("| %s | %s |\n", field, cleanCell(state.Fields[field])))
 	}
-	b.WriteString("\n## Baseline Slices\n\n")
-	renderSliceTable(&b, state.Baseline)
-	b.WriteString("\n## Dynamic Slices\n\n")
-	if len(state.Dynamic) == 0 {
-		b.WriteString("none\n")
-	} else {
-		renderSliceTable(&b, state.Dynamic)
-	}
+	b.WriteString("\n## Checklist\n\n")
+	renderChecklistTable(&b, state.Checklist)
 	b.WriteString("\n## Findings\n\n")
 	b.WriteString(defaultText(state.Findings))
 	b.WriteString("\n\n## Resume\n\n")
@@ -931,25 +772,18 @@ func renderState(state workState) string {
 	return b.String()
 }
 
-func renderSliceTable(b *strings.Builder, slices []sliceEntry) {
-	b.WriteString("| " + strings.Join(sliceColumns, " | ") + " |\n")
-	b.WriteString("|" + strings.Repeat("---|", len(sliceColumns)) + "\n")
-	for _, slice := range slices {
+func renderChecklistTable(b *strings.Builder, items []checklistItem) {
+	b.WriteString("| " + strings.Join(checklistColumns, " | ") + " |\n")
+	b.WriteString("|" + strings.Repeat("---|", len(checklistColumns)) + "\n")
+	for _, item := range items {
 		values := []string{
-			slice.SliceID,
-			slice.SliceOrigin,
-			slice.SliceType,
-			slice.Status,
-			slice.ReviewQuestion,
-			slice.WhyAdded,
-			slice.ParentSliceID,
-			joinList(slice.InputFiles),
-			slice.InputFingerprint,
-			joinList(slice.DependsOn),
-			slice.FindingRefs,
-			slice.ResultSummary,
-			slice.ExitCondition,
-			slice.ResumeNextStep,
+			item.ItemID,
+			item.Status,
+			item.Question,
+			joinList(item.InputFiles),
+			item.InputFingerprint,
+			item.FindingRefs,
+			item.ResultSummary,
 		}
 		for i := range values {
 			values[i] = cleanCell(values[i])
@@ -1196,9 +1030,9 @@ func existingFiles(repoRoot string, relPaths []string) []string {
 	return union(result)
 }
 
-func baselineIDSet() map[string]bool {
+func checklistIDSet() map[string]bool {
 	result := map[string]bool{}
-	for _, definition := range baselineDefinitions() {
+	for _, definition := range checklistDefinitions() {
 		result[definition.ID] = true
 	}
 	return result
@@ -1231,9 +1065,9 @@ func isClosedStatus(status string) bool {
 	}
 }
 
-func isSliceStatus(status string) bool {
+func isChecklistStatus(status string) bool {
 	switch status {
-	case slicePending, slicePassed, sliceBlocked, sliceStale, sliceSkippedNotApplicable:
+	case itemPending, itemClear, itemIncomplete, itemBlocked, itemStale, itemNotApplicable:
 		return true
 	default:
 		return false
@@ -1281,7 +1115,7 @@ func union(sets ...[]string) []string {
 	return result
 }
 
-func sameStringSlice(left, right []string) bool {
+func sameStringList(left, right []string) bool {
 	if len(left) != len(right) {
 		return false
 	}

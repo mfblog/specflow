@@ -1,0 +1,99 @@
+# Governance Review Scope
+
+Governance review has two modes: `scoped_review` and `deep_audit`.
+
+`scoped_review` is the default for ordinary framework changes, explicit file or directory review, and recently changed governance material.
+
+`deep_audit` is explicit. Use it only when the user asks for full-scope, baseline, deep audit, release-level governance audit, resumable review, or run-state-backed review.
+
+## `scoped_review`
+
+`scoped_review` checks the smallest governance surface that can answer the user's question.
+
+Required inputs:
+
+1. the user request or changed files.
+2. direct owner files for those inputs.
+3. boundary refs needed to verify handoff, authority, or tooling agreement.
+4. minimal convergence refs when the changed surface crosses another owner.
+
+It must not use `_governance_review/` run-state by default.
+It must not require baseline slice table, dynamic slice table, score-state table, or full-scope run-state startup.
+
+Output fields:
+
+1. `scope mode: scoped_review`
+2. `input refs`
+3. `owner refs`
+4. `boundary refs`
+5. `checks performed`
+6. `findings`
+7. `conclusion`
+
+Every real finding in a scoped review must be written as a short repairable story before trace details.
+The story must let a new maintainer understand the execution path, expected rule behavior, actual gap, possible wrong next step, and smallest correct repair.
+
+Do not present a raw field dump as the user-facing finding.
+Lists such as `background`, `what happened`, `impact`, and `recommended fix` may be used only as private drafting aids or trace details; they do not satisfy the user-facing finding requirement by themselves.
+
+Every real finding in a scoped review must still include:
+
+1. `severity: P0|P1|P2|P3`
+2. `blocking: yes|no`
+3. `evidence`
+4. `recommended fix`
+
+Severity and blocking may appear in a status line after the story.
+Evidence and trace details should appear after the reader can already understand the problem.
+
+Severity uses `framework/severity_policy.md`.
+Severity describes harm level; it does not replace explicit blocking status.
+`P0` and `P1` are normally blocking.
+`P2` and `P3` are normally non-blocking unless the finding explains why the current scope must stop.
+
+The conclusion may be:
+
+```text
+scoped_pass | scoped_blocked | needs_deep_audit
+```
+
+`scoped_pass` means only that the reviewed scope is coherent under the named inputs.
+It must not claim full governance-baseline pass or full design-baseline pass.
+`scoped_blocked` means at least one in-scope finding has `blocking: yes`.
+
+## `deep_audit`
+
+`deep_audit` preserves the full-scope review machinery.
+
+Use `deep_audit` when the user explicitly requests one of:
+
+1. `full-scope`
+2. `baseline`
+3. `deep audit`
+4. release-level governance audit
+5. resumable review
+6. run-state-backed review
+7. exact `spec_flow_review:full` for mechanism correctness
+
+For mechanism correctness, deep audit is owned by `framework/spec_flow_review.md`.
+For design quality, deep audit is owned by `framework/spec_flow_design_review.md`.
+
+Deep audit may use `docs/specs/_governance_review/` run-state and existing `specflowctl review run-*` tooling.
+
+Deep-audit tooling must resolve a review layout before collecting full-scope inputs:
+
+1. `installed_project` uses `specflow/framework/`, `specflow/templates/`, `specflow/tooling/`, and real project `docs/specs/` compatibility inputs.
+2. `source_repo` uses local `framework/`, `templates/`, and `tooling/`; its compatibility input is template bootstrap compatibility under `templates/docs/specs/`, not real project `docs/specs/`.
+
+The default CLI layout is `--layout auto`; explicit `--layout installed` or `--layout source` overrides detection. Ambiguous auto detection must stop instead of choosing silently.
+
+## Escalation
+
+A scoped review must stop with `needs_deep_audit` when:
+
+1. the requested conclusion is repository-wide or baseline-wide.
+2. the affected owner set cannot be bounded from the user request and changed files.
+3. the review discovers a cross-owner risk that cannot be answered by minimal convergence refs.
+4. the user asks for resumability, slice state, score state, or run-state tooling.
+
+Do not silently widen a scoped review into deep audit.

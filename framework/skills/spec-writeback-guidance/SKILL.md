@@ -15,9 +15,9 @@ This skill is a bridge into existing specFlow routing. It does not create a new 
 
 1. Identify which approved conclusions affect behavior, boundary, acceptance, rule truth, repository mapping, or global rules.
 2. Restate the approved conclusion as current truth content, not as a transcript of the discussion.
-3. Read `natural_language_routing.md` and route by goal diagnosis, work shape, and intent fragments.
-4. Read `repository_mapping.md` when ownership, object boundaries, or support surfaces matter.
-5. Read `implementation_change_policy.md` before any implementation-side edit.
+3. Read `framework/operations/entry_routing.md` and route by goal diagnosis, work shape, and intent fragments.
+4. Read `framework/core/repository_mapping.md` when ownership, object boundaries, or support surfaces matter.
+5. Read `framework/operations/implementation_change.md` before any implementation-side edit.
 6. Write only current approved truth into the proper candidate, appendix, Rule, repository mapping, or global rule proposal path.
 7. Do not copy design discussion history, rejected options, or patch-note language into candidate truth.
 8. After writeback, route to the smallest legal next step, normally `unit_check` for affected candidate unit truth.
@@ -39,7 +39,7 @@ Report:
 
 1. Candidate writeback is not `unit_check` pass.
 2. Do not implement from chat-only design.
-3. Do not create `_plans/active` or `_verify_result`.
+3. Do not create `_plans/active`, `_verify_result`, or `_stable_verify_result`.
 4. Do not ask the user to choose internal rule-governance flow names.
 5. Do not treat a guidance conclusion as durable until it has been written into the required truth target.
 6. Do not claim the whole user goal is complete when only the first truth writeback step has landed.

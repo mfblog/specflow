@@ -64,50 +64,90 @@ type AcceptanceEvidenceEntry struct {
 }
 
 type Snapshot struct {
-	ObjectType             string
-	Object                 string
-	Module                 string
-	TruthLayerRef          string
-	SpecFileRef            string
-	SpecVersionRef         string
-	SpecFingerprint        string
-	ModuleAppendixSnapshot []AppendixEntry
-	RepositoryMapping      RepositoryMappingEntry
-	UnitSnapshot           []ObjectSnapshotEntry
-	RuleSnapshot           []RuleEntry
-	AcceptanceItemSet      []AcceptanceItemEntry
+	ObjectType                    string
+	Object                        string
+	Module                        string
+	TruthLayerRef                 string
+	SpecFileRef                   string
+	SpecVersionRef                string
+	SpecFingerprint               string
+	AcceptanceBehaviorFingerprint string
+	ModuleAppendixSnapshot        []AppendixEntry
+	RepositoryMapping             RepositoryMappingEntry
+	UnitSnapshot                  []ObjectSnapshotEntry
+	RuleSnapshot                  []RuleEntry
+	AcceptanceItemSet             []AcceptanceItemEntry
 }
 
 type ValidationResult struct {
-	ObjectType   string
-	Object       string
-	ProcessKind  string
-	ProcessFile  string
-	Valid        bool
-	Mismatches   []string
-	FailureLayer string
-	NextCommand  string
-	Expected     Snapshot
+	ObjectType      string
+	Object          string
+	ProcessKind     string
+	ProcessFile     string
+	Valid           bool
+	Mismatches      []string
+	FailureLayer    string
+	NextCommand     string
+	FreshnessImpact string
+	EvidenceReuse   string
+	Expected        Snapshot
 }
 
 type ProcessSnapshotData struct {
-	ProcessKind            string
-	ProcessFile            string
-	PresentFields          map[string]bool
-	Scalars                map[string]string
-	ModuleAppendixSnapshot []AppendixEntry
-	RepositoryMapping      RepositoryMappingEntry
-	ModuleSnapshot         []ObjectSnapshotEntry
-	RuleSnapshot           []RuleEntry
-	AcceptanceItemSet      []AcceptanceItemEntry
-	AcceptancePlanCoverage []AcceptancePlanCoverageEntry
-	AcceptanceEvidence     []AcceptanceEvidenceEntry
+	ProcessKind                   string
+	ProcessFile                   string
+	PresentFields                 map[string]bool
+	Scalars                       map[string]string
+	AcceptanceBehaviorFingerprint string
+	ModuleAppendixSnapshot        []AppendixEntry
+	RepositoryMapping             RepositoryMappingEntry
+	ModuleSnapshot                []ObjectSnapshotEntry
+	RuleSnapshot                  []RuleEntry
+	AcceptanceItemSet             []AcceptanceItemEntry
+	AcceptancePlanCoverage        []AcceptancePlanCoverageEntry
+	AcceptanceEvidence            []AcceptanceEvidenceEntry
 }
 
 var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
 
+const (
+	FreshnessCurrent         = "current"
+	FreshnessTextDrift       = "text_drift"
+	FreshnessSemanticDrift   = "semantic_drift"
+	FreshnessAcceptanceDrift = "acceptance_drift"
+	FreshnessDependencyDrift = "dependency_drift"
+	FreshnessSchemaDrift     = "schema_drift"
+	FreshnessUnknownDrift    = "unknown_drift"
+
+	EvidenceReuseNotNeeded     = "not_needed"
+	EvidenceReusePendingReview = "pending_review"
+	EvidenceReuseAccepted      = "accepted"
+	EvidenceReuseRejected      = "rejected"
+	EvidenceReuseNotEligible   = "not_eligible"
+)
+
+var independentEvaluationReceiptFields = []string{
+	"evaluation_mode",
+	"reviewer_result",
+	"reviewer_context",
+	"review_input_refs",
+	"review_findings",
+	"human_decision_refs",
+}
+
+var freshnessReceiptFields = []string{
+	"freshness_impact",
+	"evidence_reuse",
+	"freshness_current_fingerprint",
+	"freshness_review_mode",
+	"freshness_reviewer_result",
+	"freshness_reviewer_context",
+	"freshness_review_input_refs",
+	"freshness_review_findings",
+}
+
 var requiredUnitProcessSnapshotFields = map[string][]string{
-	"check": {
+	"check": withIndependentEvaluationReceipt(
 		"object_type",
 		"object_ref",
 		"gate",
@@ -123,16 +163,16 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"acceptance_item_set",
 		"unit_appendix_snapshot",
 		"rule_snapshot",
-	},
-	"plan": {
+	),
+	"plan": withIndependentEvaluationReceipt(
 		"spec_file_ref",
 		"spec_version_ref",
 		"spec_fingerprint",
 		"unit_appendix_snapshot",
 		"rule_snapshot",
 		"acceptance_item_plan_coverage",
-	},
-	"verify": {
+	),
+	"verify": withIndependentEvaluationReceipt(
 		"object_type",
 		"object_ref",
 		"gate",
@@ -150,7 +190,29 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"verification_scope_ref",
 		"rule_snapshot",
 		"acceptance_item_evidence_matrix",
-	},
+	),
+	"stable_verify": withIndependentEvaluationReceipt(
+		"object_type",
+		"object_ref",
+		"gate",
+		"decision",
+		"allow_next",
+		"next_command",
+		"blocking_summary",
+		"coverage_summary",
+		"truth_layer_ref",
+		"truth_file_ref",
+		"truth_version_ref",
+		"truth_fingerprint",
+		"repository_mapping_snapshot",
+		"acceptance_item_set",
+		"unit_appendix_snapshot",
+		"unit_snapshot",
+		"rule_snapshot",
+		"acceptance_item_evidence_matrix",
+		"implementation_surface_refs",
+		"evidence_refs",
+	),
 }
 
 var allowedAcceptanceEvidenceStatuses = map[string]bool{
@@ -171,6 +233,18 @@ var allowedVerificationSurfaces = map[string]bool{
 	"manual_effect":  true,
 }
 
+var stableVerifyDecisions = map[string]struct {
+	AllowNext   string
+	NextCommand string
+}{
+	"aligned":                    {AllowNext: "true", NextCommand: "unit_fork"},
+	"controlled_repair_required": {AllowNext: "true", NextCommand: "unit_fork"},
+	"controlled_change_required": {AllowNext: "true", NextCommand: "unit_fork"},
+	"small_repair_required":      {AllowNext: "false", NextCommand: "unit_stable_verify"},
+	"evidence_incomplete":        {AllowNext: "false", NextCommand: "unit_stable_verify"},
+	"truth_rejudge_required":     {AllowNext: "false", NextCommand: "unit_stable_verify"},
+}
+
 func RebuildCurrent(repoRoot, module string) (Snapshot, error) {
 	return RebuildCurrentObject(repoRoot, "unit", module)
 }
@@ -186,10 +260,31 @@ func RebuildCurrentObject(repoRoot, objectType, object string) (Snapshot, error)
 		return Snapshot{}, err
 	}
 
-	mainSpecRef, err := specpaths.ObjectMainSpecFileRef(objectType, status.ActiveLayer, status.Object)
+	return RebuildObjectLayer(repoRoot, objectType, status.Object, status.ActiveLayer)
+}
+
+func RebuildObjectLayer(repoRoot, objectType, object, layer string) (Snapshot, error) {
+	objectType = strings.TrimSpace(objectType)
+	object = strings.TrimSpace(object)
+	layer = strings.TrimSpace(layer)
+	if objectType != "unit" {
+		return Snapshot{}, fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
+	}
+	if object == "" {
+		return Snapshot{}, fmt.Errorf("object is required")
+	}
+	if layer != "candidate" && layer != "stable" {
+		return Snapshot{}, fmt.Errorf("layer %q is not supported", layer)
+	}
+
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef(objectType, layer, object)
 	if err != nil {
 		return Snapshot{}, err
 	}
+	return rebuildObjectSnapshotFromMainSpec(repoRoot, objectType, object, layer, mainSpecRef)
+}
+
+func rebuildObjectSnapshotFromMainSpec(repoRoot, objectType, object, layer, mainSpecRef string) (Snapshot, error) {
 	mainSpecAbs := filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef))
 	mainSpecContent, err := os.ReadFile(mainSpecAbs)
 	if err != nil {
@@ -204,7 +299,7 @@ func RebuildCurrentObject(repoRoot, objectType, object string) (Snapshot, error)
 		ObjectType:      objectType,
 		Object:          object,
 		Module:          object,
-		TruthLayerRef:   status.ActiveLayer,
+		TruthLayerRef:   layer,
 		SpecFileRef:     mainSpecRef,
 		SpecFingerprint: hashNormalizedText(string(mainSpecContent)),
 	}
@@ -234,7 +329,7 @@ func RebuildCurrentObject(repoRoot, objectType, object string) (Snapshot, error)
 	if err != nil {
 		return Snapshot{}, err
 	}
-	sharedEntries, err := buildRuleSnapshot(repoRoot, status.ActiveLayer, ruleRefs)
+	sharedEntries, err := buildRuleSnapshot(repoRoot, layer, ruleRefs)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -245,7 +340,194 @@ func RebuildCurrentObject(repoRoot, objectType, object string) (Snapshot, error)
 		return Snapshot{}, err
 	}
 	result.AcceptanceItemSet = acceptanceItems
+	result.AcceptanceBehaviorFingerprint = fingerprintAcceptanceBehavior(acceptanceItems)
 	return result, nil
+}
+
+func CandidateIntentForObject(repoRoot, objectType, object string) (string, error) {
+	objectType = strings.TrimSpace(objectType)
+	object = strings.TrimSpace(object)
+	if objectType != "unit" {
+		return "", fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
+	}
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef(objectType, "candidate", object)
+	if err != nil {
+		return "", err
+	}
+	mainSpecAbs := filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef))
+	mainSpecContent, err := os.ReadFile(mainSpecAbs)
+	if err != nil {
+		return "", fmt.Errorf("read %s: %w", mainSpecRef, err)
+	}
+	frontmatter, _, err := parseFrontmatter(string(mainSpecContent))
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", mainSpecRef, err)
+	}
+	return strings.TrimSpace(frontmatter["candidate_intent"]), nil
+}
+
+type StableVerifyIntentRequirement struct {
+	Decision       string
+	RequiredIntent string
+	Required       bool
+}
+
+func StableVerifyCandidateIntentRequirement(repoRoot, objectType, object string) (StableVerifyIntentRequirement, error) {
+	validation, err := ValidateProcessFileForObject(repoRoot, objectType, object, "stable_verify")
+	if err == nil && validation.Valid {
+		processData, err := LoadProcessSnapshot(repoRoot, objectType, object, "stable_verify")
+		if err != nil {
+			return StableVerifyIntentRequirement{}, err
+		}
+		return stableVerifyCandidateIntentRequirementFromData(processData), nil
+	}
+	processData, err := LoadProcessSnapshot(repoRoot, objectType, object, "stable_verify")
+	if err != nil {
+		return StableVerifyIntentRequirement{}, nil
+	}
+	requirement := stableVerifyCandidateIntentRequirementFromData(processData)
+	if !requirement.Required {
+		return requirement, nil
+	}
+	if !stableVerifyIntentGuardValid(repoRoot, objectType, object, processData) {
+		return StableVerifyIntentRequirement{}, nil
+	}
+	return requirement, nil
+}
+
+func stableVerifyCandidateIntentRequirementFromData(processData ProcessSnapshotData) StableVerifyIntentRequirement {
+	decision := processData.Scalars["decision"]
+	switch decision {
+	case "controlled_repair_required":
+		return StableVerifyIntentRequirement{Decision: decision, RequiredIntent: "repair", Required: true}
+	case "controlled_change_required":
+		return StableVerifyIntentRequirement{Decision: decision, RequiredIntent: "change", Required: true}
+	default:
+		return StableVerifyIntentRequirement{Decision: decision}
+	}
+}
+
+func stableVerifyIntentGuardValid(repoRoot, objectType, object string, processData ProcessSnapshotData) bool {
+	if objectType != "unit" {
+		return false
+	}
+	for _, field := range []string{
+		"object_type",
+		"object_ref",
+		"gate",
+		"decision",
+		"allow_next",
+		"next_command",
+		"truth_layer_ref",
+		"truth_file_ref",
+		"truth_version_ref",
+		"truth_fingerprint",
+		"repository_mapping_snapshot",
+		"acceptance_item_set",
+		"unit_appendix_snapshot",
+		"unit_snapshot",
+		"rule_snapshot",
+		"acceptance_item_evidence_matrix",
+		"implementation_surface_refs",
+		"evidence_refs",
+	} {
+		if !processData.PresentFields[field] {
+			return false
+		}
+	}
+	if processData.Scalars["object_type"] != objectType ||
+		processData.Scalars["object_ref"] != object ||
+		processData.Scalars["gate"] != "unit_stable_verify" ||
+		processData.Scalars["truth_layer_ref"] != "stable" {
+		return false
+	}
+	route, ok := stableVerifyDecisions[processData.Scalars["decision"]]
+	if !ok ||
+		processData.Scalars["allow_next"] != route.AllowNext ||
+		processData.Scalars["next_command"] != route.NextCommand ||
+		route.NextCommand != "unit_fork" {
+		return false
+	}
+
+	expected, err := stableTruthForIntentGuard(repoRoot, objectType, object)
+	if err != nil {
+		return false
+	}
+	if processData.Scalars["truth_file_ref"] != expected.SpecFileRef ||
+		processData.Scalars["truth_version_ref"] != expected.SpecVersionRef ||
+		processData.Scalars["truth_fingerprint"] != expected.SpecFingerprint {
+		return false
+	}
+	if processData.PresentFields["acceptance_behavior_fingerprint"] &&
+		processData.Scalars["acceptance_behavior_fingerprint"] != expected.AcceptanceBehaviorFingerprint {
+		return false
+	}
+
+	repositoryMapping, err := BuildRepositoryMappingSnapshot(repoRoot)
+	if err != nil {
+		return false
+	}
+	if normalizeRepositoryMapping(processData.RepositoryMapping) != normalizeRepositoryMapping(repositoryMapping) {
+		return false
+	}
+	if normalizeAcceptanceItemList(processData.AcceptanceItemSet) != normalizeAcceptanceItemList(expected.AcceptanceItemSet) {
+		return false
+	}
+	if normalizeAppendixList(processData.ModuleAppendixSnapshot) != normalizeAppendixList(expected.ModuleAppendixSnapshot) {
+		return false
+	}
+	if normalizeObjectSnapshotList(processData.ModuleSnapshot) != normalizeObjectSnapshotList(expected.UnitSnapshot) {
+		return false
+	}
+	return true
+}
+
+func stableTruthForIntentGuard(repoRoot, objectType, object string) (Snapshot, error) {
+	mainSpecRef, err := specpaths.ObjectMainSpecFileRef(objectType, "stable", object)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	mainSpecContent, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)))
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("read %s: %w", mainSpecRef, err)
+	}
+	frontmatter, body, err := parseFrontmatter(string(mainSpecContent))
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("%s: %w", mainSpecRef, err)
+	}
+	version := strings.TrimSpace(frontmatter["version"])
+	if version == "" {
+		return Snapshot{}, fmt.Errorf("%s: missing frontmatter.version", mainSpecRef)
+	}
+	appendixEntries, err := buildAppendixSnapshot(repoRoot, mainSpecRef, frontmatter, body)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	unitRefs, _, err := parseFrontmatterNamedRefs(string(mainSpecContent), "unit_refs")
+	if err != nil {
+		return Snapshot{}, err
+	}
+	unitSnapshot, err := buildObjectDependencySnapshot(repoRoot, "unit", unitRefs)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	acceptanceItems, err := buildAcceptanceItemSet(mainSpecRef, body)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	return Snapshot{
+		ObjectType:                    objectType,
+		Object:                        object,
+		Module:                        object,
+		TruthLayerRef:                 "stable",
+		SpecFileRef:                   mainSpecRef,
+		SpecVersionRef:                fmt.Sprintf("%s@%s", strings.TrimSuffix(filepath.Base(mainSpecRef), ".md"), version),
+		SpecFingerprint:               hashNormalizedText(string(mainSpecContent)),
+		ModuleAppendixSnapshot:        appendixEntries,
+		UnitSnapshot:                  unitSnapshot,
+		AcceptanceItemSet:             acceptanceItems,
+		AcceptanceBehaviorFingerprint: fingerprintAcceptanceBehavior(acceptanceItems),
+	}, nil
 }
 
 func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult, error) {
@@ -278,12 +560,14 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 	}
 
 	result := ValidationResult{
-		ObjectType:  objectType,
-		Object:      object,
-		ProcessKind: processKind,
-		ProcessFile: processFile,
-		Expected:    expected,
-		Valid:       true,
+		ObjectType:      objectType,
+		Object:          object,
+		ProcessKind:     processKind,
+		ProcessFile:     processFile,
+		Expected:        expected,
+		Valid:           true,
+		FreshnessImpact: FreshnessCurrent,
+		EvidenceReuse:   EvidenceReuseNotNeeded,
 	}
 
 	for _, field := range requiredFields {
@@ -301,11 +585,13 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 		result.Valid = false
 		result.Mismatches = append(result.Mismatches, field)
 	}
+	validateIndependentEvaluationReceipt(&result, actual)
 
 	if processKind == "plan" {
 		compareScalar(&result, "spec_file_ref", actual.scalars["spec_file_ref"], expected.SpecFileRef)
 		compareScalar(&result, "spec_version_ref", actual.scalars["spec_version_ref"], expected.SpecVersionRef)
-		compareScalar(&result, "spec_fingerprint", actual.scalars["spec_fingerprint"], expected.SpecFingerprint)
+		comparePrimaryFingerprint(&result, "spec_fingerprint", actual.scalars["spec_fingerprint"], expected.SpecFingerprint)
+		compareOptionalAcceptanceBehaviorFingerprint(&result, actual, expected)
 
 		if _, ok := actual.scalars["unit_appendix_snapshot"]; ok || actual.appendixPresent {
 			actualAppendix := normalizeAppendixList(actual.appendixEntries)
@@ -324,7 +610,13 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 			}
 		}
 		validateAcceptancePlanCoverage(&result, actual, expected.AcceptanceItemSet)
-		finalizeValidationResult(&result)
+		finalizeValidationResult(&result, actual)
+		return result, nil
+	}
+
+	if processKind == "stable_verify" {
+		validateStableVerifyProcess(repoRoot, &result, actual, expected)
+		finalizeValidationResult(&result, actual)
 		return result, nil
 	}
 
@@ -341,7 +633,8 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 	compareScalar(&result, "truth_layer_ref", actual.scalars["truth_layer_ref"], expected.TruthLayerRef)
 	compareScalar(&result, "truth_file_ref", actual.scalars["truth_file_ref"], expected.SpecFileRef)
 	compareScalar(&result, "truth_version_ref", actual.scalars["truth_version_ref"], expected.SpecVersionRef)
-	compareScalar(&result, "truth_fingerprint", actual.scalars["truth_fingerprint"], expected.SpecFingerprint)
+	comparePrimaryFingerprint(&result, "truth_fingerprint", actual.scalars["truth_fingerprint"], expected.SpecFingerprint)
+	compareOptionalAcceptanceBehaviorFingerprint(&result, actual, expected)
 	compareAcceptanceItemSet(&result, actual, expected.AcceptanceItemSet)
 	if processKind == "verify" {
 		validateAcceptanceEvidenceMatrix(&result, actual, expected.AcceptanceItemSet)
@@ -372,7 +665,7 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 		}
 	}
 
-	finalizeValidationResult(&result)
+	finalizeValidationResult(&result, actual)
 	return result, nil
 }
 
@@ -384,6 +677,12 @@ func requiredFieldsForObjectProcess(objectType, processKind string) ([]string, b
 	default:
 		return nil, false
 	}
+}
+
+func withIndependentEvaluationReceipt(fields ...string) []string {
+	result := append([]string{}, fields...)
+	result = append(result, independentEvaluationReceiptFields...)
+	return result
 }
 
 func expectedProcessRouting(objectType, processKind string) (string, string, error) {
@@ -399,6 +698,129 @@ func expectedProcessRouting(objectType, processKind string) (string, string, err
 		}
 	}
 	return "", "", fmt.Errorf("process kind %q is not supported for object type %q", processKind, objectType)
+}
+
+func validateIndependentEvaluationReceipt(result *ValidationResult, actual processSnapshot) {
+	if actual.presentFields["evaluation_mode"] {
+		compareScalar(result, "evaluation_mode", actual.scalars["evaluation_mode"], "independent")
+	}
+	if actual.presentFields["reviewer_result"] {
+		compareScalar(result, "reviewer_result", actual.scalars["reviewer_result"], "pass")
+	}
+	if actual.presentFields["reviewer_context"] {
+		compareScalar(result, "reviewer_context", actual.scalars["reviewer_context"], "minimal_context")
+	}
+	if actual.presentFields["review_findings"] {
+		compareScalar(result, "review_findings", actual.scalars["review_findings"], "none")
+	}
+	if actual.presentFields["human_decision_refs"] {
+		value := strings.TrimSpace(actual.scalars["human_decision_refs"])
+		if value != "" && value != "none" && isChatOnlyHumanDecisionRef(value) {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, "human_decision_refs must be none or explicit durable refs, not chat-only")
+		}
+	}
+}
+
+func isChatOnlyHumanDecisionRef(value string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	return normalized == "chat" ||
+		normalized == "conversation" ||
+		normalized == "thread" ||
+		strings.Contains(normalized, "chat-only") ||
+		strings.Contains(normalized, "conversation-only")
+}
+
+func validateStableVerifyProcess(repoRoot string, result *ValidationResult, actual processSnapshot, expected Snapshot) {
+	decision := actual.scalars["decision"]
+	route, ok := stableVerifyDecisions[decision]
+	if !ok {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, fmt.Sprintf("decision invalid for stable_verify: %s", decision))
+	}
+
+	if expected.TruthLayerRef != "stable" {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, fmt.Sprintf("stable_verify requires stable truth, got %s", expected.TruthLayerRef))
+	}
+
+	compareScalar(result, "object_type", actual.scalars["object_type"], expected.ObjectType)
+	compareScalar(result, "object_ref", actual.scalars["object_ref"], expected.Object)
+	compareScalar(result, "gate", actual.scalars["gate"], "unit_stable_verify")
+	if ok {
+		compareScalar(result, "allow_next", actual.scalars["allow_next"], route.AllowNext)
+		compareScalar(result, "next_command", actual.scalars["next_command"], route.NextCommand)
+	}
+	compareScalar(result, "truth_layer_ref", actual.scalars["truth_layer_ref"], "stable")
+	compareScalar(result, "truth_file_ref", actual.scalars["truth_file_ref"], expected.SpecFileRef)
+	compareScalar(result, "truth_version_ref", actual.scalars["truth_version_ref"], expected.SpecVersionRef)
+	comparePrimaryFingerprint(result, "truth_fingerprint", actual.scalars["truth_fingerprint"], expected.SpecFingerprint)
+	compareOptionalAcceptanceBehaviorFingerprint(result, actual, expected)
+
+	repositoryMapping, err := BuildRepositoryMappingSnapshot(repoRoot)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, err.Error())
+	} else {
+		actualMapping := normalizeRepositoryMapping(actual.repositoryMapping)
+		expectedMapping := normalizeRepositoryMapping(repositoryMapping)
+		if actualMapping != expectedMapping {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("repository_mapping_snapshot mismatch: actual=%s expected=%s", actualMapping, expectedMapping))
+		}
+	}
+
+	compareAcceptanceItemSet(result, actual, expected.AcceptanceItemSet)
+	validateAcceptanceEvidenceMatrix(result, actual, expected.AcceptanceItemSet)
+	if decision == "aligned" {
+		validateStableAlignedEvidencePasses(result, actual, expected.AcceptanceItemSet)
+	}
+
+	actualAppendix := normalizeAppendixList(actual.appendixEntries)
+	expectedAppendix := normalizeAppendixList(expected.ModuleAppendixSnapshot)
+	if actualAppendix != expectedAppendix {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
+	}
+
+	actualUnits := normalizeObjectSnapshotList(actual.moduleEntries)
+	expectedUnits := normalizeObjectSnapshotList(expected.UnitSnapshot)
+	if actualUnits != expectedUnits {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_snapshot mismatch: actual=%s expected=%s", actualUnits, expectedUnits))
+	}
+
+	actualShared := normalizeSharedList(actual.sharedEntries)
+	expectedShared := normalizeSharedList(expected.RuleSnapshot)
+	if actualShared != expectedShared {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, fmt.Sprintf("rule_snapshot mismatch: actual=%s expected=%s", actualShared, expectedShared))
+	}
+}
+
+func validateStableAlignedEvidencePasses(result *ValidationResult, actual processSnapshot, expected []AcceptanceItemEntry) {
+	entries, err := acceptanceEvidenceEntriesFromParsed(actual)
+	if err != nil {
+		return
+	}
+	expectedByID := acceptanceItemsByID(expected)
+	for _, entry := range entries {
+		expectedItem, ok := expectedByID[entry.ID]
+		if !ok {
+			continue
+		}
+		if expectedItem.NotRunnableYet == "yes" {
+			if entry.Status != "not_runnable_yet" {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("stable_verify aligned evidence for %s must be not_runnable_yet", entry.ID))
+			}
+			continue
+		}
+		if entry.Status != "pass" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("stable_verify aligned evidence for %s must be pass", entry.ID))
+		}
+	}
 }
 
 func LoadProcessSnapshot(repoRoot, objectType, object, processKind string) (ProcessSnapshotData, error) {
@@ -422,17 +844,18 @@ func LoadProcessSnapshot(repoRoot, objectType, object, processKind string) (Proc
 		scalars[key] = value
 	}
 	return ProcessSnapshotData{
-		ProcessKind:            processKind,
-		ProcessFile:            processFile,
-		PresentFields:          copyStringBoolMap(parsed.presentFields),
-		Scalars:                scalars,
-		ModuleAppendixSnapshot: append([]AppendixEntry(nil), parsed.appendixEntries...),
-		ModuleSnapshot:         append([]ObjectSnapshotEntry(nil), parsed.moduleEntries...),
-		RuleSnapshot:           append([]RuleEntry(nil), parsed.sharedEntries...),
-		RepositoryMapping:      parsed.repositoryMapping,
-		AcceptanceItemSet:      append([]AcceptanceItemEntry(nil), parsed.acceptanceItemEntries...),
-		AcceptancePlanCoverage: append([]AcceptancePlanCoverageEntry(nil), parsed.acceptancePlanEntries...),
-		AcceptanceEvidence:     append([]AcceptanceEvidenceEntry(nil), parsed.acceptanceEvidenceEntries...),
+		ProcessKind:                   processKind,
+		ProcessFile:                   processFile,
+		PresentFields:                 copyStringBoolMap(parsed.presentFields),
+		Scalars:                       scalars,
+		AcceptanceBehaviorFingerprint: scalars["acceptance_behavior_fingerprint"],
+		ModuleAppendixSnapshot:        append([]AppendixEntry(nil), parsed.appendixEntries...),
+		ModuleSnapshot:                append([]ObjectSnapshotEntry(nil), parsed.moduleEntries...),
+		RuleSnapshot:                  append([]RuleEntry(nil), parsed.sharedEntries...),
+		RepositoryMapping:             parsed.repositoryMapping,
+		AcceptanceItemSet:             append([]AcceptanceItemEntry(nil), parsed.acceptanceItemEntries...),
+		AcceptancePlanCoverage:        append([]AcceptancePlanCoverageEntry(nil), parsed.acceptancePlanEntries...),
+		AcceptanceEvidence:            append([]AcceptanceEvidenceEntry(nil), parsed.acceptanceEvidenceEntries...),
 	}, nil
 }
 
@@ -452,6 +875,7 @@ func Render(snapshot Snapshot) string {
 		fmt.Sprintf("truth_file_ref: %s", snapshot.SpecFileRef),
 		fmt.Sprintf("truth_version_ref: %s", snapshot.SpecVersionRef),
 		fmt.Sprintf("truth_fingerprint: %s", snapshot.SpecFingerprint),
+		fmt.Sprintf("acceptance_behavior_fingerprint: %s", snapshot.AcceptanceBehaviorFingerprint),
 		"acceptance_item_set:",
 	}
 	lines = append(lines, renderAcceptanceItemLines(snapshot.AcceptanceItemSet)...)
@@ -1344,6 +1768,23 @@ func compareScalar(result *ValidationResult, field, actual, expected string) {
 	}
 }
 
+func comparePrimaryFingerprint(result *ValidationResult, field, actual, expected string) {
+	compareScalar(result, field, actual, expected)
+}
+
+func compareOptionalAcceptanceBehaviorFingerprint(result *ValidationResult, actual processSnapshot, expected Snapshot) {
+	if !actual.presentFields["acceptance_behavior_fingerprint"] {
+		return
+	}
+	actualValue := strings.TrimSpace(actual.scalars["acceptance_behavior_fingerprint"])
+	if actualValue == "" {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "acceptance_behavior_fingerprint must not be empty")
+		return
+	}
+	compareScalar(result, "acceptance_behavior_fingerprint", actualValue, expected.AcceptanceBehaviorFingerprint)
+}
+
 func compareAcceptanceItemSet(result *ValidationResult, actual processSnapshot, expected []AcceptanceItemEntry) {
 	actualEntries, err := acceptanceItemEntriesFromParsed(actual)
 	if err != nil {
@@ -1595,6 +2036,24 @@ func normalizeAcceptanceItemList(entries []AcceptanceItemEntry) string {
 	return strings.Join(parts, ";")
 }
 
+func fingerprintAcceptanceBehavior(entries []AcceptanceItemEntry) string {
+	items := normalizeAcceptanceItemEntries(entries)
+	parts := make([]string, 0, len(items))
+	for _, item := range items {
+		parts = append(parts, strings.Join([]string{
+			"id=" + item.ID,
+			"target=" + item.Target,
+			"verification_surface=" + item.VerificationSurface,
+			"implementation_surface=" + item.ImplementationSurface,
+			"verification_method=" + item.VerificationMethod,
+			"pass_condition=" + item.PassCondition,
+			"not_runnable_yet=" + item.NotRunnableYet,
+			"not_runnable_yet_reason=" + item.NotRunnableYetReason,
+		}, "\x1f"))
+	}
+	return hashNormalizedText(strings.Join(parts, "\n"))
+}
+
 func normalizeSharedList(entries []RuleEntry) string {
 	if len(entries) == 0 {
 		return "none"
@@ -1636,14 +2095,230 @@ func normalizeObjectSnapshotList(entries []ObjectSnapshotEntry) string {
 	return strings.Join(parts, ";")
 }
 
-func finalizeValidationResult(result *ValidationResult) {
+func finalizeValidationResult(result *ValidationResult, actual processSnapshot) {
+	result.FreshnessImpact = classifyFreshnessImpact(result, actual)
+	result.EvidenceReuse = evidenceReuseForImpact(result.FreshnessImpact)
+
+	if result.FreshnessImpact == FreshnessTextDrift {
+		primaryField := primaryFingerprintField(result.ProcessKind)
+		if freshnessReceiptValid(result, actual, primaryField) && hasOnlyPrimaryFingerprintMismatch(result.Mismatches, primaryField) {
+			result.Mismatches = removePrimaryFingerprintMismatches(result.Mismatches, primaryField)
+			result.Valid = true
+			result.EvidenceReuse = EvidenceReuseAccepted
+		} else {
+			result.Valid = false
+			if result.EvidenceReuse != EvidenceReuseRejected {
+				result.EvidenceReuse = EvidenceReusePendingReview
+			}
+		}
+	}
+
 	if result.Valid {
 		result.FailureLayer = "none"
 		result.NextCommand = ""
 		return
 	}
+	if result.FreshnessImpact == FreshnessTextDrift {
+		result.FailureLayer = "freshness_layer"
+		result.NextCommand = ""
+		return
+	}
 	result.FailureLayer = classifyFailureLayer(result.ObjectType, result.ProcessKind, result.Mismatches)
 	result.NextCommand = nextCommandForFailureLayer(result.ObjectType, result.ProcessKind, result.FailureLayer)
+}
+
+func classifyFreshnessImpact(result *ValidationResult, actual processSnapshot) string {
+	primaryField := primaryFingerprintField(result.ProcessKind)
+	hasPrimaryDrift := hasPrimaryFingerprintMismatch(result.Mismatches, primaryField)
+	if !hasPrimaryDrift {
+		switch {
+		case len(result.Mismatches) == 0:
+			return FreshnessCurrent
+		case hasDependencyMismatch(result.Mismatches):
+			return FreshnessDependencyDrift
+		case hasAcceptanceSetMismatch(result.Mismatches):
+			return FreshnessAcceptanceDrift
+		default:
+			return FreshnessSchemaDrift
+		}
+	}
+
+	switch {
+	case hasDependencyMismatch(result.Mismatches):
+		return FreshnessDependencyDrift
+	case hasAcceptanceSetMismatch(result.Mismatches):
+		return FreshnessAcceptanceDrift
+	case hasPrimaryRefMismatch(result.Mismatches):
+		return FreshnessSemanticDrift
+	case hasSchemaMismatch(result.Mismatches, primaryField):
+		return FreshnessSchemaDrift
+	}
+
+	actualBehavior := strings.TrimSpace(actual.scalars["acceptance_behavior_fingerprint"])
+	if actualBehavior == "" {
+		return FreshnessUnknownDrift
+	}
+	if actualBehavior != result.Expected.AcceptanceBehaviorFingerprint {
+		return FreshnessSemanticDrift
+	}
+	return FreshnessTextDrift
+}
+
+func evidenceReuseForImpact(impact string) string {
+	switch impact {
+	case FreshnessCurrent:
+		return EvidenceReuseNotNeeded
+	case FreshnessTextDrift:
+		return EvidenceReusePendingReview
+	default:
+		return EvidenceReuseNotEligible
+	}
+}
+
+func primaryFingerprintField(processKind string) string {
+	switch processKind {
+	case "plan":
+		return "spec_fingerprint"
+	case "check", "verify", "stable_verify":
+		return "truth_fingerprint"
+	default:
+		return ""
+	}
+}
+
+func freshnessReceiptValid(result *ValidationResult, actual processSnapshot, primaryField string) bool {
+	valid := true
+	for _, field := range freshnessReceiptFields {
+		if !actual.presentFields[field] {
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("missing required freshness field: %s", field))
+			valid = false
+		}
+	}
+	if !valid {
+		return false
+	}
+
+	expectedCurrentFingerprint := result.Expected.SpecFingerprint
+	if primaryField == "" {
+		expectedCurrentFingerprint = ""
+	}
+	checks := []struct {
+		Field    string
+		Expected string
+	}{
+		{"freshness_impact", FreshnessTextDrift},
+		{"evidence_reuse", EvidenceReuseAccepted},
+		{"freshness_current_fingerprint", expectedCurrentFingerprint},
+		{"freshness_review_mode", "independent"},
+		{"freshness_reviewer_result", "pass"},
+		{"freshness_reviewer_context", "minimal_context"},
+		{"freshness_review_findings", "none"},
+	}
+	for _, check := range checks {
+		actualValue := strings.TrimSpace(actual.scalars[check.Field])
+		if actualValue != check.Expected {
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s mismatch: actual=%s expected=%s", check.Field, actualValue, check.Expected))
+			valid = false
+			if check.Field == "freshness_reviewer_result" || check.Field == "freshness_review_findings" {
+				result.EvidenceReuse = EvidenceReuseRejected
+			}
+		}
+	}
+	if strings.TrimSpace(actual.scalars["freshness_review_input_refs"]) == "" {
+		result.Mismatches = append(result.Mismatches, "freshness_review_input_refs must not be empty")
+		valid = false
+	}
+	return valid
+}
+
+func hasPrimaryFingerprintMismatch(mismatches []string, primaryField string) bool {
+	if primaryField == "" {
+		return false
+	}
+	prefix := primaryField + " mismatch:"
+	for _, mismatch := range mismatches {
+		if strings.HasPrefix(mismatch, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasOnlyPrimaryFingerprintMismatch(mismatches []string, primaryField string) bool {
+	if len(mismatches) == 0 || primaryField == "" {
+		return false
+	}
+	for _, mismatch := range mismatches {
+		if !strings.HasPrefix(mismatch, primaryField+" mismatch:") {
+			return false
+		}
+	}
+	return true
+}
+
+func removePrimaryFingerprintMismatches(mismatches []string, primaryField string) []string {
+	result := make([]string, 0, len(mismatches))
+	for _, mismatch := range mismatches {
+		if strings.HasPrefix(mismatch, primaryField+" mismatch:") {
+			continue
+		}
+		result = append(result, mismatch)
+	}
+	return result
+}
+
+func hasDependencyMismatch(mismatches []string) bool {
+	for _, mismatch := range mismatches {
+		if strings.Contains(mismatch, "unit_appendix_snapshot mismatch") ||
+			strings.Contains(mismatch, "repository_mapping_snapshot mismatch") ||
+			strings.Contains(mismatch, "unit_snapshot mismatch") ||
+			strings.Contains(mismatch, "rule_snapshot mismatch") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasAcceptanceSetMismatch(mismatches []string) bool {
+	for _, mismatch := range mismatches {
+		if strings.Contains(mismatch, "acceptance_item_set mismatch") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasPrimaryRefMismatch(mismatches []string) bool {
+	for _, mismatch := range mismatches {
+		if strings.Contains(mismatch, "truth_file_ref mismatch") ||
+			strings.Contains(mismatch, "truth_version_ref mismatch") ||
+			strings.Contains(mismatch, "spec_file_ref mismatch") ||
+			strings.Contains(mismatch, "spec_version_ref mismatch") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSchemaMismatch(mismatches []string, primaryField string) bool {
+	for _, mismatch := range mismatches {
+		if primaryField != "" && strings.HasPrefix(mismatch, primaryField+" mismatch:") {
+			continue
+		}
+		if strings.Contains(mismatch, "acceptance_behavior_fingerprint mismatch") ||
+			strings.Contains(mismatch, "acceptance_behavior_fingerprint must not be empty") {
+			continue
+		}
+		if strings.Contains(mismatch, "acceptance_item_set mismatch") ||
+			strings.Contains(mismatch, "unit_appendix_snapshot mismatch") ||
+			strings.Contains(mismatch, "repository_mapping_snapshot mismatch") ||
+			strings.Contains(mismatch, "unit_snapshot mismatch") ||
+			strings.Contains(mismatch, "rule_snapshot mismatch") {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 func classifyFailureLayer(objectType, processKind string, mismatches []string) string {
@@ -1653,8 +2328,10 @@ func classifyFailureLayer(objectType, processKind string, mismatches []string) s
 			strings.Contains(mismatch, "spec_file_ref mismatch"),
 			strings.Contains(mismatch, "spec_version_ref mismatch"),
 			strings.Contains(mismatch, "spec_fingerprint mismatch"),
+			strings.Contains(mismatch, "acceptance_behavior_fingerprint mismatch"),
 			strings.Contains(mismatch, "acceptance_item_set mismatch"),
 			strings.Contains(mismatch, "unit_appendix_snapshot mismatch"),
+			strings.Contains(mismatch, "repository_mapping_snapshot mismatch"),
 			strings.Contains(mismatch, "unit_snapshot mismatch"),
 			strings.Contains(mismatch, "rule_snapshot mismatch"):
 			return "truth_layer"
@@ -1664,6 +2341,8 @@ func classifyFailureLayer(objectType, processKind string, mismatches []string) s
 	case "plan":
 		return "plan_layer"
 	case "verify":
+		return "evidence_layer"
+	case "stable_verify":
 		return "evidence_layer"
 	case "check":
 		return "gate_layer"
@@ -1675,7 +2354,12 @@ func classifyFailureLayer(objectType, processKind string, mismatches []string) s
 func nextCommandForFailureLayer(objectType, processKind, failureLayer string) string {
 	switch objectType {
 	case "unit":
+		if processKind == "stable_verify" {
+			return "unit_stable_verify"
+		}
 		switch failureLayer {
+		case "freshness_layer":
+			return ""
 		case "truth_layer", "gate_layer":
 			return "unit_check"
 		case "plan_layer":
@@ -1683,6 +2367,9 @@ func nextCommandForFailureLayer(objectType, processKind, failureLayer string) st
 		case "implementation_layer":
 			return "unit_impl"
 		case "evidence_layer":
+			if processKind == "stable_verify" {
+				return "unit_stable_verify"
+			}
 			return "unit_verify"
 		}
 	}
@@ -1791,6 +2478,14 @@ func VerifyResultFilePath(objectType, object string) string {
 	return fmt.Sprintf("docs/specs/_verify_result/%s/%s.md", objectType, object)
 }
 
+func StablePromotionSummaryFilePath(objectType, object string) string {
+	return fmt.Sprintf("docs/specs/_verify_result/stable/%s/%s.md", objectType, object)
+}
+
+func StableVerifyResultFilePath(objectType, object string) string {
+	return fmt.Sprintf("docs/specs/_stable_verify_result/%s/%s.md", objectType, object)
+}
+
 func ProcessArtifactPaths(objectType, object, processKind string) ([]string, error) {
 	if objectType != "unit" {
 		return nil, fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
@@ -1807,6 +2502,8 @@ func ProcessArtifactPaths(objectType, object, processKind string) ([]string, err
 		return []string{DraftPlanFilePath(object), ActivePlanFilePath(object)}, nil
 	case "verify":
 		return []string{VerifyResultFilePath(objectType, object)}, nil
+	case "stable_verify":
+		return []string{StableVerifyResultFilePath(objectType, object)}, nil
 	default:
 		return nil, fmt.Errorf("unsupported process kind %q", processKind)
 	}
@@ -1828,6 +2525,8 @@ func ProcessFilePath(objectType, object, processKind string) (string, error) {
 		return ActivePlanFilePath(object), nil
 	case "verify":
 		return VerifyResultFilePath(objectType, object), nil
+	case "stable_verify":
+		return StableVerifyResultFilePath(objectType, object), nil
 	default:
 		return "", fmt.Errorf("unsupported process kind %q", processKind)
 	}

@@ -9,68 +9,40 @@ Keep repository-specific rules outside the managed block. `specFlow` tooling may
 <!-- SPECFLOW:BEGIN -->
 ## specFlow Addendum
 
-Use this entry procedure for requests that belong to `specFlow`.
-Before any lifecycle action or file edit, choose the owning policy file and follow only that policy's allowed path.
+Use this lightweight entry procedure for requests that belong to `specFlow`.
+The entry only routes the request. The routed lifecycle or operation file is the active Context Card and defines the current required context, allowed writes, forbidden writes, on-demand expansions, independent evaluation, and close requirements.
 
 ### 1. First Read
 
-1. If the request exactly matches `unit_advance:{unit}`, read `specflow/framework/advance_policy.md` directly.
-2. If the request is an exact standard command, read `specflow/framework/command_policy.md`, then the matching file under `specflow/framework/commands/`.
-3. If the request is exactly `spec_flow_review` or `spec_flow_design_review`, with or without a narrowing phrase, read the matching review policy directly.
-4. If the request is exactly `spec_flow_migrate`, with or without a narrowing phrase, read `specflow/framework/spec_flow_migrate.md` directly.
-5. If the request only asks for implementation-side edits and does not ask for truth, boundary, shared, system, governance, migration, or guidance work, read `specflow/framework/implementation_change_policy.md` first.
-6. For every other `specFlow` request, read `specflow/framework/natural_language_routing.md` first.
+1. If the request exactly matches a standard lifecycle command (`unit_init:{unit}`, `unit_new:{unit}`, `unit_fork:{unit}`, `unit_check:{unit}`, `unit_plan:{unit}`, `unit_impl:{unit}`, `unit_verify:{unit}`, `unit_promote:{unit}`, `unit_stable_verify:{unit}`), read `specflow/framework/lifecycle/overview.md`, then the matching Context Card under `specflow/framework/lifecycle/`. Entry commands share `unit_init_new_fork.md`.
+2. If the request exactly matches `unit_advance:{unit}`, read `specflow/framework/advance_policy.md`.
+3. For every other `specFlow` request, read `specflow/framework/operations/entry_routing.md` first.
 
-After the first policy file routes the request, continue only through the routed policy, command, governance flow, or checkpoint path.
+After routing, read only the active Context Card's required context. Enter its on-demand expansions only when their trigger appears.
+Framework-root relative paths in routed files use `framework/...` as the logical framework root. In installed projects, resolve them under `specflow/framework/...`; project refs such as `docs/specs/...` remain repository-root relative.
 
-### 2. Pre-Action Rules
+### 2. Authority Boundary
 
-1. Do not edit implementation-side files until `specflow/framework/implementation_change_policy.md` proves the change is `implementation_only` or the routed command explicitly allows implementation.
-2. Do not change behavior truth, acceptance truth, object ownership, rule truth, global rules, lifecycle state, or process files unless the active policy or command explicitly allows that write.
-3. Resolve path ownership and object boundaries from `docs/specs/repository_mapping.md` when they matter; do not guess from directories.
-4. Resolve existing `unit` state from `docs/specs/_status.md` before advancing any lifecycle step.
-5. Read `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may affect repository-wide defaults, shared mechanisms, prohibitions, or explicit exceptions.
-6. Enter rule-governance only through `specflow/framework/natural_language_routing.md`.
-7. Keep registered entry index managed blocks consistent according to `specflow/framework/entry_index_registry.md`.
+1. Do not edit truth, process evidence, lifecycle status, rules, repository mapping, or implementation files until the active Context Card or operation explicitly allows that write.
+2. Do not close an advancing gate from self-assessment. When the active Context Card requires independent evaluation, the process evidence must contain a valid independent reviewer receipt.
+3. Do not guess project terms, object ownership, or lifecycle state from directory shape or chat. Read the durable source named by the active Context Card.
 
-### 3. Terms That Must Not Be Guessed
+### 3. Active Surface
 
-These project terms must be interpreted only through the policy files:
+The active layered surface is:
 
-1. `Spec`
-2. `unit`
-3. `stable`
-4. `candidate`
-5. `_status.md`
-6. `repository_mapping.md`
-7. `rule`
-8. `checkpoint`
-9. `implementation_change_policy.md`
+1. `specflow/framework/core/`
+2. `specflow/framework/lifecycle/`
+3. `specflow/framework/operations/`
+4. `specflow/framework/governance/`
 
-### 4. Hard Stops
-
-Stop instead of guessing when any of these are true:
-
-1. the request's intent or target object is unclear
-2. path ownership, object boundary, or support-surface ownership is unclear
-3. a behavior, acceptance, boundary, shared, or system decision exists only in chat and has not been written into durable truth
-4. implementation permission is not proven
-5. rule-truth or global-rule ownership is unclear
-6. a prerequisite command, truth writeback, checkpoint, or verification gate is required first
-7. Spec, command, routing, implementation, checkpoint, or entry-sync rules conflict
-
-### 5. Required Report
+### 4. Required Report
 
 For any `specFlow` route, report the user-facing answer first and keep traceability details separate.
 
 The user-facing answer must state the current state, next action, reason, expected result, and remaining gap in plain project-structure language when they apply.
 It must not require the user to understand internal object-family names, command names, lifecycle state names, policy-file names, or governance-flow names.
 
-The execution note may name the entry shape, first policy file, routed owner, files changed, next legal step, and stop reason.
+The execution note may name the entry shape, active Context Card, files changed, next legal step, and stop reason.
 It must not be required for the user to understand the answer.
-
-### 6. Detailed Rule Owners
-
-Detailed routing, object, command, advance, checkpoint, implementation, migration, rule-governance, and entry-sync rules live under `specflow/framework/`.
-Project truth inputs live under `docs/specs/`.
 <!-- SPECFLOW:END -->

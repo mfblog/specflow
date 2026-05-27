@@ -38,6 +38,19 @@ type cleanupRule struct {
 	FileKinds   []string
 }
 
+var fallbackReasonLayers = map[string]string{
+	"truth_drift":              "truth_layer",
+	"binding_drift":            "truth_layer",
+	"baseline_drift":           "truth_layer",
+	"rule_drift":               "truth_layer",
+	"truth_incomplete":         "truth_layer",
+	"plan_drift":               "plan_layer",
+	"gate_missing":             "gate_layer",
+	"implementation_deviation": "implementation_layer",
+	"evidence_incomplete":      "evidence_layer",
+	"stable_verify_invalid":    "evidence_layer",
+}
+
 var layeredRules = map[string]map[string]cleanupRule{
 	"unit": {
 		"truth_layer":          {NextCommand: "unit_check", FileKinds: []string{"check_work", "check", "plan", "verify"}},
@@ -48,8 +61,39 @@ var layeredRules = map[string]map[string]cleanupRule{
 	},
 }
 
+func ValidateFallbackReason(reason, failureLayer string) error {
+	reason = strings.TrimSpace(reason)
+	failureLayer = strings.TrimSpace(failureLayer)
+	if reason == "" {
+		return fmt.Errorf("fallback reason is required")
+	}
+	if failureLayer == "" {
+		return fmt.Errorf("failure layer is required")
+	}
+	expectedLayer, ok := fallbackReasonLayer(reason)
+	if !ok {
+		return fmt.Errorf("unsupported fallback reason %q", reason)
+	}
+	if failureLayer != expectedLayer {
+		return fmt.Errorf("fallback reason %q requires failure layer %q, got %q", reason, expectedLayer, failureLayer)
+	}
+	return nil
+}
+
 func ApplyFallback(repoRoot, module, fromCommand, reason string) (CleanupResult, error) {
-	return ApplyObjectFallback(repoRoot, "unit", module, fromCommand, reason, inferFailureLayer("unit", fromCommand, reason))
+	layer, ok := fallbackReasonLayer(reason)
+	if !ok {
+		reason = strings.TrimSpace(reason)
+		return CleanupResult{
+			ObjectType:   "unit",
+			Object:       strings.TrimSpace(module),
+			Module:       strings.TrimSpace(module),
+			FromCommand:  strings.TrimSpace(fromCommand),
+			Reason:       reason,
+			FailureLayer: "",
+		}, fmt.Errorf("unsupported fallback reason %q", reason)
+	}
+	return ApplyObjectFallback(repoRoot, "unit", module, fromCommand, reason, layer)
 }
 
 func ApplyObjectFallback(repoRoot, objectType, object, fromCommand, reason, failureLayer string) (CleanupResult, error) {
@@ -68,8 +112,11 @@ func ApplyObjectFallback(repoRoot, objectType, object, fromCommand, reason, fail
 	if _, err := ensureFormalObject(repoRoot, result.ObjectType, result.Object); err != nil {
 		return result, err
 	}
+	if err := ValidateFallbackReason(result.Reason, result.FailureLayer); err != nil {
+		return result, err
+	}
 
-	rule, err := lookupLayeredRule(result.ObjectType, result.FailureLayer)
+	rule, err := lookupFallbackCleanupRule(result.ObjectType, result.FailureLayer, result.FromCommand, result.Reason)
 	if err != nil {
 		return result, err
 	}
@@ -115,6 +162,9 @@ func ApplyObjectSuccessCleanup(repoRoot, objectType, object, mode string) (Succe
 	if _, err := ensureFormalObject(repoRoot, result.ObjectType, result.Object); err != nil {
 		return result, err
 	}
+	if err := ensureSuccessCleanupPrerequisites(repoRoot, result.ObjectType, result.Object, result.Mode); err != nil {
+		return result, err
+	}
 
 	paths, err := successCleanupPaths(repoRoot, result.ObjectType, result.Object, result.Mode)
 	if err != nil {
@@ -135,6 +185,34 @@ func ApplyObjectSuccessCleanup(repoRoot, objectType, object, mode string) (Succe
 		result.DeletedFiles = append(result.DeletedFiles, relPath)
 	}
 	return result, nil
+}
+
+func ensureSuccessCleanupPrerequisites(repoRoot, objectType, object, mode string) error {
+	if mode != "unit_promote" {
+		return nil
+	}
+	if objectType != "unit" {
+		return fmt.Errorf("mode %q requires object type unit", mode)
+	}
+	summaryRef := snapshot.StablePromotionSummaryFilePath(objectType, object)
+	if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(summaryRef))); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("stable promotion summary is required before unit_promote cleanup: %s", summaryRef)
+		}
+		return fmt.Errorf("stat %s: %w", summaryRef, err)
+	}
+	return nil
+}
+
+func lookupFallbackCleanupRule(objectType, failureLayer, fromCommand, reason string) (cleanupRule, error) {
+	if objectType == "unit" && failureLayer == "evidence_layer" && isStableVerifyEvidenceFallback(fromCommand, reason) {
+		return cleanupRule{NextCommand: "unit_stable_verify", FileKinds: []string{"stable_verify"}}, nil
+	}
+	return lookupLayeredRule(objectType, failureLayer)
+}
+
+func isStableVerifyEvidenceFallback(fromCommand, reason string) bool {
+	return fromCommand == "unit_stable_verify" || reason == "stable_verify_invalid"
 }
 
 func lookupLayeredRule(objectType, failureLayer string) (cleanupRule, error) {
@@ -165,25 +243,9 @@ func filePathsForObject(objectType, object string, fileKinds []string) []string 
 	return sortAndDedupeStrings(paths)
 }
 
-func inferFailureLayer(objectType, fromCommand, reason string) string {
-	switch reason {
-	case "truth_drift", "binding_drift", "baseline_drift", "rule_drift", "truth_incomplete", "shared_truth_conflict", "governance_drift":
-		return "truth_layer"
-	case "implementation_deviation":
-		return "implementation_layer"
-	case "evidence_incomplete":
-		return "evidence_layer"
-	case "gate_missing":
-		if strings.HasSuffix(fromCommand, "_impl") {
-			return "plan_layer"
-		}
-		return "gate_layer"
-	default:
-		if objectType == "unit" && strings.Contains(fromCommand, "_plan") {
-			return "plan_layer"
-		}
-		return "truth_layer"
-	}
+func fallbackReasonLayer(reason string) (string, bool) {
+	layer, ok := fallbackReasonLayers[strings.TrimSpace(reason)]
+	return layer, ok
 }
 
 func successCleanupPaths(repoRoot, objectType, object, mode string) ([]string, error) {
@@ -193,7 +255,7 @@ func successCleanupPaths(repoRoot, objectType, object, mode string) ([]string, e
 		if objectType != "unit" {
 			return nil, fmt.Errorf("mode %q requires object type unit", mode)
 		}
-		paths = append(paths, filePathsForObject(objectType, object, []string{"check_work", "check", "plan", "verify"})...)
+		paths = append(paths, filePathsForObject(objectType, object, []string{"check_work", "check", "plan", "verify", "stable_verify"})...)
 	case "unit_promote":
 		if objectType != "unit" {
 			return nil, fmt.Errorf("mode %q requires object type unit", mode)
@@ -203,7 +265,7 @@ func successCleanupPaths(repoRoot, objectType, object, mode string) ([]string, e
 			return nil, err
 		}
 		paths = append(paths, candidateMainRef)
-		paths = append(paths, filePathsForObject(objectType, object, []string{"check_work", "check", "plan", "verify"})...)
+		paths = append(paths, filePathsForObject(objectType, object, []string{"check_work", "check", "plan", "verify", "stable_verify"})...)
 		appendixPaths, err := candidateAppendixPaths(repoRoot, objectType, object)
 		if err != nil {
 			return nil, err

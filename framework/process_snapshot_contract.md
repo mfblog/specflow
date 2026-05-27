@@ -4,26 +4,27 @@ Process files record what a unit command checked in one round.
 
 They are evidence, not behavior truth.
 
-When a supported process file carries slice work state, the generic slice terms and mechanical maintenance boundaries come from `specflow/framework/slice_work_state_protocol.md`.
-This file defines only the supported process paths, process snapshots, unit-check work-state fields, freshness rules, and validation rules.
+This file defines the supported process paths, process snapshots, unit-check checklist fields, freshness rules, and validation rules.
 
 ## 1. Supported Process Paths
 
 Supported unit process paths:
 
-1. unit check work state: `docs/specs/_check_work/unit/{unit}.md`
+1. unit check checklist: `docs/specs/_check_work/unit/{unit}.md`
 2. check result: `docs/specs/_check_result/unit/{unit}.md`
 3. active plan: `docs/specs/_plans/active/{unit}.md`
 4. draft plan: `docs/specs/_plans/draft/{unit}.md`
 5. verify result: `docs/specs/_verify_result/unit/{unit}.md`
 6. stable promotion summary: `docs/specs/_verify_result/stable/unit/{unit}.md`
+7. stable verify result: `docs/specs/_stable_verify_result/unit/{unit}.md`
 
 No `scenario` process path is supported.
 
-`_check_work` is a command-local work-state path for `unit_check`.
+`_check_work` is a command-local checklist path for `unit_check`.
 It is not a pass gate and is not consumed by `unit_plan`.
 Downstream handoff commands consume only `_check_result`, `_plans/active`, and `_verify_result` according to their command contracts.
-Other process files may carry command-owned business slice records only when their owning command defines that adoption in its command file.
+`unit_stable_verify` close consumes only tool-valid `_stable_verify_result` for lifecycle advancement from stable verification.
+Other process files may carry command-owned review records only when their owning command defines that adoption in its command file.
 
 ## 2. Common Fields
 
@@ -33,13 +34,50 @@ Check and verify process YAML must identify the unit and command gate:
 object_type: unit
 object_ref: {unit}
 gate: unit_check|unit_verify
-decision: pass|blocked|fix_required
-allow_next: true|false
-next_command: unit_plan|unit_impl|unit_verify|unit_promote|unit_check
-truth_layer_ref: candidate|stable
-truth_file_ref: docs/specs/units/{layer}/{file}.md
+decision: pass
+allow_next: true
+next_command: unit_plan|unit_promote
+truth_layer_ref: candidate
+truth_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 truth_version_ref: c_unit_{unit}@x.y.z
 truth_fingerprint: {fingerprint}
+acceptance_behavior_fingerprint: {fingerprint}
+evaluation_mode: independent
+reviewer_result: pass
+reviewer_context: minimal_context
+review_input_refs: none | list
+review_findings: none
+human_decision_refs: none | list
+```
+
+`_check_result` and candidate `_verify_result` are consumable evidence only for advancing pass gates.
+Non-advancing command outcomes such as `blocked` or `fix_required` must not be stored as these process snapshots.
+
+Stable verify process YAML must identify stable truth and the current implementation-alignment decision:
+
+```yaml
+object_type: unit
+object_ref: {unit}
+gate: unit_stable_verify
+decision: aligned|controlled_repair_required|controlled_change_required|small_repair_required|evidence_incomplete|truth_rejudge_required
+allow_next: true|false
+next_command: unit_fork|unit_stable_verify
+blocking_summary: none|{summary}
+coverage_summary: {summary}
+truth_layer_ref: stable
+truth_file_ref: docs/specs/units/stable/s_unit_{unit}.md
+truth_version_ref: s_unit_{unit}@x.y.z
+truth_fingerprint: {fingerprint}
+acceptance_behavior_fingerprint: {fingerprint}
+repository_mapping_snapshot: present
+implementation_surface_refs: {refs}
+evidence_refs: {refs}
+evaluation_mode: independent
+reviewer_result: pass
+reviewer_context: minimal_context
+review_input_refs: none | list
+review_findings: none
+human_decision_refs: none | list
 ```
 
 Plan process YAML must identify the unit truth it planned from:
@@ -48,7 +86,46 @@ Plan process YAML must identify the unit truth it planned from:
 spec_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 spec_version_ref: c_unit_{unit}@x.y.z
 spec_fingerprint: {fingerprint}
+acceptance_behavior_fingerprint: {fingerprint}
+evaluation_mode: independent
+reviewer_result: pass
+reviewer_context: minimal_context
+review_input_refs: none | list
+review_findings: none
+human_decision_refs: none | list
 ```
+
+Advancing check, active plan, verify, and stable verify files must include the independent evaluation receipt.
+Tooling validates the receipt fields mechanically; it does not prove reviewer session isolation and does not judge whether the reviewer made a good semantic decision.
+
+Receipt requirements:
+
+1. `evaluation_mode` must be `independent`.
+2. `reviewer_result` must be `pass` for advancing evidence.
+3. `reviewer_context` must be `minimal_context`.
+4. `review_findings` must be `none`.
+5. `review_input_refs` may be `none` for compatibility, or a list containing the reviewer pack name from `framework/core/independent_evaluation.md` plus durable input refs.
+6. `human_decision_refs` must be `none` or durable human-confirmation refs, not chat-only conclusions.
+
+Freshness reuse fields are conditional. They are required only when deterministic validation reports `text_drift` and the process evidence is being reused instead of recreated:
+
+```yaml
+freshness_impact: text_drift
+evidence_reuse: accepted
+freshness_current_fingerprint: {current truth/spec fingerprint}
+freshness_review_mode: independent
+freshness_reviewer_result: pass
+freshness_reviewer_context: minimal_context
+freshness_review_input_refs: none | list
+freshness_review_findings: none
+```
+
+`acceptance_behavior_fingerprint` is the normalized SHA-256 of the full formal acceptance item behavior fields: `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `pass_condition`, `not_runnable_yet`, and `not_runnable_yet_reason`.
+New check, active plan, verify, and stable verify evidence should record it.
+Old evidence without this field can remain valid while the text fingerprint still matches, but it becomes `unknown_drift` after a truth/spec fingerprint change.
+
+Tooling classifies freshness impact mechanically. It does not judge whether a changed paragraph preserves business meaning.
+Text drift evidence reuse requires the freshness receipt above and independent reviewer confirmation using reviewer pack `freshness_text_drift_reuse`.
 
 ## 3. Dependency Snapshots
 
@@ -78,14 +155,21 @@ Process validation failure maps to these layers:
 1. truth mismatch -> `truth_layer`
 2. check schema or gate evidence mismatch -> `gate_layer`
 3. plan schema or plan coverage mismatch -> `plan_layer`
-4. verify evidence mismatch -> `evidence_layer`
+4. implementation mismatch while truth, check, and plan still validate -> `implementation_layer`
+5. verify evidence mismatch -> `evidence_layer`
+6. stable verify evidence mismatch -> `evidence_layer`, with `unit_stable_verify` as the restart command
+7. unaccepted text drift -> `freshness_layer`, with no automatic status reroute
 
 The legal fallback commands are:
 
 1. `truth_layer` -> `unit_check`
 2. `gate_layer` -> `unit_check`
 3. `plan_layer` -> `unit_plan`
-4. `evidence_layer` -> `unit_verify`
+4. `implementation_layer` -> `unit_impl`
+5. `evidence_layer` -> `unit_verify`
+6. `stable_verify` validation failure -> `unit_stable_verify`
+
+`freshness_layer` is not a fallback layer. It means the process file may be reusable after independent freshness review, so tooling must not delete process files or advance `_status.md` from that result alone.
 
 ## 5. Rejection
 
@@ -115,6 +199,7 @@ This same fingerprint contract applies to:
 4. `unit_snapshot` item fingerprints
 5. `rule_snapshot` item fingerprints
 6. `stable_truth_fingerprint`
+7. `acceptance_behavior_fingerprint`
 
 ## 7. Text Normalization Rules
 
@@ -166,16 +251,50 @@ Each stable promotion summary must record:
 
 Later stable verification may read this summary as background, but it must collect current evidence before making a new stable-alignment claim.
 
-## 9. Unit Check Work State
+## 9. Stable Verify Result
 
-`docs/specs/_check_work/unit/{unit}.md` records resumable `unit_check` progress for one target candidate.
-It follows the generic state-carrier and slice-field standards in `specflow/framework/slice_work_state_protocol.md`, with the command-specific fields below.
+`docs/specs/_stable_verify_result/unit/{unit}.md` stores current evidence produced by `unit_stable_verify`.
 
 It is:
 
-1. a process work-state file
+1. a gate-bearing process file for advancing `unit_stable_verify` to `unit_fork`
+2. an implementation-alignment claim against current stable truth
+3. a compact evidence record, not a work-state protocol
+
+It is not:
+
+1. a stable promotion summary
+2. behavior truth
+3. a slice work-state file
+4. a separate checklist file
+
+Each stable verify result must record:
+
+1. `object_type`, `object_ref`, `gate`, `decision`, `allow_next`, and `next_command`
+2. `blocking_summary` and `coverage_summary`
+3. stable truth ref, version ref, and fingerprint
+4. `repository_mapping_snapshot`
+5. `unit_appendix_snapshot`, `unit_snapshot`, and `rule_snapshot`
+6. `acceptance_item_set`
+7. `acceptance_item_evidence_matrix`
+8. `implementation_surface_refs`
+9. `evidence_refs`
+10. independent evaluation receipt fields
+
+For `decision: aligned`, every executable acceptance item must have evidence status `pass`.
+Items marked `not_runnable_yet: yes` in stable truth must use evidence status `not_runnable_yet`.
+
+`controlled_repair_required` and `controlled_change_required` may advance to `unit_fork` only when the matching stable verify result validates and the command close outcome matches the stored `decision`.
+
+## 10. Unit Check Checklist
+
+`docs/specs/_check_work/unit/{unit}.md` records resumable `unit_check` progress for one target candidate.
+
+It is:
+
+1. an optional process checklist file
 2. a resume aid for the current `unit_check` round
-3. a place to record slice status, input fingerprints, finding references, blocked reason, and next resume step
+3. a place to record checklist item status, input fingerprints, finding references, blocked reason, and next resume step
 
 It is not:
 
@@ -185,9 +304,9 @@ It is not:
 4. a substitute for `_check_result/unit/{unit}.md`
 5. a place for tooling to decide semantic pass, finding severity, or final conclusion
 
-### 9.1 Required Run Fields
+### 10.1 Required Run Fields
 
-The work-state run table must record:
+The checklist run table must record:
 
 ```yaml
 work_flow: unit_check
@@ -197,13 +316,11 @@ object_ref: {unit}
 status: in_progress|blocked_on_finding|ready_for_final|closed_pass|closed_blocked|closed_fix_required
 created_at: YYYY-MM-DDTHH:MM:SSZ
 last_updated_at: YYYY-MM-DDTHH:MM:SSZ
-active_slice: {slice_id}
 truth_layer_ref: candidate
 truth_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 truth_version_ref: c_unit_{unit}@x.y.z
 truth_fingerprint: {fingerprint}
-baseline_slice_table: present
-dynamic_slice_table: none|present
+checklist_table: present
 finding_refs: none|{refs}
 blocked_reason: none|{reason}
 resume_next_step: {step}
@@ -211,52 +328,33 @@ resume_next_step: {step}
 
 `truth_fingerprint` uses the same normalized SHA-256 contract as Section 6.
 
-### 9.2 Slice Table Fields
+### 10.2 Checklist Fields
 
-Baseline and dynamic slice tables use these fields:
+The checklist table uses these fields:
 
 ```text
-slice_id
-slice_origin
-slice_type
+item_id
 status
-review_question
-why_added
-parent_slice_id
+question
 input_files
 input_fingerprint
-depends_on
 finding_refs
 result_summary
-exit_condition
-resume_next_step
 ```
-
-Allowed `slice_origin` values:
-
-1. `baseline`
-2. `dynamic`
-
-Allowed `slice_type` values:
-
-1. `local`
-2. `cross_convergence`
 
 Allowed `status` values:
 
 1. `pending`
-2. `passed`
-3. `blocked`
-4. `stale`
-5. `skipped_not_applicable`
+2. `clear`
+3. `incomplete`
+4. `blocked`
+5. `stale`
+6. `not_applicable`
 
-Every dynamic slice must name an existing `parent_slice_id`.
-The parent may be a baseline slice or another dynamic slice.
-Dynamic slices must not replace required baseline slices.
+`clear`, `incomplete`, and `blocked` are semantic statuses set by the executor.
+Tooling may create `pending`, preserve executor-set statuses, and mechanically mark `clear` items as `stale` when inputs change.
 
-### 9.3 Baseline Slice Skeleton
-
-The mechanical work-state skeleton for `unit_check` must include these baseline local slices:
+### 10.3 Baseline Checklist
 
 1. `goal_and_responsibility`
 2. `dependency_truth_surface`
@@ -267,48 +365,41 @@ The mechanical work-state skeleton for `unit_check` must include these baseline 
 7. `acceptance_and_testability`
 8. `implementation_handoff`
 
-It must include these baseline cross-check slices:
+### 10.4 Freshness And Stale Rules
 
-1. `goal_to_acceptance_convergence`
-2. `flow_to_boundary_convergence`
-3. `dependency_truth_convergence`
-4. `output_to_acceptance_convergence`
-
-### 9.4 Freshness And Stale Rules
-
-Before a `unit_check` pass gate is written, the work-state file must be refreshed and validated.
+Before a `unit_check` pass gate is written, the checklist file may be refreshed and validated if the executor used it during the round.
+The pass gate still depends only on `_check_result` validation.
 
 Refresh rules:
 
-1. recompute the work-state truth fingerprint from the current target candidate
-2. recompute each slice `input_fingerprint` from the current `input_files`
-3. if a slice is `passed` and its input fingerprint changes, mark that slice `stale`
-4. if a slice is `passed` and one of its input files is missing, mark that slice `stale`
-5. if a cross-check slice is `passed` and any slice in `depends_on` is `stale`, mark the cross-check slice `stale`
-6. update `last_updated_at`
+1. recompute the checklist truth fingerprint from the current target candidate
+2. recompute each checklist item `input_fingerprint` from the current `input_files`
+3. if an item is `clear` and its input fingerprint changes, mark that item `stale`
+4. if an item is `clear` and one of its input files is missing, mark that item `stale`
+5. update `last_updated_at`
 
 If truth drift, binding drift, fallback cleanup, unit fork, unit promote, rule release, or project-instance migration invalidates the target candidate's prior check state, the old `_check_work` file must be deleted or marked unusable by the owning cleanup path.
 
-### 9.5 Tooling Boundary
+### 10.5 Tooling Boundary
 
 `specflowctl process check-work-*` commands may:
 
-1. create the work-state skeleton
-2. validate field presence, legal values, slice table shape, dynamic parent links, object type, and repository-relative input paths
+1. create the checklist skeleton
+2. validate field presence, legal values, checklist table shape, object type, and repository-relative input paths
 3. refresh timestamps
 4. compute input fingerprints
-5. mark stale slices caused by input or dependency fingerprint change
+5. mark stale checklist items caused by input fingerprint change
 
 They must not:
 
-1. mark a semantic slice as `passed`
+1. mark a semantic item as `clear`, `incomplete`, or `blocked`
 2. write finding content
 3. choose finding severity
 4. decide `blocked` versus `fix_required`
 5. decide whether the candidate is good enough to pass
 6. write `_check_result/unit/{unit}.md`
 
-## 10. Process Validation
+## 11. Process Validation
 
 When a command writes or consumes a supported unit process file, it must rebuild the current snapshot from current bound truth and compare it against the stored fields exactly.
 
@@ -316,28 +407,36 @@ At minimum, validation must rebuild:
 
 1. `truth_layer_ref`, `truth_file_ref`, `truth_version_ref`, and `truth_fingerprint` for check and verify files
 2. `spec_file_ref`, `spec_version_ref`, and `spec_fingerprint` for active plan files
-3. `unit_appendix_snapshot` from explicitly referenced unit appendix files
-4. `unit_snapshot` from current unit `unit_refs`
-5. `rule_snapshot` from stable global rules and current unit `rule_refs`
-6. `acceptance_item_set` from the current unit truth for check and verify files
-7. `acceptance_item_plan_coverage` against the current candidate acceptance item ids for active plan files
+3. stable truth refs and fingerprints for stable verify files
+4. `repository_mapping_snapshot` for stable verify files
+5. `unit_appendix_snapshot` from explicitly referenced unit appendix files
+6. `unit_snapshot` from current unit `unit_refs`
+7. `rule_snapshot` from stable global rules and current unit `rule_refs`
+8. `acceptance_item_set` from the current unit truth for check, verify, and stable verify files
+9. `acceptance_item_plan_coverage` against the current candidate acceptance item ids for active plan files
+10. `acceptance_item_evidence_matrix` against the current acceptance item ids for verify and stable verify files
+11. independent evaluation receipt fields for check, active plan, verify, and stable verify files
+12. acceptance behavior fingerprint and conditional freshness reuse receipt fields when text drift is being reused
 
-Tool-backed validation rule:
+Deterministic validation rule:
 
-1. when deterministic snapshot validation tooling is available, process-file writeback and process-file consumption must use it as the authoritative validation step
+1. when deterministic snapshot validation tooling is available, process-file writeback and process-file consumption must use it as the deterministic validation step
 2. for current unit process files, the required validation command is:
 
 ```text
-specflow/tooling/bin/specflowctl-<os>-<arch> snapshot validate-process --repo-root <repo-root> --object-type unit --object <unit> --process check|plan|verify
+<tooling-root>/bin/specflowctl-<os>-<arch> snapshot validate-process --repo-root <repo-root> --object-type unit --object <unit> --process check|plan|verify|stable_verify
 ```
 
 3. `plan` validates only `docs/specs/_plans/active/{unit}.md`
 4. `docs/specs/_plans/draft/{unit}.md` is not a downstream-consumable handoff file
 5. `_check_work` is validated by `specflowctl process check-work-validate`, not by `snapshot validate-process`
-6. `snapshot validate-process` remains limited to downstream-consumable `check`, `plan`, and `verify` files
+6. `stable_verify` validates only `docs/specs/_stable_verify_result/unit/{unit}.md`
 7. a command that writes a covered downstream process file must run the matching validation command after writeback and before reporting a pass gate, active handoff, verification pass, or lifecycle advance
 8. a command that consumes a covered downstream process file must run the matching validation command before treating that file as current and consumable
-9. if the required validation tooling is missing, unsupported for the target process kind, stale, or fails to execute, the command must report that authoritative process validation is unavailable and must not claim lifecycle progression from that process file
+9. if the required validation tooling is missing, unsupported for the target process kind, stale, or fails to execute, the command must report that deterministic process validation is unavailable and must not claim lifecycle progression from that process file
 10. manual hash output, shell checksum output, editor display, conversation-derived values, and temporary script results are diagnostic only; they must not replace the tooling result for lifecycle progression
 
-If any required field differs after applying only command-owned exceptions, the process file is invalid for downstream use.
+Freshness impact is defined by `framework/core/freshness.md`.
+When only normalized text drift exists and freshness reuse is accepted, the process file remains valid for downstream use.
+When freshness reuse is missing or rejected, validation reports `freshness_layer` without recommending lifecycle fallback.
+When behavior, acceptance, dependency, or schema drift is found, existing fallback and recovery rules still apply.

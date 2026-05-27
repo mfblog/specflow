@@ -2,6 +2,8 @@ package commandclose
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandpreflight"
@@ -48,15 +50,17 @@ type Result struct {
 	SuccessCleanup            processcleanup.SuccessCleanupResult
 	StatusUpdated             bool
 	ValidationMismatches      []string
+	PromotionSummaryFile      string
 }
 
 type transition struct {
-	Status            statusfile.ObjectStatus
-	ValidationProcess string
-	CleanupKind       string
-	CleanupMode       string
-	FailureLayer      string
-	Reason            string
+	Status             statusfile.ObjectStatus
+	ValidationProcess  string
+	ValidationDecision string
+	CleanupKind        string
+	CleanupMode        string
+	FailureLayer       string
+	Reason             string
 }
 
 func Close(opts Options) (Result, error) {
@@ -111,11 +115,14 @@ func Close(opts Options) (Result, error) {
 	}
 
 	if trans.ValidationProcess != "" {
-		mismatches, err := validateProcess(opts.RepoRoot, opts.ObjectType, opts.Object, trans.ValidationProcess)
+		mismatches, err := validateProcess(opts.RepoRoot, opts.ObjectType, opts.Object, trans.ValidationProcess, trans.ValidationDecision)
 		if err != nil {
 			return result, err
 		}
 		result.ValidationMismatches = mismatches
+	}
+	if err := validateControlledStableVerifyForkIntent(opts); err != nil {
+		return result, err
 	}
 
 	if !opts.Apply {
@@ -135,16 +142,26 @@ func Close(opts Options) (Result, error) {
 		}
 		result.StatusUpdated = updated
 	case cleanupSuccess:
+		if trans.CleanupMode == "unit_promote" {
+			summaryFile, err := writeStablePromotionSummary(opts.RepoRoot, opts.ObjectType, opts.Object)
+			if err != nil {
+				return result, err
+			}
+			result.PromotionSummaryFile = summaryFile
+		}
 		updated, err := statusfile.UpsertObjectStatus(opts.RepoRoot, trans.Status, isCreateCommand(opts.Command))
 		if err != nil {
 			return result, err
 		}
 		result.StatusUpdated = updated
 		cleanup, err := processcleanup.ApplyObjectSuccessCleanup(opts.RepoRoot, opts.ObjectType, opts.Object, trans.CleanupMode)
+		result.SuccessCleanup = cleanup
 		if err != nil {
+			if result.StatusUpdated {
+				return result, successCleanupAfterStatusError(opts, trans.CleanupMode, err)
+			}
 			return result, err
 		}
-		result.SuccessCleanup = cleanup
 	default:
 		updated, err := statusfile.UpsertObjectStatus(opts.RepoRoot, trans.Status, isCreateCommand(opts.Command))
 		if err != nil {
@@ -154,6 +171,103 @@ func Close(opts Options) (Result, error) {
 	}
 
 	return result, nil
+}
+
+func successCleanupAfterStatusError(opts Options, cleanupMode string, err error) error {
+	return fmt.Errorf("success cleanup failed after status update; fix the filesystem blocker and rerun `specflowctl process cleanup-success --repo-root %s --object-type %s --object %s --mode %s`: %w", opts.RepoRoot, opts.ObjectType, opts.Object, cleanupMode, err)
+}
+
+func writeStablePromotionSummary(repoRoot, objectType, object string) (string, error) {
+	verifyData, err := snapshot.LoadProcessSnapshot(repoRoot, objectType, object, "verify")
+	if err != nil {
+		return "", err
+	}
+	stableSnapshot, err := snapshot.RebuildObjectLayer(repoRoot, objectType, object, "stable")
+	if err != nil {
+		return "", fmt.Errorf("stable promotion summary requires current stable truth: %w", err)
+	}
+	summaryRef := snapshot.StablePromotionSummaryFilePath(objectType, object)
+	summary := renderStablePromotionSummary(stableSnapshot, verifyData)
+	summaryAbs := filepath.Join(repoRoot, filepath.FromSlash(summaryRef))
+	if err := os.MkdirAll(filepath.Dir(summaryAbs), 0o755); err != nil {
+		return "", fmt.Errorf("create stable promotion summary dir for %s: %w", summaryRef, err)
+	}
+	if err := os.WriteFile(summaryAbs, []byte(summary), 0o644); err != nil {
+		return "", fmt.Errorf("write %s: %w", summaryRef, err)
+	}
+	return summaryRef, nil
+}
+
+func renderStablePromotionSummary(stableSnapshot snapshot.Snapshot, verifyData snapshot.ProcessSnapshotData) string {
+	var builder strings.Builder
+	builder.WriteString("# Stable Promotion Summary\n\n")
+	builder.WriteString("```yaml\n")
+	builder.WriteString("object_type: " + stableSnapshot.ObjectType + "\n")
+	builder.WriteString("object_ref: " + stableSnapshot.Object + "\n")
+	builder.WriteString("stable_truth_file_ref: " + stableSnapshot.SpecFileRef + "\n")
+	builder.WriteString("stable_truth_version_ref: " + stableSnapshot.SpecVersionRef + "\n")
+	builder.WriteString("stable_truth_fingerprint: " + stableSnapshot.SpecFingerprint + "\n")
+	builder.WriteString("promotion_verify_result_ref: " + verifyData.ProcessFile + "\n")
+	appendPromotionAcceptanceItemSet(&builder, verifyData.AcceptanceItemSet)
+	appendPromotionCoverageSummary(&builder, verifyData.AcceptanceEvidence)
+	appendPromotionEvidenceRefs(&builder, promotionEvidenceRefs(verifyData))
+	builder.WriteString("```\n")
+	return builder.String()
+}
+
+func appendPromotionAcceptanceItemSet(builder *strings.Builder, items []snapshot.AcceptanceItemEntry) {
+	builder.WriteString("acceptance_item_set:\n")
+	if len(items) == 0 {
+		builder.WriteString("  - id: none\n")
+		return
+	}
+	for _, item := range items {
+		builder.WriteString("  - id: " + item.ID + "\n")
+	}
+}
+
+func appendPromotionCoverageSummary(builder *strings.Builder, entries []snapshot.AcceptanceEvidenceEntry) {
+	builder.WriteString("acceptance_item_coverage_summary:\n")
+	if len(entries) == 0 {
+		builder.WriteString("  - id: none\n")
+		builder.WriteString("    status: not_checked\n")
+		return
+	}
+	for _, entry := range entries {
+		builder.WriteString("  - id: " + entry.ID + "\n")
+		builder.WriteString("    status: " + entry.Status + "\n")
+	}
+}
+
+func appendPromotionEvidenceRefs(builder *strings.Builder, refs []string) {
+	builder.WriteString("key_evidence_source_refs:\n")
+	for _, ref := range refs {
+		builder.WriteString("  - " + ref + "\n")
+	}
+}
+
+func promotionEvidenceRefs(verifyData snapshot.ProcessSnapshotData) []string {
+	refs := []string{}
+	for _, key := range []string{"evidence_refs", "review_input_refs", "human_decision_refs"} {
+		value := strings.TrimSpace(verifyData.Scalars[key])
+		if value == "" || value == "none" {
+			continue
+		}
+		refs = appendUniqueString(refs, value)
+	}
+	if len(refs) == 0 {
+		refs = append(refs, verifyData.ProcessFile)
+	}
+	return refs
+}
+
+func appendUniqueString(items []string, item string) []string {
+	for _, existing := range items {
+		if existing == item {
+			return items
+		}
+	}
+	return append(items, item)
 }
 
 func normalizeOptions(opts Options) Options {
@@ -315,6 +429,11 @@ func determineTransition(opts Options, before statusfile.ObjectStatus, present b
 	if opts.Reason != "" {
 		trans.Reason = opts.Reason
 	}
+	if trans.FailureLayer != "" {
+		if err := processcleanup.ValidateFallbackReason(trans.Reason, trans.FailureLayer); err != nil {
+			return transition{}, err
+		}
+	}
 	return trans, nil
 }
 
@@ -338,19 +457,19 @@ func nextOnlyTransition(opts Options, current statusfile.ObjectStatus, outcomes 
 func unitStableVerifyTransition(opts Options, current statusfile.ObjectStatus) transition {
 	switch opts.Outcome {
 	case "aligned":
-		return withNext(current, "unit_fork")
+		return withNextAndValidationDecision(current, "unit_fork", "stable_verify", opts.Outcome)
 	case "small_repair_required", "evidence_incomplete", "truth_rejudge_required":
 		return withNext(current, "unit_stable_verify")
 	case "controlled_repair_required":
 		if opts.CandidateIntent != "repair" {
 			return transition{}
 		}
-		return withNext(current, "unit_fork")
+		return withNextAndValidationDecision(current, "unit_fork", "stable_verify", opts.Outcome)
 	case "controlled_change_required":
 		if opts.CandidateIntent != "change" {
 			return transition{}
 		}
-		return withNext(current, "unit_fork")
+		return withNextAndValidationDecision(current, "unit_fork", "stable_verify", opts.Outcome)
 	default:
 		return transition{}
 	}
@@ -378,7 +497,7 @@ func unitImplTransition(opts Options, current statusfile.ObjectStatus) transitio
 	case "truth_fallback":
 		return fallback(current, "unit_check", "truth_layer", opts.Reason)
 	case "plan_fallback":
-		return fallback(current, "unit_plan", "plan_layer", defaultReason(opts.Reason, "gate_missing"))
+		return fallback(current, "unit_plan", "plan_layer", defaultReason(opts.Reason, "plan_drift"))
 	case "gate_fallback":
 		return fallback(current, "unit_check", "gate_layer", defaultReason(opts.Reason, "gate_missing"))
 	default:
@@ -437,7 +556,7 @@ func promoteInvalidTransition(opts Options, current statusfile.ObjectStatus, obj
 		if objectType != "unit" {
 			return transition{}
 		}
-		return fallback(current, "unit_plan", "plan_layer", defaultReason(opts.Reason, "gate_missing"))
+		return fallback(current, "unit_plan", "plan_layer", defaultReason(opts.Reason, "plan_drift"))
 	case "implementation":
 		if objectType != "unit" {
 			return transition{}
@@ -461,6 +580,12 @@ func withNext(current statusfile.ObjectStatus, next string) transition {
 func withNextAndValidation(current statusfile.ObjectStatus, next, process string) transition {
 	trans := withNext(current, next)
 	trans.ValidationProcess = process
+	return trans
+}
+
+func withNextAndValidationDecision(current statusfile.ObjectStatus, next, process, decision string) transition {
+	trans := withNextAndValidation(current, next, process)
+	trans.ValidationDecision = decision
 	return trans
 }
 
@@ -505,7 +630,7 @@ func defaultReason(actual, fallbackValue string) string {
 	return fallbackValue
 }
 
-func validateProcess(repoRoot, objectType, object, process string) ([]string, error) {
+func validateProcess(repoRoot, objectType, object, process, expectedDecision string) ([]string, error) {
 	result, err := snapshot.ValidateProcessFileForObject(repoRoot, objectType, object, process)
 	if err != nil {
 		return nil, err
@@ -513,7 +638,46 @@ func validateProcess(repoRoot, objectType, object, process string) ([]string, er
 	if !result.Valid {
 		return result.Mismatches, fmt.Errorf("required %s process is invalid for %s %s: %s", process, objectType, object, strings.Join(result.Mismatches, "; "))
 	}
+	if expectedDecision != "" {
+		processData, err := snapshot.LoadProcessSnapshot(repoRoot, objectType, object, process)
+		if err != nil {
+			return nil, err
+		}
+		actualDecision := processData.Scalars["decision"]
+		if actualDecision != expectedDecision {
+			mismatch := fmt.Sprintf("decision mismatch: actual=%s expected=%s", actualDecision, expectedDecision)
+			return []string{mismatch}, fmt.Errorf("required %s process decision is invalid for %s %s: %s", process, objectType, object, mismatch)
+		}
+	}
 	return nil, nil
+}
+
+func validateControlledStableVerifyForkIntent(opts Options) error {
+	if opts.Command != "unit_fork" || opts.Outcome != "candidate_created" {
+		return nil
+	}
+	requirement, err := snapshot.StableVerifyCandidateIntentRequirement(opts.RepoRoot, opts.ObjectType, opts.Object)
+	if err != nil {
+		return err
+	}
+	if !requirement.Required {
+		return nil
+	}
+	actualIntent, err := snapshot.CandidateIntentForObject(opts.RepoRoot, opts.ObjectType, opts.Object)
+	if err != nil {
+		return err
+	}
+	if actualIntent != requirement.RequiredIntent {
+		return fmt.Errorf("candidate_intent mismatch for controlled stable verify decision %s: actual=%s expected=%s", requirement.Decision, emptyAsNone(actualIntent), requirement.RequiredIntent)
+	}
+	return nil
+}
+
+func emptyAsNone(value string) string {
+	if value == "" {
+		return "none"
+	}
+	return value
 }
 
 func shouldValidateInput(command string, trans transition) bool {

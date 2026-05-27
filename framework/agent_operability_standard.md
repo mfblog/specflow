@@ -18,7 +18,7 @@ This standard applies to governance documents that define or route behavior, inc
 
 1. entry managed blocks
 2. routing policies
-3. command policies and command files
+3. lifecycle overview and lifecycle Context Cards
 4. rule-governance flows
 5. review policies
 6. process-state contracts
@@ -53,7 +53,7 @@ Terms must not be left to ordinary interpretation when relevant:
 8. `rule`
 9. rule-governance branch
 10. `checkpoint`
-11. `implementation_change_policy`
+11. `operations/implementation_change`
 
 ### 4.2 Owner And Entry Resolution
 
@@ -106,7 +106,7 @@ The document must define the required output or stop report:
 2. current state
 3. next legal step
 4. why the next step is legal
-5. checkpoint fields when checkpointing is allowed
+5. plain stop report and resume path when checkpointing is allowed
 6. resume path
 7. whether temporary contracts are execution-local or durable truth
 

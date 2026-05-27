@@ -11,7 +11,7 @@
 
 [English](./README.md) · **简体中文**
 
-[接入仓库](#接入仓库) · [快速开始](#快速开始) · [核心概念](#核心概念) · [标准命令](#标准命令) · [开发流程](#开发流程) · [Reader](#reader-看进度) · [进阶用法](#进阶用法)
+[接入仓库](#接入仓库) · [快速开始](#快速开始) · [增量采用模式](#增量采用模式) · [核心概念](#核心概念) · [标准命令](#标准命令) · [开发流程](#开发流程) · [Reader](#reader-看进度) · [进阶用法](#进阶用法)
 
 ---
 
@@ -56,6 +56,8 @@
 - `specFlow` 负责定义这件事在仓库里应该怎么推进
 - runtime 负责按照这些规则真正去读文件、改文件、改代码、做验证
 - 人负责说清目标、确认关键边界，以及接受或调整结果
+
+当前核心模型是渐进式披露加独立评估：每一步只读自己的 Context Card，关键推进 gate 必须在 process evidence 中留下独立 reviewer receipt。
 
 你需要先理解几个核心概念和基本的开发流程。
 把这些搞清楚之后，大部分日常工作可以用标准命令驱动。
@@ -179,7 +181,8 @@ Release 绑定的是 tooling 输入 fingerprint，不是每一次 `specflow` 源
 - `docs/specs/`
 - 其他 workflow 支撑文件
 
-完成这一步后，建议先读完[核心概念](#核心概念)和[开发流程](#开发流程)，再开始日常工作。
+完成这一步后，先选择一个[增量采用模式](#增量采用模式)。
+`init` 只是准备共享骨架，不要求你立刻使用完整生命周期。
 
 日常用标准命令推进，把 `{module_name}` 替换为你要工作的模块名：
 
@@ -197,6 +200,45 @@ unit_verify:{module_name}
 ```
 
 agent 会读取安装后的入口文件和当前仓库真相，再决定下一步该走哪个命令、写 Spec、检查边界，还是停下来问你一个必须确认的问题。
+
+## 增量采用模式
+
+你可以从很小的一块开始。安装 specFlow 不等于必须立刻承诺 promotion、stable verification、governance review 或完整生命周期。
+
+| 模式 | 适合场景 | 允许做什么 |
+|---|---|---|
+| `reader-only` | 先看清状态，不想改流程 | 启动 `specflow-reader`，只读查看状态和真相，不写 lifecycle 文件 |
+| `implementation-only` | 请求符合已经写好的正式真相 | 用自然语言发起代码或测试修改；如果需要改行为、边界、验收、规则或 ownership truth，就停下来 |
+| `single-unit-trial` | 只想在一个 unit 上试用 specFlow | 只治理一个指定 unit，其它仓库内容暂时不纳入 specFlow |
+| `unit-check-only` | 只想判断一个 Spec 是不是好需求 | 执行 `unit_check:{unit}`，在 pass、blocked 或 fix-required 后停止 |
+
+正式契约见 `specflow/framework/core/adoption_modes.md`。
+这些模式是入口选择，不是新的生命周期状态、process schema 或 CLI 模式开关。
+promotion、stable verification 和 governance review 仍然是之后显式选择的路径，不是这些轻量入口的默认要求。
+
+reader-only 示例：
+
+```bash
+<specflow-reader-binary> --repo-root . --addr 127.0.0.1:17863
+```
+
+implementation-only 示例：
+
+```text
+在不改变已记录行为的前提下，让现有 retry 测试更稳定。如果这需要改 truth，请停止并告诉我最小 specFlow 步骤。
+```
+
+single-unit-trial 示例：
+
+```text
+现在只对 payment_retry 这个 unit 使用 specFlow。除非我明确要求，不要 promote，也不要进入 governance review。
+```
+
+unit-check-only 示例：
+
+```text
+执行 unit_check:payment_retry，并在 check result 后停止。暂时不要 plan 或 implement。
+```
 
 ## 核心概念
 
@@ -224,6 +266,8 @@ unit_new / unit_fork → unit_check → unit_plan → unit_impl → unit_verify 
 
 - **stable** 是当前正式接受的行为真相
 - **candidate** 是正在准备的下一版真相（新需求、行为调整）
+- **check** 判断 candidate 真相是否已经清楚到可以进入计划
+- **plan** 把通过检查的真相转成可执行的实现交接
 - **verify** 对照 candidate 验证实现
 - **promote** 把通过验收的 candidate 升级为新的 stable
 
@@ -254,6 +298,8 @@ Unit 和 rule 可以自由组合：
 | 检查当前实现是否仍符合 stable 真相 | `unit_stable_verify:{unit}` |
 
 命令格式为 `{命令}:{unit}`，例如 `unit_check:payment`。
+
+`unit_check` 和 `unit_plan` 故意保持分离。`unit_check` 关闭行为和验收真相，`unit_plan` 消费这个已校验的 check 结果并决定如何实现。这样 truth review 不会被藏进 planning 里。
 
 ## 开发流程
 
@@ -308,5 +354,8 @@ flowchart TD
 tooling 命令：`init`、`doctor`、`upgrade`。Reader 也在 tooling 层，但它是只读视图。
 
 更新 `specflow/` 后，先检查 tooling fingerprint 确认是否需要刷新本地二进制文件，然后让 agent 执行 `spec_flow_migrate`，使项目侧文件适配当前 framework 契约。
+
+普通框架修改默认使用 scoped review：只审查变更文件、直接 owner、边界引用和最小收敛引用。
+full-scope governance 或 design deep audit 必须显式要求；当你确实需要更重的 slice/run-state 路径时，明确说 `full-scope`、`baseline`、`deep audit`、`resumable review` 或 run-state-backed review。
 
 进阶治理 flow（`spec_flow_review`、`spec_flow_design_review`、rule 治理）通过自然语言进入。

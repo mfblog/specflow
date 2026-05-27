@@ -43,35 +43,6 @@ function Invoke-CheckedOutput {
     ($output -join "`n").Trim()
 }
 
-function New-FingerprintRoot {
-    param(
-        [string]$RepoRoot
-    )
-
-    $parentRoot = (Resolve-Path (Join-Path $RepoRoot "..")).Path
-    if (Test-Path -LiteralPath (Join-Path $parentRoot "specflow/tooling/manifest.tsv") -PathType Leaf) {
-        return [pscustomobject]@{
-            Path = $parentRoot
-            Temporary = $false
-        }
-    }
-
-    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("specflow-fingerprint-" + [System.Guid]::NewGuid().ToString("N"))
-    New-Item -ItemType Directory -Path $tempRoot | Out-Null
-    try {
-        New-Item -ItemType SymbolicLink -Path (Join-Path $tempRoot "specflow") -Target $RepoRoot | Out-Null
-    }
-    catch {
-        Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
-        throw "Cannot create temporary specflow link for fingerprint calculation. Rename the repository directory to 'specflow' or enable symbolic links."
-    }
-
-    [pscustomobject]@{
-        Path = $tempRoot
-        Temporary = $true
-    }
-}
-
 $ManagedBegin = "<!-- SPECFLOW:BEGIN -->"
 $ManagedEnd = "<!-- SPECFLOW:END -->"
 
@@ -323,7 +294,6 @@ $scriptDir = Split-Path -Parent $PSCommandPath
 $repoRoot = (Resolve-Path (Join-Path $scriptDir "../..")).Path
 $projectRoot = (Resolve-Path (Join-Path $repoRoot "..")).Path
 $binDir = Join-Path $repoRoot "tooling/bin"
-$fingerprintRoot = $null
 $downloadDir = $null
 
 try {
@@ -349,8 +319,7 @@ try {
 
     Sync-ExistingEntryBlocks $repoRoot $projectRoot
 
-    $fingerprintRoot = New-FingerprintRoot $repoRoot
-    $fingerprintScript = Join-Path $fingerprintRoot.Path "specflow/tooling/scripts/tooling_fingerprint.ps1"
+    $fingerprintScript = Join-Path $repoRoot "tooling/scripts/tooling_fingerprint.ps1"
     $fingerprint = (& $fingerprintScript).Trim()
     $shortFingerprint = $fingerprint.Substring(0, 12)
     $tag = "specflow-tooling-$shortFingerprint"
@@ -395,9 +364,6 @@ try {
     Write-Host "Installed $ctlName, $readerName, and SHA256SUMS from $tag."
 }
 finally {
-    if ($null -ne $fingerprintRoot -and $fingerprintRoot.Temporary) {
-        Remove-Item -LiteralPath $fingerprintRoot.Path -Recurse -Force -ErrorAction SilentlyContinue
-    }
     if ($null -ne $downloadDir) {
         Remove-Item -LiteralPath $downloadDir -Recurse -Force -ErrorAction SilentlyContinue
     }

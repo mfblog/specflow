@@ -19,7 +19,7 @@ This table is the only structured registry that connects current or planned `uni
 
 | kind | id | registration_state | implementation_paths | spec_files | responsibility |
 |---|---|---|---|---|---|
-| unit | example | planned | none | `docs/specs/units/candidate/c_unit_example.md` | Example unit responsibility |
+| unit | example | planned | none | none | Example unit responsibility |
 | rule | g_rule_repository_baseline | planned | none | `docs/specs/rules/stable/s_g_rule_repository_baseline.md` | Repository-wide baseline rules |
 
 Rules:
@@ -44,4 +44,5 @@ Process support paths include:
 3. `docs/specs/_check_result/**`
 4. `docs/specs/_plans/**`
 5. `docs/specs/_verify_result/**`
-6. `docs/specs/_governance_review/**`
+6. `docs/specs/_stable_verify_result/**`
+7. `docs/specs/_governance_review/**`

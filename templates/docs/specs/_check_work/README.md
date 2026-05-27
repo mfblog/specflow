@@ -1,6 +1,6 @@
-# Unit Check Work State Directory
+# Unit Check Checklist Directory
 
-This directory stores intermediate work-state files for `unit_check`.
+This directory stores optional resume checklists for `unit_check`.
 
 Allowed object type:
 
@@ -13,7 +13,7 @@ docs/specs/_check_work/unit/{unit}.md
 ```
 
 These files are not Specs, not behavior truth, and not downstream pass gates.
-They record only the current `unit_check` round's slice progress, input fingerprints, finding references, blocked reason, and resume position.
+They record only the current `unit_check` round's checklist progress, input fingerprints, finding references, blocked reason, and resume position.
 
 The only handoff gate from `unit_check` to `unit_plan` remains:
 
@@ -24,9 +24,9 @@ docs/specs/_check_result/unit/{unit}.md
 Tooling may maintain only mechanical fields:
 
 1. UTC timestamps
-2. baseline slice skeleton
+2. baseline checklist skeleton
 3. input fingerprints
-4. stale slice marks
+4. stale checklist item marks
 5. structural validation
 
-Tooling must not write slice pass judgments, finding content, severity, or the final `pass`, `blocked`, or `fix_required` conclusion.
+Tooling must not write checklist pass judgments, finding content, severity, or the final `pass`, `blocked`, or `fix_required` conclusion.

@@ -21,19 +21,25 @@ In this repository, governance tooling means repo-tracked executable implementat
 
 The definition depends on responsibility, not on file suffix.
 
+Path root rule:
+
+1. in `installed_project`, `<tooling-root>` is `specflow/tooling/`
+2. in `source_repo`, `<tooling-root>` is `tooling/`
+3. installed-project user examples may use `specflow/tooling/...`, but review and migration contracts must use `<tooling-root>/...`
+
 Therefore:
 
-1. Go source under `specflow/tooling/` that performs fixed governance actions is governance tooling
+1. Go source under `<tooling-root>/` that performs fixed governance actions is governance tooling
 2. a later shell, Python, or other executable implementation would also count if it performs the same kind of fixed governance action
 3. a Markdown explanation file is not tooling implementation, but it is still part of the tooling review surface when it defines or explains the tooling contract
 
 Default review-target rule:
 
 1. the default governance review target is source and rule-level material
-2. compiled binaries under `specflow/tooling/bin/` are local build or release artifacts, not the default source-of-truth review target
+2. compiled binaries under `<tooling-root>/bin/` are local build or release artifacts, not the default source-of-truth review target
 3. default `spec_flow_review` should review tooling source and tooling contract documents rather than platform binaries
 4. the framework policy owns the tooling boundary rules
-5. `specflow/tooling/README.md` owns the project-local tooling command surface and usage explanation
+5. `<tooling-root>/README.md` owns the project-local tooling command surface and usage explanation
 6. project-root `docs/` files must not be required as an additional tooling contract layer
 
 ## 3. Tooling Necessity Contract
@@ -83,7 +89,8 @@ The allowed action families are:
 10. render
    - expose a read-only local view derived from already-written truth files without creating, editing, or promoting truth
 11. work-state maintenance
-   - create, validate, refresh, or touch slice work-state carriers when the adopting owner defines the exact path, fields, statuses, and stale rules under `specflow/framework/slice_work_state_protocol.md`
+   - create, validate, refresh, or touch review slice work-state carriers when the adopting owner defines the exact path, fields, statuses, and stale rules under `framework/slice_work_state_protocol.md`
+   - create, validate, refresh, or touch the optional `unit_check` checklist when `process_snapshot_contract.md` defines the exact path, fields, statuses, and stale rules
    - maintain only mechanical data such as timestamps, skeleton rows, input fingerprints, and stale marks
 12. relation calculation
    - compute candidate readiness, candidate blockers, candidate cycles, and reference-only edges from explicit already-written references
@@ -127,7 +134,8 @@ Additional rule:
 4. command close tooling may accept explicit standardized flags such as `--outcome`, `--reason`, `--failure-layer`, and `--candidate-intent`, but it must not choose those values, repair contradictory values, or infer a semantic outcome from repository content
 5. command close tooling may reject an unsupported state combination and may apply the one legal transition for a supported combination, but it must not create a second lifecycle rule outside the command-owned transition table
 6. slice work-state tooling may mark stale slices from fingerprint changes only when the adopting owner defines that mechanical action, but it must not mark semantic slices as passed, write finding content, choose severity, decide review scores, decide verification sufficiency, or decide a final command or review result
-7. relation calculation tooling may report explicit candidate references, ready candidates, blocked candidates, and cycles, but it must not infer dependencies from prose, judge candidate content quality, choose a lifecycle outcome, or repair references
+7. unit-check checklist tooling may mark stale checklist items from fingerprint changes only when `process_snapshot_contract.md` defines that mechanical action, but it must not mark semantic items as clear, incomplete, or blocked
+8. relation calculation tooling may report explicit candidate references, ready candidates, blocked candidates, and cycles, but it must not infer dependencies from prose, judge candidate content quality, choose a lifecycle outcome, or repair references
 
 ## 6. Relationship To `spec_flow_review`
 
@@ -143,18 +151,18 @@ That review must cover at least:
 The required tooling-contract document set is:
 
 1. this policy file for framework-level boundary rules
-2. `specflow/framework/slice_work_state_protocol.md` for slice work-state carrier and mechanical maintenance boundaries
-3. `specflow/tooling/README.md` for the concrete command surface, build flow, recovery flow, and usage examples
+2. `framework/slice_work_state_protocol.md` for slice work-state carrier and mechanical maintenance boundaries
+3. `<tooling-root>/README.md` for the concrete command surface, build flow, recovery flow, and usage examples
 4. the current tooling source input files:
-   - `specflow/tooling/cmd/**/*.go`
-   - `specflow/tooling/internal/**/*.go`
-   - `specflow/tooling/go.mod`
-   - `specflow/tooling/manifest.tsv`
-   - `specflow/tooling/go.sum` when it exists
+   - `<tooling-root>/cmd/**/*.go`
+   - `<tooling-root>/internal/**/*.go`
+   - `<tooling-root>/go.mod`
+   - `<tooling-root>/manifest.tsv`
+   - `<tooling-root>/go.sum` when it exists
 5. the tooling helper script files:
-   - all regular files under `specflow/tooling/scripts/**`
+   - all regular files under `<tooling-root>/scripts/**`
 6. the runtime reader web files:
-   - `specflow/tooling/reader/web/**`
+   - `<tooling-root>/reader/web/**`
 
 Default `spec_flow_review` must not issue `pass` when any of the following is true:
 
@@ -165,7 +173,7 @@ Default `spec_flow_review` must not issue `pass` when any of the following is tr
 
 ## 7. Compiled Tooling Freshness
 
-When governance tooling is executed through compiled binaries under `specflow/tooling/bin/`, the repository must prevent stale binaries from continuing to execute governance actions.
+When governance tooling is executed through compiled binaries under `<tooling-root>/bin/`, the repository must prevent stale binaries from continuing to execute governance actions.
 That directory is a git-ignored local cache.
 Official platform binaries are produced from tagged source by the Release workflow and distributed as GitHub Release assets.
 
@@ -173,11 +181,11 @@ Required rules:
 
 1. the freshness check target is the current tooling source input set, not filesystem timestamps or other environment metadata
 2. the current tooling source input set must include the files that change current binary behavior:
-   - `specflow/tooling/cmd/**/*.go`
-   - `specflow/tooling/internal/**/*.go`
-   - `specflow/tooling/go.mod`
-   - `specflow/tooling/manifest.tsv`
-   - `specflow/tooling/go.sum` when it exists
+   - `<tooling-root>/cmd/**/*.go`
+   - `<tooling-root>/internal/**/*.go`
+   - `<tooling-root>/go.mod`
+   - `<tooling-root>/manifest.tsv`
+   - `<tooling-root>/go.sum` when it exists
 3. `build-release` must embed one build-time fingerprint derived from that source input set into the produced binaries
 4. a compiled tooling binary must compare its embedded fingerprint against the current live source fingerprint before executing ordinary governance actions
 5. when the fingerprints differ, the binary must stop and require a rebuild instead of continuing
@@ -189,7 +197,7 @@ The tooling freshness fingerprint is separate from process snapshot fingerprints
 It proves that a compiled tool matches the current tooling source input set.
 It must not be used as evidence that a unit, Rule, process file, or review slice is fresh.
 
-Tooling helper scripts under `specflow/tooling/scripts/` are default review inputs because they rebuild or select binaries for the installed tooling source.
+Tooling helper scripts under `<tooling-root>/scripts/` are default review inputs because they rebuild or select binaries for the installed tooling source.
 They are not binary freshness inputs unless they change compiled binary behavior.
 
 In plain words:

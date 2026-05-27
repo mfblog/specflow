@@ -11,7 +11,7 @@ Only unit handoffs are supported.
 If the check result is missing, malformed, or stale, the next legal step remains `unit_check`.
 
 `unit_plan` must not consume `docs/specs/_check_work/unit/{unit}.md`.
-That file is only a resumable `unit_check` work-state file.
+That file is only a resumable `unit_check` checklist file.
 It is not a pass gate and cannot prove that the candidate is ready for planning.
 
 ## 2. Plan To Implementation
@@ -45,3 +45,14 @@ Before stable writeback, `unit_promote` must resolve:
 No scenario handoff exists.
 
 Scenario process files must not be used as unit evidence.
+
+## 6. Stable Verify To Fork
+
+`unit_stable_verify` advancing outcomes may consume `docs/specs/_stable_verify_result/unit/{unit}.md` only when it validates against current stable unit truth.
+
+The close outcome must match the stable verify result `decision`.
+
+If the stable verify result is missing, malformed, stale, or records a different decision, the unit must remain at `unit_stable_verify`.
+
+`docs/specs/_verify_result/stable/unit/{unit}.md` is a stable promotion summary only.
+It must not be used as current stable implementation-alignment evidence.

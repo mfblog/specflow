@@ -1,11 +1,14 @@
 package toolingfreshness
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
 )
 
 const HiddenBuildFingerprintCommand = "__print-build-fingerprint"
@@ -31,13 +34,17 @@ func CheckProcess(args []string, cwd string) error {
 	if err != nil {
 		return err
 	}
-	if !IsToolingRepo(repoRoot) {
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if errors.Is(err, specflowlayout.ErrNotFound) {
 		return nil
+	}
+	if err != nil {
+		return err
 	}
 	if strings.TrimSpace(BuildFingerprint) == "" {
 		return fmt.Errorf(
 			"specflow binary missing embedded build fingerprint; run `%s`",
-			buildReleaseRecoveryCommand(repoRoot),
+			buildReleaseRecoveryCommand(repoRoot, layout),
 		)
 	}
 
@@ -53,14 +60,14 @@ func CheckProcess(args []string, cwd string) error {
 		"stale specflow binary: built_fingerprint=%s live_fingerprint=%s; run `%s`",
 		shortFingerprint(report.EmbeddedFingerprint),
 		shortFingerprint(report.LiveFingerprint),
-		buildReleaseRecoveryCommand(repoRoot),
+		buildReleaseRecoveryCommand(repoRoot, layout),
 	)
 }
 
-func buildReleaseRecoveryCommand(repoRoot string) string {
+func buildReleaseRecoveryCommand(repoRoot string, layout specflowlayout.Layout) string {
 	return fmt.Sprintf(
 		"cd %q && go run ./cmd/specflowctl build-release --repo-root %q",
-		filepath.Join(repoRoot, "specflow", "tooling"),
+		filepath.Join(repoRoot, filepath.FromSlash(layout.ToolingRoot)),
 		repoRoot,
 	)
 }

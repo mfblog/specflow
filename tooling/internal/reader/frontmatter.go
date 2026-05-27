@@ -5,9 +5,8 @@ import (
 )
 
 type frontmatter struct {
-	Scalars      map[string]string
-	Lists        map[string][]string
-	BoundObjects []string
+	Scalars map[string]string
+	Lists   map[string][]string
 }
 
 func parseFrontmatter(text string) frontmatter {
@@ -32,9 +31,6 @@ func parseFrontmatter(text string) frontmatter {
 			if value != "" {
 				value = trimQuote(value)
 				result.Lists[currentList] = append(result.Lists[currentList], value)
-				if currentList == "bound_objects" {
-					result.BoundObjects = append(result.BoundObjects, value)
-				}
 			}
 			continue
 		}

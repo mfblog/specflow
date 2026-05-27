@@ -197,17 +197,7 @@ if [[ "${branch}" != "main" ]]; then
   exit 0
 fi
 
-fingerprint_root=""
-parent_root="$(cd "${REPO_ROOT}/.." && pwd)"
-if [[ -f "${parent_root}/specflow/tooling/manifest.tsv" ]]; then
-  fingerprint_root="${parent_root}"
-else
-  fingerprint_root="$(mktemp -d)"
-  trap 'rm -rf "${fingerprint_root}"' EXIT
-  ln -s "${REPO_ROOT}" "${fingerprint_root}/specflow"
-fi
-
-fingerprint="$("${fingerprint_root}/specflow/tooling/scripts/tooling_fingerprint.sh" --short)"
+fingerprint="$("${REPO_ROOT}/tooling/scripts/tooling_fingerprint.sh" --short)"
 tag="specflow-tooling-${fingerprint}"
 
 if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then

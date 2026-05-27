@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
 )
 
 var requiredWebFiles = []string{
@@ -112,22 +114,28 @@ func noStore(next http.Handler) http.Handler {
 }
 
 func ReaderWebRoot(repoRoot string) (string, error) {
-	webRoot := filepath.Join(repoRoot, "specflow", "tooling", "reader", "web")
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return "", err
+	}
+	webRelative := specflowlayout.Relative(layout.ToolingRoot, "reader/web")
+	webRoot := filepath.Join(repoRoot, filepath.FromSlash(webRelative))
 	info, err := os.Stat(webRoot)
 	if err != nil {
-		return "", fmt.Errorf("reader web root missing: %s", filepath.ToSlash(filepath.Join("specflow", "tooling", "reader", "web")))
+		return "", fmt.Errorf("reader web root missing: %s", webRelative)
 	}
 	if !info.IsDir() {
-		return "", fmt.Errorf("reader web root is not a directory: %s", filepath.ToSlash(filepath.Join("specflow", "tooling", "reader", "web")))
+		return "", fmt.Errorf("reader web root is not a directory: %s", webRelative)
 	}
 	for _, file := range requiredWebFiles {
+		fileRelative := specflowlayout.Relative(webRelative, file)
 		path := filepath.Join(webRoot, file)
 		info, err := os.Stat(path)
 		if err != nil {
-			return "", fmt.Errorf("reader web asset missing: %s", filepath.ToSlash(filepath.Join("specflow", "tooling", "reader", "web", file)))
+			return "", fmt.Errorf("reader web asset missing: %s", fileRelative)
 		}
 		if info.IsDir() {
-			return "", fmt.Errorf("reader web asset is a directory: %s", filepath.ToSlash(filepath.Join("specflow", "tooling", "reader", "web", file)))
+			return "", fmt.Errorf("reader web asset is a directory: %s", fileRelative)
 		}
 	}
 	return webRoot, nil

@@ -15,7 +15,7 @@ Rules:
    - current-round progress, blockers, and verification focus
 5. `Execution Surface Plan` must be organized around the changed execution surfaces of the round rather than one forced whole-unit path.
 6. Each execution surface must name its current known path, target path, and first cutover slices.
-7. `Retirement Targets` must name which legacy paths, helpers, patches, wrappers, or equivalent dependencies should stop being required for the round to close.
+7. `Retirement Targets` must name which retired paths, helpers, patches, wrappers, or equivalent dependencies should stop being required for the round to close.
 8. `Verification Targets` must name which retirement goals `unit_verify` must explicitly prove.
 9. `Verification Targets` must also reference the candidate Spec acceptance item `id` values they prove.
 10. `Implementation Tasks` should be organized as closeable execution slices rather than one undifferentiated task block.
@@ -30,9 +30,12 @@ Rules:
    - `spec_file_ref`
    - `spec_version_ref`
    - `spec_fingerprint`
+   - `acceptance_behavior_fingerprint`
    - `unit_appendix_snapshot`
    - `rule_snapshot`
    - `acceptance_item_plan_coverage`
+   - independent evaluation receipt fields
+   - conditional freshness reuse receipt fields when accepted `text_drift` keeps the plan reusable
 13. `acceptance_item_plan_coverage` must map each current-gate acceptance item `id` to implementation slices or `Verification Targets`.
 14. If a current-gate acceptance item is not covered by an implementation slice or verification target, `active/{unit}.md` is not consumable by `unit_impl` or `unit_verify`.
 15. `active/{unit}.md` does not carry the gate decision of `unit_check` or the promotion decision of `unit_verify`.
@@ -46,8 +49,8 @@ Rules:
    - `verification_note`
 20. `unit_verify` still requires a current valid `active/{unit}.md`.
 21. `unit_verify` must consume `Execution Surface Plan`, `Retirement Targets`, `Verification Targets`, and `acceptance_item_plan_coverage` as part of the round's formal verification input.
-22. If candidate truth changes, the active plan becomes outdated through `truth_layer`.
-23. It also becomes outdated through `truth_layer` when formal global baseline bindings, Rule bindings, or acceptance item sets drift.
+22. If candidate truth changes, deterministic validation must classify the freshness impact before choosing fallback.
+23. Accepted `text_drift` can remain reusable; semantic, acceptance, dependency, schema, and unknown drift cannot.
 24. If only the active plan is missing, malformed, not tool-valid, or missing required coverage while the check gate still covers current truth, the recovery layer is `plan_layer`; the flow returns to `unit_plan` without deleting a still-valid check gate.
 25. `unit_fork` must delete the previous round's `active/{unit}.md`.
 26. `unit_promote` must delete the corresponding `active/{unit}.md`.

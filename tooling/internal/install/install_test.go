@@ -63,6 +63,30 @@ func TestDoctorFailsWhenReaderWebAssetIsMissing(t *testing.T) {
 	}
 }
 
+func TestDoctorReportsSourceRepoReaderPath(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupDoctorRepoAt(t, repoRoot, "", "tooling")
+	if err := os.Remove(filepath.Join(repoRoot, "tooling/reader/web/app.js")); err != nil {
+		t.Fatalf("Remove(app.js) failed: %v", err)
+	}
+
+	result, err := Doctor(repoRoot)
+	if err != nil {
+		t.Fatalf("Doctor returned unexpected error: %v", err)
+	}
+
+	joined := strings.Join(result.Failures, "\n")
+	if !strings.Contains(joined, "MISSING tooling/reader/web/app.js") {
+		t.Fatalf("expected source-repo reader asset failure, got %v", result.Failures)
+	}
+	if strings.Contains(joined, "MISSING specflow/tooling/reader/web/app.js") {
+		t.Fatalf("doctor resolved the installed reader path in a source repo: %v", result.Failures)
+	}
+	if strings.Contains(joined, "MISSING docs/") || strings.Contains(joined, "INVALID managed block in AGENTS.md") {
+		t.Fatalf("doctor checked installed-project destinations in a source repo: %v", result.Failures)
+	}
+}
+
 func TestInitAppendsManagedBlockToExistingEntryFile(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
@@ -92,20 +116,25 @@ func TestInitAppendsManagedBlockToExistingEntryFile(t *testing.T) {
 
 func setupDoctorRepo(t *testing.T, repoRoot string) string {
 	t.Helper()
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), strings.Join([]string{
+	return setupDoctorRepoAt(t, repoRoot, "specflow", "specflow/tooling")
+}
+
+func setupDoctorRepoAt(t *testing.T, repoRoot, contentRoot, toolingRoot string) string {
+	t.Helper()
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "manifest.tsv"), strings.Join([]string{
 		"templates/AGENTS.md\tAGENTS.md\tframework",
 	}, "\n")+"\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "template\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(contentRoot), "templates/AGENTS.md"), "template\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/go.mod"), "module github.com/Bingordinary/SpecFlow/specflow/tooling\n\ngo 1.22.2\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/cmd/specflow-reader/main.go"), "package main\n\nfunc main() {}\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/internal/demo/demo.go"), "package demo\n\nfunc Value() string { return \"demo\" }\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/index.html"), "<!doctype html>\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/styles.css"), "body { color: #111; }\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/app.js"), "console.log('demo');\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/cytoscape.min.js"), "window.cytoscape = function() {};\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/mermaid.min.js"), "window.mermaid = { initialize() {}, run() {} };\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "go.mod"), "module github.com/Bingordinary/SpecFlow/specflow/tooling\n\ngo 1.22.2\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "cmd/specflow-reader/main.go"), "package main\n\nfunc main() {}\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "internal/demo/demo.go"), "package demo\n\nfunc Value() string { return \"demo\" }\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "reader/web/index.html"), "<!doctype html>\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "reader/web/styles.css"), "body { color: #111; }\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "reader/web/app.js"), "console.log('demo');\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "reader/web/cytoscape.min.js"), "window.cytoscape = function() {};\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "reader/web/mermaid.min.js"), "window.mermaid = { initialize() {}, run() {} };\n")
 
 	fingerprint, _, err := toolingfreshness.LiveFingerprint(repoRoot)
 	if err != nil {

@@ -196,6 +196,93 @@ func TestApplyKeepsCandidateModuleWhenCallerAllowsSharedSnapshotMismatch(t *test
 	}
 }
 
+func TestApplyReportsFreshnessReviewRequiredWithoutCleanup(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupImpactModuleSharedRepo(t, repoRoot)
+	replaceImpactCandidateSpecText(t, repoRoot, "# Demo\n", "# Demo\n\nEditorial note only.\n")
+
+	result, err := Apply(repoRoot, Input{
+		Modules: []ScopedModule{{
+			Binding: ModuleBinding{
+				Module:      "demo",
+				ActiveLayer: "candidate",
+				NextCommand: "unit_plan",
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	moduleResult := result.ModuleResults[0]
+	if moduleResult.Outcome != "freshness_review_required" || moduleResult.FailureLayer != "freshness_layer" {
+		t.Fatalf("expected freshness review result, got %+v", moduleResult)
+	}
+	if moduleResult.StatusUpdated || len(moduleResult.DeletedFiles) != 0 {
+		t.Fatalf("freshness review must be non-destructive, got %+v", moduleResult)
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md")); err != nil {
+		t.Fatalf("expected process file to remain, stat err=%v", err)
+	}
+}
+
+func TestApplyKeepsCandidateModuleWithAcceptedTextDrift(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupImpactModuleSharedRepo(t, repoRoot)
+	oldSnap, err := snapshot.RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	replaceImpactCandidateSpecText(t, repoRoot, "# Demo\n", "# Demo\n\nEditorial note only.\n")
+	currentSnap, err := snapshot.RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent after edit: %v", err)
+	}
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md"), renderImpactCheckProcessSnapshotWithFreshness(oldSnap, currentSnap))
+
+	result, err := Apply(repoRoot, Input{
+		Modules: []ScopedModule{{
+			Binding: ModuleBinding{
+				Module:      "demo",
+				ActiveLayer: "candidate",
+				NextCommand: "unit_plan",
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	moduleResult := result.ModuleResults[0]
+	if moduleResult.Outcome != "unchanged" || moduleResult.NextCommand != "unit_plan" {
+		t.Fatalf("expected unchanged accepted text drift, got %+v", moduleResult)
+	}
+}
+
+func TestApplyFallbackStillRunsForSemanticDrift(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupImpactModuleSharedRepo(t, repoRoot)
+	replaceImpactCandidateSpecText(t, repoRoot, "pass_condition: demo behavior passes the declared checks.", "pass_condition: demo behavior now requires changed checks.")
+
+	result, err := Apply(repoRoot, Input{
+		Modules: []ScopedModule{{
+			Binding: ModuleBinding{
+				Module:      "demo",
+				ActiveLayer: "candidate",
+				NextCommand: "unit_plan",
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	moduleResult := result.ModuleResults[0]
+	if moduleResult.Outcome != "invalidated" || moduleResult.NextCommand != "unit_check" {
+		t.Fatalf("expected semantic drift fallback, got %+v", moduleResult)
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected process file cleanup for semantic drift, stat err=%v", err)
+	}
+}
+
 func TestApplyKeepsCandidateModuleWhenPlanUsesPlanContract(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupImpactModuleSharedRepo(t, repoRoot)
@@ -225,6 +312,37 @@ func TestApplyKeepsCandidateModuleWhenPlanUsesPlanContract(t *testing.T) {
 	moduleResult := result.ModuleResults[0]
 	if moduleResult.Outcome != "unchanged" || moduleResult.NextCommand != "unit_verify" {
 		t.Fatalf("expected unchanged module with valid plan contract, got %+v", moduleResult)
+	}
+}
+
+func TestApplyUsesPlanDriftReasonForInvalidPlanEvidence(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupImpactModuleSharedRepo(t, repoRoot)
+
+	snap, err := snapshot.RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	body := strings.Replace(renderImpactPlanProcessSnapshot(snap), "    coverage: covered", "", 1)
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), body)
+
+	result, err := Apply(repoRoot, Input{
+		Modules: []ScopedModule{{
+			Binding: ModuleBinding{
+				Module:      "demo",
+				ActiveLayer: "candidate",
+				NextCommand: "unit_verify",
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	moduleResult := result.ModuleResults[0]
+	if moduleResult.Outcome != "invalidated" || moduleResult.FailureLayer != "plan_layer" ||
+		moduleResult.FallbackReasonCode != "plan_drift" || moduleResult.NextCommand != "unit_plan" {
+		t.Fatalf("expected plan_drift fallback to unit_plan, got %+v", moduleResult)
 	}
 }
 
@@ -300,6 +418,20 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 	return "docs/specs/rules/candidate/c_b_rule_demo.md"
 }
 
+func replaceImpactCandidateSpecText(t *testing.T, repoRoot, old, replacement string) {
+	t.Helper()
+	path := filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "c_unit_demo.md")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read candidate spec: %v", err)
+	}
+	updated := strings.Replace(string(content), old, replacement, 1)
+	if updated == string(content) {
+		t.Fatalf("candidate spec did not contain %q", old)
+	}
+	mustWriteImpactFile(t, path, updated)
+}
+
 func mustMkdirImpactAll(t *testing.T, path string) {
 	t.Helper()
 	if err := os.MkdirAll(path, 0o755); err != nil {
@@ -368,6 +500,7 @@ func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
 		"truth_file_ref: " + snap.SpecFileRef,
 		"truth_version_ref: " + snap.SpecVersionRef,
 		"truth_fingerprint: " + snap.SpecFingerprint,
+		"acceptance_behavior_fingerprint: " + snap.AcceptanceBehaviorFingerprint,
 	}
 	lines = append(lines, renderImpactAcceptanceItemSet(snap.AcceptanceItemSet)...)
 	lines = append(lines,
@@ -386,8 +519,24 @@ func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
 	if len(snap.RuleSnapshot) == 0 {
 		lines[len(lines)-1] = "rule_snapshot: none"
 	}
+	lines = append(lines, renderImpactIndependentEvaluationReceipt(snap.SpecFileRef)...)
 	lines = append(lines, "```", "")
 	return strings.Join(lines, "\n")
+}
+
+func renderImpactCheckProcessSnapshotWithFreshness(oldSnap, currentSnap snapshot.Snapshot) string {
+	body := renderImpactCheckProcessSnapshot(oldSnap)
+	receipt := strings.Join([]string{
+		"freshness_impact: text_drift",
+		"evidence_reuse: accepted",
+		"freshness_current_fingerprint: " + currentSnap.SpecFingerprint,
+		"freshness_review_mode: independent",
+		"freshness_reviewer_result: pass",
+		"freshness_reviewer_context: minimal_context",
+		"freshness_review_input_refs: " + currentSnap.SpecFileRef,
+		"freshness_review_findings: none",
+	}, "\n")
+	return strings.Replace(body, "\n```\n", "\n"+receipt+"\n```\n", 1)
 }
 
 func renderImpactAcceptanceItemSet(entries []snapshot.AcceptanceItemEntry) []string {
@@ -413,6 +562,7 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 		"spec_file_ref: " + snap.SpecFileRef,
 		"spec_version_ref: " + snap.SpecVersionRef,
 		"spec_fingerprint: " + snap.SpecFingerprint,
+		"acceptance_behavior_fingerprint: " + snap.AcceptanceBehaviorFingerprint,
 		"unit_appendix_snapshot: none",
 		"rule_snapshot:",
 		"  - rule_id: " + snap.RuleSnapshot[0].RuleID,
@@ -422,11 +572,23 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 		"    fingerprint: " + snap.RuleSnapshot[0].Fingerprint,
 	}
 	lines = append(lines, renderImpactAcceptancePlanCoverage(snap.AcceptanceItemSet)...)
+	lines = append(lines, renderImpactIndependentEvaluationReceipt(snap.SpecFileRef)...)
 	lines = append(lines,
 		"```",
 		"",
 	)
 	return strings.Join(lines, "\n")
+}
+
+func renderImpactIndependentEvaluationReceipt(reviewInputRef string) []string {
+	return []string{
+		"evaluation_mode: independent",
+		"reviewer_result: pass",
+		"reviewer_context: minimal_context",
+		"review_input_refs: " + reviewInputRef,
+		"review_findings: none",
+		"human_decision_refs: none",
+	}
 }
 
 func renderImpactAcceptancePlanCoverage(entries []snapshot.AcceptanceItemEntry) []string {

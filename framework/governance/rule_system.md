@@ -1,0 +1,30 @@
+# Rule System
+
+Rules are reusable constraints that apply across units.
+
+This file is the governance entry for rule work. Exact rule-governance entries route to the flow files under `framework/governance/rules/`.
+
+## Rule Scopes
+
+1. Global rules (`g_rule_`) apply to every current-layer unit.
+2. Bound rules (`b_rule_`) apply only to units that reference them through `rule_refs`.
+
+Consumer lists are derived from unit frontmatter. Rule files must not store consumer lists.
+
+## Governance Flows
+
+1. `rule_new` -> `framework/governance/rules/rule_new.md`
+2. `rule_extract` -> `framework/governance/rules/rule_extract.md`
+3. `rule_bind` -> `framework/governance/rules/rule_bind.md`
+4. `rule_topology` -> `framework/governance/rules/rule_topology.md`
+5. `rule_sync` -> `framework/governance/rules/rule_sync.md`
+6. `rule_escape` -> `framework/governance/rules/rule_escape.md`
+
+Rule-governance flows inherit `framework/governance/impact_sync.md`, `framework/lifecycle/recovery.md`, and `framework/operations/output_standard.md`.
+
+## Routing
+
+Use `framework/operations/entry_routing.md` for natural-language rule requests.
+For an exact rule-governance entry, read this file and the matching flow file above.
+
+If repository truth is insufficient to pick or finish a rule flow, route to `rule_escape`.

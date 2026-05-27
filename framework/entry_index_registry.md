@@ -28,9 +28,11 @@ This file does not define the template-source review scope of `spec_flow_review`
 Additional rules:
 
 1. This registry defines the project-side registered entry files used for managed-block sync and manual consistency checks.
-2. If a new project-side entry index file is added later, update this file first so sync and commit-time checks can include it.
-3. Files with the same responsibility but not yet registered are not part of the project-side registered set.
-4. `spec_flow_review` may read this file to verify project-side ownership and sync semantics, but its default template-source scope is defined in `specflow/framework/spec_flow_review.md`.
+2. In `installed_project`, the registered paths resolve at the repository root.
+3. In `source_repo`, the registered paths resolve under `<template-root>/` for template entry managed-block checks. Local source-repository `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` files are personal or host-owned files unless another rule registers them.
+4. If a new project-side entry index file is added later, update this file first so sync and commit-time checks can include it.
+5. Files with the same responsibility but not yet registered are not part of the project-side registered set.
+6. `spec_flow_review` may read this file to verify project-side ownership and sync semantics.
 
 ---
 
@@ -59,7 +61,7 @@ Fixed rules:
 6. If multiple registered entry files were modified and their managed blocks still differ, the task enters an explicit source-selection case:
    - do not guess the sync source from mtime, path order, or other environment metadata
    - explicitly choose which registered entry file is the source for this round before syncing
-   - run `specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>`
+   - run `<tooling-root>/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>`
    - `<registered-entry-file>` must be one of the registered project-side entry files from this registry, for example `AGENTS.md`
 7. Syncing is only responsible for re-aligning managed blocks across registered entry files. It does not narrow review scope or rewrite governance judgment rules.
 
@@ -76,9 +78,9 @@ Entry-file managed blocks must be synchronized before a task claims that registe
 
 Rules:
 
-1. If a round edits one registered entry managed block, run `specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>` before closure.
+1. If a round edits one registered entry managed block, run `<tooling-root>/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>` before closure.
 2. If a round edits multiple registered entry managed blocks and those blocks already match, no sync command is required.
-3. If a round edits multiple registered entry managed blocks and those blocks still differ, explicitly choose one registered entry file as the source and run `specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>`.
+3. If a round edits multiple registered entry managed blocks and those blocks still differ, explicitly choose one registered entry file as the source and run `<tooling-root>/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>`.
 4. Git staging remains a manual action outside specFlow governance.
 
 ---

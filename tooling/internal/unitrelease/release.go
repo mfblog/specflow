@@ -25,7 +25,7 @@ type Result struct {
 	FromRef             string
 	ToRef               string
 	CandidateUpdated    []string
-	StableUpdated       []string
+	StableRerouted      []string
 	MainSpecsUpdated    []string
 	ProcessFilesRemoved []string
 	StatusUpdated       []string
@@ -91,26 +91,29 @@ func ReleaseVersion(repoRoot string, options Options) (Result, error) {
 		if err != nil {
 			return Result{}, err
 		}
-		nextRefs, changed, err := unitrefs.ReplaceUnitRef(refs, normalized.FromRef, normalized.ToRef)
-		if err != nil {
-			return Result{}, fmt.Errorf("%s: %w", fileRef, err)
-		}
-		if !changed {
+		if !containsString(refs, normalized.FromRef) {
 			continue
 		}
-
-		updated, err := unitrefs.UpdateObjectUnitRefs(fileRef, string(contentBytes), nextRefs)
-		if err != nil {
-			return Result{}, err
-		}
-		if err := os.WriteFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)), []byte(updated), 0o644); err != nil {
-			return Result{}, fmt.Errorf("write %s: %w", fileRef, err)
-		}
-		result.MainSpecsUpdated = append(result.MainSpecsUpdated, fileRef)
 
 		key := status.ObjectType + ":" + status.Object
 		switch status.ActiveLayer {
 		case "candidate":
+			nextRefs, changed, err := unitrefs.ReplaceUnitRef(refs, normalized.FromRef, normalized.ToRef)
+			if err != nil {
+				return Result{}, fmt.Errorf("%s: %w", fileRef, err)
+			}
+			if !changed {
+				continue
+			}
+			updated, err := unitrefs.UpdateObjectUnitRefs(fileRef, string(contentBytes), nextRefs)
+			if err != nil {
+				return Result{}, err
+			}
+			if err := os.WriteFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)), []byte(updated), 0o644); err != nil {
+				return Result{}, fmt.Errorf("write %s: %w", fileRef, err)
+			}
+			result.MainSpecsUpdated = append(result.MainSpecsUpdated, fileRef)
+
 			removed, err := removeProcessArtifacts(repoRoot, status.ObjectType, status.Object)
 			if err != nil {
 				return Result{}, err
@@ -124,12 +127,17 @@ func ReleaseVersion(repoRoot string, options Options) (Result, error) {
 			result.CandidateUpdated = append(result.CandidateUpdated, key)
 			result.StatusUpdated = append(result.StatusUpdated, statusUpdateLabel(status.Object, status.NextCommand))
 		case "stable":
+			removed, err := removeStableVerifyArtifacts(repoRoot, status.ObjectType, status.Object)
+			if err != nil {
+				return Result{}, err
+			}
+			result.ProcessFilesRemoved = append(result.ProcessFilesRemoved, removed...)
 			status.NextCommand = "unit_stable_verify"
 			status.Notes = releaseNote(normalized.FromRef, normalized.ToRef, true)
 			if _, err := statusfile.UpsertObjectStatus(repoRoot, status, false); err != nil {
 				return Result{}, err
 			}
-			result.StableUpdated = append(result.StableUpdated, key)
+			result.StableRerouted = append(result.StableRerouted, key)
 			result.StatusUpdated = append(result.StatusUpdated, statusUpdateLabel(status.Object, status.NextCommand))
 		default:
 			return Result{}, fmt.Errorf("unit %q has unsupported active layer %q", status.Object, status.ActiveLayer)
@@ -137,19 +145,19 @@ func ReleaseVersion(repoRoot string, options Options) (Result, error) {
 	}
 
 	result.CandidateUpdated = normalizeStrings(result.CandidateUpdated)
-	result.StableUpdated = normalizeStrings(result.StableUpdated)
+	result.StableRerouted = normalizeStrings(result.StableRerouted)
 	result.MainSpecsUpdated = normalizeStrings(result.MainSpecsUpdated)
 	result.ProcessFilesRemoved = normalizeStrings(result.ProcessFilesRemoved)
 	result.StatusUpdated = normalizeStrings(result.StatusUpdated)
-	result.Noop = len(result.MainSpecsUpdated) == 0
+	result.Noop = len(result.CandidateUpdated) == 0 && len(result.StableRerouted) == 0
 
-	if diagnostics := ValidateCurrentRefs(repoRoot, normalized.FromRef); len(diagnostics) > 0 {
-		return Result{}, fmt.Errorf("post-release current unit ref validation failed: %s", strings.Join(diagnostics, "; "))
+	if diagnostics := ValidateCurrentCandidateRefs(repoRoot, normalized.FromRef); len(diagnostics) > 0 {
+		return Result{}, fmt.Errorf("post-release current candidate unit ref validation failed: %s", strings.Join(diagnostics, "; "))
 	}
 	return result, nil
 }
 
-func ValidateCurrentRefs(repoRoot string, forbiddenRef string) []string {
+func ValidateCurrentCandidateRefs(repoRoot string, forbiddenRef string) []string {
 	diagnostics := []string{}
 	statuses, err := statusfile.LoadObjectStatuses(repoRoot)
 	if err != nil {
@@ -157,6 +165,9 @@ func ValidateCurrentRefs(repoRoot string, forbiddenRef string) []string {
 	}
 	for _, status := range statuses {
 		if status.ObjectType != "unit" {
+			continue
+		}
+		if status.ActiveLayer != "candidate" {
 			continue
 		}
 		fileRef, err := specpaths.ObjectMainSpecFileRef(status.ObjectType, status.ActiveLayer, status.Object)
@@ -212,6 +223,14 @@ func parseStableUnitRef(ref string) (string, string, error) {
 
 func removeProcessArtifacts(repoRoot, objectType, object string) ([]string, error) {
 	kinds := []string{"check_work", "check", "plan", "verify"}
+	return removeProcessArtifactsByKind(repoRoot, objectType, object, kinds)
+}
+
+func removeStableVerifyArtifacts(repoRoot, objectType, object string) ([]string, error) {
+	return removeProcessArtifactsByKind(repoRoot, objectType, object, []string{"stable_verify"})
+}
+
+func removeProcessArtifactsByKind(repoRoot, objectType, object string, kinds []string) ([]string, error) {
 	removed := []string{}
 	for _, kind := range kinds {
 		paths, err := snapshot.ProcessArtifactPaths(objectType, object, kind)
@@ -234,7 +253,7 @@ func removeProcessArtifacts(repoRoot, objectType, object string) ([]string, erro
 
 func releaseNote(fromRef, toRef string, stable bool) string {
 	if stable {
-		return fmt.Sprintf("Retargeted by unit release-version from %s to %s; rerun stable verification.", fromRef, toRef)
+		return fmt.Sprintf("Rerouted by unit release-version from %s to %s; stable truth still references the prior ref until verified or forked.", fromRef, toRef)
 	}
 	return fmt.Sprintf("Retargeted by unit release-version from %s to %s; rerun check.", fromRef, toRef)
 }
@@ -259,4 +278,13 @@ func normalizeStrings(items []string) []string {
 	}
 	sort.Strings(normalized)
 	return normalized
+}
+
+func containsString(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
 }

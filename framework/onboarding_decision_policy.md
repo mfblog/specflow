@@ -75,7 +75,7 @@ Direct first-stable onboarding is allowed only when all of the following are tru
 4. every material unknown is either resolved before stable writeback or explicitly irrelevant to the stable behavior being captured
 5. any shared rule, global rule, reusable mechanism, exception, or cross-unit boundary needed by the first stable Spec is already resolved through the proper rule-governance path before stable writeback
 6. repository mapping and path ownership are explicit enough to write the unit registration and any required implementation path or support-surface registration without guessing
-7. the resulting stable Spec satisfies `specflow/framework/spec_authoring_baseline.md`
+7. the resulting stable Spec satisfies `framework/core/object_model.md`
 
 Direct first-stable onboarding must stop before stable writeback when any of the following are true:
 

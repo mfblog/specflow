@@ -40,13 +40,14 @@ func TestReleaseVersionUpdatesCandidateAndDeletesProcessFiles(t *testing.T) {
 	assertContains(t, status, "| `unit` | `trace` | `no` | `yes` | `candidate` | `unit_check` | Retargeted by unit release-version from s_unit_assistant@0.8.0 to s_unit_assistant@0.9.0; rerun check. |")
 }
 
-func TestReleaseVersionUpdatesStableWithoutForking(t *testing.T) {
+func TestReleaseVersionReroutesStableWithoutRewritingTruth(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeReleaseStatus(t, repoRoot,
 		"| `unit` | `assistant` | `yes` | `no` | `stable` | `unit_fork` | test |\n"+
 			"| `unit` | `agent` | `yes` | `no` | `stable` | `unit_fork` | test |\n")
 	writeReleaseUnit(t, repoRoot, "stable", "assistant", "0.9.0", nil)
 	writeReleaseUnit(t, repoRoot, "stable", "agent", "0.1.0", []string{"s_unit_assistant@0.8.0"})
+	writeReleaseFile(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/agent.md"), "# stable verify\n")
 
 	result, err := ReleaseVersion(repoRoot, Options{
 		Unit:    "assistant",
@@ -56,13 +57,16 @@ func TestReleaseVersionUpdatesStableWithoutForking(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReleaseVersion returned error: %v", err)
 	}
-	if got := strings.Join(result.StableUpdated, ","); got != "unit:agent" {
-		t.Fatalf("expected agent stable update, got %q", got)
+	if got := strings.Join(result.StableRerouted, ","); got != "unit:agent" {
+		t.Fatalf("expected agent stable reroute, got %q", got)
 	}
-	assertContains(t, readReleaseFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_agent.md")), "  - s_unit_assistant@0.9.0")
+	stableAgent := readReleaseFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_agent.md"))
+	assertContains(t, stableAgent, "  - s_unit_assistant@0.8.0")
+	assertNotContains(t, stableAgent, "  - s_unit_assistant@0.9.0")
 	assertNotExists(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_agent.md"))
+	assertNotExists(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/agent.md"))
 	status := readReleaseFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"))
-	assertContains(t, status, "| `unit` | `agent` | `yes` | `no` | `stable` | `unit_stable_verify` | Retargeted by unit release-version from s_unit_assistant@0.8.0 to s_unit_assistant@0.9.0; rerun stable verification. |")
+	assertContains(t, status, "| `unit` | `agent` | `yes` | `no` | `stable` | `unit_stable_verify` | Rerouted by unit release-version from s_unit_assistant@0.8.0 to s_unit_assistant@0.9.0; stable truth still references the prior ref until verified or forked. |")
 }
 
 func TestReleaseVersionNoopWhenOldRefIsAbsent(t *testing.T) {
@@ -122,9 +126,9 @@ func TestReleaseVersionRejectsDuplicateRetargetResult(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeReleaseStatus(t, repoRoot,
 		"| `unit` | `assistant` | `yes` | `no` | `stable` | `unit_fork` | test |\n"+
-			"| `unit` | `agent` | `yes` | `no` | `stable` | `unit_fork` | test |\n")
+			"| `unit` | `agent` | `no` | `yes` | `candidate` | `unit_check` | test |\n")
 	writeReleaseUnit(t, repoRoot, "stable", "assistant", "0.9.0", nil)
-	writeReleaseUnit(t, repoRoot, "stable", "agent", "0.1.0", []string{"s_unit_assistant@0.8.0", "s_unit_assistant@0.9.0"})
+	writeReleaseUnit(t, repoRoot, "candidate", "agent", "0.1.0", []string{"s_unit_assistant@0.8.0", "s_unit_assistant@0.9.0"})
 
 	_, err := ReleaseVersion(repoRoot, Options{
 		Unit:    "assistant",
@@ -136,15 +140,15 @@ func TestReleaseVersionRejectsDuplicateRetargetResult(t *testing.T) {
 	}
 }
 
-func TestValidateCurrentRefsReportsRemainingOldRef(t *testing.T) {
+func TestValidateCurrentCandidateRefsReportsRemainingOldRef(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeReleaseStatus(t, repoRoot,
 		"| `unit` | `assistant` | `yes` | `no` | `stable` | `unit_fork` | test |\n"+
-			"| `unit` | `agent` | `yes` | `no` | `stable` | `unit_fork` | test |\n")
+			"| `unit` | `agent` | `no` | `yes` | `candidate` | `unit_check` | test |\n")
 	writeReleaseUnit(t, repoRoot, "stable", "assistant", "0.9.0", nil)
-	writeReleaseUnit(t, repoRoot, "stable", "agent", "0.1.0", []string{"s_unit_assistant@0.8.0"})
+	writeReleaseUnit(t, repoRoot, "candidate", "agent", "0.1.0", []string{"s_unit_assistant@0.8.0"})
 
-	diagnostics := ValidateCurrentRefs(repoRoot, "s_unit_assistant@0.8.0")
+	diagnostics := ValidateCurrentCandidateRefs(repoRoot, "s_unit_assistant@0.8.0")
 	if len(diagnostics) != 1 || !strings.Contains(diagnostics[0], "forbidden unit ref s_unit_assistant@0.8.0 remains") {
 		t.Fatalf("expected forbidden ref diagnostic, got %v", diagnostics)
 	}
@@ -226,6 +230,13 @@ func assertContains(t *testing.T, content, want string) {
 	t.Helper()
 	if !strings.Contains(content, want) {
 		t.Fatalf("expected content to contain %q\ncontent:\n%s", want, content)
+	}
+}
+
+func assertNotContains(t *testing.T, content, want string) {
+	t.Helper()
+	if strings.Contains(content, want) {
+		t.Fatalf("expected content not to contain %q\ncontent:\n%s", want, content)
 	}
 }
 

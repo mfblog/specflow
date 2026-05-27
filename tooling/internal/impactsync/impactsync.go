@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
@@ -107,6 +108,7 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 	processFound := false
 	sharedMismatch := false
 	nonSharedMismatch := false
+	freshnessReviewRequired := false
 	failureLayer := ""
 	for _, processKind := range []string{"check", "plan", "verify"} {
 		processPath, err := snapshot.ProcessFilePath("unit", binding.Module, processKind)
@@ -128,6 +130,11 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 			return ModuleResult{}, err
 		}
 		if validation.Valid {
+			continue
+		}
+		if validation.FailureLayer == "freshness_layer" {
+			freshnessReviewRequired = true
+			result.Diagnostics = append(result.Diagnostics, prefixItems(validation.Mismatches, processKind)...)
 			continue
 		}
 		if failureLayer == "" {
@@ -162,7 +169,9 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 	case nonSharedMismatch:
 		switch failureLayer {
 		case "plan_layer":
-			fallbackReason = "gate_missing"
+			fallbackReason = "plan_drift"
+		case "implementation_layer":
+			fallbackReason = "implementation_deviation"
 		case "evidence_layer":
 			fallbackReason = "evidence_incomplete"
 		case "gate_layer":
@@ -180,6 +189,9 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 	case !processFound && explicitFallbackScope && binding.NextCommand != "unit_check":
 		fallbackReason = "binding_drift"
 		failureLayer = "truth_layer"
+	case freshnessReviewRequired:
+		result.Outcome = "freshness_review_required"
+		result.FailureLayer = "freshness_layer"
 	}
 
 	if fallbackReason == "" {
@@ -202,9 +214,32 @@ func reconcileStable(repoRoot string, binding ModuleBinding, result ModuleResult
 	if fallbackReason == "" {
 		return result, nil
 	}
+	if err := processcleanup.ValidateFallbackReason(fallbackReason, "truth_layer"); err != nil {
+		return ModuleResult{}, err
+	}
 	result.FallbackReasonCode = fallbackReason
 	result.Outcome = "rerouted"
 	result.NextCommand = "unit_stable_verify"
+	processPaths, err := snapshot.ProcessArtifactPaths("unit", result.Module, "stable_verify")
+	if err != nil {
+		return ModuleResult{}, err
+	}
+	for _, processPath := range processPaths {
+		processAbs := filepath.Join(repoRoot, filepath.FromSlash(processPath))
+		if _, err := os.Stat(processAbs); err != nil {
+			if os.IsNotExist(err) {
+				if !contains(result.MissingFiles, processPath) {
+					result.MissingFiles = append(result.MissingFiles, processPath)
+				}
+				continue
+			}
+			return ModuleResult{}, fmt.Errorf("stat %s: %w", processPath, err)
+		}
+		if err := os.Remove(processAbs); err != nil {
+			return ModuleResult{}, fmt.Errorf("delete %s: %w", processPath, err)
+		}
+		result.DeletedFiles = append(result.DeletedFiles, processPath)
+	}
 	updated, err := statusfile.UpdateNextCommand(repoRoot, binding.Module, result.NextCommand)
 	if err != nil {
 		return ModuleResult{}, err
@@ -214,23 +249,30 @@ func reconcileStable(repoRoot string, binding ModuleBinding, result ModuleResult
 }
 
 func applyCandidateFallback(repoRoot string, result ModuleResult, fallbackReason string, failureLayer string) (ModuleResult, error) {
+	if err := processcleanup.ValidateFallbackReason(fallbackReason, failureLayer); err != nil {
+		return ModuleResult{}, err
+	}
 	result.FallbackReasonCode = fallbackReason
 	result.FailureLayer = failureLayer
 	result.Outcome = "invalidated"
 	processKinds := []string{"check_work", "check", "plan", "verify"}
 	switch failureLayer {
+	case "truth_layer":
+		result.NextCommand = "unit_check"
 	case "gate_layer":
 		result.NextCommand = "unit_check"
 		processKinds = []string{"check_work", "check"}
 	case "plan_layer":
 		result.NextCommand = "unit_plan"
 		processKinds = []string{"plan", "verify"}
+	case "implementation_layer":
+		result.NextCommand = "unit_impl"
+		processKinds = []string{"verify"}
 	case "evidence_layer":
 		result.NextCommand = "unit_verify"
 		processKinds = []string{"verify"}
 	default:
-		result.NextCommand = "unit_check"
-		result.FailureLayer = "truth_layer"
+		return ModuleResult{}, fmt.Errorf("unsupported failure layer %q", failureLayer)
 	}
 	for _, processKind := range processKinds {
 		processPaths, err := snapshot.ProcessArtifactPaths("unit", result.Module, processKind)

@@ -3,6 +3,8 @@
 ## 1. Purpose
 
 `spec_flow_design_review` reviews whether the current `specFlow` design is a sound human-serving governance system.
+This file owns explicit `deep_audit` review for design quality.
+Ordinary or plain exact `spec_flow_design_review` entry routes through `framework/governance/review.md` first and stays `scoped_review` unless the user explicitly asks for full-scope, baseline, deep audit, release-level governance audit, resumable review, or run-state-backed review.
 
 It answers five questions:
 
@@ -12,7 +14,7 @@ It answers five questions:
 4. whether the design remains operable for normal users and executors without excessive mental or operational burden
 5. whether the repository may still claim that the current `specFlow` design is worth using as designed
 
-Plain input `spec_flow_design_review` means the default design-baseline review defined in this file unless the user explicitly narrows scope.
+Deep audit must be explicit. Plain exact entry without explicit deep-audit intent must not automatically start full-scope run-state review.
 
 This flow does not replace `spec_flow_review`.
 `spec_flow_review` answers whether the governance rule set still closes coherently.
@@ -23,7 +25,24 @@ It reviews the design of the governance mechanism that governs business truth.
 
 ## 2. Default Scope
 
+This section applies only to explicit `deep_audit`.
+
 The default scope includes the design main chain only.
+It is layout-normalized:
+
+1. `installed_project`
+   - framework root: `specflow/framework/`
+   - template root: `specflow/templates/`
+   - tooling root: `specflow/tooling/`
+   - project-instance compatibility mode: real project `docs/specs/`
+2. `source_repo`
+   - framework root: `framework/`
+   - template root: `templates/`
+   - tooling root: `tooling/`
+   - project-instance compatibility mode: template bootstrap compatibility under `templates/docs/specs/`
+
+`specflowctl review ... --layout auto` detects the layout. `--layout installed` and `--layout source` are explicit overrides.
+When auto detection finds both layouts, the review must stop and require an explicit layout.
 
 That default scope includes:
 
@@ -31,57 +50,58 @@ That default scope includes:
    - `spec_flow_design_review.md`
    - `agent_operability_standard.md`
    - `spec_policy.md`
-   - `command_policy.md`
+   - `lifecycle/overview.md`
    - `advance_policy.md`
-   - `natural_language_routing.md`
-   - `spec_flow_migrate.md`
+   - `operations/entry_routing.md`
+   - `operations/migration.md`
    - `onboarding_decision_policy.md`
-   - `implementation_change_policy.md`
-   - `repository_mapping_policy.md`
+   - `operations/implementation_change.md`
+   - `core/repository_mapping.md`
    - `spec_writing_guide.md`
    - `candidate_intent_policy.md`
    - `candidate_intents/`
-   - `checkpoint_protocol.md`
+   - `operations/output_standard.md`
    - `slice_work_state_protocol.md`
-   - `natural_language_routing.md` only where it defines the rule-governance branch
+   - `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch
 2. lifecycle and gate-shape rules
-   - `specflow/framework/commands/*.md`
+   - active command contracts under `<framework-root>/lifecycle/*.md`
+   - lifecycle Context Cards under `<framework-root>/lifecycle/*.md` are the active command contract
    - `candidate_handoff_contract.md`
    - `downgrade_policy.md`
    - `process_snapshot_contract.md`
    - `slice_work_state_protocol.md`
-   - `recovery_policy.md`
-   - `specflow/templates/docs/specs/_status.md`
-   - `specflow/templates/docs/specs/_check_work/README.md`
-   - `specflow/templates/docs/specs/_check_result/README.md`
-   - `specflow/templates/docs/specs/_plans/README.md`
-   - `specflow/templates/docs/specs/_plans/draft/README.md`
-   - `specflow/templates/docs/specs/_plans/active/README.md`
-   - `specflow/templates/docs/specs/_verify_result/README.md`
-   - `specflow/templates/docs/specs/_governance_review/README.md`
+   - `lifecycle/recovery.md`
+   - `<template-root>/docs/specs/_status.md`
+   - `<template-root>/docs/specs/_check_work/README.md`
+   - `<template-root>/docs/specs/_check_result/README.md`
+   - `<template-root>/docs/specs/_plans/README.md`
+   - `<template-root>/docs/specs/_plans/draft/README.md`
+   - `<template-root>/docs/specs/_plans/active/README.md`
+   - `<template-root>/docs/specs/_verify_result/README.md`
+   - `<template-root>/docs/specs/_stable_verify_result/README.md`
+   - `<template-root>/docs/specs/_governance_review/README.md`
 3. human-entry rules
-   - `AGENTS.md`
-   - `GEMINI.md`
-   - `CLAUDE.md`
-   - `specflow/templates/AGENTS.md`
-   - `specflow/templates/GEMINI.md`
-   - `specflow/templates/CLAUDE.md`
+   - `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` for `installed_project`
+   - `example.md` for `source_repo`
+   - `<template-root>/AGENTS.md`
+   - `<template-root>/GEMINI.md`
+   - `<template-root>/CLAUDE.md`
    - `entry_index_registry.md`
-   - `output_baseline.md`
+   - `operations/output_standard.md`
 
 The default scope excludes:
 
 1. `tooling_execution_policy.md`
-2. `specflow/tooling/README.md`
-3. `specflow/tooling/bin/**`
-4. `specflow/tooling/cmd/**`
-5. `specflow/tooling/internal/**`
-6. `rule_new.md`
-7. `rule_extract.md`
-8. `rule_bind.md`
-9. `rule_topology.md`
-10. `rule_sync.md`
-11. `rule_escape.md`
+2. `<tooling-root>/README.md`
+3. `<tooling-root>/bin/**`
+4. `<tooling-root>/cmd/**`
+5. `<tooling-root>/internal/**`
+6. `governance/rules/rule_new.md`
+7. `governance/rules/rule_extract.md`
+8. `governance/rules/rule_bind.md`
+9. `governance/rules/rule_topology.md`
+10. `governance/rules/rule_sync.md`
+11. `governance/rules/rule_escape.md`
 
 If a conclusion, finding, or `pass` claim directly depends on one excluded file, the executor must explicitly widen scope first.
 Do not claim that an excluded file supports the current design conclusion when that file was never made in-scope.
@@ -94,48 +114,48 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `spec_flow_design_review.md`
    - `agent_operability_standard.md`
    - `spec_policy.md`
-   - `command_policy.md`
+   - `lifecycle/overview.md`
    - `advance_policy.md`
-   - `natural_language_routing.md`
-   - `spec_flow_migrate.md`
+   - `operations/entry_routing.md`
+   - `operations/migration.md`
    - `onboarding_decision_policy.md`
-   - `implementation_change_policy.md`
-   - `repository_mapping_policy.md`
+   - `operations/implementation_change.md`
+   - `core/repository_mapping.md`
    - `spec_writing_guide.md`
    - `candidate_intent_policy.md`
    - `candidate_intents/`
    - `slice_work_state_protocol.md`
-   - `natural_language_routing.md` only where it defines the rule-governance branch
-   - `AGENTS.md`
-   - `GEMINI.md`
-   - `CLAUDE.md`
-   - `specflow/templates/AGENTS.md`
-   - `specflow/templates/GEMINI.md`
-   - `specflow/templates/CLAUDE.md`
+   - `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch
+   - `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` for `installed_project`
+   - `example.md` for `source_repo`
+   - `<template-root>/AGENTS.md`
+   - `<template-root>/GEMINI.md`
+   - `<template-root>/CLAUDE.md`
 2. `lifecycle_and_gate_design`
-   - `specflow/framework/commands/*.md`
+   - active command contracts under `<framework-root>/lifecycle/*.md`
+   - lifecycle Context Cards under `<framework-root>/lifecycle/*.md`
    - `candidate_handoff_contract.md`
    - `downgrade_policy.md`
    - `process_snapshot_contract.md`
    - `slice_work_state_protocol.md`
-   - `recovery_policy.md`
-   - `specflow/templates/docs/specs/_status.md`
-   - `specflow/templates/docs/specs/_check_work/README.md`
-   - `specflow/templates/docs/specs/_check_result/README.md`
-   - `specflow/templates/docs/specs/_plans/README.md`
-   - `specflow/templates/docs/specs/_plans/draft/README.md`
-   - `specflow/templates/docs/specs/_plans/active/README.md`
-   - `specflow/templates/docs/specs/_verify_result/README.md`
-   - `checkpoint_protocol.md`
+   - `lifecycle/recovery.md`
+   - `<template-root>/docs/specs/_status.md`
+   - `<template-root>/docs/specs/_check_work/README.md`
+   - `<template-root>/docs/specs/_check_result/README.md`
+   - `<template-root>/docs/specs/_plans/README.md`
+   - `<template-root>/docs/specs/_plans/draft/README.md`
+   - `<template-root>/docs/specs/_plans/active/README.md`
+   - `<template-root>/docs/specs/_verify_result/README.md`
+   - `<template-root>/docs/specs/_stable_verify_result/README.md`
+   - `operations/output_standard.md`
 3. `human_operability_and_extension`
    - `entry_index_registry.md`
-   - `output_baseline.md`
-   - `AGENTS.md`
-   - `GEMINI.md`
-   - `CLAUDE.md`
-   - `specflow/templates/AGENTS.md`
-   - `specflow/templates/GEMINI.md`
-   - `specflow/templates/CLAUDE.md`
+   - `operations/output_standard.md`
+   - `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` for `installed_project`
+   - `example.md` for `source_repo`
+   - `<template-root>/AGENTS.md`
+   - `<template-root>/GEMINI.md`
+   - `<template-root>/CLAUDE.md`
 
 Onboarding and evidence appendix design must be judged as part of `design_foundation`.
 The review must judge whether that design solves the real historical-project and partially implemented project onboarding problem, avoids creating an unnecessary lifecycle state, keeps evidence separate from implementation truth, and makes the current position and next action understandable to normal users and executors.
@@ -157,7 +177,7 @@ If a narrowed review still crosses one of those boundaries and the owner block i
 
 ### 5.1 Full-Scope Review Run State
 
-`spec_flow_design_review` adopts `specflow/framework/slice_work_state_protocol.md` when it uses a review run-state file.
+`spec_flow_design_review` adopts `<framework-root>/slice_work_state_protocol.md` when it uses a review run-state file.
 This review file owns the adoption details, design review blocks, scoring model, hard-blocker rules, optimization rules, and final conclusion rules.
 
 Default full-scope `spec_flow_design_review` uses a run-state process file.
@@ -199,6 +219,7 @@ Rules:
 4. the run-state file must not replace the fixed review blocks, the eight fixed design questions, the hard-blocker rules, or the pass gate
 5. deterministic tooling may maintain only mechanical fields:
    - UTC timestamps
+   - `review_layout`
    - baseline slice skeleton rows
    - score-state skeleton rows
    - input fingerprints
@@ -236,11 +257,12 @@ Design-review adoption rules:
 
 Structural validation rule:
 
-1. `review run-validate --flow spec_flow_design_review` checks file shape and all fixed status values, including closed statuses; it is not a reuse decision.
+1. `review run-validate --flow spec_flow_design_review --layout auto|installed|source` checks file shape, `review_layout`, and all fixed status values, including closed statuses; it is not a reuse decision.
 2. closed run-state files may be structurally valid, but they are not open and must not be reused by startup.
 3. freshness refresh applies only to an open run-state file.
-4. `review run-refresh --flow spec_flow_design_review` is the authoritative entry for updating `input_fingerprint` and marking stale slices.
+4. `review run-refresh --flow spec_flow_design_review --layout auto|installed|source` is the authoritative entry for updating `input_fingerprint` and marking stale slices.
 5. manual hashes, shell checksum output, editor display, temporary scripts, and conversation-derived values must not be written as `input_fingerprint` values or used to decide that a design-review slice remains fresh.
+6. an explicit layout that conflicts with an existing open run-state file's `review_layout` must fail instead of rewriting that file.
 
 ### 5.2 Baseline Slice Catalog
 
@@ -568,44 +590,48 @@ Otherwise the result is `blocked`.
 
 ## 8. Output Contract
 
+This output contract applies to explicit `deep_audit`.
+
 The output must report at least:
 
 1. `review scope`
-2. whether full-scope run state was created, reused, deleted and recreated, or not used
-3. the run-state file path when full-scope run state is used
-4. `review_plan`
-5. the fixed review blocks used
-6. the file coverage per block
-7. the baseline slice table and slice statuses when run state is used
-8. the dynamic risk slice table and slice statuses, or explicit `none`, when run state is used
-9. the score-state table when run state is used
-10. the stale slice result when run state is used
-11. the hard-blocker result
-12. the `routine_work_path_check` result:
+2. `review layout`
+3. `framework root`, `template root`, `tooling root`, and `project-instance compatibility mode`
+4. whether full-scope run state was created, reused, deleted and recreated, or not used
+5. the run-state file path when full-scope run state is used
+6. `review_plan`
+7. the fixed review blocks used
+8. the file coverage per block
+9. the baseline slice table and slice statuses when run state is used
+10. the dynamic risk slice table and slice statuses, or explicit `none`, when run state is used
+11. the score-state table when run state is used
+12. the stale slice result when run state is used
+13. the hard-blocker result
+14. the `routine_work_path_check` result:
    - report `not_triggered` when the trigger condition did not apply
    - otherwise report each reviewed path, current pre-action read chain, B/D/E judgment, timing decisions, lost-control analysis, and whether the check found a hard blocker, non-blocking optimization, or missing evidence
-13. all eight question scores, each with:
+15. all eight question scores, each with:
    - `score`
    - `score_basis`
    - `evidence`
-14. the fixed group averages
-15. the `weighted_score`
-16. the cross-block convergence results
-17. the findings result:
+16. the fixed group averages
+17. the `weighted_score`
+18. the cross-block convergence results
+19. the findings result:
    - explicit `none` when no real finding exists
    - otherwise every finding must satisfy Section 8.1
-18. the optimization result:
+20. the optimization result:
    - explicit `none` when no non-blocking optimization exists
    - otherwise every optimization must satisfy Section 8.2
-19. when the final conclusion is `pass-with-optimization`, `why pass still holds`
-20. when Question 6, 7, or 8 scores below `4` and no non-blocking optimization is reported for that question, the acceptable residual weakness explanation
-21. the final conclusion:
+21. when the final conclusion is `pass-with-optimization`, `why pass still holds`
+22. when Question 6, 7, or 8 scores below `4` and no non-blocking optimization is reported for that question, the acceptable residual weakness explanation
+23. the final conclusion:
    - `pass`
    - `pass-with-optimization`
    - `blocked`
 
-If the output does not explicitly report Items 11 through 18, the review is not complete.
-If the final conclusion is `pass-with-optimization` and the output omits Item 19, the review is not complete.
+If the output does not explicitly report Items 13 through 20, the review is not complete.
+If the final conclusion is `pass-with-optimization` and the output omits Item 21, the review is not complete.
 
 ### 8.1 Finding Contract
 
@@ -617,7 +643,7 @@ The minimum required fields are:
 
 1. `title`
 2. `severity`
-   - required when the finding is graded under `severity_policy.md`
+   - required for every real finding and must be one of `P0`, `P1`, `P2`, or `P3`
 3. `affected_questions`
    - the exact question numbers from Section 7.1 that this finding harms
 4. `score_impact`
@@ -632,13 +658,14 @@ The minimum required fields are:
 
 Additional rules:
 
-1. if `severity` is present, the finding must satisfy the shared explanation baseline from `severity_policy.md`
+1. `severity` must satisfy the shared explanation baseline from `severity_policy.md`
 2. `severity` explains design harm; it does not replace the fixed score model
 3. `score` explains current design quality; it does not replace explicit blocking judgment
-4. `recommended fix` must be specific enough that later repair work can execute it without a second clarification round
-5. when a finding concerns avoidable rule weight or incorrect rule-consumption timing, `recommended fix` must state the smallest correct repair: keep as `action_before_hard_rule`, downgrade to `on_demand_rule_lookup`, convert to `post_action_check`, keep only as `example_or_wording`, merge or link as `duplicate_or_restatement`, or remove or narrow an `overweight_rule`
-6. when a finding comes from `routine_work_path_check`, `recommended fix` must state whether the minimal repair is a lighter B rule set, a narrower D action boundary, an E automatic impact check, or a hard pre-action stop that the current design failed to isolate
-7. when no real finding exists, the output must say so explicitly instead of omitting the finding section
+4. `P0` and `P1` are normally blocking; `P2` and `P3` are normally non-blocking unless the finding explains why the current review must stop
+5. `recommended fix` must be specific enough that later repair work can execute it without a second clarification round
+6. when a finding concerns avoidable rule weight or incorrect rule-consumption timing, `recommended fix` must state the smallest correct repair: keep as `action_before_hard_rule`, downgrade to `on_demand_rule_lookup`, convert to `post_action_check`, keep only as `example_or_wording`, merge or link as `duplicate_or_restatement`, or remove or narrow an `overweight_rule`
+7. when a finding comes from `routine_work_path_check`, `recommended fix` must state whether the minimal repair is a lighter B rule set, a narrower D action boundary, an E automatic impact check, or a hard pre-action stop that the current design failed to isolate
+8. when no real finding exists, the output must say so explicitly instead of omitting the finding section
 
 ### 8.2 Optimization Contract
 
@@ -679,5 +706,6 @@ This flow does not:
 4. review tooling source or binaries by default
 5. create a new command chain
 6. update `_status.md`
-7. write `_check_result`, `_plans`, or `_verify_result`
+7. write `_check_result`, `_plans`, `_verify_result`, or `_stable_verify_result`
 8. use checkpoints in v1
+9. replace the default `scoped_review` front door in `framework/governance/review.md`

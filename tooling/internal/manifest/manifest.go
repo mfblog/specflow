@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-)
 
-const RelativePath = "specflow/tooling/manifest.tsv"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
+)
 
 type Item struct {
 	SourceRelative      string
@@ -17,10 +17,15 @@ type Item struct {
 }
 
 func Load(repoRoot string) ([]Item, error) {
-	path := filepath.Join(repoRoot, filepath.FromSlash(RelativePath))
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+	relativePath := specflowlayout.Relative(layout.ToolingRoot, "manifest.tsv")
+	path := filepath.Join(repoRoot, filepath.FromSlash(relativePath))
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open %s: %w", RelativePath, err)
+		return nil, fmt.Errorf("open %s: %w", relativePath, err)
 	}
 	defer file.Close()
 
@@ -42,10 +47,10 @@ func Load(repoRoot string) ([]Item, error) {
 		})
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scan %s: %w", RelativePath, err)
+		return nil, fmt.Errorf("scan %s: %w", relativePath, err)
 	}
 	if len(items) == 0 {
-		return nil, fmt.Errorf("no manifest entries found in %s", RelativePath)
+		return nil, fmt.Errorf("no manifest entries found in %s", relativePath)
 	}
 	return items, nil
 }

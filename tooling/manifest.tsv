@@ -7,6 +7,7 @@ templates/docs/specs/_plans/README.md	docs/specs/_plans/README.md	framework
 templates/docs/specs/_plans/draft/README.md	docs/specs/_plans/draft/README.md	framework
 templates/docs/specs/_plans/active/README.md	docs/specs/_plans/active/README.md	framework
 templates/docs/specs/_verify_result/README.md	docs/specs/_verify_result/README.md	framework
+templates/docs/specs/_stable_verify_result/README.md	docs/specs/_stable_verify_result/README.md	framework
 templates/docs/specs/_status.md	docs/specs/_status.md	project
 templates/docs/specs/_check_work/README.md	docs/specs/_check_work/README.md	framework
 templates/docs/specs/repository_mapping.md	docs/specs/repository_mapping.md	project

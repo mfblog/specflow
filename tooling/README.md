@@ -3,17 +3,28 @@
 This directory contains the standalone Go CLI that performs deterministic governance actions for `specFlow`.
 
 The tooling layer exists only for fixed execution work whose meaning is already constrained by governance rules.
+It validates Context Card process evidence mechanically, including independent reviewer receipt fields for advancing gates, but it does not judge business semantics.
+
+In tooling contracts, `<tooling-root>` means `tooling/` in a `source_repo` layout and `specflow/tooling/` in an `installed_project` layout.
+Installed-project usage examples below continue to show `specflow/tooling/...` directly.
 
 ## Build
 
-`specflow/tooling/bin/` is a local binary cache.
+`<tooling-root>/bin/` is a local binary cache.
 It is ignored by git and must not be committed.
 
-Rebuild local binaries from the repository root:
+Installed-project rebuild example from the repository root:
 
 ```bash
 cd specflow/tooling
 go run ./cmd/specflowctl build-release --repo-root ../..
+```
+
+Source-repository rebuild example from the repository root:
+
+```bash
+cd tooling
+go run ./cmd/specflowctl build-release --repo-root ..
 ```
 
 Official platform binaries are GitHub Release assets.
@@ -60,9 +71,9 @@ The tooling layer may:
 6. cleanup
 7. sync
 8. render read-only local views
-9. maintain mechanical slice work-state fields when the adopting owner defines the state carrier and stale rules
+9. maintain mechanical review slice work-state fields when the adopting owner defines the state carrier and stale rules
 10. maintain mechanical review run-state fields
-11. maintain mechanical unit-check work-state fields
+11. maintain mechanical unit-check checklist fields
 
 The tooling layer must not:
 
@@ -73,9 +84,9 @@ The tooling layer must not:
 5. become a second semantic source of truth
 6. write reader-derived conclusions back into project files
 
-Slice work-state tooling follows `specflow/framework/slice_work_state_protocol.md`.
-The protocol defines generic carrier, slice, stale, and tooling-boundary standards.
-Each command or review policy still owns its own adoption rules, carrier paths, slice catalog, closure criteria, and final conclusions.
+Slice work-state tooling for review run-state follows `specflow/framework/slice_work_state_protocol.md`.
+The protocol defines generic carrier, slice, stale, and tooling-boundary standards for adopting review flows.
+Each review policy still owns its own adoption rules, carrier paths, slice catalog, closure criteria, and final conclusions.
 The CLI must not infer adoption or create a new durable state carrier from the protocol alone.
 
 `impact_sync` is a governance concept first.
@@ -83,7 +94,7 @@ The current CLI exposes only the deterministic pieces already justified by rules
 For shared-change reconciliation, the current mechanical entry remains `rule sync-impact`, but that entry must first compute `rule_sync` scope and exceptions and only then hand the fixed downstream object set to internal `impact_sync`.
 
 `specflow-reader` is a read-only local view over current truth files.
-It may parse `docs/specs/**`, build an in-memory graph, serve local HTML from `specflow/tooling/reader/web`, and refresh that view when truth files change.
+It may parse `docs/specs/**`, build an in-memory graph, serve local HTML from `<tooling-root>/reader/web`, and refresh that view when truth files change.
 It must not edit files, advance lifecycle state, or store semantic conclusions outside process memory.
 
 ## Current Command Surface
@@ -97,19 +108,21 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
 4. `entry check`
    - inspect registered entry managed-block consistency
 5. `entry sync`
-   - sync registered project-side entry managed blocks from one explicit source
+   - sync registered entry managed blocks from one explicit source
+   - in `installed_project`, registered entries resolve at the repository root
+   - in `source_repo`, registered entries resolve under `templates/`
 6. `repository-mapping validate`
    - validate `docs/specs/repository_mapping.md` path rules against `_status.md` and declared rule files
-7. `review collect-default-scope --flow <review_flow>`
+7. `review collect-default-scope --flow <review_flow> --layout auto|installed|source`
    - collect the deterministic default scope for the explicit review flow
-8. `review run-init --flow <review_flow>`
+8. `review run-init --flow <review_flow> --layout auto|installed|source`
    - create or reuse the full-scope run-state file for the explicit review flow
-9. `review run-validate --flow <review_flow>`
+9. `review run-validate --flow <review_flow> --layout auto|installed|source`
    - validate required run-state fields, timestamps, all fixed statuses including closed statuses, baseline slices, score state when present, and dynamic slice parent links
-11. `review run-refresh --flow <review_flow>`
+11. `review run-refresh --flow <review_flow> --layout auto|installed|source`
    - recompute slice input fingerprints for an open run-state file, mark changed `passed` slices as `stale`, and refresh `last_updated_at`
    - for `spec_flow_review`, the generated baseline includes `supporting_truth_lifecycle_convergence` so stable/candidate supporting truth paths are reviewed as an explicit cross-convergence slice
-12. `review run-touch --flow <review_flow>`
+12. `review run-touch --flow <review_flow> --layout auto|installed|source`
    - refresh only `last_updated_at`
 13. `command preflight`
    - mechanically verify a standard command's entry state from `_status.md` and required process snapshot validation results
@@ -126,16 +139,18 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - execute deterministic layered fallback cleanup for one unit
 18. `process cleanup-success`
    - execute deterministic success cleanup for one unit
+   - `unit_promote` cleanup requires the stable promotion summary at `docs/specs/_verify_result/stable/unit/{unit}.md` before candidate verify evidence or candidate truth files are deleted
+   - if `command close --command unit_promote --outcome promoted --apply` reports `status_updated: true` and then a success-cleanup failure, fix the filesystem blocker and rerun `process cleanup-success --object-type unit --object <unit> --mode unit_promote`; do not rerun `unit_promote` close because status already points to `unit_fork`
 19. `process check-work-init`
-   - create or reuse `docs/specs/_check_work/unit/{unit}.md` for `unit_check`
-   - writes only the baseline slice skeleton, timestamps, truth fingerprint, and input fingerprints
+	- create or reuse `docs/specs/_check_work/unit/{unit}.md` for `unit_check`
+	- writes only the baseline checklist skeleton, timestamps, truth fingerprint, and input fingerprints
 20. `process check-work-validate`
-   - validate `unit_check` work-state shape, legal statuses, repository-relative input paths, and dynamic slice parent links
+	- validate `unit_check` checklist shape, legal statuses, and repository-relative input paths
 21. `process check-work-refresh`
-   - recompute work-state fingerprints, mark changed `passed` slices as `stale`, propagate stale status to dependent cross-check slices, and update `last_updated_at`
+	- recompute checklist fingerprints, mark changed `clear` items as `stale`, and update `last_updated_at`
 22. `process check-work-touch`
-   - refresh only `last_updated_at` for a valid `unit_check` work-state file
-   - the `process check-work-*` commands use the `unit_check` adoption rules for `slice_work_state_protocol.md`; they do not create a general-purpose work-state carrier
+	- refresh only `last_updated_at` for a valid `unit_check` checklist file
+	- the `process check-work-*` commands do not adopt `slice_work_state_protocol.md`; they only maintain an optional unit-check checklist
 23. `status set-unit`
    - write one deterministic `unit` row in `_status.md` as a low-level status tool
 24. `status set-object`
@@ -151,14 +166,15 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
 27. `rule release-version`
    - publish an already-existing stable Rule version by retargeting current-layer consumers from `--from-ref` to `--to-ref`
    - candidate current-layer objects are rewritten directly
-   - stable current-layer objects are auto-forked to candidate before their candidate `rule_refs` are rewritten
+   - stable current-layer objects are auto-forked to candidate only when their current `_status.md` `Next Command` is `unit_fork`
    - same-object stable appendices explicitly linked by the stable main Spec are retargeted into candidate appendices during the auto-fork, including Markdown link targets and direct same-object path literals
    - stale same-object candidate appendices are removed before the auto-fork writes current candidate appendices
-   - stable unit forks additionally write `candidate_intent=change`
+   - stable unit forks write `candidate_intent=change`; a current effective stable-verify `controlled_repair_required` result fails closed before mutation, while `controlled_change_required` allows the change fork
+   - stable auto-fork status routing and process cleanup reuse the `unit_fork` command close contract
 28. `unit release-version`
    - publish an already-existing stable unit version by retargeting current-layer `unit_refs` from `--from-ref` to `--to-ref`
-   - candidate current-layer units are rewritten directly, unsafe current-round check work, check, plan, and verify process files are removed when present, and the unit is routed to `unit_check`
-   - stable current-layer units are rewritten directly without forking or candidate creation and are routed to `unit_stable_verify`
+   - candidate current-layer units are rewritten directly, unsafe current-round check checklist, check, plan, and verify process files are removed when present, and the unit is routed to `unit_check`
+   - stable current-layer units are not rewritten; stale stable-verify evidence is removed when present and the unit is routed to `unit_stable_verify`
    - when no current-layer unit still uses the old stable unit ref, the command reports a no-op result
 29. `relation candidates`
    - compute the current candidate advancement relation graph from explicit refs
@@ -182,7 +198,7 @@ Rules:
 1. running `specflow-reader` starts a local HTTP server and prints the URL.
 2. the reader does not open a browser automatically.
 3. when `--repo-root` is omitted, it defaults to `../../..` from the current working directory.
-4. the server reads front-end files from `specflow/tooling/reader/web`.
+4. the server reads front-end files from `<tooling-root>/reader/web`.
 5. the server reads current project truth from `docs/specs/**`.
 6. each `/api/snapshot` request rebuilds the displayed snapshot from disk before returning data.
 7. the server does not watch files and does not expose a server-sent event stream.
@@ -192,7 +208,7 @@ Rules:
 
 Reader front-end rules:
 
-1. `specflow/tooling/reader/web` is the only runtime source for reader HTML, CSS, and JavaScript.
+1. `<tooling-root>/reader/web` is the only runtime source for reader HTML, CSS, and JavaScript.
 2. `specflow-reader` does not embed a fallback copy of the front-end.
 3. editing front-end files does not require rebuilding `specflow-reader`; refresh the browser after the file change.
 4. `doctor` reports missing required reader front-end files as installation failures.
@@ -212,6 +228,26 @@ The `review run-*` commands require an explicit review flow:
 1. `spec_flow_review`
 2. `spec_flow_design_review`
 
+They also accept `--layout auto|installed|source`.
+
+Layout meanings:
+
+1. `installed`
+   - resolves to `installed_project`
+   - reads framework inputs from `specflow/framework/`
+   - reads templates from `specflow/templates/`
+   - reads tooling from `specflow/tooling/`
+   - reviews real project-instance compatibility under `docs/specs/`
+2. `source`
+   - resolves to `source_repo`
+   - reads framework inputs from local `framework/`
+   - reads templates from local `templates/`
+   - reads tooling from local `tooling/`
+   - reviews template bootstrap compatibility under `templates/docs/specs/` and does not require real project-instance `docs/specs/`
+3. `auto`
+   - detects one of the two layouts
+   - stops on ambiguous detection instead of choosing silently
+
 They maintain only mechanical fields in:
 
 ```text
@@ -222,27 +258,29 @@ docs/specs/_governance_review/spec_flow_design_review.md
 Rules:
 
 1. timestamps are written from Go runtime UTC time using `YYYY-MM-DDTHH:MM:SSZ`
-2. input fingerprints are computed from repository-relative input files
-3. `run-refresh` may change `passed` slices to `stale` when inputs change or disappear
-4. tooling must not change `pending`, `blocked`, or `skipped_not_in_scope` into a passing judgment
-5. tooling may create and validate the `spec_flow_design_review` score-state skeleton
-6. tooling must not write findings, severities, non-blocking optimizations, question scores, score basis, hard-blocker judgments, or final conclusions owned by the active review policy
+2. run-state files record `review_layout` as `installed_project` or `source_repo`
+3. input fingerprints are computed from repository-relative input files
+4. `run-refresh` may change `passed` slices to `stale` when inputs change or disappear
+5. tooling must not change `pending`, `blocked`, or `skipped_not_in_scope` into a passing judgment
+6. tooling may create and validate the `spec_flow_design_review` score-state skeleton
+7. tooling must not write findings, severities, non-blocking optimizations, question scores, score basis, hard-blocker judgments, or final conclusions owned by the active review policy
    - `spec_flow_review` final conclusions are `pass | blocked`
    - `spec_flow_design_review` final conclusions are `pass | pass-with-optimization | blocked`
-7. each review flow uses one fixed run-state file
-8. when the fixed run-state file is missing, tooling creates the file for a new full-scope review
-9. when a new full-scope review starts after a closed or invalid run-state file, tooling deletes the old fixed file before writing the new run state
-10. `run-validate` checks structural validity only; a closed run-state file can validate successfully while still remaining unavailable for reuse
-11. when the fixed run-state file is valid and open, `run-init` applies the owning review policy's age rule:
+8. each review flow uses one fixed run-state file
+9. when the fixed run-state file is missing, tooling creates the file for a new full-scope review
+10. when a new full-scope review starts after a closed or invalid run-state file, tooling deletes the old fixed file before writing the new run state
+11. `run-validate` checks structural validity only; a closed run-state file can validate successfully while still remaining unavailable for reuse
+12. when the fixed run-state file is valid and open, `run-init` applies the owning review policy's age rule:
    - no more than two hours old: reuse automatically
    - for `spec_flow_review`, more than two hours and no more than 24 hours old: stop for a manual reuse-or-delete decision
    - for `spec_flow_review`, more than 24 hours and no more than seven days old: stop for a manual reuse-or-delete decision and recommend deleting the old run state and starting a new run
    - for `spec_flow_design_review`, more than two hours and no more than seven days old: stop for a manual reuse-or-delete decision
    - more than seven days old: delete as expired and create a new run state
-12. after reusing an open run-state file, callers must run `review run-refresh` before continuing review work so changed inputs become stale slices instead of hidden drift
-13. `review run-refresh` is the authoritative command for updating `input_fingerprint`; callers must not write manual hash output into run-state files
-14. `spec_flow_review` baseline run state includes `supporting_truth_lifecycle_convergence` to force explicit review of fork, promote, cleanup, rule release, and tooling paths for stable and candidate supporting truth
-15. review run-state slice fields follow the generic protocol only through the adoption rules in the active review policy
+13. after reusing an open run-state file, callers must run `review run-refresh` before continuing review work so changed inputs become stale slices instead of hidden drift
+14. `review run-refresh` is the authoritative command for updating `input_fingerprint`; callers must not write manual hash output into run-state files
+15. an explicit `--layout` that conflicts with an existing open run-state file's `review_layout` fails instead of rewriting that file
+16. `spec_flow_review` baseline run state includes `supporting_truth_lifecycle_convergence` to force explicit review of fork, promote, cleanup, rule release, and tooling paths for stable and candidate supporting truth
+17. review run-state slice fields follow the generic protocol only through the adoption rules in the active review policy
 
 ## Command Preflight
 
@@ -264,7 +302,7 @@ Output includes `preflight_result`, `validated_processes`, `failure_layer`, `rec
 Rules:
 
 1. lifecycle commands that consume process files should run this before treating a gate, active plan, or verify result as usable
-2. a failed preflight is not cleanup by itself; cleanup remains owned by command policy and `process cleanup-fallback`
+2. a failed preflight is not cleanup by itself; cleanup remains owned by lifecycle recovery and `process cleanup-fallback`
 3. manual hashes, shell checksums, editor display, and temporary scripts may diagnose a mismatch but must not replace this entry
 
 ## Relation Commands
@@ -297,26 +335,26 @@ The default `spec_flow_review` tooling review input set is:
 1. the framework tooling policy and this README
 2. the current tooling source input set listed below
 3. the tooling helper script input set listed below
-4. reader runtime files under `specflow/tooling/reader/web/**`
+4. reader runtime files under `<tooling-root>/reader/web/**`
 
 The current tooling source input set is:
 
-1. `specflow/tooling/cmd/**/*.go`
-2. `specflow/tooling/internal/**/*.go`
-3. `specflow/tooling/go.mod`
-4. `specflow/tooling/manifest.tsv`
-5. `specflow/tooling/go.sum` when it exists
+1. `<tooling-root>/cmd/**/*.go`
+2. `<tooling-root>/internal/**/*.go`
+3. `<tooling-root>/go.mod`
+4. `<tooling-root>/manifest.tsv`
+5. `<tooling-root>/go.sum` when it exists
 
 The tooling helper script input set is every regular file under:
 
 ```text
-specflow/tooling/scripts/**
+<tooling-root>/scripts/**
 ```
 
 This includes install, pull-with-release, push-with-release, build-release, and tooling-fingerprint scripts.
 
 The manifest is included because it controls which framework-managed and project-managed files `init` and `doctor` inspect or write.
-Reader front-end files under `specflow/tooling/reader/web/**` are runtime files, not binary freshness inputs.
+Reader front-end files under `<tooling-root>/reader/web/**` are runtime files, not binary freshness inputs.
 Tooling helper scripts are review inputs because they rebuild or select binaries for the installed tooling source.
 They are not binary freshness inputs unless they change compiled binary behavior.
 
@@ -336,7 +374,7 @@ Rules:
 
 1. `command close` is the standard command-closing surface for lifecycle state progression
 2. `status set-object` and `status set-unit` remain available only as low-level deterministic status write tools
-3. standard command files must use `command close` instead of directly calling `status set-object`
+3. lifecycle Context Cards must use `command close` instead of directly calling `status set-object`
 4. `command close` may infer only the fixed state write defined by the command name and explicit `--outcome`; it must not infer the outcome itself
 5. dry-run is the default; callers must pass `--apply` before `_status.md` or process files are changed
 6. ordinary lifecycle progression must not bypass `command close` by editing `_status.md` manually or by using `status set-object` / `status set-unit`
@@ -372,10 +410,12 @@ Execution rules:
 6. promotion recovery requires `--stable-before yes|no`
 7. generic `truth_fallback` outcomes require an explicit `--reason`, because the command result owns the fallback reason code
 8. `unit_plan` `truth_fallback` requires `--reason truth_incomplete`
-9. for commands that consume current process files, non-fallback close outcomes run `command preflight` internally before status progression, cleanup, or success reporting
-10. fallback and recovery close outcomes do not require currently valid input process files, because their purpose is to move the object back to the smallest legal recovery point
-11. `input_validation_action`, `input_validated_processes`, and `input_validation_mismatches` report the internal close-time preflight result separately from output process validation
-12. `command_close_result` is `dry_run`, `applied`, or `failed`; `failed` means the close operation returned an error, even when the caller passed `--apply`
+9. fallback reasons must use the canonical recovery codes: `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete`, `plan_drift`, `gate_missing`, `implementation_deviation`, `evidence_incomplete`, or `stable_verify_invalid`
+10. each fallback reason is accepted only with its recovery-defined failure layer; `plan_drift` belongs to `plan_layer` and `gate_missing` belongs to `gate_layer`
+11. for commands that consume current process files, non-fallback close outcomes run `command preflight` internally before status progression, cleanup, or success reporting
+12. fallback and recovery close outcomes do not require currently valid input process files, because their purpose is to move the object back to the smallest legal recovery point
+13. `input_validation_action`, `input_validated_processes`, and `input_validation_mismatches` report the internal close-time preflight result separately from output process validation
+14. `command_close_result` is `dry_run`, `applied`, or `failed`; `failed` means the close operation returned an error, even when the caller passed `--apply`
 
 ## Usage Examples
 
@@ -397,18 +437,19 @@ Examples:
 ```bash
 ./specflow/tooling/bin/specflowctl-linux-amd64 doctor
 ./specflow/tooling/bin/specflow-reader-linux-amd64 --repo-root . --addr 127.0.0.1:17863
-./specflow/tooling/bin/specflowctl-linux-amd64 review collect-default-scope --flow spec_flow_review
-./specflow/tooling/bin/specflowctl-linux-amd64 review collect-default-scope --flow spec_flow_design_review
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-init --flow spec_flow_review
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-init --flow spec_flow_design_review
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-validate --flow spec_flow_review
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-refresh --flow spec_flow_design_review
-./specflow/tooling/bin/specflowctl-linux-amd64 review run-touch --flow spec_flow_design_review
+./specflow/tooling/bin/specflowctl-linux-amd64 review collect-default-scope --flow spec_flow_review --layout auto
+./specflow/tooling/bin/specflowctl-linux-amd64 review collect-default-scope --flow spec_flow_design_review --layout auto
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-init --flow spec_flow_review --layout auto
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-init --flow spec_flow_design_review --layout auto
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-validate --flow spec_flow_review --layout auto
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-refresh --flow spec_flow_design_review --layout auto
+./specflow/tooling/bin/specflowctl-linux-amd64 review run-touch --flow spec_flow_design_review --layout auto
 ./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command unit_impl --object-type unit --object ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 command close --command unit_stable_verify --object-type unit --object ai --outcome controlled_repair_required --candidate-intent repair
 ./specflow/tooling/bin/specflowctl-linux-amd64 command close --command unit_stable_verify --object-type unit --object ai --outcome controlled_repair_required --candidate-intent repair --apply
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --object-type unit --object ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot validate-process --object-type unit --object ai --process verify
+./specflow/tooling/bin/specflowctl-linux-amd64 snapshot validate-process --object-type unit --object ai --process stable_verify
 ./specflow/tooling/bin/specflowctl-linux-amd64 process cleanup-fallback --object-type unit --object ai --from-command unit_promote --reason evidence_incomplete --failure-layer evidence_layer
 ./specflow/tooling/bin/specflowctl-linux-amd64 status set-object --type unit --object ai --stable yes --candidate no --active-layer stable --next-command unit_fork
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_app_config_topology@0.2.0 --units ai
@@ -421,8 +462,9 @@ Examples:
 
 ## Freshness Rule
 
-Compiled binaries under `specflow/tooling/bin/` are local cache files.
+Compiled binaries under `<tooling-root>/bin/` are local cache files.
 They must fail closed when the embedded tooling fingerprint no longer matches current source.
+The fingerprint hashes tooling-root-relative keys such as `cmd/...`, `internal/...`, `go.mod`, and `manifest.tsv`, so identical tooling content has one fingerprint in both layouts.
 
 The local development recovery path is:
 

@@ -27,6 +27,8 @@ type Process struct {
 	Result                 string
 	FailureLayer           string
 	RecommendedNextCommand string
+	FreshnessImpact        string
+	EvidenceReuse          string
 	Diagnostics            []string
 }
 
@@ -139,11 +141,15 @@ func validateProcess(repoRoot, objectType, object, processKind string) Process {
 		process.Result = "valid"
 		process.FailureLayer = "none"
 		process.RecommendedNextCommand = "none"
+		process.FreshnessImpact = validation.FreshnessImpact
+		process.EvidenceReuse = validation.EvidenceReuse
 		return process
 	}
 	process.Diagnostics = append(process.Diagnostics, validation.Mismatches...)
 	process.FailureLayer = noneIfEmpty(validation.FailureLayer)
 	process.RecommendedNextCommand = noneIfEmpty(validation.NextCommand)
+	process.FreshnessImpact = validation.FreshnessImpact
+	process.EvidenceReuse = validation.EvidenceReuse
 	return process
 }
 
@@ -157,6 +163,8 @@ func fallbackForMissingOrUnavailableProcess(objectType, processKind string) (str
 			return "plan_layer", "unit_plan"
 		case "verify":
 			return "evidence_layer", "unit_verify"
+		case "stable_verify":
+			return "evidence_layer", "unit_stable_verify"
 		}
 	}
 	return "tooling_gap", "none"

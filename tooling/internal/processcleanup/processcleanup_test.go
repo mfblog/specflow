@@ -6,8 +6,61 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 )
+
+func TestValidateFallbackReasonAcceptsCanonicalReasonLayers(t *testing.T) {
+	cases := []struct {
+		reason string
+		layer  string
+	}{
+		{reason: "truth_drift", layer: "truth_layer"},
+		{reason: "binding_drift", layer: "truth_layer"},
+		{reason: "baseline_drift", layer: "truth_layer"},
+		{reason: "rule_drift", layer: "truth_layer"},
+		{reason: "truth_incomplete", layer: "truth_layer"},
+		{reason: "plan_drift", layer: "plan_layer"},
+		{reason: "gate_missing", layer: "gate_layer"},
+		{reason: "implementation_deviation", layer: "implementation_layer"},
+		{reason: "evidence_incomplete", layer: "evidence_layer"},
+		{reason: "stable_verify_invalid", layer: "evidence_layer"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.reason, func(t *testing.T) {
+			if err := ValidateFallbackReason(tc.reason, tc.layer); err != nil {
+				t.Fatalf("ValidateFallbackReason: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateFallbackReasonRejectsUnsupportedAndMismatchedReasonLayers(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		reason string
+		layer  string
+		want   string
+	}{
+		{name: "legacy reason", reason: "truth_changed", layer: "truth_layer", want: "unsupported fallback reason"},
+		{name: "gate reason on plan layer", reason: "gate_missing", layer: "plan_layer", want: "requires failure layer \"gate_layer\""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateFallbackReason(tc.reason, tc.layer)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("expected %q failure, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
+func TestApplyFallbackRejectsLegacyReasonWithoutInferringTruthLayer(t *testing.T) {
+	_, err := ApplyFallback(t.TempDir(), "ai", "unit_verify", "truth_changed")
+	if err == nil || !strings.Contains(err.Error(), "unsupported fallback reason") {
+		t.Fatalf("expected unsupported legacy reason failure, got %v", err)
+	}
+}
 
 func TestApplyFallbackForPromoteEvidenceIncomplete(t *testing.T) {
 	repoRoot := t.TempDir()
@@ -47,6 +100,46 @@ func TestApplyFallbackForPromoteEvidenceIncomplete(t *testing.T) {
 	}
 	if _, err := os.Stat(verifyPath); !os.IsNotExist(err) {
 		t.Fatalf("expected verify file to be deleted, stat err=%v", err)
+	}
+}
+
+func TestApplyFallbackForStableVerifyInvalidDeletesOnlyStableVerifyEvidence(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+
+	status := strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `ai` | `yes` | `no` | `stable` | `unit_stable_verify` | note |",
+	}, "\n") + "\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+
+	stableVerifyPath := filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/ai.md")
+	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/unit/ai.md")
+	mustWriteFile(t, stableVerifyPath, "stable verify")
+	mustWriteFile(t, verifyPath, "candidate verify")
+
+	result, err := ApplyFallback(repoRoot, "ai", "unit_stable_verify", "stable_verify_invalid")
+	if err != nil {
+		t.Fatalf("ApplyFallback: %v", err)
+	}
+	if result.NextCommand != "unit_stable_verify" {
+		t.Fatalf("expected next command unit_stable_verify, got %s", result.NextCommand)
+	}
+	if len(result.DeletedFiles) != 1 || result.DeletedFiles[0] != "docs/specs/_stable_verify_result/unit/ai.md" {
+		t.Fatalf("unexpected deleted files: %v", result.DeletedFiles)
+	}
+	if _, err := os.Stat(stableVerifyPath); !os.IsNotExist(err) {
+		t.Fatalf("expected stable verify file to be deleted, stat err=%v", err)
+	}
+	if _, err := os.Stat(verifyPath); err != nil {
+		t.Fatalf("expected candidate verify file to remain, stat err=%v", err)
 	}
 }
 
@@ -173,7 +266,7 @@ func TestApplyObjectFallbackForUnitPlanLayer(t *testing.T) {
 		mustWriteFile(t, filepath.Join(repoRoot, relPath), relPath)
 	}
 
-	result, err := ApplyObjectFallback(repoRoot, "unit", "ai", "unit_impl", "gate_missing", "plan_layer")
+	result, err := ApplyObjectFallback(repoRoot, "unit", "ai", "unit_impl", "plan_drift", "plan_layer")
 	if err != nil {
 		t.Fatalf("ApplyObjectFallback: %v", err)
 	}
@@ -191,6 +284,38 @@ func TestApplyObjectFallbackForUnitPlanLayer(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(repoRoot, relPath)); !os.IsNotExist(err) {
 			t.Fatalf("expected %s to be deleted, stat err=%v", relPath, err)
 		}
+	}
+}
+
+func TestApplyObjectFallbackRejectsInvalidCanonicalReasonInput(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+	status := strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `ai` | `no` | `yes` | `candidate` | `unit_impl` | note |",
+	}, "\n") + "\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+
+	for _, tc := range []struct {
+		name   string
+		reason string
+		layer  string
+		want   string
+	}{
+		{name: "legacy reason", reason: "truth_changed", layer: "truth_layer", want: "unsupported fallback reason"},
+		{name: "layer mismatch", reason: "gate_missing", layer: "plan_layer", want: "requires failure layer \"gate_layer\""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ApplyObjectFallback(repoRoot, "unit", "ai", "unit_impl", tc.reason, tc.layer)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("expected %q failure, got %v", tc.want, err)
+			}
+		})
 	}
 }
 
@@ -246,6 +371,9 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/ai.md"), "plan")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/draft/ai.md"), "draft plan")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/ai.md"), "verify")
+	summaryRef := snapshot.StablePromotionSummaryFilePath("unit", "ai")
+	mustMkdirAll(t, filepath.Dir(filepath.Join(repoRoot, filepath.FromSlash(summaryRef))))
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(summaryRef)), "stable promotion summary")
 
 	result, err := ApplySuccessCleanup(repoRoot, "ai", "unit_promote")
 	if err != nil {
@@ -266,6 +394,38 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(relPath))); !os.IsNotExist(err) {
 			t.Fatalf("expected %s to be deleted, stat err=%v", relPath, err)
 		}
+	}
+}
+
+func TestApplySuccessCleanupForPromoteRequiresStableSummary(t *testing.T) {
+	repoRoot := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+
+	status := strings.Join([]string{
+		"# Spec Status",
+		"",
+		"## Formal Objects",
+		"",
+		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
+		"|---|---|---|---|---|---|---|",
+		"| `unit` | `ai` | `yes` | `no` | `stable` | `unit_fork` | promoted |",
+	}, "\n") + "\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
+	candidateMainRef, err := specpaths.MainSpecFileRef("candidate", "ai")
+	if err != nil {
+		t.Fatalf("MainSpecFileRef: %v", err)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(candidateMainRef)), "candidate")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/ai.md"), "verify")
+
+	_, err = ApplySuccessCleanup(repoRoot, "ai", "unit_promote")
+	if err == nil || !strings.Contains(err.Error(), "stable promotion summary is required before unit_promote cleanup") {
+		t.Fatalf("expected stable summary prerequisite error, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(candidateMainRef))); err != nil {
+		t.Fatalf("candidate main must remain when summary is missing, stat err=%v", err)
 	}
 }
 

@@ -43,35 +43,6 @@ function Invoke-CheckedOutput {
     ($output -join "`n").Trim()
 }
 
-function New-FingerprintRoot {
-    param(
-        [string]$RepoRoot
-    )
-
-    $parentRoot = (Resolve-Path (Join-Path $RepoRoot "..")).Path
-    if (Test-Path -LiteralPath (Join-Path $parentRoot "specflow/tooling/manifest.tsv") -PathType Leaf) {
-        return [pscustomobject]@{
-            Path = $parentRoot
-            Temporary = $false
-        }
-    }
-
-    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("specflow-fingerprint-" + [System.Guid]::NewGuid().ToString("N"))
-    New-Item -ItemType Directory -Path $tempRoot | Out-Null
-    try {
-        New-Item -ItemType SymbolicLink -Path (Join-Path $tempRoot "specflow") -Target $RepoRoot | Out-Null
-    }
-    catch {
-        Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
-        throw "Cannot create temporary specflow link for fingerprint calculation. Rename the repository directory to 'specflow' or enable symbolic links."
-    }
-
-    [pscustomobject]@{
-        Path = $tempRoot
-        Temporary = $true
-    }
-}
-
 $ManagedBegin = "<!-- SPECFLOW:BEGIN -->"
 $ManagedEnd = "<!-- SPECFLOW:END -->"
 
@@ -205,7 +176,6 @@ if ($Help) {
 $scriptDir = Split-Path -Parent $PSCommandPath
 $repoRoot = (Resolve-Path (Join-Path $scriptDir "../..")).Path
 $projectRoot = (Resolve-Path (Join-Path $repoRoot "..")).Path
-$fingerprintRoot = $null
 
 try {
     Set-Location $repoRoot
@@ -236,8 +206,7 @@ try {
         exit 0
     }
 
-    $fingerprintRoot = New-FingerprintRoot $repoRoot
-    $fingerprintScript = Join-Path $fingerprintRoot.Path "specflow/tooling/scripts/tooling_fingerprint.ps1"
+    $fingerprintScript = Join-Path $repoRoot "tooling/scripts/tooling_fingerprint.ps1"
     $fingerprint = (& $fingerprintScript -Short).Trim()
     $tag = "specflow-tooling-$fingerprint"
 
@@ -265,7 +234,4 @@ try {
     Write-Host "Release workflow triggered by $tag."
 }
 finally {
-    if ($null -ne $fingerprintRoot -and $fingerprintRoot.Temporary) {
-        Remove-Item -LiteralPath $fingerprintRoot.Path -Recurse -Force -ErrorAction SilentlyContinue
-    }
 }

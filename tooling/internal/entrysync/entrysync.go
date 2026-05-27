@@ -11,12 +11,13 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
 )
 
 const (
 	managedBegin = "<!-- SPECFLOW:BEGIN -->"
 	managedEnd   = "<!-- SPECFLOW:END -->"
-	registryPath = "specflow/framework/entry_index_registry.md"
 )
 
 var registeredEntryPattern = regexp.MustCompile("^- `([^`]*)`$")
@@ -34,7 +35,15 @@ type SyncResult struct {
 }
 
 func Inspect(repoRoot string) (Inspection, error) {
-	registeredFiles, err := loadRegisteredFiles(repoRoot)
+	return inspect(repoRoot, true)
+}
+
+func inspect(repoRoot string, inferChanged bool) (Inspection, error) {
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return Inspection{}, err
+	}
+	registeredFiles, err := loadRegisteredFiles(repoRoot, layout)
 	if err != nil {
 		return Inspection{}, err
 	}
@@ -60,6 +69,9 @@ func Inspect(repoRoot string) (Inspection, error) {
 	if inspection.Consistent {
 		return inspection, nil
 	}
+	if !inferChanged {
+		return inspection, nil
+	}
 
 	currentRoundChanged, err := inferCurrentRoundChanged(repoRoot, registeredFiles)
 	if err != nil {
@@ -73,7 +85,11 @@ func Inspect(repoRoot string) (Inspection, error) {
 }
 
 func Sync(repoRoot, source string) (SyncResult, error) {
-	inspection, err := Inspect(repoRoot)
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return SyncResult{}, err
+	}
+	inspection, err := inspect(repoRoot, source == "")
 	if err != nil {
 		return SyncResult{}, err
 	}
@@ -83,6 +99,8 @@ func Sync(repoRoot, source string) (SyncResult, error) {
 
 	if source == "" {
 		source = inspection.SuggestedSource
+	} else {
+		source = normalizeSource(layout, source)
 	}
 	if source == "" {
 		return SyncResult{}, fmt.Errorf("registered entry docs differ and no unique sync source could be inferred")
@@ -131,7 +149,8 @@ func Sync(repoRoot, source string) (SyncResult, error) {
 	return result, nil
 }
 
-func loadRegisteredFiles(repoRoot string) ([]string, error) {
+func loadRegisteredFiles(repoRoot string, layout specflowlayout.Layout) ([]string, error) {
+	registryPath := specflowlayout.Relative(layout.FrameworkRoot, "entry_index_registry.md")
 	data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(registryPath)))
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", registryPath, err)
@@ -153,7 +172,7 @@ func loadRegisteredFiles(repoRoot string) ([]string, error) {
 		}
 		match := registeredEntryPattern.FindStringSubmatch(trimmed)
 		if len(match) == 2 {
-			files = append(files, match[1])
+			files = append(files, resolveRegisteredEntry(layout, match[1]))
 		}
 	}
 	if len(files) == 0 {
@@ -166,6 +185,21 @@ func loadRegisteredFiles(repoRoot string) ([]string, error) {
 		}
 	}
 	return files, nil
+}
+
+func resolveRegisteredEntry(layout specflowlayout.Layout, relPath string) string {
+	if layout.Kind == specflowlayout.SourceRepo {
+		return specflowlayout.Relative(layout.TemplateRoot, relPath)
+	}
+	return relPath
+}
+
+func normalizeSource(layout specflowlayout.Layout, source string) string {
+	source = filepath.ToSlash(source)
+	if layout.Kind == specflowlayout.SourceRepo && !strings.HasPrefix(source, layout.TemplateRoot+"/") {
+		return specflowlayout.Relative(layout.TemplateRoot, source)
+	}
+	return source
 }
 
 func extractManagedBlock(content string) (string, error) {

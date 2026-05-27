@@ -3,6 +3,7 @@ package repositorymapping
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -27,6 +28,23 @@ func TestValidateAcceptsObjectRegistry(t *testing.T) {
 	}
 	if !result.Valid() {
 		t.Fatalf("expected valid mapping, got diagnostics: %v", result.Diagnostics)
+	}
+}
+
+func TestValidateAcceptsSourceTemplateBootstrap(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatalf("runtime.Caller failed")
+	}
+	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", ".."))
+	templateRoot := filepath.Join(repoRoot, "templates")
+
+	result, err := Validate(templateRoot)
+	if err != nil {
+		t.Fatalf("Validate template bootstrap returned error: %v", err)
+	}
+	if !result.Valid() {
+		t.Fatalf("expected source template bootstrap mapping to validate, got diagnostics: %v", result.Diagnostics)
 	}
 }
 

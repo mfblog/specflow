@@ -5,7 +5,7 @@ usage() {
   cat >&2 <<'USAGE'
 Usage: build_release.sh
 
-Rebuild all local SpecFlow tooling release binaries under specflow/tooling/bin.
+Rebuild all local SpecFlow tooling release binaries under <tooling-root>/bin.
 
 Environment:
   GOCACHE  Go build cache directory. Defaults to /tmp/go-build-cache.
@@ -26,10 +26,10 @@ for arg in "$@"; do
 done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-TOOLING_DIR="${REPO_ROOT}/specflow/tooling"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+TOOLING_DIR="${REPO_ROOT}/tooling"
 
 export GOCACHE="${GOCACHE:-/tmp/go-build-cache}"
 
 cd "${TOOLING_DIR}"
-go run ./cmd/specflowctl build-release --repo-root ../..
+go run ./cmd/specflowctl build-release --repo-root "${REPO_ROOT}"
