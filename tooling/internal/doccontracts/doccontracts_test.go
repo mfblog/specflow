@@ -365,6 +365,60 @@ func TestInstalledEntriesDefineFrameworkRootRelativeRefs(t *testing.T) {
 	}
 }
 
+func TestEntryManagedBlocksDefineActionGuide(t *testing.T) {
+	repoRoot := findRepoRoot(t)
+	for _, relPath := range []string{"templates/AGENTS.md", "templates/CLAUDE.md", "templates/GEMINI.md"} {
+		block := managedSpecFlowBlock(t, readDocContractFile(t, repoRoot, relPath), relPath)
+		for _, phrase := range []string{
+			"### 1. What specFlow Governs",
+			"### 2. When This Applies",
+			"### 3. Before Repo Edits",
+			"### 4. Implementation-Change Classification",
+			"### 5. Drift During Work",
+			"### 6. Examples",
+			"specFlow is the repository workflow for governed engineering changes.",
+			"It does not mean every code edit must change spec documents.",
+			"A unit is one governed engineering responsibility.",
+			"Stable truth is the accepted current description.",
+			"Candidate truth is the proposed next description.",
+			"A rule is reusable truth shared across units.",
+			"A Context Card is the command-specific action card",
+			"repo-tracked code, tests, configs, prompts, fixtures, integration scripts",
+			"If the path may belong to a formal unit",
+			"A code-only implementation edit may stay implementation_only",
+			"Do not route an exact lifecycle command through direct implementation-change classification.",
+			"Do not close an advancing gate from self-assessment.",
+			"Do not guess project terms, object ownership, or lifecycle state from directory shape or chat.",
+			"Use this gate only when no exact lifecycle Context Card is already active.",
+			"Then read `specflow/framework/operations/implementation_change.md`.",
+			"That operation owns the detailed classification.",
+			"Classify the request as implementation_only, truth_writeback_required, or boundary_unclear before editing.",
+			"Implementation-only means the current stable or candidate truth already allows",
+			"Truth writeback required means the project record must change before implementation continues.",
+			"Boundary unclear means current truth is not enough to prove one safe implementation result",
+			"If testing, debugging, review, or exploration discovers behavior, protocol, boundary, acceptance, rule, or ownership change",
+			"stop ordinary implementation and reroute through `specflow/framework/operations/entry_routing.md`",
+			"existing stable unit",
+			"`unit_fork:{unit}`",
+			"Fixing an implementation deviation where current truth already defines the intended behavior",
+			"Changing an external protocol, acceptance rule, or unit boundary is `truth_writeback_required`.",
+		} {
+			if !strings.Contains(block, phrase) {
+				t.Fatalf("%s managed block missing action-guide phrase %q", relPath, phrase)
+			}
+		}
+		for _, forbidden := range []string{
+			"Read `specflow/framework/operations/implementation_change.md` before editing implementation files for a formal unit.",
+			"Before editing any repo-tracked implementation file",
+			"### 1. Before Editing Files",
+		} {
+			if strings.Contains(block, forbidden) {
+				t.Fatalf("%s managed block must not use obsolete weak-entry phrase %q", relPath, forbidden)
+			}
+		}
+	}
+}
+
 func TestFrameworkDocsUseFrameworkRootRelativeRefs(t *testing.T) {
 	repoRoot := findRepoRoot(t)
 	allowed := map[string]bool{
@@ -572,6 +626,22 @@ func TestNaturalLanguageUnitRoutingSelectsLifecycleContextCard(t *testing.T) {
 	} {
 		if !strings.Contains(overview, phrase) {
 			t.Fatalf("lifecycle overview missing natural-language Context Card boundary phrase %q", phrase)
+		}
+	}
+}
+
+func TestImplementationSideRoutingUsesDirectImplementationGate(t *testing.T) {
+	repoRoot := findRepoRoot(t)
+	routing := readDocContractFile(t, repoRoot, "framework/operations/entry_routing.md")
+	for _, phrase := range []string{
+		"no exact lifecycle Context Card is already active",
+		"`framework/onboarding_decision_policy.md`",
+		"repo-tracked code, tests, configs, prompts, fixtures, integration scripts, or other implementation-side files",
+		"That operation owns the implementation-only, truth-writeback-required, and boundary-unclear classification.",
+		"Implementation permission must be proven before editing implementation-side files.",
+	} {
+		if !strings.Contains(routing, phrase) {
+			t.Fatalf("entry_routing.md missing implementation-side routing contract %q", phrase)
 		}
 	}
 }
@@ -1272,6 +1342,23 @@ func TestDesignReviewAlwaysUsesFullScopeBaseline(t *testing.T) {
 		"the dynamic risk slice table and slice statuses, or explicit `none`",
 		"the score-state table",
 		"the stale slice result",
+		"entry_control_chain_check",
+		"`specflow_concept_clarity`",
+		"`implementation_only_path_clarity`",
+		"`entry_applicability`",
+		"`pre_mutation_gate`",
+		"`authority_resolution`",
+		"`exact_command_precedence`",
+		"`drift_reclassification`",
+		"`hard_stop_clarity`",
+		"`owner_reachability`",
+		"the `entry_control_chain_check result`:",
+		"report evidence for `specflow_concept_clarity`, `implementation_only_path_clarity`, `entry_applicability`",
+		"must be `passed`, `blocked`, or `incomplete`",
+		"does not create another review flow, score question, score group, baseline slice, run-state field, or CLI",
+		"must not depend on product, integration, vendor, or domain examples",
+		"every code edit must change spec documents",
+		"code-only or implementation-only work has a smaller legal path",
 		"create a scoped or narrowed `spec_flow_design_review` mode",
 		"required for every real finding and must be one of `P0`, `P1`, `P2`, or `P3`",
 		"`P0` and `P1` are normally blocking",
@@ -1311,7 +1398,7 @@ func TestDesignReviewAlwaysUsesFullScopeBaseline(t *testing.T) {
 		"when run state is used",
 	} {
 		if strings.Contains(content, forbidden) {
-			t.Fatalf("framework/spec_flow_design_review.md still contains obsolete scoped-design phrase %q", forbidden)
+			t.Fatalf("framework/spec_flow_design_review.md contains forbidden design-review phrase %q", forbidden)
 		}
 	}
 }

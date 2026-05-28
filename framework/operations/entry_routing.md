@@ -3,6 +3,10 @@
 This file is the only natural-language entry route into active SpecFlow owners.
 `framework/...` refs are framework-root relative. Installed project entry files define the physical framework root; the specFlow source repository resolves them under local `framework/...`.
 
+Use this file after the installed entry addendum has identified the request as specFlow work and no exact command directly owns the whole request.
+Implementation-side requests that may affect a formal unit must satisfy `framework/operations/implementation_change.md` before any implementation edit when no exact lifecycle Context Card is already active.
+This file consumes that operation's result when the next legal owner is `framework/onboarding_decision_policy.md`, a lifecycle Context Card, rule governance, repository mapping, framework governance, or guidance.
+
 ## Exact Commands
 
 If the request exactly matches `unit_advance:{unit}`, read `framework/advance_policy.md`.
@@ -91,8 +95,10 @@ When guidance applies, read `framework/skills/using-specflow-guidance/SKILL.md`.
 Guidance must not replace an exact command, advance lifecycle state, authorize implementation-side edits, or treat chat-only agreement as durable truth.
 If a guidance conclusion affects behavior truth, boundary truth, acceptance truth, rule truth, global rule truth, or repository ownership, route that conclusion into the proper formal truth writeback path before implementation.
 
-Route implementation-only requests to `framework/operations/implementation_change.md` only when the request asks only for implementation-side edits and does not require truth, boundary, shared rule, system rule, migration, governance, or guidance work.
-Implementation permission must be proven before editing implementation files.
+Route implementation-side requests to `framework/operations/implementation_change.md` when the requested edit touches repo-tracked code, tests, configs, prompts, fixtures, integration scripts, or other implementation-side files for a formal unit and no exact lifecycle Context Card is already active.
+That operation owns the implementation-only, truth-writeback-required, and boundary-unclear classification.
+It may route to `framework/onboarding_decision_policy.md`, a lifecycle Context Card, rule governance, repository mapping, framework governance, or guidance.
+Implementation permission must be proven before editing implementation-side files.
 
 ## Framework Governance
 

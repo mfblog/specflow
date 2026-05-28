@@ -345,19 +345,20 @@ If any in-scope file cannot be assigned to a review block, do not issue `pass`.
    - human operability
    - gate usefulness
    - extension-surface cost
-5. when a design risk concerns heavy gate structure, mandatory read chains, or required pre-action routing, judge whether the rule-consumption timing from Section 7.1 matches the work risk before scoring Questions 6, 7, or 8
-6. run the `routine_work_path_check` from Section 7.1 when its trigger condition is met
-7. when a design risk concerns avoidable rule weight, classify the affected rule text with the rule-weight classes from Section 7.1 before scoring Questions 6, 7, or 8
-8. complete the required cross-block convergence checks
-9. add required dynamic risk slices when newly discovered design risks cannot be tracked by an existing baseline slice
-10. judge the hard-blocker set from Section 7.4 before any scoring-based `pass` claim
-11. score all eight fixed design questions from Section 7.1
-12. compute the fixed group averages from Section 7.2
-13. compute the `weighted_score` from Section 7.3
-14. separate blocking findings from non-blocking optimizations
+5. run the `entry_control_chain_check` from Section 7.1 before judging hard blockers or scoring Questions 6, 7, or 8
+6. when a design risk concerns heavy gate structure, mandatory read chains, or required pre-action routing, judge whether the rule-consumption timing from Section 7.1 matches the work risk before scoring Questions 6, 7, or 8
+7. run the `routine_work_path_check` from Section 7.1 when its trigger condition is met
+8. when a design risk concerns avoidable rule weight, classify the affected rule text with the rule-weight classes from Section 7.1 before scoring Questions 6, 7, or 8
+9. complete the required cross-block convergence checks
+10. add required dynamic risk slices when newly discovered design risks cannot be tracked by an existing baseline slice
+11. judge the hard-blocker set from Section 7.4 before any scoring-based `pass` claim
+12. score all eight fixed design questions from Section 7.1
+13. compute the fixed group averages from Section 7.2
+14. compute the `weighted_score` from Section 7.3
+15. separate blocking findings from non-blocking optimizations
    - every real finding must use the fixed finding contract from Section 8.1
    - every non-blocking optimization must use the optimization contract from Section 8.2
-15. issue the final result only after baseline slices, dynamic risk slices, hard-blocker review, routine-work path check when triggered, question scoring, group checks, weighted-score calculation, findings review, optimization review, and cross-block convergence are all complete
+16. issue the final result only after baseline slices, dynamic risk slices, entry control chain check, hard-blocker review, routine-work path check when triggered, question scoring, group checks, weighted-score calculation, findings review, optimization review, and cross-block convergence are all complete
 
 ## 7. Scoring Model
 
@@ -415,6 +416,45 @@ Rules:
 3. `post_action_check` is preferred when the same control can be enforced by a deterministic or reviewable check before closure.
 4. a review must not classify a rule as `post_action_check` when the violation cannot be detected and repaired before closure.
 5. a review must treat forced pre-action consumption as suspect when the rule can move to `on_demand_rule_lookup` or `post_action_check` without losing the control listed in Rule 1.
+
+`entry_control_chain_check` is mandatory for every `spec_flow_design_review`.
+It judges whether human entry documents and their first-owner links act as executable entry control for an executor with no prior `specFlow` memory.
+It is not a business scenario checklist and must not depend on product, integration, vendor, or domain examples.
+It does not create another review flow, score question, score group, baseline slice, run-state field, or CLI.
+
+The `entry_control_chain_check result` must be one of:
+
+1. `passed`
+2. `blocked`
+3. `incomplete`
+
+The check must judge these abstract capabilities:
+
+1. `specflow_concept_clarity`
+   - human entry documents explain that `specFlow` governs engineering changes that may affect the written project record; they must not imply that every code edit must change spec documents
+2. `implementation_only_path_clarity`
+   - human entry documents explain that code-only or implementation-only work is a legal path when current stable or candidate truth already constrains one implementation result and the request does not change behavior, boundary, protocol, acceptance, rule truth, lifecycle state, implementation permission, or ownership
+3. `entry_applicability`
+   - human entry documents state when a request enters `specFlow`, including when ordinary work becomes governed because it may affect durable truth, ownership, lifecycle, rule truth, or implementation permission
+4. `pre_mutation_gate`
+   - before repo-tracked implementation-side files may be modified, the entry design requires the executor to resolve applicable governance ownership and implementation permission
+5. `authority_resolution`
+   - the entry design routes the executor to the owner that can decide truth, state, ownership, rule, lifecycle, or implementation permission instead of making the executor infer that authority
+6. `exact_command_precedence`
+   - exact commands enter their owning Context Card directly and are not displaced by a broader natural-language or implementation-change route
+7. `drift_reclassification`
+   - when execution discovers possible truth, ownership, rule, lifecycle, or implementation-permission impact, the design requires the executor to stop the current path and reclassify before further mutation
+8. `hard_stop_clarity`
+   - unclear state, owner, truth writeback target, or implementation permission forces a stop instead of a guessed write or guessed route
+9. `owner_reachability`
+   - human entry documents do not need to copy owner rules, but they must expose enough first-level owner routes for the executor to reach the governing lifecycle, implementation-change, repository-mapping, rule-governance, review, guidance, or onboarding owner
+
+Completion rules:
+
+1. if the check is not performed, the review is incomplete and must not issue `pass`, `pass-with-optimization`, or `blocked`
+2. if any capability is `blocked`, the check result is `blocked` and the hard-blocker rules must be evaluated before any scoring-based pass claim
+3. if any capability lacks enough in-scope evidence, the check result is `incomplete` and the review must stop or add a dynamic risk slice before final conclusion
+4. a passing check must explain how the result affects Questions 6, 7, and 8
 
 `routine_work_path_check` is mandatory when any of Questions 6, 7, or 8 is expected to score below `4` because of reading cost, rule weight, routine-work cost, full-chain path cost, mandatory read chains, heavy gate structure, or pre-action reading burden.
 
@@ -477,6 +517,7 @@ Question-specific scoring rules:
 1. Question 1 must judge:
    - whether the target problem is explicit
    - whether that problem is real in repository work rather than self-created by the mechanism
+   - whether the design solves written project record and implementation alignment instead of inventing a false rule that every code edit must change spec documents
    - whether the mechanism still has distinct value instead of duplicating another existing control
 2. Question 2 must judge:
    - whether ownership and repair landing points are explicit
@@ -500,6 +541,8 @@ Question-specific scoring rules:
    - whether a normal user or executor can tell where they are
    - whether they can tell the next step and why it is the next step
    - whether the official documents, rather than author memory, carry the needed orientation
+   - whether entry documents explain the basic meaning of `specFlow` before relying on internal command or lifecycle terms
+   - whether the entry control chain lets an executor identify the current route, next owner, and stop point from official entry documents
    - whether the in-scope rules force a normal user or executor to learn avoidable internal mechanism detail before they can understand current position, next action, and reason
    - whether `judgment_guidance`, `example_or_wording`, and `duplicate_or_restatement` content is kept small enough that it does not hide the governing hard rules
    - whether pre-action reading is limited to `action_before_hard_rule` material and does not hide the current next action behind rules that could safely be consumed on demand or checked after action
@@ -507,6 +550,8 @@ Question-specific scoring rules:
    - whether small changes have a smaller legal path than large changes
    - whether routine work avoids full-chain over-processing
    - whether the mechanism's operational steps scale with actual work size
+   - whether code-only or implementation-only work has a smaller legal path when written truth already constrains one safe implementation result
+   - whether entry pre-action controls scale with work risk instead of sending every request through the same full-chain path
    - whether `hard_rule` requirements are limited to cases where durable truth, ownership, lifecycle, implementation permission, rule truth, system truth, or end-to-end verification risk actually requires them
    - whether a specialized structure is optional or conditional when the current work does not need that structure for safe closure
    - whether routine work avoids mandatory full-chain pre-reading when an `on_demand_rule_lookup` or `post_action_check` path would preserve the same safety
@@ -514,6 +559,8 @@ Question-specific scoring rules:
    - whether the control gained is visible and repeatable
    - whether the documentation, learning, and execution cost stay proportionate to that gain
    - whether the mechanism still looks worth maintaining over time
+   - whether entry reading cost prevents unsafe mutation without pushing legitimate code-only work into a truth-change or full-lifecycle path
+   - whether the entry control chain's reading cost produces repeatable control over authority resolution, pre-mutation permission, and drift reclassification
    - whether each heavy gate or required read produces a distinct control gain that is not already produced by a smaller rule or owner file
    - whether each required pre-action read produces a distinct control gain that cannot be preserved by `on_demand_rule_lookup` or `post_action_check`
    - whether the recommended repair for excess rule weight is the smallest correct one: keep as `action_before_hard_rule`, downgrade to `on_demand_rule_lookup`, convert to `post_action_check`, keep only as `example_or_wording`, merge or link as `duplicate_or_restatement`, or remove or narrow an `overweight_rule`
@@ -575,6 +622,9 @@ Any one of them forces the final conclusion to `blocked`, regardless of the weig
 6. the mechanism forces simple changes through a full heavy path when the work does not change durable truth, object ownership, lifecycle advancement, implementation permission, rule truth, system truth, or end-to-end verification obligations, and the design provides no smaller legal path
 7. the mechanism forces simple changes through full pre-action rule consumption when a smaller `action_before_hard_rule`, `on_demand_rule_lookup`, or `post_action_check` path would preserve the same control, and the design provides no smaller legal path
 8. a triggered `routine_work_path_check` proves that routine implementation-only work cannot be handled with lightweight pre-action prohibitions plus automatic impact checks, and the design provides no smaller legal path
+9. the human entry design lets an executor mutate implementation-side repository files before resolving applicable governance ownership and implementation permission
+10. the human entry design does not require reclassification when execution discovers possible truth, ownership, rule, lifecycle, or implementation-permission impact
+11. the human entry design makes an executor believe every code edit must change spec documents or enter the full lifecycle, and the design provides no smaller implementation-only legal path
 
 ### 7.5 Pass Gate
 
@@ -583,7 +633,8 @@ If no hard blocker exists, passing still requires all of the following:
 1. no individual question score is below `2`
 2. every fixed group average is at least `2.5`
 3. `weighted_score` is at least `75`
-4. when `routine_work_path_check` is triggered, the check is complete and its result is reflected in the hard-blocker result, findings result, optimization result, and Question 6, 7, and 8 score bases
+4. the `entry_control_chain_check` is complete and its result is reflected in the hard-blocker result, findings result, optimization result, and Question 6, 7, and 8 score bases
+5. when `routine_work_path_check` is triggered, the check is complete and its result is reflected in the hard-blocker result, findings result, optimization result, and Question 6, 7, and 8 score bases
 
 When these pass-gate conditions hold:
 
@@ -611,31 +662,35 @@ The output must report at least:
 11. the score-state table
 12. the stale slice result
 13. the hard-blocker result
-14. the `routine_work_path_check` result:
+14. the `entry_control_chain_check result`:
+   - must be `passed`, `blocked`, or `incomplete`
+   - report evidence for `specflow_concept_clarity`, `implementation_only_path_clarity`, `entry_applicability`, `pre_mutation_gate`, `authority_resolution`, `exact_command_precedence`, `drift_reclassification`, `hard_stop_clarity`, and `owner_reachability`
+   - report the impact on Questions 6, 7, and 8
+15. the `routine_work_path_check` result:
    - report `not_triggered` when the trigger condition did not apply
    - otherwise report each reviewed path, current pre-action read chain, B/D/E judgment, timing decisions, lost-control analysis, and whether the check found a hard blocker, non-blocking optimization, or missing evidence
-15. all eight question scores, each with:
+16. all eight question scores, each with:
    - `score`
    - `score_basis`
    - `evidence`
-16. the fixed group averages
-17. the `weighted_score`
-18. the cross-block convergence results
-19. the findings result:
+17. the fixed group averages
+18. the `weighted_score`
+19. the cross-block convergence results
+20. the findings result:
    - explicit `none` when no real finding exists
    - otherwise every finding must satisfy Section 8.1
-20. the optimization result:
+21. the optimization result:
    - explicit `none` when no non-blocking optimization exists
    - otherwise every optimization must satisfy Section 8.2
-21. when the final conclusion is `pass-with-optimization`, `why pass still holds`
-22. when Question 6, 7, or 8 scores below `4` and no non-blocking optimization is reported for that question, the acceptable residual weakness explanation
-23. the final conclusion:
+22. when the final conclusion is `pass-with-optimization`, `why pass still holds`
+23. when Question 6, 7, or 8 scores below `4` and no non-blocking optimization is reported for that question, the acceptable residual weakness explanation
+24. the final conclusion:
    - `pass`
    - `pass-with-optimization`
    - `blocked`
 
-If the output does not explicitly report Items 13 through 20, the review is not complete.
-If the final conclusion is `pass-with-optimization` and the output omits Item 21, the review is not complete.
+If the output does not explicitly report Items 13 through 21, the review is not complete.
+If the final conclusion is `pass-with-optimization` and the output omits Item 22, the review is not complete.
 
 ### 8.1 Finding Contract
 
