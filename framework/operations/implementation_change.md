@@ -1,9 +1,9 @@
 # Direct Implementation Change
 
-This gate applies when a user asks for repo-tracked code, test, or implementation changes outside an exact lifecycle command.
+This gate applies when a user asks for implementation-side proposals or repo-tracked code, test, or implementation changes outside an exact lifecycle command.
 It is the operation owner for the `implementation-only` adoption mode described in `framework/core/adoption_modes.md`.
 
-Implementation-only is a narrow entry path, not a shortcut around truth. It may change code or tests only when the request fits already-written formal truth.
+Implementation-only is a narrow entry path, not a shortcut around truth. It may propose implementation work or change code and tests only when the request fits already-written formal truth.
 
 This is a governance gate, not an independent command.
 
@@ -11,7 +11,7 @@ This is a governance gate, not an independent command.
 
 This gate applies when all of the following are true:
 
-1. the user asks to modify repo-tracked code, tests, or other implementation-side files
+1. the user asks for an implementation-side proposal or asks to modify repo-tracked code, tests, or other implementation-side files
 2. the request is not already entered as a standard unit command
 3. the requested work may affect one or more formal units, bound rule consumers, or implementation constrained by a stable global rule
 
@@ -25,7 +25,7 @@ Repository mode rule:
 
 ## Classification
 
-Classify the request before editing implementation files:
+Classify the request before proposing or editing implementation-side files:
 
 1. `implementation_only` - fits already-written formal truth.
 2. `truth_writeback_required` - changes behavior, boundary, acceptance, rule, or ownership truth.
@@ -55,11 +55,13 @@ Required minimum reads:
 6. read bound rule files only when the current-layer main Spec shows that relevant behavior depends on those rules
 7. read directly relevant implementation or test files only to understand the requested implementation surface or verify that the requested change is limited to an already-defined result
 
-Before any implementation-side edit, the executor must already know that:
+Before any implementation-side proposal or edit, the executor must already know that:
 
 1. repository truth proves the target object, current layer, current `Next Command`, and implementation permission
 2. current truth is explicit enough to constrain one implementation result
 3. the request does not require behavior, boundary, acceptance, rule, ownership, governance, migration, or guidance work first
+
+If these facts are not proven, `implementation_only` must not authorize an implementation proposal or implementation-side edit.
 
 Do not classify from code shape alone when repository truth exists.
 Do not use code experimentation to discover whether the request is a behavior change.

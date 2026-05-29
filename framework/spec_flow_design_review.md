@@ -418,7 +418,7 @@ Rules:
 5. a review must treat forced pre-action consumption as suspect when the rule can move to `on_demand_rule_lookup` or `post_action_check` without losing the control listed in Rule 1.
 
 `entry_control_chain_check` is mandatory for every `spec_flow_design_review`.
-It judges whether human entry documents and their first-owner links act as executable entry control for an executor with no prior `specFlow` memory.
+It judges whether human entry documents and their first-owner links act as executable entry control for an executor without project-specific context.
 It is not a business scenario checklist and must not depend on product, integration, vendor, or domain examples.
 It does not create another review flow, score question, score group, baseline slice, run-state field, or CLI.
 
@@ -430,24 +430,69 @@ The `entry_control_chain_check result` must be one of:
 
 The check must judge these abstract capabilities:
 
-1. `specflow_concept_clarity`
-   - human entry documents explain that `specFlow` governs engineering changes that may affect the written project record; they must not imply that every code edit must change spec documents
-2. `implementation_only_path_clarity`
-   - human entry documents explain that code-only or implementation-only work is a legal path when current stable or candidate truth already constrains one implementation result and the request does not change behavior, boundary, protocol, acceptance, rule truth, lifecycle state, implementation permission, or ownership
-3. `entry_applicability`
-   - human entry documents state when a request enters `specFlow`, including when ordinary work becomes governed because it may affect durable truth, ownership, lifecycle, rule truth, or implementation permission
-4. `pre_mutation_gate`
-   - before repo-tracked implementation-side files may be modified, the entry design requires the executor to resolve applicable governance ownership and implementation permission
-5. `authority_resolution`
-   - the entry design routes the executor to the owner that can decide truth, state, ownership, rule, lifecycle, or implementation permission instead of making the executor infer that authority
-6. `exact_command_precedence`
+1. `startup_entry_control`
+   - human entry documents act as the first control point for governed work; the opening rule makes the next action clear before background explanation
+2. `first_owner_selection`
+   - before any lifecycle action, implementation proposal, repair plan, reconciliation plan, or repository mutation, human entry documents tell the executor how to choose the first owning file
+3. `owner_only_continuation`
+   - after the first owner routes the request, human entry documents require the executor to follow only the routed owner, Context Card, operation, or governance path
+4. `pre_action_permission_gate`
+   - before proposing or mutating implementation-side files, human entry documents require the active owner to prove implementation permission and allowed writes
+5. `route_specificity_before_implementation_gate`
+   - human entry documents do not route requests that already involve truth creation or change, no formal truth, owner decisions, lifecycle decisions, chat-claimed lifecycle state, skipped status or owner checks, contract-like fields, downstream compatibility, repository mapping, guidance, or custom intermediate flows through implementation-change as the default first owner
+6. `diagnostic_work_not_mutation`
+   - human entry documents distinguish read-only inspection or verification from implementation-side mutation, so diagnostic work can proceed only as investigation and cannot become a repair path without owner permission
+7. `exact_command_precedence`
    - exact commands enter their owning Context Card directly and are not displaced by a broader natural-language or implementation-change route
-7. `drift_reclassification`
-   - when execution discovers possible truth, ownership, rule, lifecycle, or implementation-permission impact, the design requires the executor to stop the current path and reclassify before further mutation
-8. `hard_stop_clarity`
-   - unclear state, owner, truth writeback target, or implementation permission forces a stop instead of a guessed write or guessed route
-9. `owner_reachability`
-   - human entry documents do not need to copy owner rules, but they must expose enough first-level owner routes for the executor to reach the governing lifecycle, implementation-change, repository-mapping, rule-governance, review, guidance, or onboarding owner
+8. `drift_stop_and_reroute`
+   - when execution discovers possible behavior, boundary, acceptance, rule, ownership, lifecycle, or implementation-permission impact, the design requires the executor to stop the current path and return to the legal owner before further mutation
+9. `no_ad_hoc_flow_substitution`
+   - human entry documents forbid replacing the recorded next command, active Context Card, or operation owner with a custom reconciliation, audit, alignment, gap-review, or similarly named intermediate flow
+10. `hard_stop_clarity`
+   - unclear intent, state, owner, boundary, truth writeback target, implementation permission, or conflicting owner rules force a stop instead of a guessed write or guessed route
+11. `owner_reachability`
+   - human entry documents do not need to copy owner rules, but they must expose enough first-level owner routes for the executor to reach the governing lifecycle, implementation-change, natural-language routing, governance review, migration, guidance, onboarding, repository-mapping, or rule-governance owner
+12. `entry_robustness_probe`
+   - human entry design must be verified with tool-neutral probes run by an independent executor without project-specific context; the probe judges observed routing and mutation control, not the name of the tool used to run it
+
+The `entry_robustness_probe` must use abstract prompt families, not product, integration, vendor, or domain examples:
+
+1. `mixed_intent_prompt`
+2. `disguised_truth_change_prompt`
+3. `chat_claimed_state_prompt`
+4. `skip_owner_or_status_prompt`
+5. `custom_flow_substitution_prompt`
+6. `exact_command_with_noise_prompt`
+7. `clean_implementation_only_control_prompt`
+
+For each prompt family, the probe must record:
+
+1. `prompt_family`
+2. `expected_control`
+3. `observed_first_owner`
+4. `diagnostic_allowed`
+5. `mutation_allowed`
+6. `result`
+7. `failure_class`
+8. `probe_source`
+9. `executor_independence`
+
+Allowed probe evidence may come from an independent agent session, reviewer role-play, recorded replay harness, local multi-executor tool, or manual black-box exercise.
+Allowed `probe_source` values are `independent_agent_session`, `reviewer_role_play`, `recorded_replay_harness`, `local_multi_executor_tool`, and `manual_black_box_exercise`.
+`executor_independence` must be `confirmed_independent_no_project_specific_context`.
+Every allowed probe evidence source must satisfy the independent executor requirement; reviewer role-play, recorded replay, local tooling, and manual exercise must not bypass it.
+If a prompt-family record lacks `executor_independence` or cannot prove `confirmed_independent_no_project_specific_context`, that capability lacks enough in-scope evidence and the `entry_control_chain_check result` is `incomplete`.
+The standard is tool-neutral: it must not require a specific platform capability, tool command, or command name.
+
+Probe failure classes are:
+
+1. `wrong_first_owner`
+2. `mutation_leak`
+3. `diagnostic_overblock`
+4. `chat_truth_trusted`
+5. `custom_flow_accepted`
+6. `exact_command_displaced`
+7. `implementation_gate_overmatch`
 
 Completion rules:
 
@@ -455,6 +500,12 @@ Completion rules:
 2. if any capability is `blocked`, the check result is `blocked` and the hard-blocker rules must be evaluated before any scoring-based pass claim
 3. if any capability lacks enough in-scope evidence, the check result is `incomplete` and the review must stop or add a dynamic risk slice before final conclusion
 4. a passing check must explain how the result affects Questions 6, 7, and 8
+
+When reflecting this check into Questions 6, 7, and 8:
+
+1. Question 6 judges whether an executor without project-specific context can find the first owner, next action, and stop points from the entry control text.
+2. Question 7 judges whether route specificity and diagnostic allowance scale the entry cost with work risk instead of forcing every request through the full governance chain or a hard stop.
+3. Question 8 judges whether the required startup reading buys repeatable execution control that is worth its cost.
 
 `routine_work_path_check` is mandatory when any of Questions 6, 7, or 8 is expected to score below `4` because of reading cost, rule weight, routine-work cost, full-chain path cost, mandatory read chains, heavy gate structure, or pre-action reading burden.
 
@@ -622,9 +673,16 @@ Any one of them forces the final conclusion to `blocked`, regardless of the weig
 6. the mechanism forces simple changes through a full heavy path when the work does not change durable truth, object ownership, lifecycle advancement, implementation permission, rule truth, system truth, or end-to-end verification obligations, and the design provides no smaller legal path
 7. the mechanism forces simple changes through full pre-action rule consumption when a smaller `action_before_hard_rule`, `on_demand_rule_lookup`, or `post_action_check` path would preserve the same control, and the design provides no smaller legal path
 8. a triggered `routine_work_path_check` proves that routine implementation-only work cannot be handled with lightweight pre-action prohibitions plus automatic impact checks, and the design provides no smaller legal path
-9. the human entry design lets an executor mutate implementation-side repository files before resolving applicable governance ownership and implementation permission
-10. the human entry design does not require reclassification when execution discovers possible truth, ownership, rule, lifecycle, or implementation-permission impact
+9. the human entry design lets an executor propose implementation-side work or mutate implementation-side repository files before selecting the first owner and proving implementation permission
+10. the human entry design does not require stop-and-reroute when execution discovers possible truth, ownership, rule, lifecycle, boundary, acceptance, or implementation-permission impact
 11. the human entry design makes an executor believe every code edit must change spec documents or enter the full lifecycle, and the design provides no smaller implementation-only legal path
+12. the human entry design opens with background explanation, concept teaching, or a classification table instead of a first-owner action rule, so the executor cannot immediately know which owner to read first
+13. the human entry design lets an executor replace the recorded next command, active Context Card, or operation owner with an ad hoc reconciliation, audit, alignment, gap-review, or similarly named intermediate flow
+14. the human entry design routes requests that already involve formal truth creation or change, no formal truth, owner decisions, lifecycle decisions, chat-claimed lifecycle state, skipped status or owner checks, contract-like fields, downstream compatibility, repository mapping, guidance, or custom intermediate flows through implementation-change as the default first owner
+15. the human entry design forbids read-only inspection or verification needed to classify a request and provides no smaller legal diagnostic path before mutation
+16. the `entry_robustness_probe` shows that an independent executor can propose implementation-side work or mutate implementation-side repository files before selecting the first owner and proving implementation permission
+17. the `entry_robustness_probe` shows that the entry design trusts chat-only state or permission, accepts a custom intermediate flow as owner, or displaces an exact command with a broader route
+18. the `entry_robustness_probe` shows that implementation-change overmatching hides the real owner for work that already needs owner judgment; if the result is conservative overblocking without mutation leakage, report a finding or optimization instead of a hard blocker unless no smaller legal diagnostic path exists
 
 ### 7.5 Pass Gate
 
@@ -664,7 +722,8 @@ The output must report at least:
 13. the hard-blocker result
 14. the `entry_control_chain_check result`:
    - must be `passed`, `blocked`, or `incomplete`
-   - report evidence for `specflow_concept_clarity`, `implementation_only_path_clarity`, `entry_applicability`, `pre_mutation_gate`, `authority_resolution`, `exact_command_precedence`, `drift_reclassification`, `hard_stop_clarity`, and `owner_reachability`
+   - report evidence for `startup_entry_control`, `first_owner_selection`, `owner_only_continuation`, `pre_action_permission_gate`, `route_specificity_before_implementation_gate`, `diagnostic_work_not_mutation`, `exact_command_precedence`, `drift_stop_and_reroute`, `no_ad_hoc_flow_substitution`, `hard_stop_clarity`, `owner_reachability`, and `entry_robustness_probe`
+   - report probe evidence using `prompt_family`, `expected_control`, `observed_first_owner`, `diagnostic_allowed`, `mutation_allowed`, `result`, `failure_class`, `probe_source`, and `executor_independence`
    - report the impact on Questions 6, 7, and 8
 15. the `routine_work_path_check` result:
    - report `not_triggered` when the trigger condition did not apply

@@ -4,8 +4,10 @@ This file is the only natural-language entry route into active SpecFlow owners.
 `framework/...` refs are framework-root relative. Installed project entry files define the physical framework root; the specFlow source repository resolves them under local `framework/...`.
 
 Use this file after the installed entry addendum has identified the request as specFlow work and no exact command directly owns the whole request.
-Implementation-side requests that may affect a formal unit must satisfy `framework/operations/implementation_change.md` before any implementation edit when no exact lifecycle Context Card is already active.
-This file consumes that operation's result when the next legal owner is `framework/onboarding_decision_policy.md`, a lifecycle Context Card, rule governance, repository mapping, framework governance, or guidance.
+Requests limited to implementation-side work must satisfy `framework/operations/implementation_change.md` before proposing or editing implementation-side files when no exact lifecycle Context Card is already active.
+Requests that already ask for formal truth creation or change, no formal truth, behavior, protocol, boundary, acceptance, rule, ownership, lifecycle, lifecycle state, Next Command, stable/candidate state, unit phase, repository mapping, guidance, skipping `_status.md` or owner checks, or a custom reconciliation, audit, alignment, or gap-review route through this file before implementation-change classification.
+Requests that may change field meaning, schema fields, output fields, fixture fields, contract-like log fields, or downstream compatibility route through this file unless the user explicitly limits the work to internal non-semantic implementation support.
+This file consumes implementation-change results when the next legal owner is `framework/onboarding_decision_policy.md`, a lifecycle Context Card, rule governance, repository mapping, framework governance, or guidance.
 
 ## Exact Commands
 
@@ -95,10 +97,11 @@ When guidance applies, read `framework/skills/using-specflow-guidance/SKILL.md`.
 Guidance must not replace an exact command, advance lifecycle state, authorize implementation-side edits, or treat chat-only agreement as durable truth.
 If a guidance conclusion affects behavior truth, boundary truth, acceptance truth, rule truth, global rule truth, or repository ownership, route that conclusion into the proper formal truth writeback path before implementation.
 
-Route implementation-side requests to `framework/operations/implementation_change.md` when the requested edit touches repo-tracked code, tests, configs, prompts, fixtures, integration scripts, or other implementation-side files for a formal unit and no exact lifecycle Context Card is already active.
+Route requests that are limited to implementation-side proposals or edits to `framework/operations/implementation_change.md` when the requested work touches repo-tracked code, tests, configs, prompts, fixtures, integration scripts, or other implementation-side files for a formal unit and no exact lifecycle Context Card is already active.
 That operation owns the implementation-only, truth-writeback-required, and boundary-unclear classification.
 It may route to `framework/onboarding_decision_policy.md`, a lifecycle Context Card, rule governance, repository mapping, framework governance, or guidance.
-Implementation permission must be proven before editing implementation-side files.
+Implementation permission must be proven before proposing or editing implementation-side files.
+Testing, debugging, review, and exploration may inspect or verify. They do not authorize mutation. If they discover behavior, protocol, boundary, acceptance, rule, ownership, lifecycle, or implementation-permission impact, stop before proposing a repair path and route to the owning lifecycle, rule-governance, repository-mapping, guidance, onboarding, or implementation-change owner.
 
 ## Framework Governance
 

@@ -17,7 +17,7 @@ This skill is a bridge into existing specFlow routing. It does not create a new 
 2. Restate the approved conclusion as current truth content, not as a transcript of the discussion.
 3. Read `framework/operations/entry_routing.md` and route by goal diagnosis, work shape, and intent fragments.
 4. Read `framework/core/repository_mapping.md` when ownership, object boundaries, or support surfaces matter.
-5. Read `framework/operations/implementation_change.md` before any implementation-side edit.
+5. Read `framework/operations/implementation_change.md` before any implementation-side proposal or edit.
 6. Write only current approved truth into the proper candidate, appendix, Rule, repository mapping, or global rule proposal path.
 7. Do not copy design discussion history, rejected options, or patch-note language into candidate truth.
 8. After writeback, route to the smallest legal next step, normally `unit_check` for affected candidate unit truth.
