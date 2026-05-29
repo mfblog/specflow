@@ -8,6 +8,8 @@ let activeDocMode = "rendered";
 let mermaidReady = false;
 let activeSpecflowNavGroup = "unit";
 let activeReviewNavGroup = "candidate";
+let expandedReviewObjectKeys = new Set();
+let initializedReviewNavGroups = new Set();
 let activeTodoNavGroup = "stableVerify";
 let activeRegistryNavGroup = "problem";
 let snapshotRequestInFlight = false;
@@ -325,7 +327,8 @@ const TRANSLATIONS = {
       docKinds: {
         main: "主文",
         appendix: "附录",
-        evidence: "证据"
+        evidence: "证据",
+        evidenceAppendix: "证据附录"
       },
       targets: {
         candidate: "这是当前正在确认的 Spec，确认完成前不能当作正式基线。",
@@ -733,7 +736,8 @@ const TRANSLATIONS = {
       docKinds: {
         main: "Main",
         appendix: "Appendix",
-        evidence: "Evidence"
+        evidence: "Evidence",
+        evidenceAppendix: "Evidence appendix"
       },
       targets: {
         candidate: "This Spec is still being confirmed and is not the formal baseline yet.",
@@ -1122,8 +1126,8 @@ function renderSpecflowNav() {
 function renderReviewNav() {
   const items = reviewItems();
   const sections = reviewTypeOrder()
-    .map((type) => ({ type, items: items.filter((item) => item.reviewType === type) }))
-    .filter((section) => section.items.length > 0);
+    .map((type) => ({ type, groups: reviewObjectGroups(items.filter((item) => item.reviewType === type)) }))
+    .filter((section) => section.groups.length > 0);
   if (sections.length === 0) {
     const empty = document.createElement("div");
     empty.className = "nav-empty";
@@ -1134,10 +1138,10 @@ function renderReviewNav() {
   if (!sections.some((section) => section.type === activeReviewNavGroup)) {
     activeReviewNavGroup = (sections[0] || {}).type || "capability";
   }
-  sections.forEach((section) => renderReviewNavSection(section.type, section.items));
+  sections.forEach((section) => renderReviewNavSection(section.type, section.groups));
 }
 
-function renderReviewNavSection(type, items) {
+function renderReviewNavSection(type, groups) {
   const expanded = type === activeReviewNavGroup;
   const section = document.createElement("section");
   section.className = expanded ? "nav-section expanded" : "nav-section";
@@ -1146,7 +1150,7 @@ function renderReviewNavSection(type, items) {
   header.className = "nav-section-title";
   header.type = "button";
   header.setAttribute("aria-expanded", String(expanded));
-  header.innerHTML = `<span>${escapeHTML(reviewTypeLabel(type))}</span><em>${items.length}</em>`;
+  header.innerHTML = `<span>${escapeHTML(reviewTypeLabel(type))}</span><em>${groups.length}</em>`;
   header.addEventListener("click", () => {
     activeReviewNavGroup = type;
     renderNav();
@@ -1154,14 +1158,39 @@ function renderReviewNavSection(type, items) {
   section.appendChild(header);
 
   if (expanded) {
-    items.forEach((item) => {
-      const button = document.createElement("button");
-      button.className = `nav-item ${objectKindClass(item.object.kind)}${item.id === selectedNodeID ? " active" : ""}`;
-      button.type = "button";
-      button.title = `${item.fileLabel}\n${item.path}`;
-      button.innerHTML = `${renderNavItemTitle(item.fileLabel, item.object.kind)}<span>${escapeHTML(reviewNavSubtitle(item))}</span>`;
-      button.addEventListener("click", () => focusReviewItem(item.id));
-      section.appendChild(button);
+    ensureReviewSectionExpansion(type, groups);
+    groups.forEach((group) => {
+      const groupExpanded = expandedReviewObjectKeys.has(group.key);
+      const objectButton = document.createElement("button");
+      objectButton.className = `nav-object ${objectKindClass(group.object.kind)}${groupExpanded ? " expanded" : ""}`;
+      objectButton.type = "button";
+      objectButton.title = group.objectLabel;
+      objectButton.setAttribute("aria-expanded", String(groupExpanded));
+      objectButton.innerHTML = `${renderNavItemTitle(group.objectLabel, group.object.kind)}<em>${group.items.length}</em>`;
+      objectButton.addEventListener("click", () => {
+        initializedReviewNavGroups.add(type);
+        if (expandedReviewObjectKeys.has(group.key)) {
+          expandedReviewObjectKeys.delete(group.key);
+        } else {
+          expandedReviewObjectKeys.add(group.key);
+        }
+        renderNav();
+      });
+      section.appendChild(objectButton);
+
+      if (!groupExpanded) return;
+      const fileList = document.createElement("div");
+      fileList.className = "review-file-list";
+      group.items.forEach((item) => {
+        const button = document.createElement("button");
+        button.className = `nav-item review-file-item ${objectKindClass(item.object.kind)}${item.id === selectedNodeID ? " active" : ""}`;
+        button.type = "button";
+        button.title = `${item.fileLabel}\n${item.path}`;
+        button.innerHTML = `<strong>${escapeHTML(reviewTreeFileLabel(item))}</strong><span>${escapeHTML(reviewTreeFileSubtitle(item))}</span>`;
+        button.addEventListener("click", () => focusReviewItem(item.id));
+        fileList.appendChild(button);
+      });
+      section.appendChild(fileList);
     });
   }
   navPanel.appendChild(section);
@@ -2868,9 +2897,57 @@ function renderReviewBoard() {
   graphView.innerHTML = "";
 }
 
+function reviewObjectGroups(items) {
+  const groups = new Map();
+  list(items).forEach((item) => {
+    if (!item || !item.object) return;
+    const key = reviewObjectGroupKey(item);
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        reviewType: item.reviewType,
+        object: item.object,
+        objectLabel: item.objectLabel || item.object.label || item.object.id || t("fallback.undeclared"),
+        items: []
+      });
+    }
+    groups.get(key).items.push(item);
+  });
+  const result = [...groups.values()];
+  result.forEach((group) => {
+    group.items.sort(compareReviewItems);
+  });
+  result.sort(compareReviewGroups);
+  return result;
+}
+
+function reviewObjectGroupKey(item) {
+  if (!item || !item.object) return "";
+  return `review-object:${item.reviewType}:${item.object.kind}:${item.object.id}`;
+}
+
+function compareReviewGroups(left, right) {
+  return reviewTypeOrder().indexOf(left.reviewType) - reviewTypeOrder().indexOf(right.reviewType)
+    || Number(Boolean(right.items.some((item) => item.nextCommand))) - Number(Boolean(left.items.some((item) => item.nextCommand)))
+    || String(left.objectLabel || "").localeCompare(String(right.objectLabel || ""))
+    || String(left.key || "").localeCompare(String(right.key || ""));
+}
+
+function ensureReviewSectionExpansion(type, groups) {
+  if (initializedReviewNavGroups.has(type)) return;
+  const selectedGroup = groups.find((group) => group.items.some((item) => item.id === selectedNodeID));
+  const defaultGroup = selectedGroup || groups[0];
+  if (defaultGroup) expandedReviewObjectKeys.add(defaultGroup.key);
+  initializedReviewNavGroups.add(type);
+}
+
 function focusReviewItem(itemID) {
   const item = reviewItemByID(itemID);
-  if (item) activeReviewNavGroup = item.reviewType;
+  if (item) {
+    activeReviewNavGroup = item.reviewType;
+    initializedReviewNavGroups.add(item.reviewType);
+    expandedReviewObjectKeys.add(reviewObjectGroupKey(item));
+  }
   selectedNodeID = itemID;
   renderNav();
   renderGraph();
@@ -2901,7 +2978,7 @@ function reviewItems() {
     const targetType = reviewTargetTypeForObject(object);
     if (!targetType) return;
     if (object.kind === "unit" && object.layer === "candidate") {
-      uniqueSources(object.truth_paths).filter((source) => isPrimaryReviewSource(source, object, "candidate")).forEach((source) => {
+      uniqueSources(object.truth_paths).filter((source) => isReviewSourceForLayer(source, object, "candidate")).forEach((source) => {
         addItem({
           reviewType: "candidate",
           targetType,
@@ -2914,7 +2991,7 @@ function reviewItems() {
       return;
     }
     if (object.kind === "unit" && object.layer === "stable") {
-      uniqueSources(object.truth_paths).filter((source) => isPrimaryReviewSource(source, object, "stable")).forEach((source) => {
+      uniqueSources(object.truth_paths).filter((source) => isReviewSourceForLayer(source, object, "stable")).forEach((source) => {
         addItem({
           reviewType: "stable",
           targetType,
@@ -2927,7 +3004,7 @@ function reviewItems() {
       return;
     }
     if (object.kind !== "rule" || object.layer !== "stable") return;
-    uniqueSources(object.truth_paths).filter((source) => isPrimaryReviewSource(source, object, "stable")).forEach((source) => {
+    uniqueSources(object.truth_paths).filter((source) => isReviewSourceForLayer(source, object, "stable")).forEach((source) => {
       addItem({
         reviewType: "stableRule",
         targetType,
@@ -2966,18 +3043,48 @@ function compareReviewItems(left, right) {
   return reviewTypeOrder().indexOf(left.reviewType) - reviewTypeOrder().indexOf(right.reviewType)
     || Number(Boolean(right.nextCommand)) - Number(Boolean(left.nextCommand))
     || String(left.objectLabel || "").localeCompare(String(right.objectLabel || ""))
+    || reviewDocKindRank(left) - reviewDocKindRank(right)
     || String(left.path || "").localeCompare(String(right.path || ""));
+}
+
+function reviewDocKindRank(item) {
+  const kind = reviewDocKind(item && item.source ? item.source : item);
+  if (kind === "main") return 0;
+  if (kind === "appendix") return 1;
+  if (kind === "evidence") return 2;
+  return 3;
+}
+
+function isReviewSourceForLayer(source, object, layer) {
+  const path = String(source && source.path ? source.path : "");
+  if (!path.includes(`/${layer}/`)) return false;
+  if (object.kind === "unit") return isUnitReviewSource(source, object, layer);
+  if (object.kind === "rule") return isRuleReviewSource(source, object, layer);
+  return false;
+}
+
+function isUnitReviewSource(source, object, layer) {
+  const path = String(source && source.path ? source.path : "");
+  const name = fileName(path);
+  const prefix = layer === "stable" ? "s" : "c";
+  const objectID = normalizedObjectID(object);
+  if (!objectID) return false;
+  if (isAppendixPath(path)) return name.startsWith(`${prefix}_unit_${objectID}_`) && name.endsWith(".md");
+  return name === `${prefix}_unit_${objectID}.md`;
+}
+
+function isRuleReviewSource(source, object, layer) {
+  const path = String(source && source.path ? source.path : "");
+  if (isAppendixPath(path)) return false;
+  const prefix = layer === "stable" ? "s" : "c";
+  const objectID = normalizedObjectID(object);
+  if (!objectID) return false;
+  return fileName(path) === `${prefix}_${objectID}.md`;
 }
 
 function isPrimaryReviewSource(source, object, layer) {
   const path = String(source && source.path ? source.path : "");
-  if (!path.includes(`/${layer}/`)) return false;
-  if (isEvidenceReference(source)) return false;
-  const name = fileName(path);
-  const prefix = layer === "stable" ? "s" : "c";
-  if (object.kind === "unit") return new RegExp(`^${prefix}_unit_[^/]+\\.md$`).test(name);
-  if (object.kind === "rule") return new RegExp(`^${prefix}_[gb]_rule_[^/]+\\.md$`).test(name);
-  return false;
+  return isReviewSourceForLayer(source, object, layer) && !isAppendixPath(path);
 }
 
 function isAppendixReference(source) {
@@ -3013,6 +3120,19 @@ function reviewFocusItems(type) {
 function reviewNavSubtitle(item) {
   const state = item.stateLabel || reviewTypeLabel(item.reviewType);
   return [state, reviewDocKindLabel(item), item.objectLabel].filter(Boolean).join(" · ");
+}
+
+function reviewTreeFileLabel(item) {
+  const kind = reviewDocKind(item && item.source ? item.source : item);
+  if (kind === "main") return t("review.docKinds.main");
+  const label = item && item.fileLabel ? item.fileLabel : reviewFileLabel(item && item.source, item && item.object);
+  if (kind === "evidence") return `${t("review.docKinds.evidenceAppendix")} ${label}`;
+  return `${t("review.docKinds.appendix")} ${label}`;
+}
+
+function reviewTreeFileSubtitle(item) {
+  const state = item && item.stateLabel ? item.stateLabel : reviewTypeLabel(item.reviewType);
+  return [state, item && item.path].filter(Boolean).join(" · ");
 }
 
 function reviewDocKindLabel(item) {
@@ -4567,10 +4687,14 @@ function navigateToSpecDocument(path) {
   const targetNode = graph.nodes.find((node) => node.source && node.source.path === path)
     || graph.nodes.find((node) => node.id === `file:${path}`);
   if (targetNode) {
-    selectedNodeID = targetNode.id;
-    renderNav();
-    renderDetailForNode(targetNode.id);
-    focusGraphNode(targetNode.id, 1.05);
+    if (currentView === "spec" && reviewItemByID(targetNode.id)) {
+      focusReviewItem(targetNode.id);
+    } else {
+      selectedNodeID = targetNode.id;
+      renderNav();
+      renderDetailForNode(targetNode.id);
+      focusGraphNode(targetNode.id, 1.05);
+    }
   } else {
     const sourceObject = list(snapshot.objects).find((object) => list(object.truth_paths).some((ref) => ref.path === path));
     if (sourceObject) {

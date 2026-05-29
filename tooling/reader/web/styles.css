@@ -291,6 +291,72 @@ button:hover {
   font-weight: 600;
 }
 
+.nav-object {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 8px;
+  background: #ffffff;
+  text-align: left;
+}
+
+.nav-object.expanded {
+  border-color: #bfdbfe;
+  background: #f8fafc;
+}
+
+.nav-object .nav-item-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.nav-object strong {
+  display: block;
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-object em {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 6px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.review-file-list {
+  margin: 0 0 9px 12px;
+  border-left: 1px solid #dbe3ef;
+  padding-left: 10px;
+}
+
+.review-file-item {
+  margin-bottom: 5px;
+  border-color: #e2e8f0;
+  padding: 6px 8px;
+  background: #ffffff;
+}
+
+.review-file-item strong {
+  font-size: 12px;
+}
+
 .nav-item {
   width: 100%;
   margin: 0 0 6px;
