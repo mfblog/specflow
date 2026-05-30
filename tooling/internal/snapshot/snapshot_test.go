@@ -728,7 +728,7 @@ layer: candidate
 		"- `evaluation_mode`: `independent`",
 		"- `reviewer_result`: `pass`",
 		"- `reviewer_context`: `minimal_context`",
-		"- `review_input_refs`: `" + expected.SpecFileRef + "`",
+		"- `review_input_refs`: `" + reviewInputRefsForTest(expected.Object, "unit_check_pass", expected.SpecFileRef) + "`",
 		"- `review_findings`: `none`",
 		"- `human_decision_refs`: `none`",
 		"",
@@ -802,7 +802,7 @@ layer: candidate
 		"    " + unsupportedField + ": c_unit_demo_prompt",
 		"    fingerprint: " + expected.ModuleAppendixSnapshot[0].Fingerprint,
 		"rule_snapshot: none",
-		renderIndependentEvaluationReceiptForTest(expected.SpecFileRef),
+		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_check_pass", expected.SpecFileRef),
 	}, "\n"))
 
 	result, err := ValidateProcessFile(repoRoot, "demo", "check")
@@ -908,7 +908,7 @@ func TestValidateProcessFileAllowsAcceptedTextDrift(t *testing.T) {
 	}
 	body := strings.Join([]string{
 		renderFormalCheckProcessBody(expected),
-		renderFreshnessReceiptForTest(current.SpecFingerprint, current.SpecFileRef),
+		renderFreshnessReceiptForTest(current.Object, current.SpecFingerprint, current.SpecFileRef),
 	}, "\n")
 	writeCheckProcessFile(t, repoRoot, body)
 
@@ -962,11 +962,17 @@ func TestValidateProcessFileRejectsInvalidFreshnessReceipt(t *testing.T) {
 			replacement: "freshness_current_fingerprint: stale-fingerprint",
 			want:        "freshness_current_fingerprint mismatch: actual=stale-fingerprint expected=" + current.SpecFingerprint,
 		},
+		{
+			name:        "missing request ref",
+			old:         "freshness_review_input_refs: " + reviewInputRefsForTest(current.Object, "freshness_text_drift_reuse", current.SpecFileRef),
+			replacement: "freshness_review_input_refs: " + current.SpecFileRef,
+			want:        "freshness_review_input_refs must contain reviewer pack: freshness_text_drift_reuse",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			body := strings.Join([]string{
 				renderFormalCheckProcessBody(expected),
-				renderFreshnessReceiptForTest(current.SpecFingerprint, current.SpecFileRef),
+				renderFreshnessReceiptForTest(current.Object, current.SpecFingerprint, current.SpecFileRef),
 			}, "\n")
 			body = strings.Replace(body, tc.old, tc.replacement, 1)
 			writeCheckProcessFile(t, repoRoot, body)
@@ -993,7 +999,7 @@ func TestValidateProcessFileClassifiesSemanticDrift(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
-	writeCheckProcessFile(t, repoRoot, renderFormalCheckProcessBody(expected)+"\n"+renderFreshnessReceiptForTest("unused", expected.SpecFileRef))
+	writeCheckProcessFile(t, repoRoot, renderFormalCheckProcessBody(expected)+"\n"+renderFreshnessReceiptForTest(expected.Object, "unused", expected.SpecFileRef))
 	replaceCandidateSpecText(t, repoRoot, "pass_condition: The demo behavior passes under the declared checks.", "pass_condition: The demo behavior passes under new semantic checks.")
 
 	result, err := ValidateProcessFile(repoRoot, "demo", "check")
@@ -1151,6 +1157,79 @@ func TestValidateProcessFileRejectsPassWithReviewFindings(t *testing.T) {
 	}
 }
 
+func TestValidateProcessFileForIndependentEvaluationRequestAllowsMissingReceipt(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	body := strings.Replace(renderFormalPlanProcessBody(expected), renderIndependentEvaluationReceiptForTest(expected.Object, "unit_plan_plan_ready", expected.SpecFileRef), "", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFileForIndependentEvaluationRequest(repoRoot, "unit", "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFileForIndependentEvaluationRequest: %v", err)
+	}
+	if !result.Valid {
+		t.Fatalf("expected pre-review validation to pass, got mismatches %+v", result.Mismatches)
+	}
+	if result.FreshnessImpact != FreshnessCurrent {
+		t.Fatalf("expected current freshness, got %s", result.FreshnessImpact)
+	}
+}
+
+func TestValidateProcessFileForIndependentEvaluationRequestRejectsCoverageGap(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	body := strings.Replace(renderFormalPlanProcessBody(expected), "id: demo.core", "id: demo.other", 1)
+	body = strings.Replace(body, renderIndependentEvaluationReceiptForTest(expected.Object, "unit_plan_plan_ready", expected.SpecFileRef), "", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFileForIndependentEvaluationRequest(repoRoot, "unit", "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFileForIndependentEvaluationRequest: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "acceptance_item_plan_coverage missing id: demo.core") {
+		t.Fatalf("expected coverage mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileForIndependentEvaluationRequestRejectsTextDrift(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	body := strings.Replace(renderFormalCheckProcessBody(expected), renderIndependentEvaluationReceiptForTest(expected.Object, "unit_check_pass", expected.SpecFileRef), "", 1)
+	writeCheckProcessFile(t, repoRoot, body)
+	replaceCandidateSpecText(t, repoRoot, "# Demo\n", "# Demo\n\nEditorial note only.\n")
+
+	result, err := ValidateProcessFileForIndependentEvaluationRequest(repoRoot, "unit", "demo", "check")
+	if err != nil {
+		t.Fatalf("ValidateProcessFileForIndependentEvaluationRequest: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if result.FreshnessImpact != FreshnessTextDrift || result.EvidenceReuse != EvidenceReusePendingReview {
+		t.Fatalf("expected pending text drift, got impact=%s reuse=%s mismatches=%+v", result.FreshnessImpact, result.EvidenceReuse, result.Mismatches)
+	}
+}
+
 func TestValidateProcessFileAcceptsPlanSchemaWithoutGateFields(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
@@ -1195,6 +1274,34 @@ func TestValidateProcessFileRejectsPlanCoverageGap(t *testing.T) {
 	}
 	if !containsMismatch(result.Mismatches, "acceptance_item_plan_coverage missing id: demo.core") {
 		t.Fatalf("expected missing coverage id mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsReceiptWithoutRequestRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	body := strings.Replace(renderFormalPlanProcessBody(expected), reviewInputRefsForTest(expected.Object, "unit_plan_plan_ready", expected.SpecFileRef), expected.SpecFileRef, 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	for _, want := range []string{
+		"review_input_refs must contain reviewer pack: unit_plan_plan_ready",
+		"review_input_refs must contain request file ref: docs/specs/_independent_evaluation/requests/unit/demo/unit_plan_plan_ready.md",
+	} {
+		if !containsMismatch(result.Mismatches, want) {
+			t.Fatalf("expected mismatch %q, got %+v", want, result.Mismatches)
+		}
 	}
 }
 
@@ -1783,7 +1890,7 @@ func renderFormalCheckProcessBody(expected Snapshot) string {
 		"unit_appendix_snapshot:",
 		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
 		"rule_snapshot: none",
-		renderIndependentEvaluationReceiptForTest(expected.SpecFileRef),
+		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_check_pass", expected.SpecFileRef),
 	}, "\n")
 }
 
@@ -1798,7 +1905,7 @@ func renderFormalPlanProcessBody(expected Snapshot) string {
 		"rule_snapshot: none",
 		"acceptance_item_plan_coverage:",
 		renderAcceptancePlanCoverageForTest(expected.AcceptanceItemSet),
-		renderIndependentEvaluationReceiptForTest(expected.SpecFileRef),
+		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_plan_plan_ready", expected.SpecFileRef),
 	}, "\n")
 }
 
@@ -1824,7 +1931,7 @@ func renderFormalVerifyProcessBody(expected Snapshot) string {
 		"rule_snapshot: none",
 		"acceptance_item_evidence_matrix:",
 		renderAcceptanceEvidenceMatrixForTest(expected.AcceptanceItemSet),
-		renderIndependentEvaluationReceiptForTest(expected.SpecFileRef),
+		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_verify_ready_to_promote", expected.SpecFileRef),
 	}, "\n")
 }
 
@@ -1858,22 +1965,27 @@ func renderFormalStableVerifyProcessBody(expected Snapshot, mapping RepositoryMa
 		renderAcceptanceEvidenceMatrixForTest(expected.AcceptanceItemSet),
 		"implementation_surface_refs: AgentCore/internal/demo",
 		"evidence_refs: go test ./...",
-		renderIndependentEvaluationReceiptForTest(expected.SpecFileRef),
+		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_stable_verify_advancing", expected.SpecFileRef),
 	}, "\n")
 }
 
-func renderIndependentEvaluationReceiptForTest(reviewInputRef string) string {
+func renderIndependentEvaluationReceiptForTest(object, pack, reviewInputRef string) string {
 	return strings.Join([]string{
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + reviewInputRef,
+		"review_input_refs: " + reviewInputRefsForTest(object, pack, reviewInputRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")
 }
 
-func renderFreshnessReceiptForTest(currentFingerprint, reviewInputRef string) string {
+func reviewInputRefsForTest(object, pack string, refs ...string) string {
+	requestFile := filepath.ToSlash(filepath.Join("docs/specs/_independent_evaluation/requests/unit", object, pack+".md"))
+	return strings.Join(append([]string{pack, requestFile}, refs...), ";")
+}
+
+func renderFreshnessReceiptForTest(object, currentFingerprint, reviewInputRef string) string {
 	return strings.Join([]string{
 		"freshness_impact: text_drift",
 		"evidence_reuse: accepted",
@@ -1881,7 +1993,7 @@ func renderFreshnessReceiptForTest(currentFingerprint, reviewInputRef string) st
 		"freshness_review_mode: independent",
 		"freshness_reviewer_result: pass",
 		"freshness_reviewer_context: minimal_context",
-		"freshness_review_input_refs: " + reviewInputRef,
+		"freshness_review_input_refs: " + reviewInputRefsForTest(object, "freshness_text_drift_reuse", reviewInputRef),
 		"freshness_review_findings: none",
 	}, "\n")
 }

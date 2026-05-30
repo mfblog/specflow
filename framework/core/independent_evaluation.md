@@ -2,8 +2,38 @@
 
 Independent evaluation prevents an executor from approving its own advancing gate.
 
-specFlow defines the receipt contract and gate requirement. The agent harness is responsible for creating a separate reviewer conversation with the minimal review pack named by the active Context Card.
+specFlow defines the receipt contract, gate requirement, and handoff request file.
+The agent harness is responsible for creating a separate reviewer conversation with the minimal review pack named by the active Context Card.
+specFlow creates independent evaluation request files.
 specFlow does not create harness commands, reviewer sessions, tokens, or task scheduling.
+
+## Handoff Requests
+
+Before an executor asks for independent evaluation of an advancing gate, the executor must generate a request file:
+
+```text
+<tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack <reviewer_pack> [--process check|plan|verify|stable_verify]
+```
+
+The request file is written under:
+
+```text
+docs/specs/_independent_evaluation/requests/unit/{unit}/{reviewer_pack}.md
+```
+
+The request file is a handoff instruction. It is not lifecycle evidence and is not consumed by `command close`.
+
+After the request file exists:
+
+1. if the current agent runtime explicitly exposes an independent executor capability, the executor may send only the request file to that independent executor.
+2. if no such capability is explicitly available, the executor must stop and give the user the request file path plus the trigger instruction from the command output.
+3. the reviewer reads the request file and returns `pass`, `blocked`, or `needs_human_decision`.
+4. the reviewer must not modify repository files.
+5. after `pass`, the executor writes the receipt into the process evidence and records the reviewer pack, request file, and supplied durable refs in `review_input_refs`; freshness reuse records the same ref shape in `freshness_review_input_refs`.
+
+The tooling validates that the candidate process artifact is mechanically ready for review without requiring the not-yet-written independent evaluation receipt.
+For freshness reuse, request generation is allowed only when deterministic validation reports `text_drift` with `evidence_reuse: pending_review`.
+This tooling check does not prove reviewer isolation and does not judge whether the reviewer made a good semantic decision.
 
 ## Roles
 
@@ -180,12 +210,12 @@ Advancing process evidence that requires independent evaluation must include:
 evaluation_mode: independent
 reviewer_result: pass
 reviewer_context: minimal_context
-review_input_refs: none | list
+review_input_refs: {reviewer_pack};{request_file};{durable_input_refs}
 review_findings: none
 human_decision_refs: none | list
 ```
 
-`review_input_refs` may be `none` for compatibility. When practical, record the reviewer pack name and durable refs that were supplied to the reviewer.
+`review_input_refs` must record the reviewer pack name, generated request file path, and durable refs that were supplied to the reviewer.
 
 ## Gate Rules
 
@@ -195,7 +225,8 @@ An advancing gate may close only when:
 2. `reviewer_result` is `pass`.
 3. `reviewer_context` is `minimal_context`.
 4. `review_findings` is `none`.
-5. `human_decision_refs` is `none` or points to durable human-confirmation refs.
+5. `review_input_refs` contains the reviewer pack, request file path, and at least one durable input ref.
+6. `human_decision_refs` is `none` or points to durable human-confirmation refs.
 
 `blocked` and `needs_human_decision` are valid reviewer outcomes, but they are not advancing outcomes.
 

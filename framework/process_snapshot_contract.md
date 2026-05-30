@@ -45,7 +45,7 @@ acceptance_behavior_fingerprint: {fingerprint}
 evaluation_mode: independent
 reviewer_result: pass
 reviewer_context: minimal_context
-review_input_refs: none | list
+review_input_refs: {reviewer_pack};{request_file};{durable_input_refs}
 review_findings: none
 human_decision_refs: none | list
 ```
@@ -75,7 +75,7 @@ evidence_refs: {refs}
 evaluation_mode: independent
 reviewer_result: pass
 reviewer_context: minimal_context
-review_input_refs: none | list
+review_input_refs: {reviewer_pack};{request_file};{durable_input_refs}
 review_findings: none
 human_decision_refs: none | list
 ```
@@ -90,13 +90,15 @@ acceptance_behavior_fingerprint: {fingerprint}
 evaluation_mode: independent
 reviewer_result: pass
 reviewer_context: minimal_context
-review_input_refs: none | list
+review_input_refs: {reviewer_pack};{request_file};{durable_input_refs}
 review_findings: none
 human_decision_refs: none | list
 ```
 
 Advancing check, active plan, verify, and stable verify files must include the independent evaluation receipt.
 Tooling validates the receipt fields mechanically; it does not prove reviewer session isolation and does not judge whether the reviewer made a good semantic decision.
+Independent evaluation request files under `docs/specs/_independent_evaluation/requests/**` are handoff instructions only.
+They are not process snapshots, are not lifecycle evidence, and are not consumed by `command close`.
 
 Receipt requirements:
 
@@ -104,7 +106,7 @@ Receipt requirements:
 2. `reviewer_result` must be `pass` for advancing evidence.
 3. `reviewer_context` must be `minimal_context`.
 4. `review_findings` must be `none`.
-5. `review_input_refs` may be `none` for compatibility, or a list containing the reviewer pack name from `framework/core/independent_evaluation.md` plus durable input refs.
+5. `review_input_refs` must contain the reviewer pack name from `framework/core/independent_evaluation.md`, the generated request file path, and at least one durable input ref supplied to the reviewer.
 6. `human_decision_refs` must be `none` or durable human-confirmation refs, not chat-only conclusions.
 
 Freshness reuse fields are conditional. They are required only when deterministic validation reports `text_drift` and the process evidence is being reused instead of recreated:
@@ -116,7 +118,7 @@ freshness_current_fingerprint: {current truth/spec fingerprint}
 freshness_review_mode: independent
 freshness_reviewer_result: pass
 freshness_reviewer_context: minimal_context
-freshness_review_input_refs: none | list
+freshness_review_input_refs: freshness_text_drift_reuse;{request_file};{durable_input_refs}
 freshness_review_findings: none
 ```
 

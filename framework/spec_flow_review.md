@@ -346,6 +346,7 @@ The default scope includes:
    - `<template-root>/docs/specs/_verify_result/README.md`
    - `<template-root>/docs/specs/_stable_verify_result/README.md`
    - `<template-root>/docs/specs/_governance_review/README.md`
+   - `<template-root>/docs/specs/_independent_evaluation/README.md`
 6. template-side project-instance bootstrap contracts
    - `<template-root>/docs/specs/repository_mapping.md`
    - `<template-root>/docs/specs/rules/stable/s_g_rule_repository_baseline.md`
@@ -389,6 +390,7 @@ Files excluded from business-truth review include:
 10. `docs/specs/_verify_result/**`
 11. `docs/specs/_stable_verify_result/**`
 12. `docs/specs/_governance_review/**`
+13. `docs/specs/_independent_evaluation/**`
 
 Those files may be reviewed for business-truth correctness only when the user explicitly narrows `spec_flow_review` to project-instance state, or when a command, repository-mapping flow, rule-governance flow, or verification flow consumes them under its own policy.
 
@@ -401,7 +403,8 @@ For `installed_project`, the compatibility input surface includes:
 2. `docs/specs/repository_mapping.md`
 3. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
 4. existing project process files under `docs/specs/_check_work/**`, `docs/specs/_check_result/**`, `docs/specs/_plans/**`, `docs/specs/_verify_result/**`, and `docs/specs/_stable_verify_result/**`
-5. existing project truth files under `docs/specs/units/**` and `docs/specs/rules/**`, only for file shape, required fields, references, and binding format
+5. existing independent evaluation request files under `docs/specs/_independent_evaluation/**`, only for request-file path, field, reviewer-pack, and reference shape
+6. existing project truth files under `docs/specs/units/**` and `docs/specs/rules/**`, only for file shape, required fields, references, and binding format
 
 `docs/specs/_governance_review/**` is not part of the compatibility input fingerprint.
 The active full-scope run-state file is governed by the run-state procedure in Section 6, because including that file in its own slice fingerprint would create self-referential stale state.
@@ -418,7 +421,7 @@ Default scope must explicitly include:
 3. the guidance-skill rule set
    - at minimum `using-specflow-guidance/SKILL.md`, `project-framing/SKILL.md`, `scope-cutting/SKILL.md`, `solution-design/SKILL.md`, `design-quality-review/SKILL.md`, and `spec-writeback-guidance/SKILL.md`
 4. the impact-reconciliation rule set
-   - at minimum `governance/impact_sync.md`, `process_snapshot_contract.md`, `slice_work_state_protocol.md`, `lifecycle/recovery.md`, template `_status.md`, and the template-side process README files
+   - at minimum `governance/impact_sync.md`, `process_snapshot_contract.md`, `slice_work_state_protocol.md`, `lifecycle/recovery.md`, template `_status.md`, and the template-side process, review-state, and independent-evaluation README files
 5. the tooling execution contract set
    - at minimum `tooling_execution_policy.md`, `slice_work_state_protocol.md`, `<tooling-root>/README.md`, the in-scope tooling source files, and the runtime reader web files
 6. the agent-operability standard
@@ -428,7 +431,7 @@ Default scope must explicitly include:
 8. the project-instance compatibility check
    - at minimum the layout-selected status, repository mapping, global rule, process-file, and formal truth compatibility inputs, limited by Section 2.10
 9. the project-instance migration flow
-   - at minimum `operations/migration.md`, `operations/entry_routing.md` where it routes project-instance migration, `lifecycle/overview.md` where it defines command boundaries, `process_snapshot_contract.md`, `lifecycle/recovery.md`, `entry_index_registry.md`, and the template-side process and entry files that migration consumes
+   - at minimum `operations/migration.md`, `operations/entry_routing.md` where it routes project-instance migration, `lifecycle/overview.md` where it defines command boundaries, `process_snapshot_contract.md`, `lifecycle/recovery.md`, `entry_index_registry.md`, and the template-side process, independent-evaluation, and entry files that migration consumes
 10. the supporting-truth lifecycle closure check
    - at minimum fork commands, promote commands, process cleanup and recovery rules, Rule sync and release-version paths, project-instance compatibility inputs, tooling contracts, and tooling source that creates, retargets, preserves, or deletes supporting truth
 
@@ -465,8 +468,8 @@ Local slices review one owner area for internal closure, side effects, contract 
    - reviews `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch
    - reviews `governance/rules/rule_new.md`, `governance/rules/rule_extract.md`, `governance/rules/rule_bind.md`, `governance/rules/rule_topology.md`, `governance/rules/rule_sync.md`, and `governance/rules/rule_escape.md`
 6. `process_and_impact_state`
-   - reviews `core/independent_evaluation.md`, `core/freshness.md`, `governance/impact_sync.md`, `process_snapshot_contract.md`, `slice_work_state_protocol.md`, `lifecycle/recovery.md`, template `_status.md`, template `_check_work`, template `_check_result`, template `_plans`, template `_verify_result`, template `_stable_verify_result`, and template `_governance_review`
-   - verifies process-state contracts, snapshot invalidation, impact handling, and governance-review run-state boundaries
+   - reviews `core/independent_evaluation.md`, `core/freshness.md`, `governance/impact_sync.md`, `process_snapshot_contract.md`, `slice_work_state_protocol.md`, `lifecycle/recovery.md`, template `_status.md`, template `_check_work`, template `_check_result`, template `_plans`, template `_verify_result`, template `_stable_verify_result`, template `_governance_review`, and template `_independent_evaluation`
+   - verifies process-state contracts, independent-evaluation request contracts, snapshot invalidation, impact handling, and governance-review run-state boundaries
 7. `project_instance_contract_compatibility`
    - reviews the current project-instance files under `docs/specs/` only for format and contract compatibility with current framework rules
    - reviews `core/object_model.md`, `core/status.md`, `core/repository_mapping.md`, `spec_policy.md`, and `spec_writing_guide.md` as the owner contracts for object family, object state, registry shape, formal Spec shape, reference format, and rule binding format

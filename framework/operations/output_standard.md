@@ -30,6 +30,16 @@ The stop report must state:
 
 Internal result names such as `checkpoint`, `decision_checkpoint`, or `human_verify` may appear only as trace details. They do not require a fixed field template.
 
+## Independent Review Stops
+
+When the only blocker is an independent evaluation and the current agent runtime does not explicitly expose an independent executor capability, the stop report must state:
+
+1. the generated independent evaluation request file path.
+2. the trigger instruction from `specflowctl evaluation request`.
+3. that the reviewer must not modify repository files.
+4. that execution resumes after the reviewer returns `pass`, `blocked`, or `needs_human_decision`.
+5. that lifecycle advancement cannot be claimed until the executor writes the receipt, validates the process evidence, and `command close` succeeds.
+
 ## Execution Note
 
 Execution notes may include active entry file, command, process files, status updates, and stop reason. They must not be required to understand the answer.

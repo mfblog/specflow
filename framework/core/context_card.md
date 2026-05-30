@@ -60,6 +60,7 @@ The executor enters an expansion only when the trigger appears in the current wo
 State whether the command has an advancing gate that requires an independent reviewer receipt.
 
 If required, link `framework/core/independent_evaluation.md` and name the process evidence file that must carry the receipt.
+The section must also name the `specflowctl evaluation request` invocation that creates the independent review handoff file before the receipt is written.
 
 ## Close Requirements
 

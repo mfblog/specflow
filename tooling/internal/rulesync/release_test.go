@@ -466,7 +466,7 @@ func writeReleaseStableVerifyProcess(t *testing.T, repoRoot, unit, decision stri
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: "+snap.SpecFileRef,
+		"review_input_refs: "+rulesyncReviewInputRefsForTest(snap.Object, "unit_stable_verify_advancing", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	)

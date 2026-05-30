@@ -30,6 +30,13 @@ Text drift reuse requires all of these:
 2. the process records `evidence_reuse: accepted`.
 3. the process records `freshness_current_fingerprint` for the current truth or spec file.
 4. an independent reviewer receipt confirms reuse with reviewer pack `freshness_text_drift_reuse`, `freshness_review_mode: independent`, `freshness_reviewer_result: pass`, `freshness_reviewer_context: minimal_context`, and `freshness_review_findings: none`.
+5. the freshness receipt records the reviewer pack, request file, and durable input refs in `freshness_review_input_refs`.
+
+Before freshness review, generate the handoff request:
+
+```text
+<tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack freshness_text_drift_reuse --process check|plan|verify|stable_verify
+```
 
 The reviewer judges whether the text-only edit preserves the intended meaning of the existing evidence. Tooling only verifies the mechanical classification and receipt fields.
 

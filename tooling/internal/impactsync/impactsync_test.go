@@ -519,7 +519,7 @@ func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
 	if len(snap.RuleSnapshot) == 0 {
 		lines[len(lines)-1] = "rule_snapshot: none"
 	}
-	lines = append(lines, renderImpactIndependentEvaluationReceipt(snap.SpecFileRef)...)
+	lines = append(lines, renderImpactIndependentEvaluationReceipt(snap.Object, "unit_check_pass", snap.SpecFileRef)...)
 	lines = append(lines, "```", "")
 	return strings.Join(lines, "\n")
 }
@@ -533,7 +533,7 @@ func renderImpactCheckProcessSnapshotWithFreshness(oldSnap, currentSnap snapshot
 		"freshness_review_mode: independent",
 		"freshness_reviewer_result: pass",
 		"freshness_reviewer_context: minimal_context",
-		"freshness_review_input_refs: " + currentSnap.SpecFileRef,
+		"freshness_review_input_refs: " + impactReviewInputRefsForTest(currentSnap.Object, "freshness_text_drift_reuse", currentSnap.SpecFileRef),
 		"freshness_review_findings: none",
 	}, "\n")
 	return strings.Replace(body, "\n```\n", "\n"+receipt+"\n```\n", 1)
@@ -572,7 +572,7 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 		"    fingerprint: " + snap.RuleSnapshot[0].Fingerprint,
 	}
 	lines = append(lines, renderImpactAcceptancePlanCoverage(snap.AcceptanceItemSet)...)
-	lines = append(lines, renderImpactIndependentEvaluationReceipt(snap.SpecFileRef)...)
+	lines = append(lines, renderImpactIndependentEvaluationReceipt(snap.Object, "unit_plan_plan_ready", snap.SpecFileRef)...)
 	lines = append(lines,
 		"```",
 		"",
@@ -580,15 +580,20 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 	return strings.Join(lines, "\n")
 }
 
-func renderImpactIndependentEvaluationReceipt(reviewInputRef string) []string {
+func renderImpactIndependentEvaluationReceipt(object, pack, reviewInputRef string) []string {
 	return []string{
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + reviewInputRef,
+		"review_input_refs: " + impactReviewInputRefsForTest(object, pack, reviewInputRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}
+}
+
+func impactReviewInputRefsForTest(object, pack string, refs ...string) string {
+	requestFile := filepath.ToSlash(filepath.Join("docs/specs/_independent_evaluation/requests/unit", object, pack+".md"))
+	return strings.Join(append([]string{pack, requestFile}, refs...), ";")
 }
 
 func renderImpactAcceptancePlanCoverage(entries []snapshot.AcceptanceItemEntry) []string {

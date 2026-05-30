@@ -3,6 +3,7 @@
 Lifecycle authority is evidence-based.
 
 Standard unit lifecycle progression is valid only with current valid evidence, a required independent evaluation receipt when applicable, deterministic validation, and successful `command close`.
+Independent evaluation requests are handoff instructions that can precede the receipt; they do not replace the receipt.
 
 This contract is the authority model for standard unit lifecycle progression.
 

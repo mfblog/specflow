@@ -1827,6 +1827,11 @@ func repositoryMappingSnapshotFixtureLines(entry snapshot.RepositoryMappingEntry
 	}
 }
 
+func rulesyncReviewInputRefsForTest(object, pack string, refs ...string) string {
+	requestFile := filepath.ToSlash(filepath.Join("docs/specs/_independent_evaluation/requests/unit", object, pack+".md"))
+	return strings.Join(append([]string{pack, requestFile}, refs...), ";")
+}
+
 func renderModuleProcessSnapshotForTest(t *testing.T, repoRoot, processKind, module string, appendixEntries []snapshot.AppendixEntry, sharedEntries []snapshot.RuleEntry) string {
 	t.Helper()
 	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", module)
@@ -1850,7 +1855,7 @@ func renderModuleProcessSnapshotForTest(t *testing.T, repoRoot, processKind, mod
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + mainSpecRef,
+		"review_input_refs: " + rulesyncReviewInputRefsForTest(module, map[string]string{"check": "unit_check_pass", "verify": "unit_verify_ready_to_promote"}[processKind], mainSpecRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}

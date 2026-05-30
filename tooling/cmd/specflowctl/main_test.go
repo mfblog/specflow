@@ -525,7 +525,7 @@ func TestSnapshotValidateProcessUsesObjectFlagsCLI(t *testing.T) {
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + expected.SpecFileRef,
+		"review_input_refs: " + cliReviewInputRefsForTest(expected.Object, "unit_plan_plan_ready", expected.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
@@ -538,6 +538,162 @@ func TestSnapshotValidateProcessUsesObjectFlagsCLI(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "Process snapshot is valid.") {
 		t.Fatalf("expected valid output, got %s", stdout.String())
+	}
+}
+
+func TestEvaluationRequestCreatesPlanHandoffCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepo(t)
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+strings.Join([]string{
+		"spec_file_ref: " + expected.SpecFileRef,
+		"spec_version_ref: " + expected.SpecVersionRef,
+		"spec_fingerprint: " + expected.SpecFingerprint,
+		"acceptance_behavior_fingerprint: " + expected.AcceptanceBehaviorFingerprint,
+		"unit_appendix_snapshot: none",
+		"rule_snapshot: none",
+		"acceptance_item_plan_coverage:",
+		"  - id: demo.core",
+		"    coverage: implementation slice and verification target",
+	}, "\n")+"\n```\n")
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err = runEvaluation([]string{"request", "--object-type", "unit", "--object", "demo", "--pack", "unit_plan_plan_ready", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("evaluation request failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	requestFile := "docs/specs/_independent_evaluation/requests/unit/demo/unit_plan_plan_ready.md"
+	if !strings.Contains(output, "evaluation_request_result: created") || !strings.Contains(output, "request_file: "+requestFile) || !strings.Contains(output, "trigger_instruction: Read and execute this independent evaluation request: "+requestFile) {
+		t.Fatalf("unexpected evaluation request output:\n%s", output)
+	}
+	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(requestFile)))
+	if err != nil {
+		t.Fatalf("read request file: %v", err)
+	}
+	text := string(content)
+	for _, phrase := range []string{
+		"reviewer_pack`: `unit_plan_plan_ready`",
+		"## Allowed Inputs",
+		"active plan under review.",
+		"## Forbidden Inputs",
+		"implementation work not authorized by the active plan.",
+		"## Review File Refs",
+		"- framework/lifecycle/unit_plan.md",
+		"## Review Evidence Refs",
+		"- none",
+		"Does the plan cover every accepted acceptance item?",
+		"## Reviewer Output",
+		"pass | blocked | needs_human_decision",
+		"## Executor Receipt After Pass",
+		"Only the executor writes this receipt into process evidence after receiving reviewer result `pass`.",
+		"review_input_refs: unit_plan_plan_ready;" + requestFile,
+	} {
+		if !strings.Contains(text, phrase) {
+			t.Fatalf("request file missing %q:\n%s", phrase, text)
+		}
+	}
+}
+
+func TestEvaluationRequestRejectsUnsupportedPackCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepo(t)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := runEvaluation([]string{"request", "--object-type", "unit", "--object", "demo", "--pack", "unknown_pack", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "unsupported independent evaluation pack") {
+		t.Fatalf("expected unsupported pack error, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
+	}
+}
+
+func TestEvaluationRequestRejectsUnsupportedObjectTypeCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepo(t)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := runEvaluation([]string{"request", "--object-type", "scenario", "--object", "demo_flow", "--pack", "unit_plan_plan_ready", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "object type \"scenario\" is not supported; only unit is supported") {
+		t.Fatalf("expected unsupported object type error, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
+	}
+}
+
+func TestEvaluationRequestCreatesFreshnessTextDriftHandoffCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepo(t)
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeCLIUnitCheckProcess(t, repoRoot, expected)
+	candidatePath := filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md")
+	content, err := os.ReadFile(candidatePath)
+	if err != nil {
+		t.Fatalf("read candidate: %v", err)
+	}
+	writeCLITestFile(t, candidatePath, strings.Replace(string(content), "# Demo\n", "# Demo\n\nEditorial note only.\n", 1))
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err = runEvaluation([]string{"request", "--object-type", "unit", "--object", "demo", "--pack", "freshness_text_drift_reuse", "--process", "check", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("freshness evaluation request failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "freshness_impact: text_drift") || !strings.Contains(output, "evidence_reuse: pending_review") {
+		t.Fatalf("expected pending text drift output, got %s", output)
+	}
+	requestFile := filepath.Join(repoRoot, "docs/specs/_independent_evaluation/requests/unit/demo/freshness_text_drift_reuse.md")
+	requestContent, err := os.ReadFile(requestFile)
+	if err != nil {
+		t.Fatalf("read freshness request: %v", err)
+	}
+	if !strings.Contains(string(requestContent), "Is the change only wording, formatting, or clarification") {
+		t.Fatalf("freshness request missing review question:\n%s", string(requestContent))
+	}
+	for _, phrase := range []string{
+		"## Reviewer Output",
+		"pass | blocked | needs_human_decision",
+		"## Executor Receipt After Pass",
+		"freshness_impact: text_drift",
+		"evidence_reuse: accepted",
+		"freshness_review_mode: independent",
+		"freshness_reviewer_result: pass",
+		"freshness_review_input_refs: freshness_text_drift_reuse;docs/specs/_independent_evaluation/requests/unit/demo/freshness_text_drift_reuse.md",
+		"freshness_review_findings: none",
+	} {
+		if !strings.Contains(string(requestContent), phrase) {
+			t.Fatalf("freshness request missing %q:\n%s", phrase, string(requestContent))
+		}
+	}
+	for _, forbidden := range []string{
+		"\nevaluation_mode: independent\n",
+		"\nreview_input_refs: freshness_text_drift_reuse",
+	} {
+		if strings.Contains(string(requestContent), forbidden) {
+			t.Fatalf("freshness request must not contain ordinary receipt field %q:\n%s", forbidden, string(requestContent))
+		}
+	}
+}
+
+func TestEvaluationRequestRejectsFreshnessSemanticDriftCLI(t *testing.T) {
+	repoRoot := createCLISnapshotRepo(t)
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeCLIUnitCheckProcess(t, repoRoot, expected)
+	candidatePath := filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md")
+	content, err := os.ReadFile(candidatePath)
+	if err != nil {
+		t.Fatalf("read candidate: %v", err)
+	}
+	writeCLITestFile(t, candidatePath, strings.Replace(string(content), "The demo behavior passes under the declared checks.", "The demo behavior passes with a different condition.", 1))
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err = runEvaluation([]string{"request", "--object-type", "unit", "--object", "demo", "--pack", "freshness_text_drift_reuse", "--process", "check", "--repo-root", repoRoot}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "freshness review request requires freshness_impact=text_drift") {
+		t.Fatalf("expected semantic drift rejection, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
 }
 
@@ -1149,6 +1305,7 @@ func createCLITestRepo(t *testing.T) string {
 		"specflow/templates/docs/specs/_verify_result/README.md",
 		"specflow/templates/docs/specs/_stable_verify_result/README.md",
 		"specflow/templates/docs/specs/_governance_review/README.md",
+		"specflow/templates/docs/specs/_independent_evaluation/README.md",
 		"specflow/templates/docs/specs/repository_mapping.md",
 		"specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
 		"specflow/templates/AGENTS.md",
@@ -1249,6 +1406,7 @@ func createCLISourceReviewRepo(t *testing.T) string {
 		"templates/docs/specs/_verify_result/README.md",
 		"templates/docs/specs/_stable_verify_result/README.md",
 		"templates/docs/specs/_governance_review/README.md",
+		"templates/docs/specs/_independent_evaluation/README.md",
 		"templates/docs/specs/repository_mapping.md",
 		"templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
 		"templates/AGENTS.md",
@@ -1403,6 +1561,7 @@ func writeCLIUnitCheckProcess(t *testing.T, repoRoot string, snap snapshot.Snaps
 		"truth_file_ref: " + snap.SpecFileRef,
 		"truth_version_ref: " + snap.SpecVersionRef,
 		"truth_fingerprint: " + snap.SpecFingerprint,
+		"acceptance_behavior_fingerprint: " + snap.AcceptanceBehaviorFingerprint,
 		"unit_appendix_snapshot: none",
 		"rule_snapshot: none",
 		"acceptance_item_set:",
@@ -1412,10 +1571,15 @@ func writeCLIUnitCheckProcess(t *testing.T, repoRoot string, snap snapshot.Snaps
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + snap.SpecFileRef,
+		"review_input_refs: " + cliReviewInputRefsForTest(snap.Object, "unit_check_pass", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
+}
+
+func cliReviewInputRefsForTest(object, pack string, refs ...string) string {
+	requestFile := filepath.ToSlash(filepath.Join("docs/specs/_independent_evaluation/requests/unit", object, pack+".md"))
+	return strings.Join(append([]string{pack, requestFile}, refs...), ";")
 }
 
 func writeCLIUnitPlanProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot) {
@@ -1424,6 +1588,7 @@ func writeCLIUnitPlanProcess(t *testing.T, repoRoot string, snap snapshot.Snapsh
 		"spec_file_ref: " + snap.SpecFileRef,
 		"spec_version_ref: " + snap.SpecVersionRef,
 		"spec_fingerprint: " + snap.SpecFingerprint,
+		"acceptance_behavior_fingerprint: " + snap.AcceptanceBehaviorFingerprint,
 		"unit_appendix_snapshot: none",
 		"rule_snapshot: none",
 		"acceptance_item_plan_coverage:",
@@ -1432,7 +1597,7 @@ func writeCLIUnitPlanProcess(t *testing.T, repoRoot string, snap snapshot.Snapsh
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + snap.SpecFileRef,
+		"review_input_refs: " + cliReviewInputRefsForTest(snap.Object, "unit_plan_plan_ready", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
@@ -1453,6 +1618,7 @@ func writeCLIUnitVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snap
 		"truth_file_ref: " + snap.SpecFileRef,
 		"truth_version_ref: " + snap.SpecVersionRef,
 		"truth_fingerprint: " + snap.SpecFingerprint,
+		"acceptance_behavior_fingerprint: " + snap.AcceptanceBehaviorFingerprint,
 		"acceptance_item_set:",
 		"  - id: demo.core",
 		"    verification_surface: internal_flow",
@@ -1466,7 +1632,7 @@ func writeCLIUnitVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snap
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + snap.SpecFileRef,
+		"review_input_refs: " + cliReviewInputRefsForTest(snap.Object, "unit_verify_ready_to_promote", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
@@ -1497,6 +1663,7 @@ func writeCLIStableVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Sn
 		"truth_file_ref: " + snap.SpecFileRef,
 		"truth_version_ref: " + snap.SpecVersionRef,
 		"truth_fingerprint: " + snap.SpecFingerprint,
+		"acceptance_behavior_fingerprint: " + snap.AcceptanceBehaviorFingerprint,
 		"repository_mapping_snapshot:",
 		"  file_ref: " + mapping.FileRef,
 		"  version_ref: " + mapping.VersionRef,
@@ -1516,7 +1683,7 @@ func writeCLIStableVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Sn
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + snap.SpecFileRef,
+		"review_input_refs: " + cliReviewInputRefsForTest(snap.Object, "unit_stable_verify_advancing", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")

@@ -15,6 +15,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandclose"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandpreflight"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/entrysync"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/evaluationrequest"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/install"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/relationgraph"
@@ -63,6 +64,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runCommand(args[1:], stdout, stderr)
 	case "entry":
 		return runEntry(args[1:], stdout, stderr)
+	case "evaluation":
+		return runEvaluation(args[1:], stdout, stderr)
 	case "relation":
 		return runRelation(args[1:], stdout, stderr)
 	case "repository-mapping":
@@ -395,6 +398,66 @@ func runEntry(args []string, stdout, stderr io.Writer) error {
 		writeEntryUsage(stderr)
 		return fmt.Errorf("unknown entry subcommand %q", args[0])
 	}
+}
+
+func runEvaluation(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		writeEvaluationUsage(stderr)
+		return errors.New("missing evaluation subcommand")
+	}
+
+	switch args[0] {
+	case "request":
+		fs := flag.NewFlagSet("evaluation request", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		objectType := fs.String("object-type", "", "formal object type: unit")
+		object := fs.String("object", "", "formal object name")
+		pack := fs.String("pack", "", "independent evaluation reviewer pack")
+		processKind := fs.String("process", "", "check | plan | verify | stable_verify; required for freshness_text_drift_reuse")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" || strings.TrimSpace(*pack) == "" {
+			writeEvaluationUsage(stderr)
+			return errors.New("object-type, object, and pack are required")
+		}
+
+		result, err := evaluationrequest.Create(evaluationrequest.Options{
+			RepoRoot:    mustAbs(*repoRoot),
+			ObjectType:  *objectType,
+			Object:      *object,
+			Pack:        *pack,
+			ProcessKind: *processKind,
+			Now:         time.Now().UTC(),
+		})
+		if err != nil {
+			return err
+		}
+		writeEvaluationRequestResult(stdout, result)
+		return nil
+	case "-h", "--help", "help":
+		writeEvaluationUsage(stdout)
+		return nil
+	default:
+		writeEvaluationUsage(stderr)
+		return fmt.Errorf("unknown evaluation subcommand %q", args[0])
+	}
+}
+
+func writeEvaluationRequestResult(stdout io.Writer, result evaluationrequest.Result) {
+	fmt.Fprintln(stdout, "evaluation_request_result: created")
+	fmt.Fprintf(stdout, "request_file: %s\n", result.RequestFile)
+	fmt.Fprintf(stdout, "reviewer_pack: %s\n", result.Pack)
+	fmt.Fprintf(stdout, "process: %s\n", result.ProcessKind)
+	fmt.Fprintf(stdout, "process_file: %s\n", result.ProcessFile)
+	fmt.Fprintf(stdout, "freshness_impact: %s\n", noneIfEmpty(result.Validation.FreshnessImpact))
+	fmt.Fprintf(stdout, "evidence_reuse: %s\n", noneIfEmpty(result.Validation.EvidenceReuse))
+	fmt.Fprintln(stdout, "review_input_refs:")
+	for _, ref := range result.ReviewInputRefs {
+		fmt.Fprintf(stdout, "- %s\n", ref)
+	}
+	fmt.Fprintf(stdout, "trigger_instruction: %s\n", result.TriggerInstruction)
 }
 
 func runRepositoryMapping(args []string, stdout, stderr io.Writer) error {
@@ -1200,6 +1263,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  build-release Build platform binaries into <tooling-root>/bin")
 	fmt.Fprintln(w, "  command  Run standard-command mechanical preflight checks and close commands")
 	fmt.Fprintln(w, "  entry    Check or sync registered entry-file managed blocks")
+	fmt.Fprintln(w, "  evaluation Generate independent evaluation request handoff files")
 	fmt.Fprintln(w, "  relation Compute candidate relation order and preflight readiness")
 	fmt.Fprintln(w, "  repository-mapping Validate docs/specs/repository_mapping.md")
 	fmt.Fprintln(w, "  review   Collect governance review scope or maintain run-state files")
@@ -1220,6 +1284,11 @@ func writeEntryUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl entry check [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl entry sync [--repo-root PATH] [--source FILE]")
+}
+
+func writeEvaluationUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl evaluation request --object-type unit --object OBJECT --pack PACK [--process check|plan|verify|stable_verify] [--repo-root PATH]")
 }
 
 func writeRelationUsage(w io.Writer) {

@@ -84,6 +84,7 @@ That default scope includes:
    - `<template-root>/docs/specs/_verify_result/README.md`
    - `<template-root>/docs/specs/_stable_verify_result/README.md`
    - `<template-root>/docs/specs/_governance_review/README.md`
+   - `<template-root>/docs/specs/_independent_evaluation/README.md`
 3. human-entry rules
    - `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` for `installed_project`
    - `example.md` for `source_repo`
@@ -153,6 +154,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `<template-root>/docs/specs/_plans/active/README.md`
    - `<template-root>/docs/specs/_verify_result/README.md`
    - `<template-root>/docs/specs/_stable_verify_result/README.md`
+   - `<template-root>/docs/specs/_independent_evaluation/README.md`
    - `operations/output_standard.md`
 3. `human_operability_and_extension`
    - `entry_index_registry.md`

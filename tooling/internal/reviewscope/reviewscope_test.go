@@ -22,6 +22,7 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_verify_result/README.md"), "# verify\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_stable_verify_result/README.md"), "# stable verify\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_governance_review/README.md"), "# governance review\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_independent_evaluation/README.md"), "# independent evaluation\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/repository_mapping.md"), "# repository mapping template\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md"), "# global rule template\n")
 	mustWrite(t, filepath.Join(repoRoot, "docs/specs/_check_result/README.md"), "# project check\n")
@@ -147,6 +148,9 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	if !containsString(scope.AgentOperabilityFiles, "specflow/templates/docs/specs/_governance_review/README.md") {
 		t.Fatalf("expected governance review process contract in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
+	if !containsString(scope.AgentOperabilityFiles, "specflow/templates/docs/specs/_independent_evaluation/README.md") {
+		t.Fatalf("expected independent evaluation request contract in agent operability scope, got %+v", scope.AgentOperabilityFiles)
+	}
 	if containsString(scope.AgentOperabilityFiles, "docs/specs/repository_mapping.md") {
 		t.Fatalf("expected project repository truth to stay outside agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
@@ -229,6 +233,7 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 		"specflow/templates/docs/specs/_verify_result/README.md",
 		"specflow/templates/docs/specs/_stable_verify_result/README.md",
 		"specflow/templates/docs/specs/_governance_review/README.md",
+		"specflow/templates/docs/specs/_independent_evaluation/README.md",
 		"specflow/templates/AGENTS.md",
 		"specflow/templates/GEMINI.md",
 		"specflow/templates/CLAUDE.md",
@@ -253,6 +258,9 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	}
 	if !containsString(scope.TemplateGovernanceFiles, "specflow/templates/docs/specs/_stable_verify_result/README.md") {
 		t.Fatalf("expected stable verify process contract in design scope, got %+v", scope.TemplateGovernanceFiles)
+	}
+	if !containsString(scope.TemplateGovernanceFiles, "specflow/templates/docs/specs/_independent_evaluation/README.md") {
+		t.Fatalf("expected independent evaluation request contract in design scope, got %+v", scope.TemplateGovernanceFiles)
 	}
 	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/operations/migration.md") {
 		t.Fatalf("expected migration policy in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
@@ -305,6 +313,7 @@ func TestCollectDefaultSpecFlowDesignScopeRequiresCandidateIntentStandards(t *te
 		"specflow/templates/docs/specs/_verify_result/README.md",
 		"specflow/templates/docs/specs/_stable_verify_result/README.md",
 		"specflow/templates/docs/specs/_governance_review/README.md",
+		"specflow/templates/docs/specs/_independent_evaluation/README.md",
 		"specflow/templates/AGENTS.md",
 		"specflow/templates/GEMINI.md",
 		"specflow/templates/CLAUDE.md",
@@ -545,6 +554,7 @@ func writeSourceScopeRepo(t *testing.T, repoRoot string) {
 		"templates/docs/specs/_verify_result/README.md",
 		"templates/docs/specs/_stable_verify_result/README.md",
 		"templates/docs/specs/_governance_review/README.md",
+		"templates/docs/specs/_independent_evaluation/README.md",
 		"templates/docs/specs/repository_mapping.md",
 		"templates/docs/specs/rules/stable/s_g_rule_repository_baseline.md",
 		"templates/AGENTS.md",

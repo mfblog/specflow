@@ -94,9 +94,10 @@ Before mutating lifecycle truth or process files:
 After mutation:
 
 1. run the required deterministic validation.
-2. run required independent evaluation before any advancing check, plan, verify, or stable-verify outcome.
-3. close through command close before claiming `_status.md` advancement.
-4. run `framework/governance/impact_sync.md` when unit truth, rule truth, global rules, dependencies, or repository mapping may affect another unit.
+2. generate the required independent evaluation request before any advancing check, plan, verify, or stable-verify outcome.
+3. run required independent evaluation from that request.
+4. close through command close before claiming `_status.md` advancement.
+5. run `framework/governance/impact_sync.md` when unit truth, rule truth, global rules, dependencies, or repository mapping may affect another unit.
 
 ## Automatic Progression
 

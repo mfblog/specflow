@@ -1033,7 +1033,7 @@ func writeCommandCloseUnitCheckProcessWithExtra(t *testing.T, repoRoot string, s
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + snap.SpecFileRef,
+		"review_input_refs: " + commandCloseReviewInputRefsForTest(snap.Object, "unit_check_pass", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}
@@ -1070,7 +1070,7 @@ func writeCommandCloseUnitPlanProcessWithExtra(t *testing.T, repoRoot string, sn
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + snap.SpecFileRef,
+		"review_input_refs: " + commandCloseReviewInputRefsForTest(snap.Object, "unit_plan_plan_ready", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}
@@ -1088,9 +1088,14 @@ func renderCommandCloseFreshnessReceipt(currentSnap snapshot.Snapshot) string {
 		"freshness_review_mode: independent",
 		"freshness_reviewer_result: pass",
 		"freshness_reviewer_context: minimal_context",
-		"freshness_review_input_refs: " + currentSnap.SpecFileRef,
+		"freshness_review_input_refs: " + commandCloseReviewInputRefsForTest(currentSnap.Object, "freshness_text_drift_reuse", currentSnap.SpecFileRef),
 		"freshness_review_findings: none",
 	}, "\n")
+}
+
+func commandCloseReviewInputRefsForTest(object, pack string, refs ...string) string {
+	requestFile := filepath.ToSlash(filepath.Join("docs/specs/_independent_evaluation/requests/unit", object, pack+".md"))
+	return strings.Join(append([]string{pack, requestFile}, refs...), ";")
 }
 
 func writeCommandCloseUnitCheckProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot) {
@@ -1118,7 +1123,7 @@ func writeCommandCloseUnitCheckProcess(t *testing.T, repoRoot string, snap snaps
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + snap.SpecFileRef,
+		"review_input_refs: " + commandCloseReviewInputRefsForTest(snap.Object, "unit_check_pass", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
@@ -1154,7 +1159,7 @@ func writeCommandCloseUnitVerifyProcess(t *testing.T, repoRoot string, snap snap
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + snap.SpecFileRef,
+		"review_input_refs: " + commandCloseReviewInputRefsForTest(snap.Object, "unit_verify_ready_to_promote", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
@@ -1205,7 +1210,7 @@ func writeCommandCloseStableVerifyProcess(t *testing.T, repoRoot string, snap sn
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + snap.SpecFileRef,
+		"review_input_refs: " + commandCloseReviewInputRefsForTest(snap.Object, "unit_stable_verify_advancing", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")

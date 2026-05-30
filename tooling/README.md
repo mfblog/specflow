@@ -74,6 +74,7 @@ The tooling layer may:
 9. maintain mechanical review slice work-state fields when the adopting owner defines the state carrier and stale rules
 10. maintain mechanical review run-state fields
 11. maintain mechanical unit-check checklist fields
+12. generate independent evaluation request files without writing reviewer conclusions
 
 The tooling layer must not:
 
@@ -83,6 +84,7 @@ The tooling layer must not:
 4. replace review severity or final conclusion judgment owned by the active review policy
 5. become a second semantic source of truth
 6. write reader-derived conclusions back into project files
+7. claim that a request file proves reviewer isolation
 
 Slice work-state tooling for review run-state follows `specflow/framework/slice_work_state_protocol.md`.
 The protocol defines generic carrier, slice, stale, and tooling-boundary standards for adopting review flows.
@@ -111,13 +113,18 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - sync registered entry managed blocks from one explicit source
    - in `installed_project`, registered entries resolve at the repository root
    - in `source_repo`, registered entries resolve under `templates/`
-6. `repository-mapping validate`
+6. `evaluation request`
+   - generate `docs/specs/_independent_evaluation/requests/unit/{unit}/{reviewer_pack}.md`
+   - standard gate requests validate the target process artifact without requiring the not-yet-written independent receipt
+   - freshness requests are allowed only for `text_drift` with `evidence_reuse: pending_review`
+   - this entry does not create a reviewer session, write receipt fields, or advance lifecycle state
+7. `repository-mapping validate`
    - validate `docs/specs/repository_mapping.md` path rules against `_status.md` and declared rule files
-7. `review collect-default-scope --flow <review_flow> --layout auto|installed|source`
+8. `review collect-default-scope --flow <review_flow> --layout auto|installed|source`
    - collect the deterministic default scope for the explicit review flow
-8. `review run-init --flow <review_flow> --layout auto|installed|source`
+9. `review run-init --flow <review_flow> --layout auto|installed|source`
    - create or reuse the full-scope run-state file for the explicit review flow
-9. `review run-validate --flow <review_flow> --layout auto|installed|source`
+10. `review run-validate --flow <review_flow> --layout auto|installed|source`
    - validate required run-state fields, timestamps, all fixed statuses including closed statuses, baseline slices, score state when present, and dynamic slice parent links
 11. `review run-refresh --flow <review_flow> --layout auto|installed|source`
    - recompute slice input fingerprints for an open run-state file, mark changed `passed` slices as `stale`, and refresh `last_updated_at`

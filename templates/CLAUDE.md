@@ -77,9 +77,9 @@ specflow/framework/lifecycle/overview.md
 
 | Command | Owner file | Purpose |
 |---|---|---|
-| `unit_init:{unit}` | `specflow/framework/lifecycle/unit_init.md` | Capture an existing accepted capability as first stable truth. |
-| `unit_new:{unit}` | `specflow/framework/lifecycle/unit_new.md` | Create the first candidate truth for a new unit. |
-| `unit_fork:{unit}` | `specflow/framework/lifecycle/unit_fork.md` | Fork candidate truth from existing stable truth for a change or repair. |
+| `unit_init:{unit}` | `specflow/framework/lifecycle/unit_init_new_fork.md` | Capture an existing accepted capability as first stable truth. |
+| `unit_new:{unit}` | `specflow/framework/lifecycle/unit_init_new_fork.md` | Create the first candidate truth for a new unit. |
+| `unit_fork:{unit}` | `specflow/framework/lifecycle/unit_init_new_fork.md` | Fork candidate truth from existing stable truth for a change or repair. |
 | `unit_check:{unit}` | `specflow/framework/lifecycle/unit_check.md` | Check whether candidate truth is clear enough for planning. |
 | `unit_plan:{unit}` | `specflow/framework/lifecycle/unit_plan.md` | Create or update the implementation plan from checked candidate truth. |
 | `unit_impl:{unit}` | `specflow/framework/lifecycle/unit_impl.md` | Implement according to the current plan. |

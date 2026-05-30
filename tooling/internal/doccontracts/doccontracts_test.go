@@ -370,56 +370,71 @@ func TestEntryManagedBlocksDefineActionGuide(t *testing.T) {
 	for _, relPath := range []string{"templates/AGENTS.md", "templates/CLAUDE.md", "templates/GEMINI.md"} {
 		block := managedSpecFlowBlock(t, readDocContractFile(t, repoRoot, relPath), relPath)
 		for _, phrase := range []string{
-			"### 1. Startup Rule",
-			"### 2. First Read",
-			"### 3. Pre-Action Rules",
-			"### 4. No Custom Flow",
-			"### 5. Hard Stops",
-			"### 6. Required Report",
-			"### 7. Detailed Rule Owners",
-			"Use this entry procedure as the first control point for `specFlow` work.",
-			"identify the owning file for the request",
-			"Follow only the route selected by that owner",
-			"If no active owner proves implementation permission",
-			"Read only the first matching owner in this order:",
+			"### 1. What specFlow Is",
+			"### 2. Spec Document Types",
+			"### 3. Spec Document Layers",
+			"### 4. State Files",
+			"### 5. Command Format",
+			"### 6. Command Index",
+			"### 7. Development Loop",
+			"### 8. Natural-Language Requests",
+			"### 9. First Read",
+			"### 10. Pre-Action Rules",
+			"### 11. No Custom Flow",
+			"### 12. Hard Stops",
+			"### 13. Required Output",
+			"### 14. Rule Locations",
+			"This repository uses specFlow to manage development work.",
+			"specFlow maintains project documents",
+			"Spec documents have two types:",
+			"Spec documents have two layers:",
+			"specFlow has two important state files:",
+			"specFlow commands use this format:",
+			"Exact commands have priority over natural-language routing.",
+			"Before any lifecycle action, implementation proposal, reconciliation plan, test-repair plan, or repo-tracked file edit",
+			"When the user request exactly matches one of these commands, read the linked owner file first and follow that file.",
+			"Before reading any lifecycle command owner file except `unit_advance:{unit}`",
 			"`specflow/framework/advance_policy.md`",
-			"`specflow/framework/lifecycle/overview.md`",
+			"specflow/framework/lifecycle/overview.md",
 			"`specflow/framework/governance/review.md`",
 			"`specflow/framework/operations/migration.md`",
-			"`specflow/framework/operations/entry_routing.md`",
-			"`specflow/framework/operations/implementation_change.md`",
+			"specflow/framework/operations/entry_routing.md",
+			"specflow/framework/operations/implementation_change.md",
+			"`unit_check:{unit}`",
+			"`unit_plan:{unit}`",
+			"`unit_verify:{unit}`",
+			"`unit_promote:{unit}`",
+			"`unit_stable_verify:{unit}`",
+			"`unit_advance:{unit}`",
+			"`spec_flow_review`",
+			"`spec_flow_review:full`",
+			"`spec_flow_design_review`",
+			"`spec_flow_migrate`",
+			"unit_new / unit_fork -> unit_check -> unit_plan -> unit_impl -> unit_verify -> unit_promote",
+			"Lifecycle state may advance only through legal command closure.",
+			"If the user request does not exactly match a specFlow command",
 			"formal truth creation or change, no formal truth",
 			"behavior, protocol, boundary, acceptance, rule, ownership, lifecycle",
 			"lifecycle state, Next Command, stable/candidate state, unit phase",
 			"skipping `_status.md` or owner checks",
 			"field meaning, schema fields, output fields, fixture fields",
 			"contract-like log fields, or downstream compatibility",
-			"unless the user explicitly limits the work to internal non-semantic implementation support",
 			"repository mapping, guidance",
 			"reconciliation, audit, alignment, or gap-review",
-			"read `specflow/framework/operations/entry_routing.md`",
-			"limited to implementation-side work",
-			"repo-tracked code, tests, configs, prompts, fixtures, integration scripts",
-			"no exact lifecycle Context Card is already active",
-			"That operation owns the implementation-only, truth-writeback-required, and boundary-unclear classification.",
-			"Exact commands have precedence.",
-			"Do not route an exact lifecycle command through direct implementation-change classification.",
+			"specflow/framework/operations/entry_routing.md",
+			"limited to implementation-side code, tests, configs, prompts, fixtures, integration scripts",
 			"After the first owner routes the request, continue only through the routed owner.",
-			"Do not propose or edit implementation-side files",
-			"Testing, debugging, review, and exploration may inspect or verify, but they do not authorize mutation.",
-			"stop before proposing a repair path and return to the first legal owner",
+			"Before editing any implementation file, prove that the active owner allows the implementation edit.",
+			"Testing, debugging, review, and exploration may inspect or verify. They do not authorize mutation by themselves.",
 			"Do not guess from directory shape, code shape, or chat.",
 			"Do not create a custom reconciliation, audit, alignment, or gap-review flow",
-			"Reconciliation, audit, alignment, and gap-review are not owners.",
-			"route the request through the active owner or the First Read list",
-			"specFlow is the repository workflow for governed engineering changes.",
-			"It does not mean every code edit must change spec documents.",
+			"still route the request through the legal owner first",
 			"A unit is one governed engineering responsibility.",
-			"Stable truth is the accepted current description.",
-			"Candidate truth is the proposed next description.",
-			"A rule is reusable truth shared across units.",
-			"A Context Card is the command-specific action card",
+			"Stable is the accepted current project truth.",
+			"Candidate is proposed next project truth.",
+			"A rule is shared truth",
 			"Do not close an advancing gate from self-assessment.",
+			"The user-facing answer must not require the user to understand internal object-family names",
 		} {
 			if !strings.Contains(block, phrase) {
 				t.Fatalf("%s managed block missing action-guide phrase %q", relPath, phrase)
@@ -706,6 +721,35 @@ func TestCompatibilityRoutingUsesGovernanceFrontDoor(t *testing.T) {
 	}
 }
 
+func TestEntryManagedBlocksRouteEntryCommandsToExistingOwner(t *testing.T) {
+	repoRoot := findRepoRoot(t)
+	ownerPath := "specflow/framework/lifecycle/unit_init_new_fork.md"
+	if _, err := os.Stat(filepath.Join(repoRoot, "framework/lifecycle/unit_init_new_fork.md")); err != nil {
+		t.Fatalf("expected source owner file to exist: %v", err)
+	}
+	for _, relPath := range []string{"templates/AGENTS.md", "templates/CLAUDE.md", "templates/GEMINI.md"} {
+		block := managedSpecFlowBlock(t, readDocContractFile(t, repoRoot, relPath), relPath)
+		for _, row := range []string{
+			"| `unit_init:{unit}` | `" + ownerPath + "` |",
+			"| `unit_new:{unit}` | `" + ownerPath + "` |",
+			"| `unit_fork:{unit}` | `" + ownerPath + "` |",
+		} {
+			if !strings.Contains(block, row) {
+				t.Fatalf("%s managed block missing entry-command owner row %q", relPath, row)
+			}
+		}
+		for _, removedOwner := range []string{
+			"specflow/framework/lifecycle/unit_init.md",
+			"specflow/framework/lifecycle/unit_new.md",
+			"specflow/framework/lifecycle/unit_fork.md",
+		} {
+			if strings.Contains(block, removedOwner) {
+				t.Fatalf("%s managed block routes to removed owner %s", relPath, removedOwner)
+			}
+		}
+	}
+}
+
 func TestEntryManagedBlocksStayLightweight(t *testing.T) {
 	repoRoot := findRepoRoot(t)
 	for _, relPath := range []string{"templates/AGENTS.md", "templates/CLAUDE.md", "templates/GEMINI.md"} {
@@ -714,9 +758,6 @@ func TestEntryManagedBlocksStayLightweight(t *testing.T) {
 			"recovery",
 			"rule_topology",
 			"rule topology",
-			"design review",
-			"spec_flow_design_review",
-			"spec_flow_review",
 		} {
 			if strings.Contains(strings.ToLower(block), forbidden) {
 				t.Fatalf("%s managed block should not default-reference %q", relPath, forbidden)
@@ -1104,6 +1145,8 @@ func TestIndependentEvaluationDefinesFixedReviewerPacks(t *testing.T) {
 		"Forbidden Inputs:",
 		"Evaluation Questions:",
 		"Legal Output:",
+		"## Handoff Requests",
+		"specflowctl-<os>-<arch> evaluation request",
 		"## Anti-Patterns",
 		"specFlow does not create harness commands, reviewer sessions, tokens, or task scheduling.",
 		"The reviewer must not inherit the executor's full working context as authority",
@@ -1128,6 +1171,9 @@ func TestLifecycleCardsReferenceFixedReviewerPacks(t *testing.T) {
 		section := sectionBetween(t, content, "## Independent Evaluation", "## Close Requirements", relPath)
 		if !strings.Contains(section, pack) {
 			t.Fatalf("%s Independent Evaluation section missing reviewer pack %s", relPath, pack)
+		}
+		if !strings.Contains(section, "evaluation request") {
+			t.Fatalf("%s Independent Evaluation section missing handoff request command", relPath)
 		}
 		if strings.Contains(section, "minimal review pack:") {
 			t.Fatalf("%s should reference the fixed reviewer pack instead of an inline free-form pack", relPath)

@@ -54,6 +54,16 @@ Advancing outcomes `aligned`, `controlled_repair_required`, and `controlled_chan
 
 The executor may write stable verify evidence, but stable alignment or controlled-change readiness must be reviewed by an isolated reviewer using reviewer pack `unit_stable_verify_advancing` from `framework/core/independent_evaluation.md`.
 
+Before requesting review, generate the handoff request:
+
+```text
+<tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack unit_stable_verify_advancing
+```
+
+If the current agent runtime explicitly exposes an independent executor capability, send only the generated request file to that executor.
+If no such capability is explicitly available, stop and give the user the generated request file path and trigger instruction.
+The reviewer returns the result to the executor and must not modify repository files.
+
 `docs/specs/_stable_verify_result/unit/{unit}.md` must contain the independent evaluation receipt defined in `framework/core/independent_evaluation.md`.
 
 ## Close Requirements

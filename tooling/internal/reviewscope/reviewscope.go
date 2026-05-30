@@ -523,6 +523,7 @@ func templateProcessStateFiles(scope SpecFlowScope) []string {
 		scope.TemplatePath("docs/specs/_verify_result/README.md"),
 		scope.TemplatePath("docs/specs/_stable_verify_result/README.md"),
 		scope.TemplatePath("docs/specs/_governance_review/README.md"),
+		scope.TemplatePath("docs/specs/_independent_evaluation/README.md"),
 	}
 }
 

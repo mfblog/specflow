@@ -93,6 +93,10 @@ type ValidationResult struct {
 	Expected        Snapshot
 }
 
+type validationOptions struct {
+	SkipIndependentEvaluationReceipt bool
+}
+
 type ProcessSnapshotData struct {
 	ProcessKind                   string
 	ProcessFile                   string
@@ -535,6 +539,16 @@ func ValidateProcessFile(repoRoot, module, processKind string) (ValidationResult
 }
 
 func ValidateProcessFileForObject(repoRoot, objectType, object, processKind string) (ValidationResult, error) {
+	return validateProcessFileForObject(repoRoot, objectType, object, processKind, validationOptions{})
+}
+
+func ValidateProcessFileForIndependentEvaluationRequest(repoRoot, objectType, object, processKind string) (ValidationResult, error) {
+	return validateProcessFileForObject(repoRoot, objectType, object, processKind, validationOptions{
+		SkipIndependentEvaluationReceipt: true,
+	})
+}
+
+func validateProcessFileForObject(repoRoot, objectType, object, processKind string, options validationOptions) (ValidationResult, error) {
 	expected, err := RebuildCurrentObject(repoRoot, objectType, object)
 	if err != nil {
 		return ValidationResult{}, err
@@ -542,6 +556,9 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 	requiredFields, ok := requiredFieldsForObjectProcess(objectType, processKind)
 	if !ok {
 		return ValidationResult{}, fmt.Errorf("process kind %q is not supported for object type %q", processKind, objectType)
+	}
+	if options.SkipIndependentEvaluationReceipt {
+		requiredFields = withoutIndependentEvaluationReceipt(requiredFields)
 	}
 
 	processFile, err := ProcessFilePath(objectType, object, processKind)
@@ -585,7 +602,9 @@ func ValidateProcessFileForObject(repoRoot, objectType, object, processKind stri
 		result.Valid = false
 		result.Mismatches = append(result.Mismatches, field)
 	}
-	validateIndependentEvaluationReceipt(&result, actual)
+	if !options.SkipIndependentEvaluationReceipt {
+		validateIndependentEvaluationReceipt(&result, actual)
+	}
 
 	if processKind == "plan" {
 		compareScalar(&result, "spec_file_ref", actual.scalars["spec_file_ref"], expected.SpecFileRef)
@@ -685,6 +704,26 @@ func withIndependentEvaluationReceipt(fields ...string) []string {
 	return result
 }
 
+func withoutIndependentEvaluationReceipt(fields []string) []string {
+	result := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if isIndependentEvaluationReceiptField(field) {
+			continue
+		}
+		result = append(result, field)
+	}
+	return result
+}
+
+func isIndependentEvaluationReceiptField(field string) bool {
+	for _, receiptField := range independentEvaluationReceiptFields {
+		if field == receiptField {
+			return true
+		}
+	}
+	return false
+}
+
 func expectedProcessRouting(objectType, processKind string) (string, string, error) {
 	switch objectType {
 	case "unit":
@@ -713,12 +752,95 @@ func validateIndependentEvaluationReceipt(result *ValidationResult, actual proce
 	if actual.presentFields["review_findings"] {
 		compareScalar(result, "review_findings", actual.scalars["review_findings"], "none")
 	}
+	if actual.presentFields["review_input_refs"] {
+		validateEvaluationInputRefs(result, "review_input_refs", actual.scalars["review_input_refs"], packForProcessKind(result.ProcessKind))
+	}
 	if actual.presentFields["human_decision_refs"] {
 		value := strings.TrimSpace(actual.scalars["human_decision_refs"])
 		if value != "" && value != "none" && isChatOnlyHumanDecisionRef(value) {
 			result.Valid = false
 			result.Mismatches = append(result.Mismatches, "human_decision_refs must be none or explicit durable refs, not chat-only")
 		}
+	}
+}
+
+func validateEvaluationInputRefs(result *ValidationResult, field, value, expectedPack string) {
+	refs := splitProcessRefList(value)
+	if len(refs) == 0 || strings.TrimSpace(value) == "none" {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, field+" must include reviewer pack, request file, and durable input refs")
+		return
+	}
+	for _, ref := range refs {
+		if ref == "none" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, field+" must not contain none")
+			return
+		}
+	}
+	if expectedPack == "" {
+		return
+	}
+	expectedRequest := evaluationRequestFileRef(result.ObjectType, result.Object, expectedPack)
+	if !containsRef(refs, expectedPack) {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s must contain reviewer pack: %s", field, expectedPack))
+	}
+	if !containsRef(refs, expectedRequest) {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s must contain request file ref: %s", field, expectedRequest))
+	}
+	hasDurableInput := false
+	for _, ref := range refs {
+		if ref != expectedPack && ref != expectedRequest {
+			hasDurableInput = true
+			break
+		}
+	}
+	if !hasDurableInput {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, field+" must contain at least one durable input ref")
+	}
+}
+
+func splitProcessRefList(value string) []string {
+	parts := strings.Split(value, ";")
+	refs := []string{}
+	for _, part := range parts {
+		ref := strings.TrimSpace(filepath.ToSlash(part))
+		if ref == "" {
+			continue
+		}
+		refs = append(refs, ref)
+	}
+	return refs
+}
+
+func containsRef(refs []string, want string) bool {
+	for _, ref := range refs {
+		if ref == want {
+			return true
+		}
+	}
+	return false
+}
+
+func evaluationRequestFileRef(objectType, object, pack string) string {
+	return filepath.ToSlash(filepath.Join("docs/specs/_independent_evaluation/requests", objectType, object, pack+".md"))
+}
+
+func packForProcessKind(processKind string) string {
+	switch processKind {
+	case "check":
+		return "unit_check_pass"
+	case "plan":
+		return "unit_plan_plan_ready"
+	case "verify":
+		return "unit_verify_ready_to_promote"
+	case "stable_verify":
+		return "unit_stable_verify_advancing"
+	default:
+		return ""
 	}
 }
 
@@ -2224,8 +2346,9 @@ func freshnessReceiptValid(result *ValidationResult, actual processSnapshot, pri
 			}
 		}
 	}
-	if strings.TrimSpace(actual.scalars["freshness_review_input_refs"]) == "" {
-		result.Mismatches = append(result.Mismatches, "freshness_review_input_refs must not be empty")
+	before := len(result.Mismatches)
+	validateEvaluationInputRefs(result, "freshness_review_input_refs", actual.scalars["freshness_review_input_refs"], "freshness_text_drift_reuse")
+	if len(result.Mismatches) != before {
 		valid = false
 	}
 	return valid

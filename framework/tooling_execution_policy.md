@@ -96,6 +96,10 @@ The allowed action families are:
    - compute candidate readiness, candidate blockers, candidate cycles, and reference-only edges from explicit already-written references
    - read only declared truth and support-surface files
    - write no project files and create no durable process artifact
+13. independent evaluation handoff
+   - generate request files only under the path defined by `framework/core/independent_evaluation.md`
+   - validate the target process artifact mechanically before request writeback
+   - write no receipt fields, reviewer result, lifecycle status, or semantic review conclusion
 
 Writeback rule:
 

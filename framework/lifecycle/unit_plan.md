@@ -63,6 +63,16 @@ Advancing outcome `plan_ready` requires independent evaluation.
 
 The executor may write the active plan, but the handoff gate must be reviewed by an isolated reviewer using reviewer pack `unit_plan_plan_ready` from `framework/core/independent_evaluation.md`.
 
+Before requesting review, generate the handoff request:
+
+```text
+<tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack unit_plan_plan_ready
+```
+
+If the current agent runtime explicitly exposes an independent executor capability, send only the generated request file to that executor.
+If no such capability is explicitly available, stop and give the user the generated request file path and trigger instruction.
+The reviewer returns the result to the executor and must not modify repository files.
+
 `docs/specs/_plans/active/{unit}.md` must contain the independent evaluation receipt defined in `framework/core/independent_evaluation.md`.
 
 ## Close Requirements
