@@ -84,7 +84,7 @@ fi
 fingerprint="$(
   while IFS= read -r rel_path; do
     printf '%s\0' "${rel_path}"
-    cat "${TOOLING_ROOT}/${rel_path}"
+    tr -d '\r' <"${TOOLING_ROOT}/${rel_path}"
     printf '\0'
   done <"${SORTED_FILE_LIST}" | "${HASH_CMD[@]}" | awk '{print $1}'
 )"

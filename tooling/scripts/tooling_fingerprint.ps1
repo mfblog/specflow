@@ -70,7 +70,14 @@ try {
     foreach ($relativePath in $files) {
         $absolutePath = Join-Path $toolingRoot ($relativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar)
         $pathBytes = [System.Text.Encoding]::UTF8.GetBytes($relativePath)
-        $contentBytes = [System.IO.File]::ReadAllBytes($absolutePath)
+        $rawBytes = [System.IO.File]::ReadAllBytes($absolutePath)
+        $normalizedBytes = [System.Collections.Generic.List[byte]]::new()
+        foreach ($byte in $rawBytes) {
+            if ($byte -ne 13) {
+                $normalizedBytes.Add($byte)
+            }
+        }
+        $contentBytes = [byte[]]$normalizedBytes.ToArray()
 
         $stream.Write($pathBytes, 0, $pathBytes.Length)
         $stream.WriteByte(0)

@@ -123,6 +123,26 @@ func TestLiveFingerprintMatchesAcrossLayouts(t *testing.T) {
 	}
 }
 
+func TestLiveFingerprintNormalizesCRLFLineEndings(t *testing.T) {
+	lfRoot := t.TempDir()
+	crlfRoot := t.TempDir()
+	writeToolingRepo(t, lfRoot)
+	writeToolingRepo(t, crlfRoot)
+	convertFingerprintInputsToCRLF(t, filepath.Join(crlfRoot, "specflow/tooling"))
+
+	lfFingerprint, _, err := LiveFingerprint(lfRoot)
+	if err != nil {
+		t.Fatalf("LF LiveFingerprint returned error: %v", err)
+	}
+	crlfFingerprint, _, err := LiveFingerprint(crlfRoot)
+	if err != nil {
+		t.Fatalf("CRLF LiveFingerprint returned error: %v", err)
+	}
+	if lfFingerprint != crlfFingerprint {
+		t.Fatalf("fingerprint differs across line endings: lf=%s crlf=%s", lfFingerprint, crlfFingerprint)
+	}
+}
+
 func TestShellFingerprintScriptMatchesLiveFingerprint(t *testing.T) {
 	if _, err := exec.LookPath("bash"); err != nil {
 		t.Skip("bash is not available")
@@ -163,6 +183,44 @@ func TestShellFingerprintScriptMatchesLiveFingerprint(t *testing.T) {
 	}
 }
 
+func TestPowerShellFingerprintScriptMatchesLiveFingerprint(t *testing.T) {
+	powershellPath, ok := findPowerShell()
+	if !ok {
+		t.Skip("PowerShell is not available")
+	}
+
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatalf("resolve repo root: %v", err)
+	}
+
+	want, _, err := LiveFingerprint(repoRoot)
+	if err != nil {
+		t.Fatalf("LiveFingerprint returned error: %v", err)
+	}
+
+	scriptPath := filepath.Join("tooling", "scripts", "tooling_fingerprint.ps1")
+	cmd := exec.Command(powershellPath, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath)
+	cmd.Dir = repoRoot
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("tooling_fingerprint.ps1 failed: %v\n%s", err, string(out))
+	}
+	if got := strings.TrimSpace(string(out)); got != want {
+		t.Fatalf("PowerShell script fingerprint mismatch\ngot  %s\nwant %s", got, want)
+	}
+
+	shortCmd := exec.Command(powershellPath, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath, "-Short")
+	shortCmd.Dir = repoRoot
+	shortOut, err := shortCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("tooling_fingerprint.ps1 -Short failed: %v\n%s", err, string(shortOut))
+	}
+	if got, want := strings.TrimSpace(string(shortOut)), want[:12]; got != want {
+		t.Fatalf("PowerShell script short fingerprint mismatch\ngot  %s\nwant %s", got, want)
+	}
+}
+
 func writeToolingRepo(t *testing.T, repoRoot string) {
 	t.Helper()
 	writeToolingRepoAt(t, repoRoot, "specflow/tooling")
@@ -180,6 +238,62 @@ func writeToolingRepoAt(t *testing.T, repoRoot, toolingRoot string) {
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "internal/demo/demo.go"), "package demo\n\nfunc Value() string { return \"demo\" }\n")
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "reader/web/app.js"), "console.log('demo');\n")
+}
+
+func convertFingerprintInputsToCRLF(t *testing.T, toolingRoot string) {
+	t.Helper()
+	paths := []string{
+		filepath.Join(toolingRoot, "go.mod"),
+		filepath.Join(toolingRoot, "manifest.tsv"),
+	}
+	err := filepath.Walk(filepath.Join(toolingRoot, "cmd"), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasSuffix(info.Name(), ".go") {
+			return nil
+		}
+		paths = append(paths, path)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk cmd files: %v", err)
+	}
+	err = filepath.Walk(filepath.Join(toolingRoot, "internal"), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasSuffix(info.Name(), ".go") {
+			return nil
+		}
+		paths = append(paths, path)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk internal files: %v", err)
+	}
+
+	for _, path := range paths {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile(%s) failed: %v", path, err)
+		}
+		lf := strings.ReplaceAll(string(content), "\r\n", "\n")
+		crlf := strings.ReplaceAll(lf, "\n", "\r\n")
+		if err := os.WriteFile(path, []byte(crlf), 0o644); err != nil {
+			t.Fatalf("WriteFile(%s) failed: %v", path, err)
+		}
+	}
+}
+
+func findPowerShell() (string, bool) {
+	for _, name := range []string{"pwsh", "powershell.exe", "powershell"} {
+		path, err := exec.LookPath(name)
+		if err == nil {
+			return path, true
+		}
+	}
+	return "", false
 }
 
 func containsPath(paths []string, expected string) bool {

@@ -1,6 +1,7 @@
 package toolingfreshness
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -140,6 +141,7 @@ func LiveFingerprint(repoRoot string) (string, []string, error) {
 		if err != nil {
 			return "", nil, fmt.Errorf("read %s: %w", input.repositoryRelative, err)
 		}
+		content = normalizeFingerprintContent(content)
 		hasher.Write([]byte(input.toolingRelative))
 		hasher.Write([]byte{0})
 		hasher.Write(content)
@@ -148,6 +150,10 @@ func LiveFingerprint(repoRoot string) (string, []string, error) {
 	}
 
 	return hex.EncodeToString(hasher.Sum(nil)), files, nil
+}
+
+func normalizeFingerprintContent(content []byte) []byte {
+	return bytes.ReplaceAll(content, []byte{'\r'}, nil)
 }
 
 func dedupeSortedInputs(items []sourceInput) []sourceInput {
