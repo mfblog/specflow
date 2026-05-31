@@ -168,6 +168,24 @@ function Sync-ExistingEntryBlocks {
     }
 }
 
+function Get-OSArchitecture {
+    $runtimeInfo = [System.Runtime.InteropServices.RuntimeInformation]
+    $property = $runtimeInfo.GetProperty("OSArchitecture")
+    if ($null -ne $property) {
+        return [string]$property.GetValue($null, $null)
+    }
+
+    $arch = [System.Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITEW6432")
+    if ([string]::IsNullOrWhiteSpace($arch)) {
+        $arch = [System.Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
+    }
+    if (-not [string]::IsNullOrWhiteSpace($arch)) {
+        return $arch
+    }
+
+    throw "Unable to determine CPU architecture."
+}
+
 function Get-PlatformSuffix {
     $os = ""
     if ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
@@ -183,10 +201,12 @@ function Get-PlatformSuffix {
         throw "Unsupported operating system."
     }
 
-    $arch = switch ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture) {
+    $osArchitecture = Get-OSArchitecture
+    $arch = switch ($osArchitecture.ToString().ToUpperInvariant()) {
         "X64" { "amd64" }
-        "Arm64" { "arm64" }
-        default { throw "Unsupported CPU architecture: $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)" }
+        "AMD64" { "amd64" }
+        "ARM64" { "arm64" }
+        default { throw "Unsupported CPU architecture: $osArchitecture" }
     }
 
     if ($os -eq "windows") {
