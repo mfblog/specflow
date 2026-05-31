@@ -1,6 +1,8 @@
 package evaluationrequest
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -531,6 +533,7 @@ func requestReviewInputRefsForTest(object, pack string, refs ...string) string {
 
 func writeVerifyProcessWithoutReceipt(t *testing.T, repoRoot string, expected snapshot.Snapshot) {
 	t.Helper()
+	activePlanFingerprint := requestFileFingerprint(t, repoRoot, snapshot.ActivePlanFilePath(expected.Object))
 	writeFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+strings.Join([]string{
 		"object_type: unit",
 		"object_ref: demo",
@@ -550,11 +553,14 @@ func writeVerifyProcessWithoutReceipt(t *testing.T, repoRoot string, expected sn
 		"unit_appendix_snapshot:",
 		renderAppendix(expected.ModuleAppendixSnapshot),
 		"verification_scope_ref: current candidate",
+		"active_plan_file_ref: " + snapshot.ActivePlanFilePath(expected.Object),
+		"active_plan_fingerprint: " + activePlanFingerprint,
 		"rule_snapshot:",
 		renderRules(expected.RuleSnapshot),
 		"acceptance_item_evidence_matrix:",
 		"  - id: demo.core",
 		"    status: pass",
+		"retirement_evidence_matrix: none",
 	}, "\n")+"\n```\n")
 }
 
@@ -572,7 +578,21 @@ func writePlanProcessWithoutReceipt(t *testing.T, repoRoot string, expected snap
 		"acceptance_item_plan_coverage:",
 		"  - id: demo.core",
 		"    coverage: implementation slice and verification target",
+		"retirement_targets: none",
 	}, "\n")+"\n```\n")
+}
+
+func requestFileFingerprint(t *testing.T, repoRoot, fileRef string) string {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)))
+	if err != nil {
+		t.Fatalf("read %s: %v", fileRef, err)
+	}
+	text := strings.ReplaceAll(string(content), "\r\n", "\n")
+	text = strings.TrimSuffix(text, "\n")
+	text += "\n"
+	sum := sha256.Sum256([]byte(text))
+	return fmt.Sprintf("%x", sum)
 }
 
 func writeStableVerifyProcessWithoutReceipt(t *testing.T, repoRoot string, expected snapshot.Snapshot, mapping snapshot.RepositoryMappingEntry) {

@@ -205,6 +205,7 @@ func configsByPack() map[string]packConfig {
 			EvaluationQuestions: []string{
 				"Does the plan cover every accepted acceptance item?",
 				"Does the plan stay inside checked truth and named implementation surfaces?",
+				"Does the plan declare retirement_targets as none or list concrete retired paths, helpers, wrappers, compatibility layers, or dependencies with verification actions?",
 				"Can unit_impl execute without inventing behavior or ownership?",
 			},
 		},
@@ -228,6 +229,7 @@ func configsByPack() map[string]packConfig {
 			EvaluationQuestions: []string{
 				"Does the verify result cover every executable acceptance item?",
 				"Are evidence refs inspectable and aligned with the active plan?",
+				"Does the verify result prove every retirement target with pass and mainline_dependency not_required evidence?",
 				"Is the candidate ready for promotion without hiding unresolved gaps?",
 			},
 		},
@@ -302,6 +304,10 @@ func collectReviewRefs(options Options, config packConfig, processFile string, v
 		fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
 	case PackUnitVerifyReadyToPromote:
 		fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object), snapshot.ActivePlanFilePath(options.Object))
+		evidenceRefs = appendScalarRefs(evidenceRefs, processData, "evidence_refs")
+		for _, entry := range processData.RetirementEvidence {
+			evidenceRefs = appendSplitRefs(evidenceRefs, entry.EvidenceRefs)
+		}
 	case PackUnitStableVerifyAdvancing:
 		fileRefs = append(fileRefs, "docs/specs/repository_mapping.md")
 		evidenceRefs = appendScalarRefs(evidenceRefs, processData, "implementation_surface_refs", "evidence_refs")
@@ -365,9 +371,18 @@ func appendScalarRefs(refs []string, processData snapshot.ProcessSnapshotData, k
 		if value == "" || value == "none" {
 			continue
 		}
-		for _, part := range strings.Split(value, ";") {
-			refs = append(refs, strings.TrimSpace(part))
+		refs = appendSplitRefs(refs, value)
+	}
+	return refs
+}
+
+func appendSplitRefs(refs []string, value string) []string {
+	for _, part := range strings.Split(value, ";") {
+		ref := strings.TrimSpace(part)
+		if ref == "" || ref == "none" {
+			continue
 		}
+		refs = append(refs, ref)
 	}
 	return refs
 }

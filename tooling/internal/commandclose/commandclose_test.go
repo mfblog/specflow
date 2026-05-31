@@ -1,6 +1,8 @@
 package commandclose
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -244,6 +246,7 @@ func TestClosePromoteWritesStablePromotionSummaryBeforeCleanup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RebuildCurrentObject: %v", err)
 	}
+	writeCommandCloseUnitPlanProcessWithExtra(t, repoRoot, candidateSnapshot, "")
 	writeCommandCloseUnitVerifyProcess(t, repoRoot, candidateSnapshot)
 
 	result, err := Close(Options{
@@ -256,6 +259,11 @@ func TestClosePromoteWritesStablePromotionSummaryBeforeCleanup(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("Close: %v", err)
+	}
+	if len(result.InputValidatedProcesses) != 2 ||
+		result.InputValidatedProcesses[0].ProcessKind != "plan" ||
+		result.InputValidatedProcesses[1].ProcessKind != "verify" {
+		t.Fatalf("unit_promote must validate plan and verify, got %+v", result.InputValidatedProcesses)
 	}
 	summaryRef := "docs/specs/_verify_result/stable/unit/demo.md"
 	if result.PromotionSummaryFile != summaryRef {
@@ -290,6 +298,7 @@ func TestClosePromoteCleanupFailureReportsRetryAfterStatusUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RebuildCurrentObject: %v", err)
 	}
+	writeCommandCloseUnitPlanProcessWithExtra(t, repoRoot, candidateSnapshot, "")
 	writeCommandCloseUnitVerifyProcess(t, repoRoot, candidateSnapshot)
 
 	blockingDir := filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_demo_blocked.md")
@@ -344,6 +353,7 @@ func TestClosePromoteRejectsMissingStableTruthBeforeCleanup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RebuildCurrentObject: %v", err)
 	}
+	writeCommandCloseUnitPlanProcessWithExtra(t, repoRoot, candidateSnapshot, "")
 	writeCommandCloseUnitVerifyProcess(t, repoRoot, candidateSnapshot)
 
 	_, err = Close(Options{
@@ -1119,6 +1129,7 @@ func writeCommandCloseUnitPlanProcessWithExtra(t *testing.T, repoRoot string, sn
 		"acceptance_item_plan_coverage:",
 		"  - id: demo.core",
 		"    coverage: implementation slice and verification target",
+		"retirement_targets: none",
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
@@ -1183,6 +1194,7 @@ func writeCommandCloseUnitCheckProcess(t *testing.T, repoRoot string, snap snaps
 
 func writeCommandCloseUnitVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot) {
 	t.Helper()
+	activePlanFingerprint := commandCloseFileFingerprint(t, repoRoot, snapshot.ActivePlanFilePath(snap.Object))
 	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+strings.Join([]string{
 		"object_type: unit",
 		"object_ref: demo",
@@ -1203,10 +1215,13 @@ func writeCommandCloseUnitVerifyProcess(t *testing.T, repoRoot string, snap snap
 		"    not_runnable_yet: no",
 		"unit_appendix_snapshot: none",
 		"verification_scope_ref: current candidate",
+		"active_plan_file_ref: " + snapshot.ActivePlanFilePath(snap.Object),
+		"active_plan_fingerprint: " + activePlanFingerprint,
 		"rule_snapshot: none",
 		"acceptance_item_evidence_matrix:",
 		"  - id: demo.core",
 		"    status: pass",
+		"retirement_evidence_matrix: none",
 		"evidence_refs: go test ./...",
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
@@ -1215,6 +1230,19 @@ func writeCommandCloseUnitVerifyProcess(t *testing.T, repoRoot string, snap snap
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
+}
+
+func commandCloseFileFingerprint(t *testing.T, repoRoot, fileRef string) string {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)))
+	if err != nil {
+		t.Fatalf("read %s: %v", fileRef, err)
+	}
+	text := strings.ReplaceAll(string(content), "\r\n", "\n")
+	text = strings.TrimSuffix(text, "\n")
+	text += "\n"
+	sum := sha256.Sum256([]byte(text))
+	return fmt.Sprintf("%x", sum)
 }
 
 func writeCommandCloseStableVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot, decision string) {

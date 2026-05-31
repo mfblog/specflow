@@ -75,7 +75,7 @@ Lifecycle commands must respect current applicable rules:
 
 1. `unit_plan` consumes a valid `_check_result/unit/{unit}.md`.
 2. `unit_impl` and `unit_verify` consume valid check and plan evidence.
-3. `unit_promote` consumes valid verify evidence.
+3. `unit_promote` consumes valid active plan and verify evidence.
 4. `unit_stable_verify` advancing outcomes consume valid `_stable_verify_result/unit/{unit}.md`.
 5. Advancing check, plan, verify, and stable-verify evidence must contain a valid independent reviewer receipt.
 6. Command close is the only lifecycle advancement authority for `_status.md`.

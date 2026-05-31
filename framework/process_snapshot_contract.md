@@ -87,6 +87,7 @@ spec_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 spec_version_ref: c_unit_{unit}@x.y.z
 spec_fingerprint: {fingerprint}
 acceptance_behavior_fingerprint: {fingerprint}
+retirement_targets: none | list
 evaluation_mode: independent
 reviewer_result: pass
 reviewer_context: minimal_context
@@ -94,6 +95,41 @@ review_input_refs: {reviewer_pack};{request_file};{durable_input_refs}
 review_findings: none
 human_decision_refs: none | list
 ```
+
+`retirement_targets` is mandatory. It must be literal `none`, or a YAML list whose items contain `id`, `target_ref`, `target_kind`, `retirement_method`, `verification_action`, and `acceptance_item_ids`.
+List form must use this exact shape:
+
+```yaml
+retirement_targets:
+  - id: rt.<slug>
+    target_ref: {path-or-name}
+    target_kind: path|helper|wrapper|compat_layer|dependency|other
+    retirement_method: remove|reroute|replace|isolate
+    verification_action: {verification action}
+    acceptance_item_ids: {acceptance_item_id},{acceptance_item_id}
+```
+
+Valid `target_kind` values are `path`, `helper`, `wrapper`, `compat_layer`, `dependency`, and `other`.
+Valid `retirement_method` values are `remove`, `reroute`, `replace`, and `isolate`.
+Each target id must use `rt.<slug>`.
+`acceptance_item_ids` must be a single comma-separated scalar of current candidate acceptance item ids.
+It must not be a YAML list and must not use semicolon delimiters.
+
+Candidate verify process YAML must also bind to the active plan and record retirement evidence:
+
+```yaml
+active_plan_file_ref: docs/specs/_plans/active/{unit}.md
+active_plan_fingerprint: {fingerprint}
+retirement_evidence_matrix: none | list
+```
+
+`retirement_evidence_matrix` is mandatory. When the active plan has `retirement_targets: none`, it must be literal `none`.
+When the active plan lists retirement targets, the matrix must contain exactly those target ids.
+Each item must include `id`, `result`, `mainline_dependency`, and `evidence_refs`.
+Promotion-ready evidence requires `result: pass` and `mainline_dependency: not_required` for every retirement target.
+Valid `result` values are `pass`, `fail`, and `not_checked`.
+Valid `mainline_dependency` values are `not_required`, `still_required`, and `unknown`.
+Tooling must not delete implementation code or judge whether a retained compatibility path is business-safe; explicit planning and verification evidence drive the outcome.
 
 Advancing check, active plan, verify, and stable verify files must include the independent evaluation receipt.
 Tooling validates the receipt fields mechanically; it does not prove reviewer session isolation and does not judge whether the reviewer made a good semantic decision.
@@ -419,9 +455,12 @@ At minimum, validation must rebuild:
 7. `rule_snapshot` from stable global rules and current unit `rule_refs`
 8. `acceptance_item_set` from the current unit truth for check, verify, and stable verify files
 9. `acceptance_item_plan_coverage` against the current candidate acceptance item ids for active plan files
-10. `acceptance_item_evidence_matrix` against the current acceptance item ids for verify and stable verify files
-11. independent evaluation receipt fields for check, active plan, verify, and stable verify files
-12. acceptance behavior fingerprint and conditional freshness reuse receipt fields when text drift is being reused
+10. `retirement_targets` shape, ids, target fields, and acceptance item refs for active plan files
+11. `active_plan_file_ref` and `active_plan_fingerprint` for candidate verify files
+12. `acceptance_item_evidence_matrix` against the current acceptance item ids for verify and stable verify files
+13. `retirement_evidence_matrix` against the current active plan retirement target ids for candidate verify files
+14. independent evaluation receipt fields for check, active plan, verify, and stable verify files
+15. acceptance behavior fingerprint and conditional freshness reuse receipt fields when text drift is being reused
 
 Deterministic validation rule:
 

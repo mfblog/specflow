@@ -671,7 +671,8 @@ func TestValidateProcessFileRejectsNonPassCheckAndVerifyDecisions(t *testing.T) 
 
 			body := renderFormalCheckProcessBody(expected)
 			if tc.processKind == "verify" {
-				body = renderFormalVerifyProcessBody(expected)
+				activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+				body = renderFormalVerifyProcessBody(expected, activePlanFingerprint)
 			}
 			body = strings.Replace(body, "decision: pass", "decision: "+tc.decision, 1)
 			if tc.processKind == "check" {
@@ -1199,7 +1200,8 @@ func TestValidateProcessFileRejectsPassWithReviewFindings(t *testing.T) {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 
-	body := strings.Replace(renderFormalVerifyProcessBody(expected), "review_findings: none", "review_findings: missing-acceptance-boundary", 1)
+	activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "review_findings: none", "review_findings: missing-acceptance-boundary", 1)
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
 
 	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
@@ -1307,6 +1309,30 @@ func TestValidateProcessFileAcceptsPlanSchemaWithoutGateFields(t *testing.T) {
 	}
 }
 
+func TestValidateProcessFileRejectsPlanMissingRetirementTargets(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	body := strings.Replace(renderFormalPlanProcessBody(expected), "retirement_targets: none\n", "", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "missing required field: retirement_targets") {
+		t.Fatalf("expected missing retirement targets mismatch, got %+v", result.Mismatches)
+	}
+}
+
 func TestValidateProcessFileRejectsPlanCoverageGap(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
@@ -1331,6 +1357,82 @@ func TestValidateProcessFileRejectsPlanCoverageGap(t *testing.T) {
 	}
 	if !containsMismatch(result.Mismatches, "acceptance_item_plan_coverage missing id: demo.core") {
 		t.Fatalf("expected missing coverage id mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsPlanRetirementTargetGaps(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "missing field",
+			body: strings.Join([]string{
+				"retirement_targets:",
+				"  - id: rt.legacy",
+				"    target_kind: helper",
+				"    retirement_method: reroute",
+				"    verification_action: go test ./...",
+				"    acceptance_item_ids: demo.core",
+			}, "\n"),
+			want: "retirement_targets invalid: each item must include id, target_ref, target_kind, retirement_method, verification_action, and acceptance_item_ids",
+		},
+		{
+			name: "duplicate id",
+			body: strings.Join([]string{
+				"retirement_targets:",
+				"  - id: rt.legacy",
+				"    target_ref: internal/legacy.go",
+				"    target_kind: helper",
+				"    retirement_method: reroute",
+				"    verification_action: go test ./...",
+				"    acceptance_item_ids: demo.core",
+				"  - id: rt.legacy",
+				"    target_ref: internal/legacy_wrapper.go",
+				"    target_kind: wrapper",
+				"    retirement_method: replace",
+				"    verification_action: go test ./...",
+				"    acceptance_item_ids: demo.core",
+			}, "\n"),
+			want: "retirement_targets duplicate id: rt.legacy",
+		},
+		{
+			name: "unknown acceptance item",
+			body: strings.Join([]string{
+				"retirement_targets:",
+				"  - id: rt.legacy",
+				"    target_ref: internal/legacy.go",
+				"    target_kind: helper",
+				"    retirement_method: reroute",
+				"    verification_action: go test ./...",
+				"    acceptance_item_ids: demo.other",
+			}, "\n"),
+			want: "retirement_targets unknown acceptance_item_ids for rt.legacy: demo.other",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			setupSnapshotValidationRepo(t, repoRoot)
+
+			expected, err := RebuildCurrent(repoRoot, "demo")
+			if err != nil {
+				t.Fatalf("RebuildCurrent: %v", err)
+			}
+			body := strings.Replace(renderFormalPlanProcessBody(expected), "retirement_targets: none", tc.body, 1)
+			mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+			result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+			if err != nil {
+				t.Fatalf("ValidateProcessFile: %v", err)
+			}
+			if result.Valid {
+				t.Fatalf("expected invalid result, got valid")
+			}
+			if !containsMismatch(result.Mismatches, tc.want) {
+				t.Fatalf("expected mismatch %q, got %+v", tc.want, result.Mismatches)
+			}
+		})
 	}
 }
 
@@ -1395,7 +1497,8 @@ func TestValidateProcessFileRejectsVerifyEvidenceGap(t *testing.T) {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
 
-	body := strings.Replace(renderFormalVerifyProcessBody(expected), "status: pass", "status: skipped", 1)
+	activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "status: pass", "status: skipped", 1)
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
 
 	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
@@ -1407,6 +1510,142 @@ func TestValidateProcessFileRejectsVerifyEvidenceGap(t *testing.T) {
 	}
 	if !containsMismatch(result.Mismatches, "acceptance_item_evidence_matrix invalid status for demo.core: skipped") {
 		t.Fatalf("expected invalid evidence status mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsVerifyMissingActivePlanBinding(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "active_plan_file_ref: docs/specs/_plans/active/demo.md\n", "", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "missing required field: active_plan_file_ref") {
+		t.Fatalf("expected active plan file ref mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsVerifyActivePlanFingerprintDrift(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	writeFormalPlanProcessForTest(t, repoRoot, expected)
+	body := renderFormalVerifyProcessBody(expected, "stale-plan-fingerprint")
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatchPrefix(result.Mismatches, "active_plan_fingerprint mismatch: actual=stale-plan-fingerprint") {
+		t.Fatalf("expected active plan fingerprint mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRequiresRetirementEvidenceForPlanTargets(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	activePlanFingerprint := writeFormalPlanProcessForTestWithRetirementTargets(t, repoRoot, expected)
+	body := renderFormalVerifyProcessBody(expected, activePlanFingerprint)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "retirement_evidence_matrix missing id: rt.legacy") {
+		t.Fatalf("expected missing retirement evidence mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsIncompleteRetirementEvidence(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		result string
+		dep    string
+		want   string
+	}{
+		{name: "fail", result: "fail", dep: "not_required", want: "retirement_evidence_matrix result for rt.legacy must be pass"},
+		{name: "not checked", result: "not_checked", dep: "not_required", want: "retirement_evidence_matrix result for rt.legacy must be pass"},
+		{name: "still required", result: "pass", dep: "still_required", want: "retirement_evidence_matrix mainline_dependency for rt.legacy must be not_required"},
+		{name: "unknown dependency", result: "pass", dep: "unknown", want: "retirement_evidence_matrix mainline_dependency for rt.legacy must be not_required"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			setupSnapshotValidationRepo(t, repoRoot)
+			mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+			expected, err := RebuildCurrent(repoRoot, "demo")
+			if err != nil {
+				t.Fatalf("RebuildCurrent: %v", err)
+			}
+			activePlanFingerprint := writeFormalPlanProcessForTestWithRetirementTargets(t, repoRoot, expected)
+			body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "retirement_evidence_matrix: none", renderRetirementEvidenceForTest(tc.result, tc.dep), 1)
+			mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+			result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+			if err != nil {
+				t.Fatalf("ValidateProcessFile: %v", err)
+			}
+			if result.Valid {
+				t.Fatalf("expected invalid result, got valid")
+			}
+			if !containsMismatch(result.Mismatches, tc.want) {
+				t.Fatalf("expected mismatch %q, got %+v", tc.want, result.Mismatches)
+			}
+		})
+	}
+}
+
+func TestValidateProcessFileAcceptsCompleteRetirementEvidence(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	activePlanFingerprint := writeFormalPlanProcessForTestWithRetirementTargets(t, repoRoot, expected)
+	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "retirement_evidence_matrix: none", renderRetirementEvidenceForTest("pass", "not_required"), 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if !result.Valid {
+		t.Fatalf("expected valid result, got mismatches %+v", result.Mismatches)
 	}
 }
 
@@ -1962,11 +2201,12 @@ func renderFormalPlanProcessBody(expected Snapshot) string {
 		"rule_snapshot: none",
 		"acceptance_item_plan_coverage:",
 		renderAcceptancePlanCoverageForTest(expected.AcceptanceItemSet),
+		"retirement_targets: none",
 		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_plan_plan_ready", expected.SpecFileRef),
 	}, "\n")
 }
 
-func renderFormalVerifyProcessBody(expected Snapshot) string {
+func renderFormalVerifyProcessBody(expected Snapshot, activePlanFingerprint string) string {
 	return strings.Join([]string{
 		"object_type: unit",
 		"object_ref: " + expected.Module,
@@ -1985,9 +2225,12 @@ func renderFormalVerifyProcessBody(expected Snapshot) string {
 		renderAcceptanceItemSetForTest(expected.AcceptanceItemSet),
 		"unit_appendix_snapshot: none",
 		"verification_scope_ref: current candidate",
+		"active_plan_file_ref: " + ActivePlanFilePath(expected.Object),
+		"active_plan_fingerprint: " + activePlanFingerprint,
 		"rule_snapshot: none",
 		"acceptance_item_evidence_matrix:",
 		renderAcceptanceEvidenceMatrixForTest(expected.AcceptanceItemSet),
+		"retirement_evidence_matrix: none",
 		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_verify_ready_to_promote", expected.SpecFileRef),
 	}, "\n")
 }
@@ -2034,6 +2277,46 @@ func renderIndependentEvaluationReceiptForTest(object, pack, reviewInputRef stri
 		"review_input_refs: " + reviewInputRefsForTest(object, pack, reviewInputRef),
 		"review_findings: none",
 		"human_decision_refs: none",
+	}, "\n")
+}
+
+func writeFormalPlanProcessForTest(t *testing.T, repoRoot string, expected Snapshot) string {
+	t.Helper()
+	return writeFormalPlanProcessBodyForTest(t, repoRoot, renderFormalPlanProcessBody(expected))
+}
+
+func writeFormalPlanProcessForTestWithRetirementTargets(t *testing.T, repoRoot string, expected Snapshot) string {
+	t.Helper()
+	body := strings.Replace(renderFormalPlanProcessBody(expected), "retirement_targets: none", renderRetirementTargetsForTest(), 1)
+	return writeFormalPlanProcessBodyForTest(t, repoRoot, body)
+}
+
+func writeFormalPlanProcessBodyForTest(t *testing.T, repoRoot, body string) string {
+	t.Helper()
+	content := "# plan\n\n```yaml\n" + body + "\n```\n"
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), content)
+	return hashNormalizedText(content)
+}
+
+func renderRetirementTargetsForTest() string {
+	return strings.Join([]string{
+		"retirement_targets:",
+		"  - id: rt.legacy",
+		"    target_ref: internal/legacy.go",
+		"    target_kind: helper",
+		"    retirement_method: reroute",
+		"    verification_action: go test ./...",
+		"    acceptance_item_ids: demo.core",
+	}, "\n")
+}
+
+func renderRetirementEvidenceForTest(result, dependency string) string {
+	return strings.Join([]string{
+		"retirement_evidence_matrix:",
+		"  - id: rt.legacy",
+		"    result: " + result,
+		"    mainline_dependency: " + dependency,
+		"    evidence_refs: go test ./...",
 	}, "\n")
 }
 
@@ -2164,6 +2447,15 @@ func renderAcceptanceEvidenceMatrixForTest(entries []AcceptanceItemEntry) string
 func containsMismatch(mismatches []string, target string) bool {
 	for _, mismatch := range mismatches {
 		if mismatch == target {
+			return true
+		}
+	}
+	return false
+}
+
+func containsMismatchPrefix(mismatches []string, prefix string) bool {
+	for _, mismatch := range mismatches {
+		if strings.HasPrefix(mismatch, prefix) {
 			return true
 		}
 	}

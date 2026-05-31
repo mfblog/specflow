@@ -32,7 +32,9 @@ Allowed writes are:
 1. `docs/specs/_plans/active/{unit}.md` when the handoff is ready and independently reviewed.
 2. `docs/specs/_plans/draft/{unit}.md` for non-consumable planning notes when blocked.
 
-The active plan must bind to current candidate truth by normalized content fingerprint and cover every accepted acceptance item.
+The active plan must bind to current candidate truth by normalized content fingerprint, cover every accepted acceptance item, and include `retirement_targets`.
+`retirement_targets` must be literal `none`, or list concrete retired paths, helpers, wrappers, compatibility layers, dependencies, or equivalent targets with retirement method, acceptance item ids, and verification action.
+Planning must not claim a retained compatibility path is retired; if it remains required, it must stay visible in the plan or be deferred by explicit later planning.
 
 ## Forbidden Writes
 

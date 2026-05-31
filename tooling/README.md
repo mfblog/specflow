@@ -310,7 +310,8 @@ Rules:
 
 1. lifecycle commands that consume process files should run this before treating a gate, active plan, or verify result as usable
 2. a failed preflight is not cleanup by itself; cleanup remains owned by lifecycle recovery and `process cleanup-fallback`
-3. manual hashes, shell checksums, editor display, and temporary scripts may diagnose a mismatch but must not replace this entry
+3. `unit_promote` validates both the active plan and verify evidence so retirement target drift cannot be hidden between verification and promotion
+4. manual hashes, shell checksums, editor display, and temporary scripts may diagnose a mismatch but must not replace this entry
 
 ## Relation Commands
 

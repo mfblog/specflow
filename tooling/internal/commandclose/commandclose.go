@@ -259,6 +259,15 @@ func promotionEvidenceRefs(verifyData snapshot.ProcessSnapshotData) []string {
 		}
 		refs = appendUniqueString(refs, value)
 	}
+	for _, entry := range verifyData.RetirementEvidence {
+		for _, ref := range strings.Split(entry.EvidenceRefs, ";") {
+			ref = strings.TrimSpace(ref)
+			if ref == "" || ref == "none" {
+				continue
+			}
+			refs = appendUniqueString(refs, ref)
+		}
+	}
 	if len(refs) == 0 {
 		refs = append(refs, verifyData.ProcessFile)
 	}

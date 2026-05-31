@@ -112,7 +112,8 @@ Evaluation Questions:
 
 1. Does the plan cover every accepted acceptance item?
 2. Does the plan stay inside checked truth and named implementation surfaces?
-3. Can `unit_impl` execute without inventing behavior or ownership?
+3. Does the plan declare `retirement_targets` as `none`, or list concrete retired paths, helpers, wrappers, compatibility layers, or dependencies with verification actions?
+4. Can `unit_impl` execute without inventing behavior or ownership?
 
 Legal Output:
 
@@ -139,7 +140,8 @@ Evaluation Questions:
 
 1. Does the verify result cover every executable acceptance item?
 2. Are evidence refs inspectable and aligned with the active plan?
-3. Is the candidate ready for promotion without hiding unresolved gaps?
+3. Does the verify result prove every retirement target with `pass` and `mainline_dependency: not_required` evidence?
+4. Is the candidate ready for promotion without hiding unresolved gaps?
 
 Legal Output:
 

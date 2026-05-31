@@ -32,6 +32,12 @@ Allowed writes are:
 2. implementation files only when the close outcome is an implementation fallback and the active plan still authorizes repair in the same command session.
 3. local test output artifacts when required by the verification method.
 
+Candidate verify evidence must bind to the current active plan through `active_plan_file_ref` and `active_plan_fingerprint`.
+It must also record `retirement_evidence_matrix`.
+If the active plan has `retirement_targets: none`, the matrix must be `none`.
+If the active plan lists retirement targets, each target must have `result: pass`, `mainline_dependency: not_required`, and durable `evidence_refs` before `ready_to_promote` may close.
+Verification must not delete code automatically or infer business compatibility safety; it only proves whether planned retirement targets are no longer required by the mainline path.
+
 ## Forbidden Writes
 
 Do not write:

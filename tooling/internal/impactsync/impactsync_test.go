@@ -572,6 +572,7 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 		"    fingerprint: " + snap.RuleSnapshot[0].Fingerprint,
 	}
 	lines = append(lines, renderImpactAcceptancePlanCoverage(snap.AcceptanceItemSet)...)
+	lines = append(lines, "retirement_targets: none")
 	lines = append(lines, renderImpactIndependentEvaluationReceipt(snap.Object, "unit_plan_plan_ready", snap.SpecFileRef)...)
 	lines = append(lines,
 		"```",

@@ -53,6 +53,16 @@ func TestRunUnitStableVerifyHasNoInputProcessDependencies(t *testing.T) {
 	}
 }
 
+func TestProcessKindsUnitPromoteRequiresPlanAndVerify(t *testing.T) {
+	kinds, err := ProcessKinds("unit", "unit_promote")
+	if err != nil {
+		t.Fatalf("ProcessKinds: %v", err)
+	}
+	if len(kinds) != 2 || kinds[0] != "plan" || kinds[1] != "verify" {
+		t.Fatalf("unit_promote must validate plan and verify, got %+v", kinds)
+	}
+}
+
 func mustWritePreflightFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

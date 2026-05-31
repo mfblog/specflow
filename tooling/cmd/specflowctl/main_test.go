@@ -522,6 +522,7 @@ func TestSnapshotValidateProcessUsesObjectFlagsCLI(t *testing.T) {
 		"acceptance_item_plan_coverage:",
 		"  - id: demo.core",
 		"    coverage: implementation slice and verification target",
+		"retirement_targets: none",
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
@@ -557,6 +558,7 @@ func TestEvaluationRequestCreatesPlanHandoffCLI(t *testing.T) {
 		"acceptance_item_plan_coverage:",
 		"  - id: demo.core",
 		"    coverage: implementation slice and verification target",
+		"retirement_targets: none",
 	}, "\n")+"\n```\n")
 
 	var stdout bytes.Buffer
@@ -1130,6 +1132,7 @@ func TestCommandCloseUnitPromoteDryRunKeepsCandidateAndProcessFilesCLI(t *testin
 	if err != nil {
 		t.Fatalf("RebuildCurrentObject: %v", err)
 	}
+	writeCLIUnitPlanProcess(t, repoRoot, expected)
 	writeCLIUnitVerifyProcess(t, repoRoot, expected)
 
 	statusPath := filepath.Join(repoRoot, "docs/specs/_status.md")
@@ -1150,6 +1153,7 @@ func TestCommandCloseUnitPromoteDryRunKeepsCandidateAndProcessFilesCLI(t *testin
 		"command_close_result: dry_run",
 		"input_validation_action: command_preflight",
 		"input_validated_processes:",
+		"- process: plan",
 		"- process: verify",
 		"result: valid",
 		"validation_action: validate_process:verify",
@@ -1594,6 +1598,7 @@ func writeCLIUnitPlanProcess(t *testing.T, repoRoot string, snap snapshot.Snapsh
 		"acceptance_item_plan_coverage:",
 		"  - id: demo.core",
 		"    coverage: implementation slice and verification target",
+		"retirement_targets: none",
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
@@ -1605,6 +1610,7 @@ func writeCLIUnitPlanProcess(t *testing.T, repoRoot string, snap snapshot.Snapsh
 
 func writeCLIUnitVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot) {
 	t.Helper()
+	activePlanFingerprint := cliFileFingerprint(t, repoRoot, snapshot.ActivePlanFilePath(snap.Object))
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+strings.Join([]string{
 		"object_type: unit",
 		"object_ref: demo",
@@ -1625,10 +1631,13 @@ func writeCLIUnitVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snap
 		"    not_runnable_yet: no",
 		"unit_appendix_snapshot: none",
 		"verification_scope_ref: current candidate",
+		"active_plan_file_ref: " + snapshot.ActivePlanFilePath(snap.Object),
+		"active_plan_fingerprint: " + activePlanFingerprint,
 		"rule_snapshot: none",
 		"acceptance_item_evidence_matrix:",
 		"  - id: demo.core",
 		"    status: pass",
+		"retirement_evidence_matrix: none",
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
@@ -1636,6 +1645,19 @@ func writeCLIUnitVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snap
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
+}
+
+func cliFileFingerprint(t *testing.T, repoRoot, fileRef string) string {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)))
+	if err != nil {
+		t.Fatalf("read %s: %v", fileRef, err)
+	}
+	text := strings.ReplaceAll(string(content), "\r\n", "\n")
+	text = strings.TrimSuffix(text, "\n")
+	text += "\n"
+	sum := sha256.Sum256([]byte(text))
+	return fmt.Sprintf("%x", sum)
 }
 
 func writeCLIStableVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot, decision string) {

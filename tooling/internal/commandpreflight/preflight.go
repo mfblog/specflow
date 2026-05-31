@@ -95,7 +95,7 @@ func ProcessKinds(objectType, command string) ([]string, error) {
 		case "unit_verify":
 			return []string{"check", "plan"}, nil
 		case "unit_promote":
-			return []string{"verify"}, nil
+			return []string{"plan", "verify"}, nil
 		default:
 			return nil, fmt.Errorf("command %q is not supported for object type %q", command, objectType)
 		}

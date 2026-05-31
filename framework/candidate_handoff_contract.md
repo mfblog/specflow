@@ -30,7 +30,9 @@ If truth or rule bindings drifted, route to `unit_check`.
 
 ## 4. Verify To Promote
 
-`unit_promote` may consume `docs/specs/_verify_result/unit/{unit}.md` only when it validates against current candidate unit truth.
+`unit_promote` may consume `docs/specs/_plans/active/{unit}.md` and `docs/specs/_verify_result/unit/{unit}.md` only when both validate against current candidate unit truth and the verify result binds to the current active plan.
+
+If the active plan has retirement targets, the verify result must prove every target with `result: pass` and `mainline_dependency: not_required` before promotion.
 
 Before stable writeback, `unit_promote` must resolve:
 

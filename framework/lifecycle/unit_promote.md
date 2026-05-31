@@ -9,10 +9,11 @@ Read only:
 1. `framework/core/context_card.md`
 2. `framework/core/lifecycle_authority.md`
 3. `docs/specs/_status.md` for the target unit row.
-4. `docs/specs/_verify_result/unit/{unit}.md`
-5. `docs/specs/units/candidate/c_unit_{unit}.md`
-6. candidate appendices, stable truth, unit refs, and rule files named by the verify result.
-7. `docs/specs/repository_mapping.md` only when promotion retargeting or cleanup needs ownership confirmation.
+4. `docs/specs/_plans/active/{unit}.md`
+5. `docs/specs/_verify_result/unit/{unit}.md`
+6. `docs/specs/units/candidate/c_unit_{unit}.md`
+7. candidate appendices, stable truth, unit refs, and rule files named by the active plan or verify result.
+8. `docs/specs/repository_mapping.md` only when promotion retargeting or cleanup needs ownership confirmation.
 
 Before promotion judgment, stable writeback, unit or rule ref retargeting, cleanup, or command close, run:
 
@@ -20,7 +21,7 @@ Before promotion judgment, stable writeback, unit or rule ref retargeting, clean
 <tooling-root>/bin/specflowctl-<os>-<arch> command preflight --repo-root <repo-root> --command unit_promote --object-type unit --object <unit>
 ```
 
-If command preflight is unavailable, run `snapshot validate-process --repo-root <repo-root> --object-type unit --object <unit> --process verify` explicitly before any promotion write.
+If command preflight is unavailable, run both `snapshot validate-process --repo-root <repo-root> --object-type unit --object <unit> --process plan` and `snapshot validate-process --repo-root <repo-root> --object-type unit --object <unit> --process verify` explicitly before any promotion write.
 
 ## Allowed Writes
 
@@ -63,13 +64,14 @@ Enter only when the trigger appears:
 
 `unit_promote` does not require a new independent reviewer receipt.
 
-Promotion consumes the current verified evidence from `unit_verify`, including the independent evaluation receipt in `docs/specs/_verify_result/unit/{unit}.md`.
+Promotion consumes the current active plan plus verified evidence from `unit_verify`, including the independent evaluation receipt in `docs/specs/_verify_result/unit/{unit}.md`.
+The verify evidence must bind to the current active plan and complete every active plan retirement target with `result: pass` and `mainline_dependency: not_required`.
 
 ## Close Requirements
 
 Successful close uses outcome `promoted`, sets `Active Layer=stable`, clears candidate state, and sets `Next Command=unit_fork`.
 
-Before closing `promoted`, ensure the command preflight above has succeeded or verify evidence has been explicitly validated.
+Before closing `promoted`, ensure the command preflight above has succeeded or both plan and verify evidence have been explicitly validated.
 Do not close until stable writeback and deterministic ref retargeting are complete.
 Then this close command validates current verify evidence, writes the stable promotion summary, advances lifecycle status, and runs candidate/process cleanup:
 

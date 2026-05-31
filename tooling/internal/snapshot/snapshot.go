@@ -64,6 +64,22 @@ type AcceptanceEvidenceEntry struct {
 	Status string
 }
 
+type RetirementTargetEntry struct {
+	ID                 string
+	TargetRef          string
+	TargetKind         string
+	RetirementMethod   string
+	VerificationAction string
+	AcceptanceItemIDs  string
+}
+
+type RetirementEvidenceEntry struct {
+	ID                 string
+	Result             string
+	MainlineDependency string
+	EvidenceRefs       string
+}
+
 type Snapshot struct {
 	ObjectType                    string
 	Object                        string
@@ -111,6 +127,8 @@ type ProcessSnapshotData struct {
 	AcceptanceItemSet             []AcceptanceItemEntry
 	AcceptancePlanCoverage        []AcceptancePlanCoverageEntry
 	AcceptanceEvidence            []AcceptanceEvidenceEntry
+	RetirementTargets             []RetirementTargetEntry
+	RetirementEvidence            []RetirementEvidenceEntry
 }
 
 const (
@@ -174,6 +192,7 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"unit_appendix_snapshot",
 		"rule_snapshot",
 		"acceptance_item_plan_coverage",
+		"retirement_targets",
 	),
 	"verify": withIndependentEvaluationReceipt(
 		"object_type",
@@ -191,8 +210,11 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"acceptance_item_set",
 		"unit_appendix_snapshot",
 		"verification_scope_ref",
+		"active_plan_file_ref",
+		"active_plan_fingerprint",
 		"rule_snapshot",
 		"acceptance_item_evidence_matrix",
+		"retirement_evidence_matrix",
 	),
 	"stable_verify": withIndependentEvaluationReceipt(
 		"object_type",
@@ -224,6 +246,34 @@ var allowedAcceptanceEvidenceStatuses = map[string]bool{
 	"partial":          true,
 	"not_checked":      true,
 	"not_runnable_yet": true,
+}
+
+var allowedRetirementTargetKinds = map[string]bool{
+	"path":         true,
+	"helper":       true,
+	"wrapper":      true,
+	"compat_layer": true,
+	"dependency":   true,
+	"other":        true,
+}
+
+var allowedRetirementMethods = map[string]bool{
+	"remove":  true,
+	"reroute": true,
+	"replace": true,
+	"isolate": true,
+}
+
+var allowedRetirementEvidenceResults = map[string]bool{
+	"pass":        true,
+	"fail":        true,
+	"not_checked": true,
+}
+
+var allowedMainlineDependencyResults = map[string]bool{
+	"not_required":   true,
+	"still_required": true,
+	"unknown":        true,
 }
 
 var allowedVerificationSurfaces = map[string]bool{
@@ -629,6 +679,7 @@ func validateProcessFileForObject(repoRoot, objectType, object, processKind stri
 			}
 		}
 		validateAcceptancePlanCoverage(&result, actual, expected.AcceptanceItemSet)
+		validateRetirementTargets(&result, actual, expected.AcceptanceItemSet)
 		finalizeValidationResult(&result, actual)
 		return result, nil
 	}
@@ -657,6 +708,8 @@ func validateProcessFileForObject(repoRoot, objectType, object, processKind stri
 	compareAcceptanceItemSet(&result, actual, expected.AcceptanceItemSet)
 	if processKind == "verify" {
 		validateAcceptanceEvidenceMatrix(&result, actual, expected.AcceptanceItemSet)
+		validateActivePlanBinding(repoRoot, &result, actual, expected)
+		validateRetirementEvidence(repoRoot, &result, actual, expected)
 	}
 
 	if actual.scalars["unit_appendix_snapshot"] != "" || actual.appendixPresent {
@@ -995,6 +1048,8 @@ func LoadProcessSnapshot(repoRoot, objectType, object, processKind string) (Proc
 		AcceptanceItemSet:             append([]AcceptanceItemEntry(nil), parsed.acceptanceItemEntries...),
 		AcceptancePlanCoverage:        append([]AcceptancePlanCoverageEntry(nil), parsed.acceptancePlanEntries...),
 		AcceptanceEvidence:            append([]AcceptanceEvidenceEntry(nil), parsed.acceptanceEvidenceEntries...),
+		RetirementTargets:             append([]RetirementTargetEntry(nil), parsed.retirementTargetEntries...),
+		RetirementEvidence:            append([]RetirementEvidenceEntry(nil), parsed.retirementEvidenceEntries...),
 	}, nil
 }
 
@@ -1572,6 +1627,10 @@ type processSnapshot struct {
 	acceptancePlanPresent     bool
 	acceptanceEvidenceEntries []AcceptanceEvidenceEntry
 	acceptanceEvidencePresent bool
+	retirementTargetEntries   []RetirementTargetEntry
+	retirementTargetPresent   bool
+	retirementEvidenceEntries []RetirementEvidenceEntry
+	retirementEvidencePresent bool
 	invalidFields             []string
 }
 
@@ -1623,6 +1682,12 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 					currentList = key
 				case "acceptance_item_evidence_matrix":
 					result.acceptanceEvidencePresent = true
+					currentList = key
+				case "retirement_targets":
+					result.retirementTargetPresent = true
+					currentList = key
+				case "retirement_evidence_matrix":
+					result.retirementEvidencePresent = true
 					currentList = key
 				}
 				continue
@@ -1680,6 +1745,18 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 					currentIndex = len(result.acceptanceEvidenceEntries) - 1
 				}
 				assignAcceptanceEvidenceField(&result.acceptanceEvidenceEntries[currentIndex], key, value)
+			case "retirement_targets":
+				if currentIndex < 0 || (listItemStart && key == "id") {
+					result.retirementTargetEntries = append(result.retirementTargetEntries, RetirementTargetEntry{})
+					currentIndex = len(result.retirementTargetEntries) - 1
+				}
+				assignRetirementTargetField(&result.retirementTargetEntries[currentIndex], key, value)
+			case "retirement_evidence_matrix":
+				if currentIndex < 0 || (listItemStart && key == "id") {
+					result.retirementEvidenceEntries = append(result.retirementEvidenceEntries, RetirementEvidenceEntry{})
+					currentIndex = len(result.retirementEvidenceEntries) - 1
+				}
+				assignRetirementEvidenceField(&result.retirementEvidenceEntries[currentIndex], key, value)
 			}
 		}
 	}
@@ -1711,6 +1788,14 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 	if raw, ok := result.scalars["acceptance_item_evidence_matrix"]; ok && raw == "none" {
 		result.acceptanceEvidencePresent = true
 		result.acceptanceEvidenceEntries = nil
+	}
+	if raw, ok := result.scalars["retirement_targets"]; ok && raw == "none" {
+		result.retirementTargetPresent = true
+		result.retirementTargetEntries = nil
+	}
+	if raw, ok := result.scalars["retirement_evidence_matrix"]; ok && raw == "none" {
+		result.retirementEvidencePresent = true
+		result.retirementEvidenceEntries = nil
 	}
 	return result, nil
 }
@@ -1846,6 +1931,36 @@ func assignAcceptanceEvidenceField(entry *AcceptanceEvidenceEntry, key, value st
 	}
 }
 
+func assignRetirementTargetField(entry *RetirementTargetEntry, key, value string) {
+	switch key {
+	case "id":
+		entry.ID = value
+	case "target_ref":
+		entry.TargetRef = value
+	case "target_kind":
+		entry.TargetKind = value
+	case "retirement_method":
+		entry.RetirementMethod = value
+	case "verification_action":
+		entry.VerificationAction = value
+	case "acceptance_item_ids":
+		entry.AcceptanceItemIDs = value
+	}
+}
+
+func assignRetirementEvidenceField(entry *RetirementEvidenceEntry, key, value string) {
+	switch key {
+	case "id":
+		entry.ID = value
+	case "result":
+		entry.Result = value
+	case "mainline_dependency":
+		entry.MainlineDependency = value
+	case "evidence_refs":
+		entry.EvidenceRefs = value
+	}
+}
+
 func compareScalar(result *ValidationResult, field, actual, expected string) {
 	if actual == "" {
 		return
@@ -1961,6 +2076,135 @@ func validateAcceptanceEvidenceMatrix(result *ValidationResult, actual processSn
 	}
 }
 
+func validateRetirementTargets(result *ValidationResult, actual processSnapshot, expected []AcceptanceItemEntry) {
+	actualEntries, err := retirementTargetEntriesFromParsed(actual)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "retirement_targets invalid: "+err.Error())
+		return
+	}
+	expectedIDs := acceptanceItemIDSet(expected)
+	actualIDs := map[string]bool{}
+	for _, entry := range actualEntries {
+		if actualIDs[entry.ID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_targets duplicate id: %s", entry.ID))
+			continue
+		}
+		actualIDs[entry.ID] = true
+		if !strings.HasPrefix(entry.ID, "rt.") || strings.TrimSpace(strings.TrimPrefix(entry.ID, "rt.")) == "" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_targets id must use rt.<slug>: %s", entry.ID))
+		}
+		if !allowedRetirementTargetKinds[entry.TargetKind] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_targets target_kind for %s must be one of path, helper, wrapper, compat_layer, dependency, other", entry.ID))
+		}
+		if !allowedRetirementMethods[entry.RetirementMethod] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_targets retirement_method for %s must be one of remove, reroute, replace, isolate", entry.ID))
+		}
+		acceptanceIDs, err := splitCommaSeparatedField(entry.AcceptanceItemIDs)
+		if err != nil {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_targets acceptance_item_ids invalid for %s: %v", entry.ID, err))
+			continue
+		}
+		seenAcceptanceIDs := map[string]bool{}
+		for _, id := range acceptanceIDs {
+			if seenAcceptanceIDs[id] {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_targets duplicate acceptance_item_ids for %s: %s", entry.ID, id))
+				continue
+			}
+			seenAcceptanceIDs[id] = true
+			if !expectedIDs[id] {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_targets unknown acceptance_item_ids for %s: %s", entry.ID, id))
+			}
+		}
+	}
+}
+
+func validateActivePlanBinding(repoRoot string, result *ValidationResult, actual processSnapshot, expected Snapshot) {
+	expectedPlanRef := ActivePlanFilePath(expected.Object)
+	compareScalar(result, "active_plan_file_ref", actual.scalars["active_plan_file_ref"], expectedPlanRef)
+	expectedFingerprint, err := fileFingerprint(repoRoot, expectedPlanRef)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "active_plan_fingerprint unavailable: "+err.Error())
+		return
+	}
+	compareScalar(result, "active_plan_fingerprint", actual.scalars["active_plan_fingerprint"], expectedFingerprint)
+}
+
+func validateRetirementEvidence(repoRoot string, result *ValidationResult, actual processSnapshot, expected Snapshot) {
+	targetEntries, err := activePlanRetirementTargets(repoRoot, expected.Object)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "retirement_evidence_matrix active plan retirement_targets invalid: "+err.Error())
+		return
+	}
+	actualEntries, err := retirementEvidenceEntriesFromParsed(actual)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "retirement_evidence_matrix invalid: "+err.Error())
+		return
+	}
+	if len(targetEntries) == 0 {
+		if len(actualEntries) != 0 {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, "retirement_evidence_matrix must be none when retirement_targets is none")
+		}
+		return
+	}
+
+	expectedIDs := map[string]bool{}
+	for _, entry := range targetEntries {
+		expectedIDs[entry.ID] = true
+	}
+	actualIDs := map[string]bool{}
+	for _, entry := range actualEntries {
+		if actualIDs[entry.ID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_evidence_matrix duplicate id: %s", entry.ID))
+			continue
+		}
+		actualIDs[entry.ID] = true
+		if !expectedIDs[entry.ID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_evidence_matrix unknown id: %s", entry.ID))
+			continue
+		}
+		if !allowedRetirementEvidenceResults[entry.Result] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_evidence_matrix invalid result for %s: %s", entry.ID, entry.Result))
+		}
+		if !allowedMainlineDependencyResults[entry.MainlineDependency] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_evidence_matrix invalid mainline_dependency for %s: %s", entry.ID, entry.MainlineDependency))
+		}
+		if strings.TrimSpace(entry.EvidenceRefs) == "" || strings.TrimSpace(entry.EvidenceRefs) == "none" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_evidence_matrix evidence_refs for %s must be durable refs", entry.ID))
+		}
+		if entry.Result != "pass" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_evidence_matrix result for %s must be pass", entry.ID))
+		}
+		if entry.MainlineDependency != "not_required" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_evidence_matrix mainline_dependency for %s must be not_required", entry.ID))
+		}
+	}
+	for _, entry := range targetEntries {
+		if !actualIDs[entry.ID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("retirement_evidence_matrix missing id: %s", entry.ID))
+		}
+	}
+}
+
 func acceptanceItemEntriesFromParsed(parsed processSnapshot) ([]AcceptanceItemEntry, error) {
 	if raw, ok := parsed.scalars["acceptance_item_set"]; ok && raw != "none" {
 		return nil, fmt.Errorf("must be literal none or a list")
@@ -2030,6 +2274,108 @@ func acceptanceEvidenceEntriesFromParsed(parsed processSnapshot) ([]AcceptanceEv
 		return items[i].ID < items[j].ID
 	})
 	return items, nil
+}
+
+func retirementTargetEntriesFromParsed(parsed processSnapshot) ([]RetirementTargetEntry, error) {
+	if raw, ok := parsed.scalars["retirement_targets"]; ok {
+		if raw != "none" {
+			return nil, fmt.Errorf("must be literal none or a list")
+		}
+		return nil, nil
+	}
+	if !parsed.retirementTargetPresent {
+		return nil, nil
+	}
+	items := append([]RetirementTargetEntry(nil), parsed.retirementTargetEntries...)
+	if len(items) == 0 {
+		return nil, fmt.Errorf("must be literal none or a non-empty list")
+	}
+	for _, item := range items {
+		if strings.TrimSpace(item.ID) == "" ||
+			strings.TrimSpace(item.TargetRef) == "" ||
+			strings.TrimSpace(item.TargetKind) == "" ||
+			strings.TrimSpace(item.RetirementMethod) == "" ||
+			strings.TrimSpace(item.VerificationAction) == "" ||
+			strings.TrimSpace(item.AcceptanceItemIDs) == "" {
+			return nil, fmt.Errorf("each item must include id, target_ref, target_kind, retirement_method, verification_action, and acceptance_item_ids")
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].ID < items[j].ID
+	})
+	return items, nil
+}
+
+func retirementEvidenceEntriesFromParsed(parsed processSnapshot) ([]RetirementEvidenceEntry, error) {
+	if raw, ok := parsed.scalars["retirement_evidence_matrix"]; ok {
+		if raw != "none" {
+			return nil, fmt.Errorf("must be literal none or a list")
+		}
+		return nil, nil
+	}
+	if !parsed.retirementEvidencePresent {
+		return nil, nil
+	}
+	items := append([]RetirementEvidenceEntry(nil), parsed.retirementEvidenceEntries...)
+	if len(items) == 0 {
+		return nil, fmt.Errorf("must be literal none or a non-empty list")
+	}
+	for _, item := range items {
+		if strings.TrimSpace(item.ID) == "" ||
+			strings.TrimSpace(item.Result) == "" ||
+			strings.TrimSpace(item.MainlineDependency) == "" ||
+			strings.TrimSpace(item.EvidenceRefs) == "" {
+			return nil, fmt.Errorf("each item must include id, result, mainline_dependency, and evidence_refs")
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].ID < items[j].ID
+	})
+	return items, nil
+}
+
+func activePlanRetirementTargets(repoRoot, object string) ([]RetirementTargetEntry, error) {
+	planRef := ActivePlanFilePath(object)
+	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(planRef)))
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", planRef, err)
+	}
+	parsed, err := parseProcessSnapshot(string(content))
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", planRef, err)
+	}
+	if !parsed.presentFields["retirement_targets"] {
+		return nil, fmt.Errorf("missing required field: retirement_targets")
+	}
+	return retirementTargetEntriesFromParsed(parsed)
+}
+
+func fileFingerprint(repoRoot, fileRef string) (string, error) {
+	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)))
+	if err != nil {
+		return "", fmt.Errorf("read %s: %w", fileRef, err)
+	}
+	return hashNormalizedText(string(content)), nil
+}
+
+func splitCommaSeparatedField(value string) ([]string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" || value == "none" {
+		return nil, fmt.Errorf("must be comma-separated current acceptance item ids")
+	}
+	rawParts := strings.Split(value, ",")
+	parts := make([]string, 0, len(rawParts))
+	for _, raw := range rawParts {
+		part := strings.TrimSpace(raw)
+		if part == "" {
+			return nil, fmt.Errorf("must not contain empty ids")
+		}
+		parts = append(parts, part)
+	}
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("must be comma-separated current acceptance item ids")
+	}
+	return parts, nil
 }
 
 func acceptanceItemIDSet(entries []AcceptanceItemEntry) map[string]bool {
