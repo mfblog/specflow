@@ -185,6 +185,58 @@ func TestCloseApplyInvokesSuccessCleanup(t *testing.T) {
 	}
 }
 
+func TestCloseUnitForkBlocksMissingCandidateAppendixCoverage(t *testing.T) {
+	repoRoot := commandCloseTestRepo(t, "| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | test |\n")
+	writeCommandCloseCandidateSpecWithIntent(t, repoRoot, "change")
+	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/appendix/s_unit_demo_prompt.md"), `---
+unit: demo
+layer: stable
+---
+
+# Stable Appendix
+`)
+
+	_, err := Close(Options{
+		RepoRoot:   repoRoot,
+		Command:    "unit_fork",
+		ObjectType: "unit",
+		Object:     "demo",
+		Outcome:    "candidate_created",
+		Apply:      true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "missing candidate appendix") {
+		t.Fatalf("expected missing candidate appendix error, got %v", err)
+	}
+	status, lookupErr := statusfile.LookupObjectStatus(repoRoot, "unit", "demo")
+	if lookupErr != nil {
+		t.Fatalf("LookupObjectStatus: %v", lookupErr)
+	}
+	if status.Candidate != "no" || status.ActiveLayer != "stable" || status.NextCommand != "unit_fork" {
+		t.Fatalf("failed fork close must not update status, got %+v", status)
+	}
+
+	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_demo_prompt.md"), `---
+unit: demo
+layer: candidate
+---
+
+# Candidate Appendix
+`)
+	result, err := Close(Options{
+		RepoRoot:   repoRoot,
+		Command:    "unit_fork",
+		ObjectType: "unit",
+		Object:     "demo",
+		Outcome:    "candidate_created",
+	})
+	if err != nil {
+		t.Fatalf("Close dry-run after candidate appendix exists: %v", err)
+	}
+	if result.StatusAfter.Candidate != "yes" || result.CleanupAction != "success:unit_fork" {
+		t.Fatalf("unexpected dry-run result: %+v", result)
+	}
+}
+
 func TestClosePromoteWritesStablePromotionSummaryBeforeCleanup(t *testing.T) {
 	repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_promote` | test |\n")
 	writeCommandCloseStableSpec(t, repoRoot)

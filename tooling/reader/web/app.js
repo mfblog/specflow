@@ -2886,7 +2886,7 @@ function sourceExists(path) {
   if (!isReadableOriginalPath(path)) return false;
   return list(snapshot.sources).some((source) => source.path === path)
     || list(snapshot.nodes).some((node) => node.source && node.source.path === path)
-    || list(snapshot.objects).some((object) => list(object.truth_paths).some((ref) => ref.path === path));
+    || list(snapshot.objects).some((object) => list(object.truth_paths).concat(list(object.baseline_truth_paths)).some((ref) => ref.path === path));
 }
 
 function isAppendixPath(path) {
@@ -2968,8 +2968,8 @@ function reviewItems() {
       id: `spec:${item.reviewType}:${item.path}:${item.object ? item.object.id : item.objectLabel}`,
       fileLabel: reviewFileLabel(source, item.object),
       source,
-      nextCommand: item.object ? item.object.next_command : "",
-      stateLabel: t(`review.states.${item.reviewType}`),
+      nextCommand: item.nextCommand !== undefined ? item.nextCommand : (item.object ? item.object.next_command : ""),
+      stateLabel: item.stateLabel || t(`review.states.${item.reviewType}`),
       targetType: item.targetType || reviewTargetTypeForObject(item.object)
     });
   };
@@ -2986,6 +2986,18 @@ function reviewItems() {
           source,
           object,
           objectLabel: object.label || object.id || t("fallback.undeclared")
+        });
+      });
+      uniqueSources(object.baseline_truth_paths).filter((source) => isReviewSourceForLayer(source, object, "stable")).forEach((source) => {
+        addItem({
+          reviewType: "stable",
+          targetType,
+          path: source.path,
+          source,
+          object,
+          objectLabel: object.label || object.id || t("fallback.undeclared"),
+          nextCommand: "",
+          stateLabel: t("review.relation.stable")
         });
       });
       return;
@@ -3094,7 +3106,8 @@ function isAppendixReference(source) {
 
 function isEvidenceReference(source) {
   const path = String(source && source.path ? source.path : "");
-  return path.includes("/appendix/") && /_evidence\.md$/.test(fileName(path));
+  const label = String(source && source.label ? source.label : "").toLowerCase();
+  return path.includes("/appendix/") && (label === "evidence appendix" || label === "evidence");
 }
 
 function isStableReference(source) {
@@ -3287,6 +3300,9 @@ function reviewRelationGroups(item) {
   const stable = uniqueSources(object.truth_paths)
     .filter((ref) => isStableReference(ref))
     .map((ref) => ref.path);
+  uniqueSources(object.baseline_truth_paths)
+    .filter((ref) => isStableReference(ref))
+    .forEach((ref) => stable.push(ref.path));
   if (stable.length > 0) groups.push({ label: t("review.relation.stable"), items: stable, linkable: true });
   if (snapshot.project.mapping_file) {
     groups.push({ label: t("review.relation.mapping"), items: [snapshot.project.mapping_file], linkable: true });
@@ -3448,6 +3464,7 @@ function renderDetail(object) {
       <dt>${escapeHTML(t("inspector.fields.notes"))}</dt><dd>${escapeHTML(object.notes || t("fallback.none"))}</dd>
     </dl>
     ${renderChipGroup(t("inspector.groups.truth"), object.truth_paths, true)}
+    ${renderChipGroup(t("review.relation.stable"), object.baseline_truth_paths, true)}
     ${renderImplementationPathGroup(t("inspector.groups.implementation"), object.implementation_paths)}
     ${renderTextChips(t("inspector.groups.rule"), object.rule_refs)}
     ${renderTextChips(t("inspector.groups.bound"), object.bound_objects)}
@@ -4696,7 +4713,7 @@ function navigateToSpecDocument(path) {
       focusGraphNode(targetNode.id, 1.05);
     }
   } else {
-    const sourceObject = list(snapshot.objects).find((object) => list(object.truth_paths).some((ref) => ref.path === path));
+    const sourceObject = list(snapshot.objects).find((object) => list(object.truth_paths).concat(list(object.baseline_truth_paths)).some((ref) => ref.path === path));
     if (sourceObject) {
       selectedNodeID = objectNodeID(sourceObject);
       renderNav();

@@ -89,7 +89,7 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 			name:         "check",
 			pack:         PackUnitCheckPass,
 			lifecycleRef: "framework/lifecycle/unit_check.md",
-			allowed:      "candidate unit truth and explicitly referenced appendices, stable truth, and rules.",
+			allowed:      "candidate unit truth, candidate appendices owned by the unit, stable truth, and rules.",
 			forbidden:    "implementation plan drafts.",
 			question:     "Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for planning?",
 			setup: func(t *testing.T) string {
@@ -146,7 +146,7 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 			name:         "stable verify",
 			pack:         PackUnitStableVerifyAdvancing,
 			lifecycleRef: "framework/lifecycle/unit_stable_verify.md",
-			allowed:      "implementation surface refs and evidence refs needed to inspect stable alignment.",
+			allowed:      "stable unit truth, stable appendices owned by the unit, rules, and repository mapping snapshot.",
 			forbidden:    "executor preference for aligned, controlled repair, or controlled change outcomes.",
 			question:     "Does current implementation align with stable truth, or does the stored decision correctly identify the controlled next step?",
 			setup: func(t *testing.T) string {
@@ -268,6 +268,7 @@ func TestCreateStableVerifyRequestIncludesProcessScalarRefs(t *testing.T) {
 	for _, ref := range []string{
 		"docs/specs/_stable_verify_result/unit/demo.md",
 		"docs/specs/repository_mapping.md",
+		"docs/specs/units/stable/appendix/s_unit_demo_notes.md",
 		"AgentCore/internal/demo",
 		"go test ./...",
 	} {
@@ -420,6 +421,13 @@ func setupStableRequestRepo(t *testing.T) string {
 	repoRoot := t.TempDir()
 	writeStatus(t, repoRoot, "| `unit` | `demo` | `yes` | `no` | `stable` | `unit_stable_verify` | test |\n")
 	writeFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_demo.md"), stableUnitSpec("demo", "1.0.0"))
+	writeFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/appendix/s_unit_demo_notes.md"), `---
+unit: demo
+layer: stable
+---
+
+# Demo Notes
+`)
 	writeRepositoryMapping(t, repoRoot)
 	return repoRoot
 }
@@ -589,7 +597,8 @@ func writeStableVerifyProcessWithoutReceipt(t *testing.T, repoRoot string, expec
 		"  fingerprint: " + mapping.Fingerprint,
 		"acceptance_item_set:",
 		renderAcceptanceItems(expected.AcceptanceItemSet),
-		"unit_appendix_snapshot: none",
+		"unit_appendix_snapshot:",
+		renderAppendix(expected.ModuleAppendixSnapshot),
 		"unit_snapshot: none",
 		"rule_snapshot: none",
 		"acceptance_item_evidence_matrix:",

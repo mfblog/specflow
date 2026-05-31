@@ -1,8 +1,8 @@
 package reader
 
 import (
+	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -12,6 +12,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/relationgraph"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitappendix"
 )
 
 type markdownDoc struct {
@@ -23,7 +24,6 @@ type markdownDoc struct {
 
 var sharedRefPattern = regexp.MustCompile("`?([cs]_[gb]_rule_[A-Za-z0-9_]+@[0-9]+\\.[0-9]+\\.[0-9]+)`?")
 var unitRefPattern = regexp.MustCompile("`?s_unit_([A-Za-z0-9_]+)@[0-9]+\\.[0-9]+\\.[0-9]+`?")
-var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+\.md(?:#[^)]+)?)\)`)
 var candidateIntentPattern = regexp.MustCompile(`\bcandidate[_-]intent\s*=?\s*(repair|change)\b`)
 
 func BuildSnapshot(repoRoot string) Snapshot {
@@ -87,7 +87,7 @@ func BuildSnapshot(repoRoot string) Snapshot {
 			continue
 		}
 		snapshot.Project.UnitCount++
-		object := buildObjectFromStatus(status, mapping, docByPath)
+		object := buildObjectFromStatus(repoRoot, status, mapping, docByPath, &snapshot.Diagnostics)
 		snapshot.Objects = append(snapshot.Objects, object)
 		nodeID := status.ObjectType + ":" + status.Object
 		builder.addNode(GraphNode{ID: nodeID, Kind: status.ObjectType, Label: status.Object, Group: status.ObjectType, Source: ptr(SourceRef{Path: "docs/specs/_status.md"})})
@@ -143,7 +143,7 @@ func BuildSnapshot(repoRoot string) Snapshot {
 	return snapshot
 }
 
-func buildObjectFromStatus(status statusfile.ObjectStatus, mapping repositoryMapping, docs map[string]markdownDoc) ObjectView {
+func buildObjectFromStatus(repoRoot string, status statusfile.ObjectStatus, mapping repositoryMapping, docs map[string]markdownDoc, diagnostics *[]Diagnostic) ObjectView {
 	nextIntent := nextIntentFromStatus(status)
 	object := ObjectView{
 		ID:              status.Object,
@@ -168,6 +168,19 @@ func buildObjectFromStatus(status statusfile.ObjectStatus, mapping repositoryMap
 		object.TruthPaths = []SourceRef{{Path: truthPath, Label: "Active Truth"}}
 		object.Sources = appendSourceUnique(object.Sources, SourceRef{Path: truthPath, Label: "Active Truth"})
 	}
+	evidenceRefs := evidenceAppendixRefsForObject(repoRoot, status, docs, diagnostics)
+	for _, ref := range unitAppendixSourceRefs(repoRoot, status.ObjectType, status.Object, status.ActiveLayer, "Appendix", evidenceRefs, diagnostics) {
+		object.TruthPaths = appendSourceUnique(object.TruthPaths, ref)
+		object.Sources = appendSourceUnique(object.Sources, ref)
+	}
+	if status.ActiveLayer == "candidate" && status.Stable == "yes" {
+		if stablePath, err := specpaths.ObjectMainSpecFileRef(status.ObjectType, "stable", status.Object); err == nil {
+			if _, ok := docs[stablePath]; ok {
+				object.BaselineTruthPaths = appendSourceUnique(object.BaselineTruthPaths, SourceRef{Path: stablePath, Label: "Stable Baseline"})
+			}
+		}
+		object.BaselineTruthPaths = appendSourceUnique(object.BaselineTruthPaths, unitAppendixSourceRefs(repoRoot, status.ObjectType, status.Object, "stable", "Stable Appendix", nil, diagnostics)...)
+	}
 	for _, truth := range object.TruthPaths {
 		doc, ok := docs[truth.Path]
 		if !ok {
@@ -182,62 +195,98 @@ func buildObjectFromStatus(status statusfile.ObjectStatus, mapping repositoryMap
 		}
 		object.RuleRefs = appendUnique(object.RuleRefs, extractRuleIDsFromFrontmatter(doc.Frontmatter)...)
 		object.UnitRefs = appendUnique(object.UnitRefs, extractUnitIDsFromFrontmatter(doc.Frontmatter)...)
-		object.TruthPaths = appendSourceUnique(object.TruthPaths, appendixRefsForDoc(doc, docs)...)
 	}
 	sort.Strings(object.RuleRefs)
 	sort.Strings(object.UnitRefs)
 	return object
 }
 
-func appendixRefsForDoc(doc markdownDoc, docs map[string]markdownDoc) []SourceRef {
-	refs := []SourceRef{}
-	evidenceRef := strings.TrimSpace(doc.Frontmatter.Scalars["evidence_appendix_ref"])
-	if evidenceRef != "" && evidenceRef != "none" {
-		if ref, ok := resolveDocRef(doc.RelPath, evidenceRef, docs); ok && isAppendixPath(ref.Path) {
-			ref.Label = "Evidence Appendix"
-			refs = appendSourceUnique(refs, ref)
-		}
+func isAppendixPath(path string) bool {
+	return strings.Contains(path, "/appendix/")
+}
+
+func evidenceAppendixRefsForObject(repoRoot string, status statusfile.ObjectStatus, docs map[string]markdownDoc, diagnostics *[]Diagnostic) map[string]bool {
+	refs := map[string]bool{}
+	if status.ObjectType != "unit" || status.ActiveLayer != "candidate" {
+		return refs
 	}
-	for _, match := range markdownLinkPattern.FindAllStringSubmatch(doc.Text, -1) {
-		if len(match) != 2 {
-			continue
+	mainPath, err := specpaths.ObjectMainSpecFileRef(status.ObjectType, status.ActiveLayer, status.Object)
+	if err != nil {
+		return refs
+	}
+	doc, ok := docs[mainPath]
+	if !ok {
+		return refs
+	}
+	rawRef := strings.TrimSpace(doc.Frontmatter.Scalars["evidence_appendix_ref"])
+	if rawRef == "" || rawRef == "none" {
+		return refs
+	}
+	relPath, err := resolveEvidenceAppendixRef(repoRoot, doc.RelPath, rawRef)
+	if err != nil {
+		if diagnostics != nil {
+			*diagnostics = append(*diagnostics, Diagnostic{
+				Severity: "warning",
+				Message:  fmt.Sprintf("%s: invalid evidence_appendix_ref %s: %v", doc.RelPath, rawRef, err),
+				Source:   &SourceRef{Path: doc.RelPath},
+			})
 		}
-		ref, ok := resolveDocRef(doc.RelPath, match[1], docs)
-		if !ok || !isAppendixPath(ref.Path) {
-			continue
-		}
-		ref.Label = "Appendix"
-		refs = appendSourceUnique(refs, ref)
+		return refs
+	}
+	if strings.Contains(relPath, "/appendix/") {
+		refs[relPath] = true
 	}
 	return refs
 }
 
-func resolveDocRef(fromPath, rawRef string, docs map[string]markdownDoc) (SourceRef, bool) {
-	rawRef = strings.TrimSpace(rawRef)
-	rawRef = strings.Trim(rawRef, "<>")
-	if rawRef == "" || strings.Contains(rawRef, "://") || strings.HasPrefix(rawRef, "#") {
-		return SourceRef{}, false
+func resolveEvidenceAppendixRef(repoRoot, fromPath, rawRef string) (string, error) {
+	ref := strings.TrimSpace(rawRef)
+	ref = strings.Trim(ref, "<>")
+	if ref == "" || strings.HasPrefix(ref, "/") || strings.Contains(ref, "://") || strings.HasPrefix(ref, "#") {
+		return "", fmt.Errorf("unsupported appendix ref")
 	}
-	if before, _, ok := strings.Cut(rawRef, "#"); ok {
-		rawRef = before
+	if before, _, ok := strings.Cut(ref, "#"); ok {
+		ref = before
 	}
-	rawRef = strings.ReplaceAll(rawRef, "\\", "/")
-	refPath := rawRef
-	if !strings.HasPrefix(refPath, "docs/") {
-		refPath = path.Join(path.Dir(fromPath), refPath)
+	ref = strings.ReplaceAll(ref, "\\", "/")
+	var absPath string
+	if strings.HasPrefix(ref, "docs/") {
+		absPath = filepath.Join(repoRoot, filepath.FromSlash(ref))
+	} else {
+		absPath = filepath.Join(repoRoot, filepath.FromSlash(filepath.Dir(fromPath)), filepath.FromSlash(ref))
 	}
-	refPath = path.Clean(refPath)
-	if !strings.HasPrefix(refPath, "docs/specs/") {
-		return SourceRef{}, false
+	relPath, err := filepath.Rel(repoRoot, filepath.Clean(absPath))
+	if err != nil {
+		return "", err
 	}
-	if _, ok := docs[refPath]; !ok {
-		return SourceRef{}, false
+	relPath = filepath.ToSlash(relPath)
+	if strings.HasPrefix(relPath, "../") || relPath == ".." {
+		return "", fmt.Errorf("appendix ref resolves outside repository")
 	}
-	return SourceRef{Path: refPath}, true
+	return relPath, nil
 }
 
-func isAppendixPath(path string) bool {
-	return strings.Contains(path, "/appendix/")
+func unitAppendixSourceRefs(repoRoot, objectType, object, layer, label string, evidenceRefs map[string]bool, diagnostics *[]Diagnostic) []SourceRef {
+	entries, err := unitappendix.Scan(repoRoot, objectType, object, layer)
+	if err != nil {
+		if diagnostics != nil {
+			*diagnostics = append(*diagnostics, Diagnostic{
+				Severity: "error",
+				Message:  err.Error(),
+				Source:   &SourceRef{Path: fmt.Sprintf("docs/specs/units/%s/appendix", layer)},
+			})
+		}
+		return nil
+	}
+	refs := make([]SourceRef, 0, len(entries))
+	for _, entry := range entries {
+		entryLabel := label
+		if evidenceRefs[entry.FileRef] {
+			entryLabel = "Evidence Appendix"
+		}
+		refs = append(refs, SourceRef{Path: entry.FileRef, Label: entryLabel})
+	}
+	return refs
 }
 
 func boundObjectsByRuleID(objects []ObjectView) map[string][]string {
@@ -831,6 +880,9 @@ func normalizeSnapshotSlices(snapshot *Snapshot) {
 		}
 		if object.BoundObjects == nil {
 			object.BoundObjects = []string{}
+		}
+		if object.BaselineTruthPaths == nil {
+			object.BaselineTruthPaths = []SourceRef{}
 		}
 		if object.Sources == nil {
 			object.Sources = []SourceRef{}

@@ -144,7 +144,7 @@ The computed candidate relation graph may read only these inputs:
 
 1. `docs/specs/_status.md`
 2. current-layer candidate unit main Specs
-3. same-layer unit appendix files explicitly referenced by a current-layer candidate unit main Spec
+3. same-layer candidate appendix files owned by a current-layer candidate unit through path and appendix frontmatter
 4. `unit_refs`
 5. `rule_refs`
 6. Markdown `.md` links
@@ -162,7 +162,7 @@ The graph has these edge meanings:
    - a current-layer candidate unit main Spec or non-evidence same-layer appendix explicitly references another current candidate unit or candidate Rule
    - the referencing candidate waits for the referenced candidate unit or candidate Rule before it may pass `unit_check` or be automatically advanced
 3. reference-only edge
-   - an evidence appendix explicitly references a candidate unit or candidate Rule
+   - the candidate appendix named by `evidence_appendix_ref` explicitly references a candidate unit or candidate Rule
    - the edge is displayed for traceability but does not block candidate advancement
 
 Cycle semantics are fixed:
@@ -182,3 +182,6 @@ Unit process files may record:
 `unit_snapshot` records the resolved stable unit dependencies listed in `unit_refs`. If it is present, tooling must validate it against current truth. New snapshots should include it when `unit_refs` is non-empty.
 
 Process evidence does not replace truth. It proves what was checked in one command round.
+
+`unit_appendix_snapshot` records the current-layer appendix files owned by the unit through appendix path and appendix frontmatter.
+For an active candidate unit that also has stable appendix files, validation fails when any stable appendix lacks the same-name candidate appendix.

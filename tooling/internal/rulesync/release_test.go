@@ -3,6 +3,7 @@ package rulesync
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -110,6 +111,17 @@ func TestReleaseVersionUpdatesCandidateAndAutoForksStableConsumer(t *testing.T) 
 		"Non-reference text prefix_s_unit_agent.md_suffix stays unchanged.",
 		"",
 	}, "\n"))
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/appendix/s_unit_agent_unlinked.md"), strings.Join([]string{
+		"---",
+		"unit: agent",
+		"layer: stable",
+		"---",
+		"",
+		"# Agent Unlinked Appendix",
+		"",
+		"Unlinked stable appendix content.",
+		"",
+	}, "\n"))
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_agent_old.md"), "stale")
 	writeUnitSpecWithRuleRefs(t, repoRoot, "candidate", "trace", []string{"s_b_rule_demo@0.1.0"})
 	writeStableSharedFile(t, repoRoot, `---
@@ -139,7 +151,11 @@ rule_version: 0.2.0
 	if len(result.CandidateUpdated) != 1 || result.CandidateUpdated[0] != "unit:trace" {
 		t.Fatalf("expected candidate trace update, got %+v", result.CandidateUpdated)
 	}
-	if len(result.AppendixRetargeted) != 1 || result.AppendixRetargeted[0] != "docs/specs/units/candidate/appendix/c_unit_agent_roles.md" {
+	expectedRetargeted := []string{
+		"docs/specs/units/candidate/appendix/c_unit_agent_roles.md",
+		"docs/specs/units/candidate/appendix/c_unit_agent_unlinked.md",
+	}
+	if !reflect.DeepEqual(result.AppendixRetargeted, expectedRetargeted) {
 		t.Fatalf("expected agent appendix retarget, got %+v", result.AppendixRetargeted)
 	}
 	if len(result.AppendixRemoved) != 1 || result.AppendixRemoved[0] != "docs/specs/units/candidate/appendix/c_unit_agent_old.md" {
@@ -175,6 +191,9 @@ rule_version: 0.2.0
 	}
 	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_agent_old.md")); !os.IsNotExist(err) {
 		t.Fatalf("expected stale candidate appendix to be removed, stat err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_agent_unlinked.md")); err != nil {
+		t.Fatalf("expected unlinked candidate appendix to be written, stat err=%v", err)
 	}
 	agentStable, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_agent.md"))
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitappendix"
 )
 
 type ConsumerOptions struct {
@@ -445,7 +446,16 @@ func removeProcessArtifacts(repoRoot, objectType, object string) ([]string, erro
 }
 
 func prepareStableAppendicesForFork(repoRoot, objectType, object, stableMainRef, candidateMainRef, stableContent, candidateContent string) (string, []preparedAppendix, []string, []string, error) {
-	stableAppendices := stableAppendixRefsFromContent(objectType, object, stableMainRef, stableContent)
+	_ = stableContent
+	stableEntries, err := unitappendix.Scan(repoRoot, objectType, object, "stable")
+	if err != nil {
+		return "", nil, nil, nil, err
+	}
+	stableAppendices := make([]string, 0, len(stableEntries))
+	stableContentByRef := stableEntriesByRef(stableEntries)
+	for _, entry := range stableEntries {
+		stableAppendices = append(stableAppendices, entry.FileRef)
+	}
 	refMap := map[string]string{
 		path.Clean(stableMainRef): path.Clean(candidateMainRef),
 	}
@@ -458,12 +468,9 @@ func prepareStableAppendicesForFork(repoRoot, objectType, object, stableMainRef,
 		refMap[stableAppendixRef] = candidateAppendixRef
 	}
 	for _, stableAppendixRef := range stableAppendices {
-		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(stableAppendixRef)))
-		if err != nil {
-			return "", nil, nil, nil, fmt.Errorf("read %s: %w", stableAppendixRef, err)
-		}
 		candidateAppendixRef := refMap[stableAppendixRef]
-		appendixContent := rewriteCandidateAppendixFrontmatter(string(data), objectType, object)
+		appendixContent := stableContentByRef[stableAppendixRef]
+		appendixContent = rewriteCandidateAppendixFrontmatter(appendixContent, objectType, object)
 		appendixContent = rewriteMarkdownDocRefs(appendixContent, stableAppendixRef, candidateAppendixRef, refMap)
 		appendixContent = rewriteKnownDocRefLiterals(appendixContent, refMap)
 		prepared = append(prepared, preparedAppendix{fileRef: candidateAppendixRef, content: appendixContent})
@@ -487,21 +494,12 @@ func prepareStableAppendicesForFork(repoRoot, objectType, object, stableMainRef,
 	return nextCandidateContent, prepared, normalizeStrings(retargeted), normalizeStrings(removed), nil
 }
 
-func stableAppendixRefsFromContent(objectType, object, fromRef, content string) []string {
-	matches := markdownLinkTargetPattern.FindAllStringSubmatch(content, -1)
-	refs := []string{}
-	for _, match := range matches {
-		target, _, ok := splitMarkdownTarget(match[1])
-		if !ok {
-			continue
-		}
-		ref, _, ok := resolveMarkdownDocRef(fromRef, target)
-		if !ok || !isOwnStableAppendixRef(objectType, object, ref) {
-			continue
-		}
-		refs = append(refs, ref)
+func stableEntriesByRef(entries []unitappendix.Entry) map[string]string {
+	result := map[string]string{}
+	for _, entry := range entries {
+		result[entry.FileRef] = entry.Content
 	}
-	return normalizeStrings(refs)
+	return result
 }
 
 func candidateAppendixRefForStable(objectType, object, stableAppendixRef string) (string, error) {
@@ -523,14 +521,6 @@ func appendixPrefixes(objectType, object string) (string, string, error) {
 	default:
 		return "", "", fmt.Errorf("unsupported object type %q", objectType)
 	}
-}
-
-func isOwnStableAppendixRef(objectType, object, ref string) bool {
-	stablePrefix, _, err := appendixPrefixes(objectType, object)
-	if err != nil {
-		return false
-	}
-	return strings.HasPrefix(ref, stablePrefix) && strings.HasSuffix(ref, ".md")
 }
 
 func rewriteMarkdownDocRefs(content, resolveFromRef, outputFromRef string, refMap map[string]string) string {

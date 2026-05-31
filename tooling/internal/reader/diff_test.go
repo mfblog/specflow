@@ -58,6 +58,21 @@ func TestReadAllowedSourceDiffForUnitCandidate(t *testing.T) {
 	}
 }
 
+func TestReadAllowedSourceDiffForUnitCandidateAppendix(t *testing.T) {
+	repoRoot := createReaderRepo(t)
+
+	diff, err := ReadAllowedSourceDiff(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_prompt.md")
+	if err != nil {
+		t.Fatalf("ReadAllowedSourceDiff appendix returned error: %v", err)
+	}
+	if !diff.Available {
+		t.Fatalf("expected appendix diff to be available, got %+v", diff)
+	}
+	if diff.StablePath != "docs/specs/units/stable/appendix/s_unit_assistant_prompt.md" {
+		t.Fatalf("unexpected stable appendix path: %q", diff.StablePath)
+	}
+}
+
 func TestReadAllowedSourceDiffUnavailableCases(t *testing.T) {
 	repoRoot := createReaderRepo(t)
 
@@ -69,19 +84,19 @@ func TestReadAllowedSourceDiffUnavailableCases(t *testing.T) {
 		t.Fatalf("expected stable_missing, got %+v", diff)
 	}
 
-	diff, err = ReadAllowedSourceDiff(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_prompt.md")
+	diff, err = ReadAllowedSourceDiff(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_unlinked.md")
 	if err != nil {
 		t.Fatalf("ReadAllowedSourceDiff appendix returned error: %v", err)
 	}
-	if diff.Available || diff.Reason != "not_unit_candidate_main_spec" {
-		t.Fatalf("expected non-main-spec unavailable result, got %+v", diff)
+	if diff.Available || diff.Reason != "stable_missing" {
+		t.Fatalf("expected missing stable appendix unavailable result, got %+v", diff)
 	}
 
 	diff, err = ReadAllowedSourceDiff(repoRoot, "docs/specs/units/stable/s_unit_tool.md")
 	if err != nil {
 		t.Fatalf("ReadAllowedSourceDiff stable returned error: %v", err)
 	}
-	if diff.Available || diff.Reason != "not_unit_candidate_main_spec" {
+	if diff.Available || diff.Reason != "not_unit_candidate_truth" {
 		t.Fatalf("expected stable doc to be unavailable, got %+v", diff)
 	}
 

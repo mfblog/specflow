@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitappendix"
 )
 
 var unitCandidateMainSpecPattern = regexp.MustCompile(`^docs/specs/units/candidate/c_unit_([A-Za-z0-9_]+)\.md$`)
@@ -25,16 +27,24 @@ func ReadAllowedSourceDiff(repoRoot, relPath string) (SourceDiff, error) {
 	if !isAllowedSourcePath(clean) {
 		return SourceDiff{}, fmt.Errorf("source path is not allowed: %s", clean)
 	}
+	stablePath := ""
 	match := unitCandidateMainSpecPattern.FindStringSubmatch(clean)
-	if len(match) != 2 {
+	if len(match) == 2 {
+		stablePath = "docs/specs/units/stable/s_unit_" + match[1] + ".md"
+	}
+	if stablePath == "" {
+		if counterpart, ok := unitappendix.StableCounterpartForCandidatePath(clean); ok {
+			stablePath = counterpart
+		}
+	}
+	if stablePath == "" {
 		return SourceDiff{
 			Available:     false,
 			CandidatePath: clean,
-			Reason:        "not_unit_candidate_main_spec",
+			Reason:        "not_unit_candidate_truth",
 		}, nil
 	}
 
-	stablePath := "docs/specs/units/stable/s_unit_" + match[1] + ".md"
 	absRoot, err := filepath.Abs(repoRoot)
 	if err != nil {
 		return SourceDiff{}, err

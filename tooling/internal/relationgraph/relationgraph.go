@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitappendix"
 )
 
 type Result struct {
@@ -108,13 +109,22 @@ func Build(repoRoot string) Result {
 	for _, candidate := range candidates {
 		mainDoc, ok := readDocument(repoRoot, candidate.FileRef, "main", candidate.Object, &result)
 		if !ok {
+			result.RelationResult = "error"
 			continue
 		}
 		scanDocumentForCandidateRefs(mainDoc, currentCandidateSet, &result)
 
-		for _, doc := range referencedAppendixDocuments(repoRoot, mainDoc, candidate.Object, &result) {
+		appendixDocs, ok := candidateAppendixDocuments(repoRoot, mainDoc, &result)
+		if !ok {
+			result.RelationResult = "error"
+			continue
+		}
+		for _, doc := range appendixDocs {
 			scanDocumentForCandidateRefs(doc, currentCandidateSet, &result)
 		}
+	}
+	if result.RelationResult == "error" {
+		return normalize(result)
 	}
 
 	stableCycleDiagnostics(repoRoot, statuses, &result)
@@ -216,41 +226,58 @@ func readDocument(repoRoot, relPath, sourceKind, owner string, result *Result) (
 	}, true
 }
 
-func referencedAppendixDocuments(repoRoot string, mainDoc document, owner string, result *Result) []document {
-	refs := []SourceRef{}
-	if evidenceRef := strings.TrimSpace(mainDoc.Scalars["evidence_appendix_ref"]); evidenceRef != "" && evidenceRef != "none" {
-		if resolved, ok := resolveDocRef(mainDoc.RelPath, evidenceRef); ok && isAppendixPath(resolved.Path) {
-			resolved.Label = "evidence"
-			refs = appendSourceUnique(refs, resolved)
-		}
+func candidateAppendixDocuments(repoRoot string, mainDoc document, result *Result) ([]document, bool) {
+	owner := mainDoc.OwnerObject
+	entries, err := unitappendix.Scan(repoRoot, "unit", owner, "candidate")
+	if err != nil {
+		result.Diagnostics = append(result.Diagnostics, err.Error())
+		return nil, false
 	}
-	for _, match := range markdownLinkPattern.FindAllStringSubmatch(mainDoc.Body, -1) {
-		if len(match) != 2 {
-			continue
-		}
-		resolved, ok := resolveDocRef(mainDoc.RelPath, match[1])
-		if !ok || !isAppendixPath(resolved.Path) {
-			continue
-		}
-		if isEvidencePath(resolved.Path) {
-			resolved.Label = "evidence"
-		} else {
-			resolved.Label = "appendix"
-		}
-		refs = appendSourceUnique(refs, resolved)
+	evidenceRefs, ok := evidenceAppendixRefs(mainDoc, entries, result)
+	if !ok {
+		return nil, false
 	}
 	docs := []document{}
-	for _, ref := range refs {
+	for _, entry := range entries {
+		ref := SourceRef{Path: entry.FileRef}
 		sourceKind := "appendix"
-		if ref.Label == "evidence" || isEvidencePath(ref.Path) {
+		if evidenceRefs[ref.Path] {
 			sourceKind = "evidence"
 		}
-		doc, ok := readDocument(repoRoot, ref.Path, sourceKind, owner, result)
-		if ok {
-			docs = append(docs, doc)
-		}
+		scalars, lists, body := parseFrontmatterAndBody(entry.Content)
+		docs = append(docs, document{
+			RelPath:     ref.Path,
+			Scalars:     scalars,
+			Lists:       lists,
+			Body:        body,
+			SourceKind:  sourceKind,
+			OwnerObject: owner,
+		})
 	}
-	return docs
+	return docs, true
+}
+
+func evidenceAppendixRefs(mainDoc document, entries []unitappendix.Entry, result *Result) (map[string]bool, bool) {
+	resultRefs := map[string]bool{}
+	rawRef := strings.TrimSpace(mainDoc.Scalars["evidence_appendix_ref"])
+	if rawRef == "" || rawRef == "none" {
+		return resultRefs, true
+	}
+	entryRefs := map[string]bool{}
+	for _, entry := range entries {
+		entryRefs[entry.FileRef] = true
+	}
+	resolved, ok := resolveDocRef(mainDoc.RelPath, rawRef)
+	if !ok {
+		result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: invalid evidence_appendix_ref %s", mainDoc.RelPath, rawRef))
+		return resultRefs, false
+	}
+	if !entryRefs[resolved.Path] {
+		result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s: evidence_appendix_ref %s is not a current candidate appendix for unit %s", mainDoc.RelPath, resolved.Path, mainDoc.OwnerObject))
+		return resultRefs, false
+	}
+	resultRefs[resolved.Path] = true
+	return resultRefs, true
 }
 
 func scanDocumentForCandidateRefs(doc document, currentCandidates map[string]bool, result *Result) {
@@ -788,14 +815,6 @@ func containsString(items []string, value string) bool {
 		}
 	}
 	return false
-}
-
-func isAppendixPath(relPath string) bool {
-	return strings.Contains(relPath, "/appendix/")
-}
-
-func isEvidencePath(relPath string) bool {
-	return strings.Contains(relPath, "/appendix/") && strings.HasSuffix(path.Base(relPath), "_evidence.md")
 }
 
 func trimRef(value string) string {

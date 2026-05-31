@@ -31,10 +31,25 @@ func TestBuildSnapshotConnectsUnitSpecAndRule(t *testing.T) {
 	expectedTruthPaths := []string{
 		"docs/specs/units/candidate/c_unit_assistant.md",
 		"docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md",
+		"docs/specs/units/candidate/appendix/c_unit_assistant_legacy_evidence.md",
 		"docs/specs/units/candidate/appendix/c_unit_assistant_prompt.md",
+		"docs/specs/units/candidate/appendix/c_unit_assistant_unlinked.md",
 	}
 	if !sourcePathsEqual(unit.TruthPaths, expectedTruthPaths) {
 		t.Fatalf("unexpected truth paths: %+v", unit.TruthPaths)
+	}
+	if sourceLabel(t, unit.TruthPaths, "docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md") != "Evidence Appendix" {
+		t.Fatalf("evidence_appendix_ref must label evidence appendix, got %+v", unit.TruthPaths)
+	}
+	if sourceLabel(t, unit.TruthPaths, "docs/specs/units/candidate/appendix/c_unit_assistant_legacy_evidence.md") != "Appendix" {
+		t.Fatalf("evidence-like suffix must not label evidence appendix, got %+v", unit.TruthPaths)
+	}
+	expectedBaselinePaths := []string{
+		"docs/specs/units/stable/s_unit_assistant.md",
+		"docs/specs/units/stable/appendix/s_unit_assistant_prompt.md",
+	}
+	if !sourcePathsEqual(unit.BaselineTruthPaths, expectedBaselinePaths) {
+		t.Fatalf("unexpected baseline truth paths: %+v", unit.BaselineTruthPaths)
 	}
 	if !stringSlicesEqual(unit.RuleRefs, []string{"b_rule_runtime_model", "b_rule_unregistered"}) {
 		t.Fatalf("unexpected rule refs: %+v", unit.RuleRefs)
@@ -163,6 +178,17 @@ func findNode(t *testing.T, nodes []GraphNode, id string) GraphNode {
 	return GraphNode{}
 }
 
+func sourceLabel(t *testing.T, sources []SourceRef, path string) string {
+	t.Helper()
+	for _, source := range sources {
+		if source.Path == path {
+			return source.Label
+		}
+	}
+	t.Fatalf("source %s not found in %+v", path, sources)
+	return ""
+}
+
 func findRegistryItem(t *testing.T, items []RegistryItem, kind, id string) RegistryItem {
 	t.Helper()
 	for _, item := range items {
@@ -214,7 +240,7 @@ func createReaderRepo(t *testing.T) string {
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
 		"|---|---|---|---|---|---|---|",
-		"| `unit` | `assistant` | `no` | `yes` | `candidate` | `unit_check` | note |",
+		"| `unit` | `assistant` | `yes` | `yes` | `candidate` | `unit_check` | note |",
 		"| `unit` | `memory` | `yes` | `yes` | `candidate` | `unit_plan` | repair candidate in progress |",
 		"| `unit` | `tool` | `yes` | `no` | `stable` | `unit_fork` | next fork must create candidate_intent=repair |",
 	}, "\n")+"\n")
@@ -257,6 +283,23 @@ func createReaderRepo(t *testing.T) string {
 		"# Global Rules",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "CLI/internal/assistant/prompt.go"), "package assistant\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_assistant.md"), strings.Join([]string{
+		"---",
+		"id: assistant",
+		"layer: stable",
+		"version: 0.0.9",
+		"---",
+		"",
+		"# Assistant Stable",
+	}, "\n")+"\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/appendix/s_unit_assistant_prompt.md"), strings.Join([]string{
+		"---",
+		"unit: assistant",
+		"layer: stable",
+		"---",
+		"",
+		"# Assistant Stable Prompt",
+	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_assistant.md"), strings.Join([]string{
 		"---",
 		"id: assistant",
@@ -300,14 +343,44 @@ func createReaderRepo(t *testing.T) string {
 		"# Memory",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_evidence.md"), strings.Join([]string{
+		"---",
+		"unit: assistant",
+		"layer: candidate",
+		"---",
+		"",
 		"# Assistant Evidence",
 		"",
 		"Evidence notes.",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_prompt.md"), strings.Join([]string{
+		"---",
+		"unit: assistant",
+		"layer: candidate",
+		"---",
+		"",
 		"# Assistant Prompt",
 		"",
 		"Prompt notes.",
+	}, "\n")+"\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_legacy_evidence.md"), strings.Join([]string{
+		"---",
+		"unit: assistant",
+		"layer: candidate",
+		"---",
+		"",
+		"# Assistant Legacy Evidence",
+		"",
+		"Evidence-like suffix but not the evidence_appendix_ref target.",
+	}, "\n")+"\n")
+	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_assistant_unlinked.md"), strings.Join([]string{
+		"---",
+		"unit: assistant",
+		"layer: candidate",
+		"---",
+		"",
+		"# Assistant Unlinked",
+		"",
+		"Unlinked notes.",
 	}, "\n")+"\n")
 	writeReaderTestFile(t, filepath.Join(repoRoot, "docs/specs/rules/candidate/c_b_rule_runtime_model.md"), strings.Join([]string{
 		"---",

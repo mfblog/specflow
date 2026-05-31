@@ -45,6 +45,7 @@ type ObjectView struct {
 	RuleRefs            []string    `json:"rule_refs"`
 	UnitRefs            []string    `json:"unit_refs"`
 	BoundObjects        []string    `json:"bound_objects"`
+	BaselineTruthPaths  []SourceRef `json:"baseline_truth_paths"`
 	Sources             []SourceRef `json:"sources"`
 }
 

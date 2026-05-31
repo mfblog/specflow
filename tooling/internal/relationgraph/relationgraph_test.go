@@ -102,7 +102,14 @@ func TestEvidenceAppendixCandidateReferenceDoesNotBlock(t *testing.T) {
 	})
 	writeCandidateUnit(t, repoRoot, "alpha", "0.2.0", "", "See evidence.", "docs/specs/units/candidate/appendix/c_unit_alpha_evidence.md")
 	writeCandidateUnit(t, repoRoot, "beta", "0.1.0", "", "No candidate dependencies.")
-	writeRelationFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_alpha_evidence.md"), "Evidence references `c_unit_beta@0.1.0`.\n")
+	writeRelationFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_alpha_evidence.md"), strings.Join([]string{
+		"---",
+		"unit: alpha",
+		"layer: candidate",
+		"---",
+		"",
+		"Evidence references `c_unit_beta@0.1.0`.",
+	}, "\n")+"\n")
 
 	result := Build(repoRoot)
 
@@ -114,6 +121,172 @@ func TestEvidenceAppendixCandidateReferenceDoesNotBlock(t *testing.T) {
 	}
 	if len(result.ReferenceEdges) != 1 || result.ReferenceEdges[0].Blocking {
 		t.Fatalf("expected non-blocking evidence edge, got %#v", result.ReferenceEdges)
+	}
+}
+
+func TestEvidenceAppendixRefControlsNonBlockingSourceKind(t *testing.T) {
+	repoRoot := relationRepo(t)
+	writeRelationStatus(t, repoRoot, []string{
+		"| `unit` | `alpha` | `yes` | `yes` | `candidate` | `unit_check` | alpha |",
+		"| `unit` | `beta` | `yes` | `yes` | `candidate` | `unit_check` | beta |",
+	})
+	writeCandidateUnit(t, repoRoot, "alpha", "0.2.0", "", "See runtime evidence.", "docs/specs/units/candidate/appendix/c_unit_alpha_runtime.md")
+	writeCandidateUnit(t, repoRoot, "beta", "0.1.0", "", "No candidate dependencies.")
+	writeRelationFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_alpha_runtime.md"), strings.Join([]string{
+		"---",
+		"unit: alpha",
+		"layer: candidate",
+		"---",
+		"",
+		"Runtime notes reference `c_unit_beta@0.1.0`.",
+	}, "\n")+"\n")
+
+	result := Build(repoRoot)
+
+	if !reflect.DeepEqual(result.ReadyCandidates, []string{"alpha", "beta"}) {
+		t.Fatalf("ready candidates = %#v", result.ReadyCandidates)
+	}
+	if len(result.ReferenceEdges) != 1 || result.ReferenceEdges[0].SourceKind != "evidence" || result.ReferenceEdges[0].Blocking {
+		t.Fatalf("expected evidence_appendix_ref to make the edge non-blocking, got %#v", result.ReferenceEdges)
+	}
+}
+
+func TestEvidenceNamedAppendixBlocksWhenNotReferencedAsEvidence(t *testing.T) {
+	repoRoot := relationRepo(t)
+	writeRelationStatus(t, repoRoot, []string{
+		"| `unit` | `alpha` | `yes` | `yes` | `candidate` | `unit_check` | alpha |",
+		"| `unit` | `beta` | `yes` | `yes` | `candidate` | `unit_check` | beta |",
+	})
+	writeCandidateUnit(t, repoRoot, "alpha", "0.2.0", "", "No evidence ref.")
+	writeCandidateUnit(t, repoRoot, "beta", "0.1.0", "", "No candidate dependencies.")
+	writeRelationFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_alpha_evidence.md"), strings.Join([]string{
+		"---",
+		"unit: alpha",
+		"layer: candidate",
+		"---",
+		"",
+		"Unreferenced appendix references `c_unit_beta@0.1.0`.",
+	}, "\n")+"\n")
+
+	result := Build(repoRoot)
+
+	if !reflect.DeepEqual(result.ReadyCandidates, []string{"beta"}) {
+		t.Fatalf("ready candidates = %#v", result.ReadyCandidates)
+	}
+	if len(result.ReferenceEdges) != 1 || result.ReferenceEdges[0].SourceKind != "appendix" || !result.ReferenceEdges[0].Blocking {
+		t.Fatalf("expected unreferenced appendix to block even with evidence-like filename, got %#v", result.ReferenceEdges)
+	}
+}
+
+func TestUnlinkedCandidateAppendixReferenceBlocks(t *testing.T) {
+	repoRoot := relationRepo(t)
+	writeRelationStatus(t, repoRoot, []string{
+		"| `unit` | `alpha` | `yes` | `yes` | `candidate` | `unit_check` | alpha |",
+		"| `unit` | `beta` | `yes` | `yes` | `candidate` | `unit_check` | beta |",
+	})
+	writeCandidateUnit(t, repoRoot, "alpha", "0.2.0", "", "No main spec candidate dependencies.")
+	writeCandidateUnit(t, repoRoot, "beta", "0.1.0", "", "No candidate dependencies.")
+	writeRelationFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_alpha_flow.md"), strings.Join([]string{
+		"---",
+		"unit: alpha",
+		"layer: candidate",
+		"---",
+		"",
+		"Flow references `c_unit_beta@0.1.0`.",
+	}, "\n")+"\n")
+
+	result := Build(repoRoot)
+
+	if !reflect.DeepEqual(result.ReadyCandidates, []string{"beta"}) {
+		t.Fatalf("ready candidates = %#v", result.ReadyCandidates)
+	}
+	blocked := findBlockedCandidate(t, result.BlockedCandidates, "alpha")
+	if !reflect.DeepEqual(blocked.BlockedBy, []string{"unit:beta"}) {
+		t.Fatalf("blocked_by = %#v", blocked.BlockedBy)
+	}
+	if len(result.ReferenceEdges) != 1 || result.ReferenceEdges[0].SourceKind != "appendix" || !result.ReferenceEdges[0].Blocking {
+		t.Fatalf("expected blocking appendix edge, got %#v", result.ReferenceEdges)
+	}
+}
+
+func TestCandidateAppendixOwnershipErrorFailsClosed(t *testing.T) {
+	repoRoot := relationRepo(t)
+	writeRelationStatus(t, repoRoot, []string{
+		"| `unit` | `alpha` | `yes` | `yes` | `candidate` | `unit_check` | alpha |",
+		"| `unit` | `beta` | `yes` | `yes` | `candidate` | `unit_check` | beta |",
+	})
+	writeCandidateUnit(t, repoRoot, "alpha", "0.2.0", "", "No main spec candidate dependencies.")
+	writeCandidateUnit(t, repoRoot, "beta", "0.1.0", "", "No candidate dependencies.")
+	writeRelationFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_alpha_a_bad.md"), strings.Join([]string{
+		"---",
+		"unit: other",
+		"layer: candidate",
+		"---",
+		"",
+		"# Bad Ownership",
+	}, "\n")+"\n")
+	writeRelationFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/appendix/c_unit_alpha_flow.md"), strings.Join([]string{
+		"---",
+		"unit: alpha",
+		"layer: candidate",
+		"---",
+		"",
+		"Flow references `c_unit_beta@0.1.0`.",
+	}, "\n")+"\n")
+
+	result := Build(repoRoot)
+	preflight := CandidatePreflight(repoRoot, "alpha")
+
+	if result.RelationResult != "error" {
+		t.Fatalf("relation result = %q, want error", result.RelationResult)
+	}
+	if len(result.ReadyCandidates) != 0 {
+		t.Fatalf("input errors must not produce ready candidates: %#v", result.ReadyCandidates)
+	}
+	if !hasDiagnosticContaining(result.Diagnostics, "frontmatter.unit mismatch") {
+		t.Fatalf("expected appendix ownership diagnostic, got %#v", result.Diagnostics)
+	}
+	if preflight.MayContinue {
+		t.Fatalf("preflight must fail closed on relation input error: %#v", preflight)
+	}
+}
+
+func TestInvalidEvidenceAppendixRefFailsClosed(t *testing.T) {
+	repoRoot := relationRepo(t)
+	writeRelationStatus(t, repoRoot, []string{
+		"| `unit` | `alpha` | `yes` | `yes` | `candidate` | `unit_check` | alpha |",
+	})
+	writeCandidateUnit(t, repoRoot, "alpha", "0.2.0", "", "Evidence ref points outside current owned appendices.", "docs/specs/units/candidate/appendix/c_unit_alpha_missing.md")
+
+	result := Build(repoRoot)
+
+	if result.RelationResult != "error" {
+		t.Fatalf("relation result = %q, want error", result.RelationResult)
+	}
+	if len(result.ReadyCandidates) != 0 {
+		t.Fatalf("invalid evidence ref must not produce ready candidates: %#v", result.ReadyCandidates)
+	}
+	if !hasDiagnosticContaining(result.Diagnostics, "is not a current candidate appendix") {
+		t.Fatalf("expected evidence appendix ownership diagnostic, got %#v", result.Diagnostics)
+	}
+}
+
+func TestMissingCandidateMainSpecFailsClosed(t *testing.T) {
+	repoRoot := relationRepo(t)
+	writeRelationStatus(t, repoRoot, []string{
+		"| `unit` | `alpha` | `yes` | `yes` | `candidate` | `unit_check` | alpha |",
+	})
+
+	result := Build(repoRoot)
+
+	if result.RelationResult != "error" {
+		t.Fatalf("relation result = %q, want error", result.RelationResult)
+	}
+	if len(result.ReadyCandidates) != 0 {
+		t.Fatalf("missing candidate main spec must not produce ready candidates: %#v", result.ReadyCandidates)
+	}
+	if !hasDiagnosticContaining(result.Diagnostics, "c_unit_alpha.md") {
+		t.Fatalf("expected missing candidate main spec diagnostic, got %#v", result.Diagnostics)
 	}
 }
 
@@ -206,6 +379,15 @@ func writeRelationFile(t *testing.T, path, content string) {
 func hasDiagnosticPrefix(diagnostics []string, prefix string) bool {
 	for _, diagnostic := range diagnostics {
 		if strings.HasPrefix(diagnostic, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasDiagnosticContaining(diagnostics []string, needle string) bool {
+	for _, diagnostic := range diagnostics {
+		if strings.Contains(diagnostic, needle) {
 			return true
 		}
 	}

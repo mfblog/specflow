@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitappendix"
 )
 
 const (
@@ -44,8 +44,6 @@ var checklistColumns = []string{
 	"finding_refs",
 	"result_summary",
 }
-
-var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
 
 type InitResult struct {
 	File         string
@@ -368,7 +366,7 @@ func collectTruthInfo(repoRoot, objectType, object string) (truthInfo, error) {
 	if err != nil {
 		return truthInfo{}, fmt.Errorf("read %s: %w", mainSpecRef, err)
 	}
-	frontmatter, body, err := parseFrontmatter(string(content))
+	frontmatter, _, err := parseFrontmatter(string(content))
 	if err != nil {
 		return truthInfo{}, fmt.Errorf("%s: %w", mainSpecRef, err)
 	}
@@ -377,7 +375,7 @@ func collectTruthInfo(repoRoot, objectType, object string) (truthInfo, error) {
 		return truthInfo{}, fmt.Errorf("%s: missing frontmatter.version", mainSpecRef)
 	}
 
-	appendices, err := collectAppendixFiles(repoRoot, mainSpecRef, frontmatter, body)
+	appendices, err := collectAppendixFiles(repoRoot, objectType, object, mainSpecRef, frontmatter)
 	if err != nil {
 		return truthInfo{}, err
 	}
@@ -819,35 +817,25 @@ func computeFingerprint(repoRoot string, inputFiles []string) (string, []string,
 	return hex.EncodeToString(sum[:]), missing, nil
 }
 
-func collectAppendixFiles(repoRoot, mainSpecRef string, frontmatter map[string]string, body string) ([]string, error) {
+func collectAppendixFiles(repoRoot, objectType, object, mainSpecRef string, frontmatter map[string]string) ([]string, error) {
 	mainDir := filepath.Dir(filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)))
-	result := []string{}
+	entries, err := unitappendix.Scan(repoRoot, objectType, object, "candidate")
+	if err != nil {
+		return nil, err
+	}
+	result := make([]string, 0, len(entries))
+	entrySet := map[string]bool{}
+	for _, entry := range entries {
+		result = append(result, entry.FileRef)
+		entrySet[entry.FileRef] = true
+	}
 	if evidenceRef := strings.TrimSpace(frontmatter["evidence_appendix_ref"]); evidenceRef != "" && evidenceRef != "none" {
 		relPath, err := resolveAppendixRef(repoRoot, mainDir, evidenceRef)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, relPath)
-	}
-	for _, destination := range markdownLinkPattern.FindAllStringSubmatch(body, -1) {
-		if len(destination) != 2 {
-			continue
-		}
-		linkDestination := strings.TrimSpace(destination[1])
-		if linkDestination == "" || strings.HasPrefix(linkDestination, "/") || strings.Contains(linkDestination, "://") || filepath.Ext(linkDestination) != ".md" {
-			continue
-		}
-		absPath := filepath.Clean(filepath.Join(mainDir, filepath.FromSlash(linkDestination)))
-		relPath, err := filepath.Rel(repoRoot, absPath)
-		if err != nil {
-			return nil, err
-		}
-		relPath = filepath.ToSlash(relPath)
-		if strings.HasPrefix(relPath, "../") || relPath == ".." || relPath == mainSpecRef {
-			continue
-		}
-		if strings.Contains(relPath, "/appendix/") {
-			result = append(result, relPath)
+		if !entrySet[relPath] {
+			return nil, fmt.Errorf("%s: evidence appendix ref %s is not a current candidate appendix for unit %s", mainSpecRef, relPath, object)
 		}
 	}
 	return union(result), nil

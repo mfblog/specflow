@@ -123,7 +123,16 @@ Appendix files are support truth for one unit.
 
 They do not replace the unit main Spec.
 
-Appendix files must be explicitly linked from the current-layer unit main Spec or named by the relevant frontmatter field.
+Appendix ownership is derived from the appendix path and appendix frontmatter, not from a main-Spec index.
+
+Each unit appendix must:
+
+1. use the current path shape for its layer and unit id
+2. declare `unit: {unit}` in frontmatter
+3. declare `layer: stable|candidate` in frontmatter
+
+When a stable unit with appendix files is forked to candidate, every stable appendix `s_unit_{unit}_{name}.md` must have a corresponding candidate appendix `c_unit_{unit}_{name}.md`.
+The candidate may have additional candidate appendices.
 
 ## 8. Process Snapshots
 
@@ -132,6 +141,8 @@ Process files may include:
 1. `unit_appendix_snapshot`
 2. `unit_snapshot`
 3. `rule_snapshot`
+
+`unit_appendix_snapshot` records the current-layer appendix files owned by the unit.
 
 `unit_snapshot` records resolved stable unit dependencies from `unit_refs`.
 

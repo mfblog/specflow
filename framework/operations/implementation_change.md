@@ -51,7 +51,7 @@ Required minimum reads:
 2. read `docs/specs/_status.md` when the request names an existing formal unit, or when the target object must be resolved before implementation permission can be judged
 3. read `docs/specs/repository_mapping.md` only when path ownership, object boundary, support-surface ownership, or target-object resolution cannot be proven from the user request and `_status.md`
 4. read the current-layer main Spec sections needed to decide whether the requested change alters formal behavior truth
-5. read explicitly referenced appendix truth only when the current-layer main Spec makes that appendix relevant
+5. read current-layer appendix truth owned by the target unit when appendix truth is relevant
 6. read bound rule files only when the current-layer main Spec shows that relevant behavior depends on those rules
 7. read directly relevant implementation or test files only to understand the requested implementation surface or verify that the requested change is limited to an already-defined result
 

@@ -13,6 +13,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitappendix"
 )
 
 type AppendixEntry struct {
@@ -111,8 +112,6 @@ type ProcessSnapshotData struct {
 	AcceptancePlanCoverage        []AcceptancePlanCoverageEntry
 	AcceptanceEvidence            []AcceptanceEvidenceEntry
 }
-
-var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
 
 const (
 	FreshnessCurrent         = "current"
@@ -605,6 +604,7 @@ func validateProcessFileForObject(repoRoot, objectType, object, processKind stri
 	if !options.SkipIndependentEvaluationReceipt {
 		validateIndependentEvaluationReceipt(&result, actual)
 	}
+	validateCandidateAppendixCoverage(repoRoot, &result, expected)
 
 	if processKind == "plan" {
 		compareScalar(&result, "spec_file_ref", actual.scalars["spec_file_ref"], expected.SpecFileRef)
@@ -686,6 +686,23 @@ func validateProcessFileForObject(repoRoot, objectType, object, processKind stri
 
 	finalizeValidationResult(&result, actual)
 	return result, nil
+}
+
+func validateCandidateAppendixCoverage(repoRoot string, result *ValidationResult, expected Snapshot) {
+	if expected.ObjectType != "unit" || expected.TruthLayerRef != "candidate" {
+		return
+	}
+	mismatches, err := unitappendix.CandidateCoverageMismatches(repoRoot, expected.ObjectType, expected.Object)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, err.Error())
+		return
+	}
+	if len(mismatches) == 0 {
+		return
+	}
+	result.Valid = false
+	result.Mismatches = append(result.Mismatches, mismatches...)
 }
 
 func requiredFieldsForObjectProcess(objectType, processKind string) ([]string, bool) {
@@ -1080,45 +1097,22 @@ func isStableMainSpecRef(mainSpecRef string) bool {
 func buildAppendixSnapshot(repoRoot, mainSpecRef string, frontmatter map[string]string, body string) ([]AppendixEntry, error) {
 	mainDir := filepath.Dir(filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)))
 	currentLayer := mainSpecLayer(mainSpecRef)
-	currentObject, ownerKey, err := mainSpecObject(mainSpecRef)
+	currentObject, _, err := mainSpecObject(mainSpecRef)
 	if err != nil {
 		return nil, err
 	}
-	seen := map[string]bool{}
+	scanned, err := unitappendix.Scan(repoRoot, "unit", currentObject, currentLayer)
+	if err != nil {
+		return nil, err
+	}
 	entries := []AppendixEntry{}
-	addAppendix := func(relPath string) error {
-		relPath = filepath.ToSlash(filepath.Clean(relPath))
-		if relPath == "." || filepath.IsAbs(relPath) || filepath.Ext(relPath) != ".md" {
-			return nil
-		}
-		if relPath == mainSpecRef {
-			return nil
-		}
-		if seen[relPath] {
-			return nil
-		}
-		seen[relPath] = true
-
-		absPath := filepath.Join(repoRoot, filepath.FromSlash(relPath))
-		content, err := os.ReadFile(absPath)
-		if err != nil {
-			return fmt.Errorf("read appendix %s: %w", relPath, err)
-		}
-		frontmatter, _, err := parseFrontmatter(string(content))
-		if err != nil {
-			return fmt.Errorf("%s: %w", relPath, err)
-		}
-		if layer := strings.TrimSpace(frontmatter["layer"]); layer != "" && layer != currentLayer {
-			return fmt.Errorf("%s: appendix layer %q does not match main spec layer %q", relPath, layer, currentLayer)
-		}
-		if owner := strings.TrimSpace(frontmatter[ownerKey]); owner != "" && owner != currentObject {
-			return fmt.Errorf("%s: appendix %s %q does not match main spec %s %q", relPath, ownerKey, owner, ownerKey, currentObject)
-		}
+	entryByRef := map[string]bool{}
+	for _, appendix := range scanned {
+		entryByRef[appendix.FileRef] = true
 		entries = append(entries, AppendixEntry{
-			FileRef:     relPath,
-			Fingerprint: hashNormalizedText(string(content)),
+			FileRef:     appendix.FileRef,
+			Fingerprint: hashNormalizedText(appendix.Content),
 		})
-		return nil
 	}
 	if evidenceRef := strings.TrimSpace(frontmatter["evidence_appendix_ref"]); evidenceRef != "" && evidenceRef != "none" {
 		relPath, err := resolveAppendixRef(repoRoot, mainDir, evidenceRef)
@@ -1128,42 +1122,14 @@ func buildAppendixSnapshot(repoRoot, mainSpecRef string, frontmatter map[string]
 		if !strings.Contains(relPath, "/appendix/") {
 			return nil, fmt.Errorf("%s: evidence appendix ref %s is not under an appendix directory", mainSpecRef, relPath)
 		}
-		if err := addAppendix(relPath); err != nil {
-			return nil, err
+		if currentLayer != "candidate" {
+			return nil, fmt.Errorf("%s: evidence appendix ref %s must point to a current candidate appendix", mainSpecRef, relPath)
+		}
+		if !entryByRef[relPath] {
+			return nil, fmt.Errorf("%s: evidence appendix ref %s is not a current candidate appendix for unit %s", mainSpecRef, relPath, currentObject)
 		}
 	}
-	for _, destination := range markdownLinkPattern.FindAllStringSubmatch(body, -1) {
-		if len(destination) != 2 {
-			continue
-		}
-		linkDestination := strings.TrimSpace(destination[1])
-		if linkDestination == "" || strings.HasPrefix(linkDestination, "/") || strings.Contains(linkDestination, "://") {
-			continue
-		}
-		absPath := filepath.Clean(filepath.Join(mainDir, filepath.FromSlash(linkDestination)))
-		relWithinLayerRoot, err := filepath.Rel(mainDir, absPath)
-		if err != nil {
-			return nil, err
-		}
-		relWithinLayerRoot = filepath.ToSlash(relWithinLayerRoot)
-		if strings.HasPrefix(relWithinLayerRoot, "../") || relWithinLayerRoot == ".." || filepath.Ext(relWithinLayerRoot) != ".md" {
-			continue
-		}
-		relPath, err := filepath.Rel(repoRoot, absPath)
-		if err != nil {
-			return nil, err
-		}
-		relPath = filepath.ToSlash(relPath)
-		if relPath == mainSpecRef {
-			continue
-		}
-		if filepath.Dir(relWithinLayerRoot) == "." {
-			return nil, fmt.Errorf("%s: module-local supporting file %s remains in the layer root; this is directory drift", mainSpecRef, relPath)
-		}
-		if err := addAppendix(relPath); err != nil {
-			return nil, err
-		}
-	}
+	_ = body
 
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].FileRef < entries[j].FileRef

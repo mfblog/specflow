@@ -141,7 +141,10 @@ rule_snapshot: none
 
 or lists.
 
-`unit_appendix_snapshot` records appendix files explicitly used by the unit round.
+`unit_appendix_snapshot` records the current-layer appendix files owned by the unit through appendix path and appendix frontmatter.
+
+For an active candidate unit, every stable appendix `s_unit_{unit}_{name}.md` must have a corresponding candidate appendix `c_unit_{unit}_{name}.md`.
+Candidate-only appendices are allowed.
 
 `unit_snapshot` records stable unit dependencies resolved from current unit `unit_refs`.
 
@@ -411,7 +414,7 @@ At minimum, validation must rebuild:
 2. `spec_file_ref`, `spec_version_ref`, and `spec_fingerprint` for active plan files
 3. stable truth refs and fingerprints for stable verify files
 4. `repository_mapping_snapshot` for stable verify files
-5. `unit_appendix_snapshot` from explicitly referenced unit appendix files
+5. `unit_appendix_snapshot` from current-layer unit appendix files owned by path and appendix frontmatter
 6. `unit_snapshot` from current unit `unit_refs`
 7. `rule_snapshot` from stable global rules and current unit `rule_refs`
 8. `acceptance_item_set` from the current unit truth for check, verify, and stable verify files

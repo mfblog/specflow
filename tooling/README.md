@@ -174,7 +174,7 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - publish an already-existing stable Rule version by retargeting current-layer consumers from `--from-ref` to `--to-ref`
    - candidate current-layer objects are rewritten directly
    - stable current-layer objects are auto-forked to candidate only when their current `_status.md` `Next Command` is `unit_fork`
-   - same-object stable appendices explicitly linked by the stable main Spec are retargeted into candidate appendices during the auto-fork, including Markdown link targets and direct same-object path literals
+   - same-object stable appendices owned by path and appendix frontmatter are retargeted into candidate appendices during the auto-fork, including Markdown link targets and direct same-object path literals
    - stale same-object candidate appendices are removed before the auto-fork writes current candidate appendices
    - stable unit forks write `candidate_intent=change`; a current effective stable-verify `controlled_repair_required` result fails closed before mutation, while `controlled_change_required` allows the change fork
    - stable auto-fork status routing and process cleanup reuse the `unit_fork` command close contract
@@ -226,7 +226,7 @@ Reader front-end rules:
 9. the front-end refresh button requests a new snapshot immediately.
 10. the front-end also polls `/api/snapshot` on a fixed interval so open pages converge to the latest disk state without relying on filesystem events.
 11. the Markdown document panel builds an in-memory side guide from the source document's Markdown headings, lets the reader open or close that guide locally, and uses it only for scrolling inside the currently opened document.
-12. the Spec View front-end view shows current candidate main Specs, current stable main Specs for registered objects, and current stable rule Specs from the existing snapshot; it must not create a new review state or write any page conclusion back to project files.
+12. the Spec View front-end view shows current candidate main Specs and candidate appendices as candidate truth, shows stable baseline truth separately for active candidate units, and shows current stable main Specs plus stable rule Specs from the existing snapshot; it must not create a new review state or write any page conclusion back to project files.
 
 ## Review Run-State Commands
 
@@ -317,8 +317,8 @@ Rules:
 `relation candidates` and `relation candidate-preflight` are read-only mechanical relation commands.
 They calculate candidate advancement order from already-written explicit references.
 
-Recognized reference inputs are current candidate unit main Specs, same-layer non-evidence appendix files linked from those Specs, `unit_refs`, `rule_refs`, Markdown `.md` links, and version refs such as `c_unit_trace@0.3.0` or `c_b_rule_runtime_model@0.4.0`.
-Evidence appendix references are reported as reference-only edges and do not block advancement.
+Recognized reference inputs are current candidate unit main Specs, same-layer non-evidence appendix files owned by those units, `unit_refs`, `rule_refs`, Markdown `.md` links, and version refs such as `c_unit_trace@0.3.0` or `c_b_rule_runtime_model@0.4.0`.
+The candidate appendix named by `evidence_appendix_ref` is reported as reference-only evidence and does not block advancement.
 Natural-language prose alone is not a relation input.
 
 Usage:

@@ -17,7 +17,7 @@ Read only:
 5. `framework/candidate_intent_policy.md`
 6. `docs/specs/_status.md` when the target unit may already be registered.
 7. `docs/specs/repository_mapping.md` when unit registration, path ownership, implementation path registration, or support-surface ownership must be proven before writeback.
-8. `docs/specs/units/stable/s_unit_{unit}.md` and explicitly referenced stable appendices when running `unit_fork:{unit}`.
+8. `docs/specs/units/stable/s_unit_{unit}.md` and stable appendices owned by that unit when running `unit_fork:{unit}`.
 9. `framework/candidate_intents/change.md` or `framework/candidate_intents/repair.md` when `unit_fork:{unit}` creates a candidate with that intent.
 10. the current valid `docs/specs/_stable_verify_result/unit/{unit}.md` when `_status.md` is stable, `Next Command` is `unit_fork`, and that stable verify result exists.
 
@@ -32,7 +32,7 @@ If a current valid stable verify result records `decision: aligned`, it does not
 
 Allowed writes are:
 
-1. `unit_init:{unit}` may create `docs/specs/units/stable/s_unit_{unit}.md`, explicitly referenced stable appendices, and required `docs/specs/repository_mapping.md` entries.
+1. `unit_init:{unit}` may create `docs/specs/units/stable/s_unit_{unit}.md`, stable appendices owned by the target unit, and required `docs/specs/repository_mapping.md` entries.
 2. `unit_new:{unit}` may create `docs/specs/units/candidate/c_unit_{unit}.md`, required candidate appendices, and required `docs/specs/repository_mapping.md` entries.
 3. `unit_fork:{unit}` may create or replace `docs/specs/units/candidate/c_unit_{unit}.md`, required candidate-only metadata, required `Repair Scope` content for repair candidates, required candidate appendices, and deterministic cleanup of obsolete candidate process files after close.
 4. Lifecycle status may change only through successful `command close`.
@@ -86,5 +86,6 @@ Outcomes:
 | `unit_fork` | `candidate_created` | Candidate truth exists, obsolete candidate process files are cleaned, and next command is `unit_check` |
 
 Do not close until every write named by the outcome is complete and no required rule-governance, repository-mapping, or onboarding-source decision remains unresolved.
+For `unit_fork`, do not close until every stable appendix owned by the unit has the corresponding same-name candidate appendix.
 Close through `command close` according to `framework/core/lifecycle_authority.md`.
 After `unit_new` or `unit_fork`, run `unit_check:{unit}` before planning or implementation.

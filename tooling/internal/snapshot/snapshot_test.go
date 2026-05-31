@@ -306,10 +306,10 @@ evidence_appendix_ref: none
 	}
 }
 
-func TestRebuildCurrentCollectsEquivalentAppendixSubdirAndPlainFieldNames(t *testing.T) {
+func TestRebuildCurrentCollectsUnlinkedAppendixByOwnedFileShape(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
-	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "support"))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/candidate"))
 
 	status := "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | note |\n"
@@ -327,7 +327,7 @@ evidence_appendix_ref: none
 # Demo
 
 ` + testAcceptanceSection + `
-See [support](./support/c_unit_demo_prompt.md).
+Detailed prompts live in the unit appendix set.
 
 ## Rule Alignment
 
@@ -347,7 +347,7 @@ layer: candidate
 
 # Appendix
 `
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir), "support", "c_unit_demo_prompt.md"), appendix)
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_demo_prompt.md"), appendix)
 
 	shared := `---
 rule_id: shared_demo
@@ -381,7 +381,7 @@ bound_objects: all_units
 	if len(result.ModuleAppendixSnapshot) != 1 {
 		t.Fatalf("expected one appendix snapshot entry, got %d", len(result.ModuleAppendixSnapshot))
 	}
-	if result.ModuleAppendixSnapshot[0].FileRef != "docs/specs/units/candidate/support/c_unit_demo_prompt.md" {
+	if result.ModuleAppendixSnapshot[0].FileRef != "docs/specs/units/candidate/appendix/c_unit_demo_prompt.md" {
 		t.Fatalf("unexpected appendix file ref: %s", result.ModuleAppendixSnapshot[0].FileRef)
 	}
 	if len(result.RuleSnapshot) != 2 || result.RuleSnapshot[1].VersionRef != "c_b_rule_demo@0.2.0" {
@@ -449,7 +449,7 @@ bound_objects:
 	}
 }
 
-func TestRebuildCurrentIgnoresRawAppendixPathLiteral(t *testing.T) {
+func TestRebuildCurrentCollectsOwnedAppendixWithoutMainSpecLink(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
@@ -489,12 +489,12 @@ layer: candidate
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
-	if len(result.ModuleAppendixSnapshot) != 0 {
-		t.Fatalf("expected raw path literal to be ignored, got %+v", result.ModuleAppendixSnapshot)
+	if len(result.ModuleAppendixSnapshot) != 1 {
+		t.Fatalf("expected owned appendix to be scanned, got %+v", result.ModuleAppendixSnapshot)
 	}
 }
 
-func TestRebuildCurrentRejectsRootDirectoryAppendixDrift(t *testing.T) {
+func TestRebuildCurrentIgnoresRootDirectorySupportingFile(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
 	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateDir)))
@@ -533,9 +533,66 @@ layer: candidate
 # Drift
 `)
 
-	_, err = RebuildCurrent(repoRoot, "demo")
-	if err == nil || !strings.Contains(err.Error(), "directory drift") {
-		t.Fatalf("expected directory drift error, got %v", err)
+	result, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	if len(result.ModuleAppendixSnapshot) != 0 {
+		t.Fatalf("root directory supporting file must not be treated as appendix, got %+v", result.ModuleAppendixSnapshot)
+	}
+}
+
+func TestRebuildCurrentRejectsAppendixFrontmatterMismatch(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir)))
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.CandidateAppendixDir), "c_unit_demo_prompt.md"), `---
+unit: other
+layer: candidate
+---
+
+# Appendix
+`)
+
+	_, err := RebuildCurrent(repoRoot, "demo")
+	if err == nil || !strings.Contains(err.Error(), "frontmatter.unit mismatch") {
+		t.Fatalf("expected appendix unit mismatch, got %v", err)
+	}
+}
+
+func TestValidateProcessFileRejectsMissingCandidateAppendixCoverage(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir)))
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableAppendixDir)))
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_check` | note |\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir), "s_unit_demo.md"), `---
+id: demo
+layer: stable
+version: 0.1.0
+---
+
+# Demo Stable
+`)
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableAppendixDir), "s_unit_demo_prompt.md"), `---
+unit: demo
+layer: stable
+---
+
+# Stable Appendix
+`)
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	writeCheckProcessFile(t, repoRoot, renderFormalCheckProcessBody(expected))
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "check")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid || result.FailureLayer != "truth_layer" || !mismatchesContain(result.Mismatches, "missing candidate appendix") {
+		t.Fatalf("expected missing candidate appendix truth-layer failure, got %+v", result)
 	}
 }
 
@@ -2107,6 +2164,15 @@ func renderAcceptanceEvidenceMatrixForTest(entries []AcceptanceItemEntry) string
 func containsMismatch(mismatches []string, target string) bool {
 	for _, mismatch := range mismatches {
 		if mismatch == target {
+			return true
+		}
+	}
+	return false
+}
+
+func mismatchesContain(mismatches []string, target string) bool {
+	for _, mismatch := range mismatches {
+		if strings.Contains(mismatch, target) {
 			return true
 		}
 	}

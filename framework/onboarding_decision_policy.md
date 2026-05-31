@@ -62,6 +62,9 @@ Evidence appendix rules:
 3. `new_design` requires `evidence_appendix_ref=none`.
 4. `replacement` requires `evidence_appendix_ref=none`.
 
+The candidate appendix named by `evidence_appendix_ref` is the evidence appendix for relation handling.
+Filename suffixes do not make an appendix evidence by themselves.
+
 ## 4. Direct First-Stable Onboarding
 
 `unit_init` may create the first stable Spec for a historical unit only when the selected behavior baseline is already accepted and fully reviewable before stable writeback.
@@ -70,7 +73,7 @@ For this policy, accepted means the command can state the selected behavior with
 Direct first-stable onboarding is allowed only when all of the following are true:
 
 1. the target is a historical unit whose current behavior is being captured, not redesigned
-2. the selected behavior can be written into the stable main Spec and any explicitly referenced stable appendices in the same round without relying on raw implementation evidence as stable truth
+2. the selected behavior can be written into the stable main Spec and stable appendices owned by the target unit in the same round without relying on raw implementation evidence as stable truth
 3. implementation, test, runtime, or historical evidence has no unresolved conflict that affects selected behavior, unit responsibility, boundaries, acceptance, rule binding, or repository ownership
 4. every material unknown is either resolved before stable writeback or explicitly irrelevant to the stable behavior being captured
 5. any shared rule, global rule, reusable mechanism, exception, or cross-unit boundary needed by the first stable Spec is already resolved through the proper rule-governance path before stable writeback
@@ -90,7 +93,7 @@ Candidate creation must use the `source_basis` and `evidence_appendix_ref` rules
 If the candidate selects behavior from implementation, tests, runtime behavior, or historical material, the candidate must use `source_basis=existing_implementation` or `source_basis=mixed` and create the required evidence appendix in the same round.
 
 Raw evidence used during first-stable onboarding is not stable behavior truth by itself.
-Any behavior selected for stable writeback must be stated directly in the stable main Spec or in an explicitly referenced stable appendix created or confirmed in the same round.
+Any behavior selected for stable writeback must be stated directly in the stable main Spec or in a stable appendix owned by the unit and created or confirmed in the same round.
 
 ## 5. Stable-Fork Candidate Source
 

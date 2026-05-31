@@ -71,7 +71,7 @@ The reviewer reads only:
 Allowed Inputs:
 
 1. user goal or exact `unit_check:{unit}` target.
-2. candidate unit truth and explicitly referenced appendices, stable truth, and rules.
+2. candidate unit truth, candidate appendices owned by the unit, stable truth, and rules.
 3. `_check_result/unit/{unit}.md`.
 4. `framework/lifecycle/unit_check.md` check questions.
 
@@ -152,7 +152,7 @@ pass | blocked | needs_human_decision
 Allowed Inputs:
 
 1. exact `unit_stable_verify:{unit}` target.
-2. stable unit truth, referenced appendices, rules, and repository mapping snapshot.
+2. stable unit truth, stable appendices owned by the unit, rules, and repository mapping snapshot.
 3. stable verify result under review.
 4. implementation surface refs and evidence refs needed to inspect stable alignment.
 5. decision criteria from `framework/lifecycle/unit_stable_verify.md`.

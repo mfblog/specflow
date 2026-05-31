@@ -170,7 +170,7 @@ func configsByPack() map[string]packConfig {
 			ReviewGoal:   "Decide whether candidate unit truth is ready for planning.",
 			AllowedInputs: []string{
 				"user goal or exact `unit_check:{unit}` target.",
-				"candidate unit truth and explicitly referenced appendices, stable truth, and rules.",
+				"candidate unit truth, candidate appendices owned by the unit, stable truth, and rules.",
 				"`_check_result/unit/{unit}.md`.",
 				"`framework/lifecycle/unit_check.md` check questions.",
 			},
@@ -239,7 +239,7 @@ func configsByPack() map[string]packConfig {
 			ReviewGoal:   "Decide whether the stable verify result supports the stored advancing decision.",
 			AllowedInputs: []string{
 				"exact `unit_stable_verify:{unit}` target.",
-				"stable unit truth, referenced appendices, rules, and repository mapping snapshot.",
+				"stable unit truth, stable appendices owned by the unit, rules, and repository mapping snapshot.",
 				"stable verify result under review.",
 				"implementation surface refs and evidence refs needed to inspect stable alignment.",
 				"decision criteria from `framework/lifecycle/unit_stable_verify.md`.",

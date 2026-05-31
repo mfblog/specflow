@@ -10,6 +10,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitappendix"
 )
 
 const (
@@ -122,6 +123,9 @@ func Close(opts Options) (Result, error) {
 		result.ValidationMismatches = mismatches
 	}
 	if err := validateControlledStableVerifyForkIntent(opts); err != nil {
+		return result, err
+	}
+	if err := validateUnitForkAppendixCoverage(opts); err != nil {
 		return result, err
 	}
 
@@ -671,6 +675,13 @@ func validateControlledStableVerifyForkIntent(opts Options) error {
 		return fmt.Errorf("candidate_intent mismatch for controlled stable verify decision %s: actual=%s expected=%s", requirement.Decision, emptyAsNone(actualIntent), requirement.RequiredIntent)
 	}
 	return nil
+}
+
+func validateUnitForkAppendixCoverage(opts Options) error {
+	if opts.Command != "unit_fork" || opts.Outcome != "candidate_created" {
+		return nil
+	}
+	return unitappendix.ValidateCandidateCoverage(opts.RepoRoot, opts.ObjectType, opts.Object)
 }
 
 func emptyAsNone(value string) string {

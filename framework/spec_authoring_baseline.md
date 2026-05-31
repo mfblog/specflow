@@ -33,9 +33,9 @@ A Spec can have valid frontmatter, valid references, and valid acceptance item s
 
 ## 2. Handoff Completeness
 
-A formal Spec is handoff-complete only when the current main Spec and its explicitly referenced appendix files explain enough for the next lifecycle step to continue without inventing missing design.
+A formal Spec is handoff-complete only when the current main Spec and the unit-owned appendix files for the current layer explain enough for the next lifecycle step to continue without inventing missing design.
 
-When the Spec describes behavior that affects implementation, it must make the following information clear in the document body or explicitly linked appendix truth:
+When the Spec describes behavior that affects implementation, it must make the following information clear in the document body or current-layer unit appendix truth:
 
 1. the intended user, actor, or caller
 2. the unit responsibility and why the unit owns it

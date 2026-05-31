@@ -11,7 +11,7 @@ Read only:
 3. `framework/core/independent_evaluation.md`
 4. `docs/specs/_status.md` for the target unit row.
 5. `docs/specs/units/candidate/c_unit_{unit}.md`
-6. candidate appendices explicitly referenced by the target unit.
+6. candidate appendices owned by the target unit.
 7. stable unit truth explicitly referenced by the target unit.
 8. rule files explicitly bound by the target unit or its referenced truth.
 9. `docs/specs/repository_mapping.md` only when ownership or boundary mapping is part of the check.
@@ -29,7 +29,7 @@ Allowed writes are:
 
 1. `docs/specs/_check_work/unit/{unit}.md` as an optional resume aid.
 2. `docs/specs/_check_result/unit/{unit}.md` only for an advancing `pass` result with valid independent evaluation receipt.
-3. `docs/specs/units/candidate/c_unit_{unit}.md` and explicitly referenced candidate appendices only when the outcome is `fix_required` and the repair stays inside the current unit truth.
+3. `docs/specs/units/candidate/c_unit_{unit}.md` and candidate appendices owned by the target unit only when the outcome is `fix_required` and the repair stays inside the current unit truth.
 
 ## Forbidden Writes
 
