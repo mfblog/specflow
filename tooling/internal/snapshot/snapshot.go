@@ -60,8 +60,9 @@ type AcceptancePlanCoverageEntry struct {
 }
 
 type AcceptanceEvidenceEntry struct {
-	ID     string
-	Status string
+	ID           string
+	Status       string
+	EvidenceRefs string
 }
 
 type RetirementTargetEntry struct {
@@ -181,6 +182,7 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
+		"acceptance_behavior_fingerprint",
 		"acceptance_item_set",
 		"unit_appendix_snapshot",
 		"rule_snapshot",
@@ -189,6 +191,9 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"spec_file_ref",
 		"spec_version_ref",
 		"spec_fingerprint",
+		"acceptance_behavior_fingerprint",
+		"stable_candidate_diff_refs",
+		"implementation_gap_refs",
 		"unit_appendix_snapshot",
 		"rule_snapshot",
 		"acceptance_item_plan_coverage",
@@ -207,6 +212,7 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
+		"acceptance_behavior_fingerprint",
 		"acceptance_item_set",
 		"unit_appendix_snapshot",
 		"verification_scope_ref",
@@ -229,6 +235,7 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
+		"acceptance_behavior_fingerprint",
 		"repository_mapping_snapshot",
 		"acceptance_item_set",
 		"unit_appendix_snapshot",
@@ -398,25 +405,41 @@ func rebuildObjectSnapshotFromMainSpec(repoRoot, objectType, object, layer, main
 }
 
 func CandidateIntentForObject(repoRoot, objectType, object string) (string, error) {
+	frontmatter, err := candidateFrontmatterForObject(repoRoot, objectType, object)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(frontmatter["candidate_intent"]), nil
+}
+
+func CandidateSourceBasisForObject(repoRoot, objectType, object string) (string, error) {
+	frontmatter, err := candidateFrontmatterForObject(repoRoot, objectType, object)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(frontmatter["source_basis"]), nil
+}
+
+func candidateFrontmatterForObject(repoRoot, objectType, object string) (map[string]string, error) {
 	objectType = strings.TrimSpace(objectType)
 	object = strings.TrimSpace(object)
 	if objectType != "unit" {
-		return "", fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
+		return nil, fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
 	}
 	mainSpecRef, err := specpaths.ObjectMainSpecFileRef(objectType, "candidate", object)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	mainSpecAbs := filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef))
 	mainSpecContent, err := os.ReadFile(mainSpecAbs)
 	if err != nil {
-		return "", fmt.Errorf("read %s: %w", mainSpecRef, err)
+		return nil, fmt.Errorf("read %s: %w", mainSpecRef, err)
 	}
 	frontmatter, _, err := parseFrontmatter(string(mainSpecContent))
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", mainSpecRef, err)
+		return nil, fmt.Errorf("%s: %w", mainSpecRef, err)
 	}
-	return strings.TrimSpace(frontmatter["candidate_intent"]), nil
+	return frontmatter, nil
 }
 
 type StableVerifyIntentRequirement struct {
@@ -475,6 +498,7 @@ func stableVerifyIntentGuardValid(repoRoot, objectType, object string, processDa
 		"truth_file_ref",
 		"truth_version_ref",
 		"truth_fingerprint",
+		"acceptance_behavior_fingerprint",
 		"repository_mapping_snapshot",
 		"acceptance_item_set",
 		"unit_appendix_snapshot",
@@ -511,8 +535,7 @@ func stableVerifyIntentGuardValid(repoRoot, objectType, object string, processDa
 		processData.Scalars["truth_fingerprint"] != expected.SpecFingerprint {
 		return false
 	}
-	if processData.PresentFields["acceptance_behavior_fingerprint"] &&
-		processData.Scalars["acceptance_behavior_fingerprint"] != expected.AcceptanceBehaviorFingerprint {
+	if processData.Scalars["acceptance_behavior_fingerprint"] != expected.AcceptanceBehaviorFingerprint {
 		return false
 	}
 
@@ -679,7 +702,8 @@ func validateProcessFileForObject(repoRoot, objectType, object, processKind stri
 			}
 		}
 		validateAcceptancePlanCoverage(&result, actual, expected.AcceptanceItemSet)
-		validateRetirementTargets(&result, actual, expected.AcceptanceItemSet)
+		validatePlanReferenceFields(repoRoot, &result, actual, expected)
+		validateRetirementTargets(repoRoot, &result, actual, expected)
 		finalizeValidationResult(&result, actual)
 		return result, nil
 	}
@@ -707,7 +731,7 @@ func validateProcessFileForObject(repoRoot, objectType, object, processKind stri
 	compareOptionalAcceptanceBehaviorFingerprint(&result, actual, expected)
 	compareAcceptanceItemSet(&result, actual, expected.AcceptanceItemSet)
 	if processKind == "verify" {
-		validateAcceptanceEvidenceMatrix(&result, actual, expected.AcceptanceItemSet)
+		validateAcceptanceEvidenceMatrix(&result, actual, expected.AcceptanceItemSet, true)
 		validateActivePlanBinding(repoRoot, &result, actual, expected)
 		validateRetirementEvidence(repoRoot, &result, actual, expected)
 	}
@@ -963,7 +987,8 @@ func validateStableVerifyProcess(repoRoot string, result *ValidationResult, actu
 	}
 
 	compareAcceptanceItemSet(result, actual, expected.AcceptanceItemSet)
-	validateAcceptanceEvidenceMatrix(result, actual, expected.AcceptanceItemSet)
+	validateAcceptanceEvidenceMatrix(result, actual, expected.AcceptanceItemSet, false)
+	validateStableVerifyEvidenceRefs(result, actual, expected.AcceptanceItemSet)
 	if decision == "aligned" {
 		validateStableAlignedEvidencePasses(result, actual, expected.AcceptanceItemSet)
 	}
@@ -1011,6 +1036,25 @@ func validateStableAlignedEvidencePasses(result *ValidationResult, actual proces
 		if entry.Status != "pass" {
 			result.Valid = false
 			result.Mismatches = append(result.Mismatches, fmt.Sprintf("stable_verify aligned evidence for %s must be pass", entry.ID))
+		}
+	}
+}
+
+func validateStableVerifyEvidenceRefs(result *ValidationResult, actual processSnapshot, expected []AcceptanceItemEntry) {
+	entries, err := acceptanceEvidenceEntriesFromParsed(actual)
+	if err != nil {
+		return
+	}
+	expectedByID := acceptanceItemsByID(expected)
+	for _, entry := range entries {
+		expectedItem, ok := expectedByID[entry.ID]
+		if !ok || expectedItem.NotRunnableYet == "yes" {
+			continue
+		}
+		evidenceRefs := strings.TrimSpace(entry.EvidenceRefs)
+		if evidenceRefs == "" || evidenceRefs == "none" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix evidence_refs for %s must be durable refs", entry.ID))
 		}
 	}
 }
@@ -1928,6 +1972,8 @@ func assignAcceptanceEvidenceField(entry *AcceptanceEvidenceEntry, key, value st
 		entry.ID = value
 	case "status":
 		entry.Status = value
+	case "evidence_refs":
+		entry.EvidenceRefs = value
 	}
 }
 
@@ -2032,7 +2078,147 @@ func validateAcceptancePlanCoverage(result *ValidationResult, actual processSnap
 	}
 }
 
-func validateAcceptanceEvidenceMatrix(result *ValidationResult, actual processSnapshot, expected []AcceptanceItemEntry) {
+func validatePlanReferenceFields(repoRoot string, result *ValidationResult, actual processSnapshot, expected Snapshot) {
+	diffRefs := strings.TrimSpace(actual.scalars["stable_candidate_diff_refs"])
+	if diffRefs == "" {
+		return
+	}
+	if !validateNoneOrRefList(result, "stable_candidate_diff_refs", diffRefs) {
+		return
+	}
+	if diffRefs != "none" {
+		validateRepositoryRelativeExistingRefs(repoRoot, result, "stable_candidate_diff_refs", splitProcessRefList(diffRefs))
+	}
+
+	stableRef, stablePresent, err := stableMainSpecRefIfPresent(repoRoot, expected.ObjectType, expected.Object)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, err.Error())
+		return
+	}
+	if stablePresent {
+		if diffRefs == "none" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, "stable_candidate_diff_refs must cite stable and candidate main specs when stable truth exists")
+		} else {
+			refs := splitProcessRefList(diffRefs)
+			if !containsRef(refs, stableRef) {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("stable_candidate_diff_refs must contain stable spec ref: %s", stableRef))
+			}
+			if !containsRef(refs, expected.SpecFileRef) {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("stable_candidate_diff_refs must contain candidate spec ref: %s", expected.SpecFileRef))
+			}
+		}
+	}
+
+	gapRefs := strings.TrimSpace(actual.scalars["implementation_gap_refs"])
+	if gapRefs == "" {
+		return
+	}
+	if !validateNoneOrRefList(result, "implementation_gap_refs", gapRefs) {
+		return
+	}
+	if gapRefs == "none" && acceptanceItemsDeclareImplementationSurface(expected.AcceptanceItemSet) {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "implementation_gap_refs must cite durable refs when acceptance items declare implementation surfaces")
+	}
+	if gapRefs != "none" {
+		validateRepositoryRelativeExistingRefs(repoRoot, result, "implementation_gap_refs", splitProcessRefList(gapRefs))
+	}
+}
+
+func validateNoneOrRefList(result *ValidationResult, field, value string) bool {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "none" {
+		return true
+	}
+	refs := splitProcessRefList(trimmed)
+	if len(refs) == 0 {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, field+" must be none or durable refs")
+		return false
+	}
+	for _, ref := range refs {
+		if ref == "none" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, field+" must not mix none with refs")
+			return false
+		}
+	}
+	return true
+}
+
+func acceptanceItemsDeclareImplementationSurface(entries []AcceptanceItemEntry) bool {
+	for _, entry := range entries {
+		surface := strings.TrimSpace(entry.ImplementationSurface)
+		if surface != "" && !strings.EqualFold(surface, "none") {
+			return true
+		}
+	}
+	return false
+}
+
+func validateRepositoryRelativeExistingRefs(repoRoot string, result *ValidationResult, field string, refs []string) {
+	for _, ref := range refs {
+		if !isRepositoryRelativePathRef(ref) {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s ref must be a repository-relative path: %s", field, ref))
+			continue
+		}
+		absPath := filepath.Join(repoRoot, filepath.FromSlash(ref))
+		rel, err := filepath.Rel(repoRoot, absPath)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s ref escapes repository root: %s", field, ref))
+			continue
+		}
+		if _, err := os.Stat(absPath); err != nil {
+			result.Valid = false
+			if os.IsNotExist(err) {
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s ref does not exist: %s", field, ref))
+			} else {
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("stat %s ref %s: %v", field, ref, err))
+			}
+		}
+	}
+}
+
+func isRepositoryRelativePathRef(ref string) bool {
+	ref = strings.TrimSpace(ref)
+	if ref == "" ||
+		ref == "." ||
+		ref == ".." ||
+		strings.Contains(ref, "\\") ||
+		strings.Contains(ref, ":") ||
+		strings.Contains(ref, "://") ||
+		strings.Contains(ref, "\t") ||
+		strings.Contains(ref, "\n") ||
+		filepath.IsAbs(ref) ||
+		filepath.VolumeName(ref) != "" {
+		return false
+	}
+	clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(ref)))
+	return clean == ref && !strings.HasPrefix(clean, "../")
+}
+
+func stableMainSpecRefIfPresent(repoRoot, objectType, object string) (string, bool, error) {
+	ref, err := specpaths.ObjectMainSpecFileRef(objectType, "stable", object)
+	if err != nil {
+		return "", false, err
+	}
+	_, err = os.Stat(filepath.Join(repoRoot, filepath.FromSlash(ref)))
+	if err == nil {
+		return ref, true, nil
+	}
+	if os.IsNotExist(err) {
+		return ref, false, nil
+	}
+	return ref, false, fmt.Errorf("stat %s: %w", ref, err)
+}
+
+func validateAcceptanceEvidenceMatrix(result *ValidationResult, actual processSnapshot, expected []AcceptanceItemEntry, requirePromotionReadyEvidence bool) {
 	actualEntries, err := acceptanceEvidenceEntriesFromParsed(actual)
 	if err != nil {
 		result.Valid = false
@@ -2063,9 +2249,19 @@ func validateAcceptanceEvidenceMatrix(result *ValidationResult, actual processSn
 			result.Valid = false
 			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix status for %s must be not_runnable_yet", entry.ID))
 		}
-		if expectedItem.NotRunnableYet == "no" && entry.Status == "not_runnable_yet" {
-			result.Valid = false
-			result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix status for %s cannot be not_runnable_yet", entry.ID))
+		if expectedItem.NotRunnableYet == "no" {
+			if entry.Status == "not_runnable_yet" {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix status for %s cannot be not_runnable_yet", entry.ID))
+			}
+			if requirePromotionReadyEvidence && entry.Status != "pass" {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix status for %s must be pass", entry.ID))
+			}
+			if requirePromotionReadyEvidence && (strings.TrimSpace(entry.EvidenceRefs) == "" || strings.TrimSpace(entry.EvidenceRefs) == "none") {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("acceptance_item_evidence_matrix evidence_refs for %s must be durable refs", entry.ID))
+			}
 		}
 	}
 	for _, item := range normalizeAcceptanceItemEntries(expected) {
@@ -2076,14 +2272,24 @@ func validateAcceptanceEvidenceMatrix(result *ValidationResult, actual processSn
 	}
 }
 
-func validateRetirementTargets(result *ValidationResult, actual processSnapshot, expected []AcceptanceItemEntry) {
+func validateRetirementTargets(repoRoot string, result *ValidationResult, actual processSnapshot, expected Snapshot) {
 	actualEntries, err := retirementTargetEntriesFromParsed(actual)
 	if err != nil {
 		result.Valid = false
 		result.Mismatches = append(result.Mismatches, "retirement_targets invalid: "+err.Error())
 		return
 	}
-	expectedIDs := acceptanceItemIDSet(expected)
+	intent, sourceBasis, err := candidateIntentAndSourceBasis(repoRoot, expected.ObjectType, expected.Object)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "retirement_targets candidate metadata unavailable: "+err.Error())
+		return
+	}
+	if intent == "change" && sourceBasis == "replacement" && len(actualEntries) == 0 {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "retirement_targets must not be none for change replacement candidates")
+	}
+	expectedIDs := acceptanceItemIDSet(expected.AcceptanceItemSet)
 	actualIDs := map[string]bool{}
 	for _, entry := range actualEntries {
 		if actualIDs[entry.ID] {
@@ -2124,6 +2330,14 @@ func validateRetirementTargets(result *ValidationResult, actual processSnapshot,
 			}
 		}
 	}
+}
+
+func candidateIntentAndSourceBasis(repoRoot, objectType, object string) (string, string, error) {
+	frontmatter, err := candidateFrontmatterForObject(repoRoot, objectType, object)
+	if err != nil {
+		return "", "", err
+	}
+	return strings.TrimSpace(frontmatter["candidate_intent"]), strings.TrimSpace(frontmatter["source_basis"]), nil
 }
 
 func validateActivePlanBinding(repoRoot string, result *ValidationResult, actual processSnapshot, expected Snapshot) {
@@ -2266,8 +2480,10 @@ func acceptanceEvidenceEntriesFromParsed(parsed processSnapshot) ([]AcceptanceEv
 	}
 	items := append([]AcceptanceEvidenceEntry(nil), parsed.acceptanceEvidenceEntries...)
 	for _, item := range items {
-		if strings.TrimSpace(item.ID) == "" || strings.TrimSpace(item.Status) == "" {
-			return nil, fmt.Errorf("each item must include id and status")
+		if strings.TrimSpace(item.ID) == "" ||
+			strings.TrimSpace(item.Status) == "" ||
+			strings.TrimSpace(item.EvidenceRefs) == "" {
+			return nil, fmt.Errorf("each item must include id, status, and evidence_refs")
 		}
 	}
 	sort.Slice(items, func(i, j int) bool {

@@ -87,6 +87,8 @@ spec_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 spec_version_ref: c_unit_{unit}@x.y.z
 spec_fingerprint: {fingerprint}
 acceptance_behavior_fingerprint: {fingerprint}
+stable_candidate_diff_refs: none | {refs}
+implementation_gap_refs: none | {refs}
 retirement_targets: none | list
 evaluation_mode: independent
 reviewer_result: pass
@@ -96,7 +98,13 @@ review_findings: none
 human_decision_refs: none | list
 ```
 
+`stable_candidate_diff_refs` and `implementation_gap_refs` are mandatory.
+When stable truth exists for the unit, `stable_candidate_diff_refs` must cite both the current candidate main Spec and the current stable main Spec.
+When no stable truth exists, `stable_candidate_diff_refs` may be literal `none`.
+`implementation_gap_refs` must be literal `none`, or cite durable repository-relative refs that show the implementation entry points, main paths, rendering/API/generation paths, or repository mapping inspected by the plan.
+
 `retirement_targets` is mandatory. It must be literal `none`, or a YAML list whose items contain `id`, `target_ref`, `target_kind`, `retirement_method`, `verification_action`, and `acceptance_item_ids`.
+For `candidate_intent: change` with `source_basis: replacement`, `retirement_targets` must not be `none`; the plan must name the old structures, entries, primary paths, wrappers, compatibility layers, or dependencies that must stop being required before promotion.
 List form must use this exact shape:
 
 ```yaml
@@ -120,8 +128,17 @@ Candidate verify process YAML must also bind to the active plan and record retir
 ```yaml
 active_plan_file_ref: docs/specs/_plans/active/{unit}.md
 active_plan_fingerprint: {fingerprint}
+acceptance_item_evidence_matrix:
+  - id: {acceptance_item_id}
+    status: pass|fail|partial|not_checked|not_runnable_yet
+    evidence_refs: {refs}
 retirement_evidence_matrix: none | list
 ```
+
+Each `acceptance_item_evidence_matrix` item must include `id`, `status`, and `evidence_refs`.
+For executable candidate acceptance items, promotion-ready verify evidence requires `status: pass` and non-empty durable `evidence_refs`.
+Items whose current truth records `not_runnable_yet: yes` must use `status: not_runnable_yet`; they may use `evidence_refs: none`.
+Generic test success, renamed files, new fields, or absent old strings are not sufficient by themselves for semantic replacement claims.
 
 `retirement_evidence_matrix` is mandatory. When the active plan has `retirement_targets: none`, it must be literal `none`.
 When the active plan lists retirement targets, the matrix must contain exactly those target ids.
@@ -159,8 +176,9 @@ freshness_review_findings: none
 ```
 
 `acceptance_behavior_fingerprint` is the normalized SHA-256 of the full formal acceptance item behavior fields: `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `pass_condition`, `not_runnable_yet`, and `not_runnable_yet_reason`.
-New check, active plan, verify, and stable verify evidence should record it.
-Old evidence without this field can remain valid while the text fingerprint still matches, but it becomes `unknown_drift` after a truth/spec fingerprint change.
+Advancing check, active plan, verify, and stable verify evidence must record it.
+Evidence without this field uses the old snapshot schema and is not current valid advancing evidence until it is migrated or recreated.
+It must not be treated as accepted `text_drift` reuse.
 
 Tooling classifies freshness impact mechanically. It does not judge whether a changed paragraph preserves business meaning.
 Text drift evidence reuse requires the freshness receipt above and independent reviewer confirmation using reviewer pack `freshness_text_drift_reuse`.
@@ -455,9 +473,9 @@ At minimum, validation must rebuild:
 7. `rule_snapshot` from stable global rules and current unit `rule_refs`
 8. `acceptance_item_set` from the current unit truth for check, verify, and stable verify files
 9. `acceptance_item_plan_coverage` against the current candidate acceptance item ids for active plan files
-10. `retirement_targets` shape, ids, target fields, and acceptance item refs for active plan files
+10. `stable_candidate_diff_refs`, `implementation_gap_refs`, and `retirement_targets` shape, ids, target fields, and acceptance item refs for active plan files
 11. `active_plan_file_ref` and `active_plan_fingerprint` for candidate verify files
-12. `acceptance_item_evidence_matrix` against the current acceptance item ids for verify and stable verify files
+12. `acceptance_item_evidence_matrix` status and evidence refs against the current acceptance item ids for verify and stable verify files
 13. `retirement_evidence_matrix` against the current active plan retirement target ids for candidate verify files
 14. independent evaluation receipt fields for check, active plan, verify, and stable verify files
 15. acceptance behavior fingerprint and conditional freshness reuse receipt fields when text drift is being reused

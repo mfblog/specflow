@@ -1819,6 +1819,22 @@ func acceptanceItemSnapshotFixtureLines(object string) []string {
 	}
 }
 
+func acceptanceBehaviorFingerprintFixture(object string) string {
+	parts := []string{strings.Join([]string{
+		"id=" + object + ".acceptance",
+		"target=" + object + " behavior is accepted.",
+		"verification_surface=internal_flow",
+		"implementation_surface=AgentCore/internal/" + object,
+		"verification_method=Go test for " + object + " behavior.",
+		"pass_condition=" + object + " behavior passes the declared checks.",
+		"not_runnable_yet=no",
+		"not_runnable_yet_reason=",
+	}, "\x1f")}
+	text := strings.TrimSuffix(strings.Join(parts, "\n"), "\n") + "\n"
+	sum := sha256.Sum256([]byte(text))
+	return fmt.Sprintf("%x", sum)
+}
+
 func repositoryMappingSnapshotFixtureLines(entry snapshot.RepositoryMappingEntry) []string {
 	return []string{
 		"file_ref: " + entry.FileRef,
@@ -1852,6 +1868,7 @@ func renderModuleProcessSnapshotForTest(t *testing.T, repoRoot, processKind, mod
 		"truth_file_ref: " + mainSpecRef,
 		"truth_version_ref: c_unit_" + module + "@0.1.0",
 		"truth_fingerprint: " + truthFingerprint,
+		"acceptance_behavior_fingerprint: " + acceptanceBehaviorFingerprintFixture(module),
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",

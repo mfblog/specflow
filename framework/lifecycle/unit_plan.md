@@ -13,7 +13,8 @@ Read only:
 5. `docs/specs/_check_result/unit/{unit}.md`
 6. `docs/specs/units/candidate/c_unit_{unit}.md`
 7. candidate appendices, stable truth, and rule files named by the check result.
-8. existing `docs/specs/_plans/active/{unit}.md` or `docs/specs/_plans/draft/{unit}.md` only when updating prior planning work.
+8. `docs/specs/repository_mapping.md` and implementation surfaces needed to identify current entry points, main paths, rendering/API/generation paths, and gaps.
+9. existing `docs/specs/_plans/active/{unit}.md` or `docs/specs/_plans/draft/{unit}.md` only when updating prior planning work.
 
 The check result, not `_check_work`, is the planning gate.
 
@@ -32,8 +33,12 @@ Allowed writes are:
 1. `docs/specs/_plans/active/{unit}.md` when the handoff is ready and independently reviewed.
 2. `docs/specs/_plans/draft/{unit}.md` for non-consumable planning notes when blocked.
 
-The active plan must bind to current candidate truth by normalized content fingerprint, cover every accepted acceptance item, and include `retirement_targets`.
+The active plan must bind to current candidate truth by normalized content fingerprint, cover every accepted acceptance item, and include `stable_candidate_diff_refs`, `implementation_gap_refs`, and `retirement_targets`.
+When stable truth exists, `stable_candidate_diff_refs` must cite both the current stable main Spec and the current candidate main Spec.
+`implementation_gap_refs` must cite the implementation and mapping refs inspected for the plan, or be literal `none` only when there is no current implementation surface to inspect.
 `retirement_targets` must be literal `none`, or list concrete retired paths, helpers, wrappers, compatibility layers, dependencies, or equivalent targets with retirement method, acceptance item ids, and verification action.
+For `candidate_intent: change` with `source_basis: replacement`, `retirement_targets` must not be `none`.
+Replacement plans must identify old primary paths, new primary paths, cutover slices, and the retirement target ids that prove old primary paths no longer carry mainline behavior.
 Planning must not claim a retained compatibility path is retired; if it remains required, it must stay visible in the plan or be deferred by explicit later planning.
 
 ## Forbidden Writes

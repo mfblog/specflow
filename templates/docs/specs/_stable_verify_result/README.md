@@ -26,6 +26,10 @@ Each stable verify result records:
 10. independent evaluation receipt fields
 11. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
 
+Each `acceptance_item_evidence_matrix` item must include `id`, `status`, and `evidence_refs`.
+For executable stable acceptance items, `decision: aligned` requires `status: pass`.
+Items marked `not_runnable_yet: yes` in current stable truth must use `status: not_runnable_yet`; they may use `evidence_refs: none`.
+
 This file is process evidence, not behavior truth.
 
 It is not:

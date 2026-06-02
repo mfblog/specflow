@@ -279,6 +279,7 @@ func TestClosePromoteWritesStablePromotionSummaryBeforeCleanup(t *testing.T) {
 		"promotion_verify_result_ref: docs/specs/_verify_result/unit/demo.md",
 		"acceptance_item_coverage_summary:",
 		"    status: pass",
+		"    evidence_refs: go test ./...",
 		"key_evidence_source_refs:",
 		"  - go test ./...",
 	} {
@@ -685,6 +686,44 @@ func TestCloseRejectsUnitVerifyReadyWhenInputCheckOrPlanMissing(t *testing.T) {
 			t.Fatalf("expected input preflight failure for missing plan, got %v", err)
 		}
 	})
+}
+
+func TestCloseRejectsUnitVerifyReadyWithWeakAcceptanceEvidence(t *testing.T) {
+	repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | test |\n")
+	snap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeCommandCloseUnitCheckProcess(t, repoRoot, snap)
+	writeCommandCloseUnitPlanProcessWithExtra(t, repoRoot, snap, "")
+	writeCommandCloseUnitVerifyProcess(t, repoRoot, snap)
+
+	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md")
+	content, err := os.ReadFile(verifyPath)
+	if err != nil {
+		t.Fatalf("read verify: %v", err)
+	}
+	weak := strings.Replace(string(content), "    evidence_refs: go test ./...\n", "", 1)
+	writeCommandCloseTestFile(t, verifyPath, weak)
+
+	_, err = Close(Options{
+		RepoRoot:   repoRoot,
+		Command:    "unit_verify",
+		ObjectType: "unit",
+		Object:     "demo",
+		Outcome:    "ready_to_promote",
+		Apply:      true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "acceptance_item_evidence_matrix invalid: each item must include id, status, and evidence_refs") {
+		t.Fatalf("expected weak acceptance evidence failure, got %v", err)
+	}
+	status, err := statusfile.LookupObjectStatus(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("LookupObjectStatus: %v", err)
+	}
+	if status.NextCommand != "unit_verify" {
+		t.Fatalf("weak verify evidence must not advance status, got %+v", status)
+	}
 }
 
 func TestCloseRejectsUnitStableVerifyAlignedWhenEvidenceMissing(t *testing.T) {
@@ -1124,6 +1163,8 @@ func writeCommandCloseUnitPlanProcessWithExtra(t *testing.T, repoRoot string, sn
 		"spec_version_ref: " + snap.SpecVersionRef,
 		"spec_fingerprint: " + snap.SpecFingerprint,
 		"acceptance_behavior_fingerprint: " + snap.AcceptanceBehaviorFingerprint,
+		"stable_candidate_diff_refs: " + commandCloseStableCandidateDiffRefsForTest(repoRoot, snap),
+		"implementation_gap_refs: docs/specs/repository_mapping.md",
 		"unit_appendix_snapshot: none",
 		"rule_snapshot: none",
 		"acceptance_item_plan_coverage:",
@@ -1154,6 +1195,14 @@ func renderCommandCloseFreshnessReceipt(currentSnap snapshot.Snapshot) string {
 		"freshness_review_input_refs: " + commandCloseReviewInputRefsForTest(currentSnap.Object, "freshness_text_drift_reuse", currentSnap.SpecFileRef),
 		"freshness_review_findings: none",
 	}, "\n")
+}
+
+func commandCloseStableCandidateDiffRefsForTest(repoRoot string, snap snapshot.Snapshot) string {
+	stableRef := "docs/specs/units/stable/s_unit_" + snap.Object + ".md"
+	if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(stableRef))); err == nil {
+		return stableRef + ";" + snap.SpecFileRef
+	}
+	return "none"
 }
 
 func commandCloseReviewInputRefsForTest(object, pack string, refs ...string) string {
@@ -1221,6 +1270,7 @@ func writeCommandCloseUnitVerifyProcess(t *testing.T, repoRoot string, snap snap
 		"acceptance_item_evidence_matrix:",
 		"  - id: demo.core",
 		"    status: pass",
+		"    evidence_refs: go test ./...",
 		"retirement_evidence_matrix: none",
 		"evidence_refs: go test ./...",
 		"evaluation_mode: independent",
@@ -1285,6 +1335,7 @@ func writeCommandCloseStableVerifyProcess(t *testing.T, repoRoot string, snap sn
 		"acceptance_item_evidence_matrix:",
 		"  - id: demo.core",
 		"    status: pass",
+		"    evidence_refs: go test ./...",
 		"implementation_surface_refs: AgentCore/internal/demo",
 		"evidence_refs: go test ./...",
 		"evaluation_mode: independent",

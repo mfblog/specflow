@@ -334,7 +334,8 @@ Rules:
 1. the commands never edit project files
 2. the commands never judge candidate completeness, evidence quality, or promotion readiness
 3. `candidate-preflight` must fail when the requested candidate is blocked by another current candidate unit, a candidate Rule, or a candidate progression cycle
-4. the reader todo panel may use the same result to group candidates as ready, blocked, or cycle, and must show `unit_advance:{unit}` only for ready candidates
+4. the reader todo panel may use the same result to group candidates as ready, blocked, or cycle
+5. the reader todo panel must show `unit_advance:{unit}` only for ready candidates whose recorded next command is `unit_check`, `unit_plan`, `unit_impl`, or `unit_verify`; promotion-ready candidates must show the explicit `unit_promote:{unit}` command instead
 
 ## Tooling Input Set
 

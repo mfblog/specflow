@@ -33,9 +33,12 @@ Allowed writes are:
 3. local test output artifacts when required by the verification method.
 
 Candidate verify evidence must bind to the current active plan through `active_plan_file_ref` and `active_plan_fingerprint`.
-It must also record `retirement_evidence_matrix`.
+It must also record per-item `acceptance_item_evidence_matrix.evidence_refs` and `retirement_evidence_matrix`.
+For executable acceptance items, promotion-ready verify evidence requires `status: pass` and durable evidence refs that prove the candidate behavior through the declared verification surface.
 If the active plan has `retirement_targets: none`, the matrix must be `none`.
 If the active plan lists retirement targets, each target must have `result: pass`, `mainline_dependency: not_required`, and durable `evidence_refs` before `ready_to_promote` may close.
+For primary protocol, default page, primary presentation, API, or artifact-generation changes, evidence must inspect the real generated artifact, API return value, DOM/screenshot, rendered text, CLI output, or a test that proves the mainline path uses the candidate protocol.
+Generic test success, absence of old strings, presence of new files, or presence of new fields must not be used as the only evidence for semantic replacement.
 Verification must not delete code automatically or infer business compatibility safety; it only proves whether planned retirement targets are no longer required by the mainline path.
 
 ## Forbidden Writes

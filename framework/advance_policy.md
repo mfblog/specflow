@@ -41,16 +41,17 @@ It must not silently advance a different candidate unit.
 2. `unit_plan:{unit}`
 3. `unit_impl:{unit}`
 4. `unit_verify:{unit}`
-5. `unit_promote:{unit}`
 
 It must stop when the next command is:
 
 1. `unit_new`
 2. `unit_init`
-3. `unit_fork`
-4. `unit_stable_verify`
+3. `unit_promote`
+4. `unit_fork`
+5. `unit_stable_verify`
 
 Those entries require an explicit user decision.
+`unit_promote:{unit}` remains the explicit manual entry for landing a verified candidate as stable truth.
 
 ## 3. Recursion
 
@@ -79,11 +80,11 @@ The executor must stop when:
 
 ## 5. Completion
 
-Advance is complete when the unit row records:
+Automatic advance is complete at the promotion-ready stop when the unit row records:
 
-1. `Stable=yes`
-2. `Candidate=no`
-3. `Active Layer=stable`
-4. `Next Command=unit_fork`
+1. `Candidate=yes`
+2. `Active Layer=candidate`
+3. `Next Command=unit_promote`
 
-The executor must report the final status and any remaining downstream reroutes caused by `unit_refs` or `rule_refs`.
+The executor must report the promotion-ready status and state that `unit_promote:{unit}` requires an explicit user decision.
+Stable completion still requires the separate `unit_promote:{unit}` command to close successfully and then record `Stable=yes`, `Candidate=no`, `Active Layer=stable`, and `Next Command=unit_fork`.

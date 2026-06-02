@@ -246,12 +246,78 @@ func TestCreatePlanRequestIncludesSnapshotInputRefs(t *testing.T) {
 		"docs/specs/units/candidate/appendix/c_unit_demo_evidence.md",
 		"docs/specs/units/stable/s_unit_dependency.md",
 		"docs/specs/rules/candidate/c_b_rule_demo.md",
+		"docs/specs/repository_mapping.md",
 		"docs/specs/_check_result/unit/demo.md",
 		"docs/specs/_plans/active/demo.md",
 	} {
 		if !containsString(result.ReviewInputRefs, ref) {
 			t.Fatalf("expected review input ref %s, got %+v", ref, result.ReviewInputRefs)
 		}
+	}
+	if !containsString(result.ReviewFileRefs, "docs/specs/repository_mapping.md") {
+		t.Fatalf("expected implementation gap ref in review file refs, got %+v", result.ReviewFileRefs)
+	}
+	request := mustReadFile(t, filepath.Join(repoRoot, filepath.FromSlash(result.RequestFile)))
+	fileRefs := sectionBetween(t, request, "## Review File Refs", "## Review Evidence Refs")
+	if !strings.Contains(fileRefs, "docs/specs/repository_mapping.md") {
+		t.Fatalf("implementation gap ref missing from request file refs:\n%s", request)
+	}
+}
+
+func TestCreateVerifyRequestIncludesAcceptanceEvidenceRefs(t *testing.T) {
+	repoRoot := setupCandidateRequestRepoWithRefs(t)
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md"), "# check\n")
+	writePlanProcessWithoutReceipt(t, repoRoot, expected)
+	writeVerifyProcessWithoutReceipt(t, repoRoot, expected)
+
+	result, err := Create(Options{
+		RepoRoot:   repoRoot,
+		ObjectType: "unit",
+		Object:     "demo",
+		Pack:       PackUnitVerifyReadyToPromote,
+		Now:        time.Date(2026, 5, 30, 1, 2, 3, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if !containsString(result.ReviewEvidenceRefs, "go test ./...") {
+		t.Fatalf("expected acceptance evidence ref in review evidence refs, got %+v", result.ReviewEvidenceRefs)
+	}
+	request := mustReadFile(t, filepath.Join(repoRoot, filepath.FromSlash(result.RequestFile)))
+	evidenceRefs := sectionBetween(t, request, "## Review Evidence Refs", "## Evaluation Questions")
+	if !strings.Contains(evidenceRefs, "go test ./...") {
+		t.Fatalf("acceptance evidence ref missing from request:\n%s", request)
+	}
+}
+
+func TestCreateVerifyRequestRejectsWeakAcceptanceEvidence(t *testing.T) {
+	repoRoot := setupCandidateRequestRepoWithRefs(t)
+	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrentObject: %v", err)
+	}
+	writeFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md"), "# check\n")
+	writePlanProcessWithoutReceipt(t, repoRoot, expected)
+	writeVerifyProcessWithoutReceipt(t, repoRoot, expected)
+
+	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md")
+	body := mustReadFile(t, verifyPath)
+	body = strings.Replace(body, "    evidence_refs: go test ./...\n", "", 1)
+	writeFile(t, verifyPath, body)
+
+	_, err = Create(Options{
+		RepoRoot:   repoRoot,
+		ObjectType: "unit",
+		Object:     "demo",
+		Pack:       PackUnitVerifyReadyToPromote,
+		Now:        time.Date(2026, 5, 30, 1, 2, 3, 0, time.UTC),
+	})
+	if err == nil || !strings.Contains(err.Error(), "acceptance_item_evidence_matrix invalid: each item must include id, status, and evidence_refs") {
+		t.Fatalf("expected weak acceptance evidence rejection, got %v", err)
 	}
 }
 
@@ -266,6 +332,10 @@ func TestCreateStableVerifyRequestIncludesProcessScalarRefs(t *testing.T) {
 		t.Fatalf("BuildRepositoryMappingSnapshot: %v", err)
 	}
 	writeStableVerifyProcessWithoutReceipt(t, repoRoot, expected, mapping)
+	processPath := filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/demo.md")
+	body := mustReadFile(t, processPath)
+	body = strings.Replace(body, "    evidence_refs: go test ./...", "    evidence_refs: go test ./... -run TestStableItem", 1)
+	writeFile(t, processPath, body)
 
 	result, err := Create(Options{
 		RepoRoot:   repoRoot,
@@ -284,6 +354,7 @@ func TestCreateStableVerifyRequestIncludesProcessScalarRefs(t *testing.T) {
 		"docs/specs/units/stable/appendix/s_unit_demo_notes.md",
 		"AgentCore/internal/demo",
 		"go test ./...",
+		"go test ./... -run TestStableItem",
 	} {
 		if !containsString(result.ReviewInputRefs, ref) {
 			t.Fatalf("expected review input ref %s, got %+v", ref, result.ReviewInputRefs)
@@ -292,7 +363,7 @@ func TestCreateStableVerifyRequestIncludesProcessScalarRefs(t *testing.T) {
 	if !containsString(result.ReviewFileRefs, "docs/specs/_stable_verify_result/unit/demo.md") {
 		t.Fatalf("expected stable verify process file in file refs, got %+v", result.ReviewFileRefs)
 	}
-	for _, ref := range []string{"AgentCore/internal/demo", "go test ./..."} {
+	for _, ref := range []string{"AgentCore/internal/demo", "go test ./...", "go test ./... -run TestStableItem"} {
 		if !containsString(result.ReviewEvidenceRefs, ref) {
 			t.Fatalf("expected evidence ref %s, got %+v", ref, result.ReviewEvidenceRefs)
 		}
@@ -303,7 +374,7 @@ func TestCreateStableVerifyRequestIncludesProcessScalarRefs(t *testing.T) {
 	request := mustReadFile(t, filepath.Join(repoRoot, filepath.FromSlash(result.RequestFile)))
 	fileRefs := sectionBetween(t, request, "## Review File Refs", "## Review Evidence Refs")
 	evidenceRefs := sectionBetween(t, request, "## Review Evidence Refs", "## Evaluation Questions")
-	for _, ref := range []string{"AgentCore/internal/demo", "go test ./..."} {
+	for _, ref := range []string{"AgentCore/internal/demo", "go test ./...", "go test ./... -run TestStableItem"} {
 		if strings.Contains(fileRefs, ref) {
 			t.Fatalf("evidence ref %s must not appear in Review File Refs:\n%s", ref, fileRefs)
 		}
@@ -542,6 +613,14 @@ func requestReviewInputRefsForTest(object, pack string, refs ...string) string {
 	return strings.Join(append([]string{pack, requestFile}, refs...), ";")
 }
 
+func requestStableCandidateDiffRefsForTest(repoRoot string, expected snapshot.Snapshot) string {
+	stableRef := "docs/specs/units/stable/s_unit_" + expected.Object + ".md"
+	if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(stableRef))); err == nil {
+		return stableRef + ";" + expected.SpecFileRef
+	}
+	return "none"
+}
+
 func writeVerifyProcessWithoutReceipt(t *testing.T, repoRoot string, expected snapshot.Snapshot) {
 	t.Helper()
 	activePlanFingerprint := requestFileFingerprint(t, repoRoot, snapshot.ActivePlanFilePath(expected.Object))
@@ -571,6 +650,7 @@ func writeVerifyProcessWithoutReceipt(t *testing.T, repoRoot string, expected sn
 		"acceptance_item_evidence_matrix:",
 		"  - id: demo.core",
 		"    status: pass",
+		"    evidence_refs: go test ./...",
 		"retirement_evidence_matrix: none",
 	}, "\n")+"\n```\n")
 }
@@ -582,6 +662,8 @@ func writePlanProcessWithoutReceipt(t *testing.T, repoRoot string, expected snap
 		"spec_version_ref: " + expected.SpecVersionRef,
 		"spec_fingerprint: " + expected.SpecFingerprint,
 		"acceptance_behavior_fingerprint: " + expected.AcceptanceBehaviorFingerprint,
+		"stable_candidate_diff_refs: " + requestStableCandidateDiffRefsForTest(repoRoot, expected),
+		"implementation_gap_refs: docs/specs/repository_mapping.md",
 		"unit_appendix_snapshot:",
 		renderAppendix(expected.ModuleAppendixSnapshot),
 		"rule_snapshot:",
@@ -635,6 +717,7 @@ func writeStableVerifyProcessWithoutReceipt(t *testing.T, repoRoot string, expec
 		"acceptance_item_evidence_matrix:",
 		"  - id: demo.core",
 		"    status: pass",
+		"    evidence_refs: go test ./...",
 		"implementation_surface_refs: AgentCore/internal/demo",
 		"evidence_refs: go test ./...",
 	}, "\n")+"\n```\n")

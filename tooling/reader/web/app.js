@@ -2776,7 +2776,7 @@ function advanceEntryCommandForObject(object, nextCommand) {
   const objectID = String(object && object.id ? object.id : "").trim();
   const command = String(nextCommand || "").trim();
   if (!kind || !objectID || !command) return "";
-  if (kind === "unit" && ["unit_check", "unit_plan", "unit_impl", "unit_verify", "unit_promote"].includes(command)) {
+  if (kind === "unit" && ["unit_check", "unit_plan", "unit_impl", "unit_verify"].includes(command)) {
     return `unit_advance:${objectID}`;
   }
   return "";

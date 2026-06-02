@@ -354,6 +354,13 @@ func setupImpactRepo(t *testing.T, repoRoot, statusContent string) {
 	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/_plans/draft"))
 	mustMkdirImpactAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
 	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), statusContent)
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), `---
+id: repository_mapping
+version: 0.1.0
+---
+
+# Repository Mapping
+`)
 }
 
 func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
@@ -372,6 +379,13 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 		"|---|---|---|---|---|---|---|",
 		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
 	}, "\n")+"\n")
+	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), `---
+id: repository_mapping
+version: 0.1.0
+---
+
+# Repository Mapping
+`)
 
 	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
 	if err != nil {
@@ -563,6 +577,8 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 		"spec_version_ref: " + snap.SpecVersionRef,
 		"spec_fingerprint: " + snap.SpecFingerprint,
 		"acceptance_behavior_fingerprint: " + snap.AcceptanceBehaviorFingerprint,
+		"stable_candidate_diff_refs: none",
+		"implementation_gap_refs: docs/specs/repository_mapping.md",
 		"unit_appendix_snapshot: none",
 		"rule_snapshot:",
 		"  - rule_id: " + snap.RuleSnapshot[0].RuleID,

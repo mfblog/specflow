@@ -219,9 +219,9 @@ func configsByPack() map[string]packConfig {
 			},
 			AllowedInputs: []string{
 				"user goal or exact `unit_plan:{unit}` target.",
-				"candidate unit truth and valid `_check_result/unit/{unit}.md`.",
+				"candidate unit truth, stable unit truth when it exists, and valid `_check_result/unit/{unit}.md`.",
 				"active plan under review.",
-				"plan acceptance coverage criteria from `framework/lifecycle/unit_plan.md`.",
+				"plan acceptance coverage, stable-to-candidate diff, implementation-gap, and retirement-target criteria from `framework/lifecycle/unit_plan.md`.",
 			},
 			ForbiddenInputs: []string{
 				"implementation work not authorized by the active plan.",
@@ -230,8 +230,10 @@ func configsByPack() map[string]packConfig {
 			},
 			EvaluationQuestions: []string{
 				"Does the plan cover every accepted acceptance item?",
+				"When stable truth exists, does the plan cite and use the stable-to-candidate behavior diff instead of planning from the candidate name alone?",
+				"Does the plan cite the implementation refs inspected for current entry points, main paths, rendering/API/generation paths, and gaps?",
+				"For candidate_intent change with source_basis replacement, does the plan reject retirement_targets none and list the old structures, entries, primary paths, wrappers, compatibility layers, or dependencies that must stop being required?",
 				"Does the plan stay inside checked truth and named implementation surfaces?",
-				"Does the plan declare retirement_targets as none or list concrete retired paths, helpers, wrappers, compatibility layers, or dependencies with verification actions?",
 				"Can unit_impl execute without inventing behavior or ownership?",
 			},
 		},
@@ -264,7 +266,9 @@ func configsByPack() map[string]packConfig {
 			},
 			EvaluationQuestions: []string{
 				"Does the verify result cover every executable acceptance item?",
-				"Are evidence refs inspectable and aligned with the active plan?",
+				"Does each executable acceptance item have inspectable evidence refs that prove the candidate behavior through the declared verification surface?",
+				"Does the verify result reject weak evidence as sufficient by itself, including generic test success, absent old strings, present new files, or present new fields?",
+				"For primary protocol, default page, primary presentation, API, or artifact-generation changes, does the evidence inspect real generated artifacts, API return values, DOM/screenshots, rendered text, CLI output, or tests proving the mainline path uses the candidate protocol?",
 				"Does the verify result prove every retirement target with pass and mainline_dependency not_required evidence?",
 				"Is the candidate ready for promotion without hiding unresolved gaps?",
 			},
@@ -358,15 +362,22 @@ func collectReviewRefs(options Options, config packConfig, processFile string, v
 	switch config.Pack {
 	case PackUnitPlanPlanReady:
 		fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
+		fileRefs = appendScalarRefs(fileRefs, processData, "implementation_gap_refs")
 	case PackUnitVerifyReadyToPromote:
 		fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object), snapshot.ActivePlanFilePath(options.Object))
 		evidenceRefs = appendScalarRefs(evidenceRefs, processData, "evidence_refs")
+		for _, entry := range processData.AcceptanceEvidence {
+			evidenceRefs = appendSplitRefs(evidenceRefs, entry.EvidenceRefs)
+		}
 		for _, entry := range processData.RetirementEvidence {
 			evidenceRefs = appendSplitRefs(evidenceRefs, entry.EvidenceRefs)
 		}
 	case PackUnitStableVerifyAdvancing:
 		fileRefs = append(fileRefs, "docs/specs/repository_mapping.md")
 		evidenceRefs = appendScalarRefs(evidenceRefs, processData, "implementation_surface_refs", "evidence_refs")
+		for _, entry := range processData.AcceptanceEvidence {
+			evidenceRefs = appendSplitRefs(evidenceRefs, entry.EvidenceRefs)
+		}
 	case PackFreshnessTextDriftReuse:
 		fileRefs = append(fileRefs, "framework/core/freshness.md")
 		switch options.ProcessKind {

@@ -565,6 +565,7 @@ func renderReleaseAcceptanceEvidence(entries []snapshot.AcceptanceItemEntry) []s
 		lines = append(lines,
 			"  - id: "+entry.ID,
 			"    status: pass",
+			"    evidence_refs: go test ./...",
 		)
 	}
 	return lines

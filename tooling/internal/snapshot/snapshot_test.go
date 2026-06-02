@@ -628,6 +628,89 @@ func TestValidateProcessFileRejectsMissingRequiredSnapshotField(t *testing.T) {
 	}
 }
 
+func TestValidateProcessFileRejectsMissingAcceptanceBehaviorFingerprint(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		processKind string
+		write       func(t *testing.T, repoRoot string)
+	}{
+		{
+			name:        "check",
+			processKind: "check",
+			write: func(t *testing.T, repoRoot string) {
+				expected, err := RebuildCurrent(repoRoot, "demo")
+				if err != nil {
+					t.Fatalf("RebuildCurrent: %v", err)
+				}
+				body := strings.Replace(renderFormalCheckProcessBody(expected), "acceptance_behavior_fingerprint: "+expected.AcceptanceBehaviorFingerprint+"\n", "", 1)
+				writeCheckProcessFile(t, repoRoot, body)
+			},
+		},
+		{
+			name:        "plan",
+			processKind: "plan",
+			write: func(t *testing.T, repoRoot string) {
+				expected, err := RebuildCurrent(repoRoot, "demo")
+				if err != nil {
+					t.Fatalf("RebuildCurrent: %v", err)
+				}
+				body := strings.Replace(renderFormalPlanProcessBody(expected), "acceptance_behavior_fingerprint: "+expected.AcceptanceBehaviorFingerprint+"\n", "", 1)
+				mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+			},
+		},
+		{
+			name:        "verify",
+			processKind: "verify",
+			write: func(t *testing.T, repoRoot string) {
+				mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+				expected, err := RebuildCurrent(repoRoot, "demo")
+				if err != nil {
+					t.Fatalf("RebuildCurrent: %v", err)
+				}
+				activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+				body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "acceptance_behavior_fingerprint: "+expected.AcceptanceBehaviorFingerprint+"\n", "", 1)
+				mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+			},
+		},
+		{
+			name:        "stable_verify",
+			processKind: "stable_verify",
+			write: func(t *testing.T, repoRoot string) {
+				setupStableSnapshotValidationRepo(t, repoRoot)
+				expected, err := RebuildCurrent(repoRoot, "demo")
+				if err != nil {
+					t.Fatalf("RebuildCurrent: %v", err)
+				}
+				mapping, err := BuildRepositoryMappingSnapshot(repoRoot)
+				if err != nil {
+					t.Fatalf("BuildRepositoryMappingSnapshot: %v", err)
+				}
+				body := strings.Replace(renderFormalStableVerifyProcessBody(expected, mapping, "aligned"), "acceptance_behavior_fingerprint: "+expected.AcceptanceBehaviorFingerprint+"\n", "", 1)
+				mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/demo.md"), "# stable verify\n\n```yaml\n"+body+"\n```\n")
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			if tc.processKind != "stable_verify" {
+				setupSnapshotValidationRepo(t, repoRoot)
+			}
+			tc.write(t, repoRoot)
+
+			result, err := ValidateProcessFile(repoRoot, "demo", tc.processKind)
+			if err != nil {
+				t.Fatalf("ValidateProcessFile: %v", err)
+			}
+			if result.Valid {
+				t.Fatalf("expected invalid result, got valid")
+			}
+			if !containsMismatch(result.Mismatches, "missing required field: acceptance_behavior_fingerprint") {
+				t.Fatalf("expected acceptance behavior fingerprint mismatch, got %+v", result.Mismatches)
+			}
+		})
+	}
+}
+
 func TestValidateProcessFileAcceptsExplicitNoneSnapshots(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
@@ -775,6 +858,7 @@ layer: candidate
 		"- `truth_file_ref`: `" + expected.SpecFileRef + "`",
 		"- `truth_version_ref`: `" + expected.SpecVersionRef + "`",
 		"- `truth_fingerprint`: `" + expected.SpecFingerprint + "`",
+		"- `acceptance_behavior_fingerprint`: `" + expected.AcceptanceBehaviorFingerprint + "`",
 		"- `acceptance_item_set`:",
 		"  - `id`: `demo.core`",
 		"    `verification_surface`: `internal_flow`",
@@ -1118,7 +1202,7 @@ func TestValidateProcessFileClassifiesDependencyDrift(t *testing.T) {
 	}
 }
 
-func TestValidateProcessFileClassifiesUnknownDriftWithoutBehaviorFingerprint(t *testing.T) {
+func TestValidateProcessFileClassifiesSchemaDriftWithoutBehaviorFingerprint(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
 
@@ -1137,8 +1221,8 @@ func TestValidateProcessFileClassifiesUnknownDriftWithoutBehaviorFingerprint(t *
 	if result.Valid {
 		t.Fatalf("expected invalid unknown drift, got valid")
 	}
-	if result.FreshnessImpact != FreshnessUnknownDrift || result.EvidenceReuse != EvidenceReuseNotEligible {
-		t.Fatalf("expected unknown drift, got impact=%s reuse=%s mismatches=%+v", result.FreshnessImpact, result.EvidenceReuse, result.Mismatches)
+	if result.FreshnessImpact != FreshnessSchemaDrift || result.EvidenceReuse != EvidenceReuseNotEligible {
+		t.Fatalf("expected schema drift, got impact=%s reuse=%s mismatches=%+v", result.FreshnessImpact, result.EvidenceReuse, result.Mismatches)
 	}
 }
 
@@ -1333,6 +1417,253 @@ func TestValidateProcessFileRejectsPlanMissingRetirementTargets(t *testing.T) {
 	}
 }
 
+func TestValidateProcessFileRejectsPlanMissingDiffAndGapRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	body := strings.Replace(renderFormalPlanProcessBody(expected), "stable_candidate_diff_refs: none\n", "", 1)
+	body = strings.Replace(body, "implementation_gap_refs: docs/specs/repository_mapping.md\n", "", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	for _, want := range []string{
+		"missing required field: stable_candidate_diff_refs",
+		"missing required field: implementation_gap_refs",
+	} {
+		if !containsMismatch(result.Mismatches, want) {
+			t.Fatalf("expected mismatch %q, got %+v", want, result.Mismatches)
+		}
+	}
+}
+
+func TestValidateProcessFileRejectsPlanImplementationGapRefsNoneWithImplementationSurface(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	body := strings.Replace(renderFormalPlanProcessBody(expected), "implementation_gap_refs: docs/specs/repository_mapping.md", "implementation_gap_refs: none", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "implementation_gap_refs must cite durable refs when acceptance items declare implementation surfaces") {
+		t.Fatalf("expected implementation gap refs mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsPlanImplementationGapRefsInvalidRepositoryRef(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		ref  string
+		want string
+	}{
+		{
+			name: "command text",
+			ref:  "go test",
+			want: "implementation_gap_refs ref does not exist: go test",
+		},
+		{
+			name: "missing repo path",
+			ref:  "docs/specs/missing_mapping.md",
+			want: "implementation_gap_refs ref does not exist: docs/specs/missing_mapping.md",
+		},
+		{
+			name: "absolute path",
+			ref:  filepath.ToSlash(filepath.Join("C:", "tmp", "mapping.md")),
+			want: "implementation_gap_refs ref must be a repository-relative path:",
+		},
+		{
+			name: "parent escape",
+			ref:  "../outside.md",
+			want: "implementation_gap_refs ref must be a repository-relative path: ../outside.md",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			setupSnapshotValidationRepo(t, repoRoot)
+
+			expected, err := RebuildCurrent(repoRoot, "demo")
+			if err != nil {
+				t.Fatalf("RebuildCurrent: %v", err)
+			}
+
+			body := strings.Replace(renderFormalPlanProcessBody(expected), "implementation_gap_refs: docs/specs/repository_mapping.md", "implementation_gap_refs: "+tc.ref, 1)
+			mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+			result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+			if err != nil {
+				t.Fatalf("ValidateProcessFile: %v", err)
+			}
+			if result.Valid {
+				t.Fatalf("expected invalid result, got valid")
+			}
+			if !containsMismatchPrefix(result.Mismatches, tc.want) {
+				t.Fatalf("expected implementation gap refs mismatch %q, got %+v", tc.want, result.Mismatches)
+			}
+		})
+	}
+}
+
+func TestValidateProcessFileRejectsPlanStableDiffRefsInvalidRepositoryRef(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		ref  string
+		want string
+	}{
+		{
+			name: "command text",
+			ref:  "go test",
+			want: "stable_candidate_diff_refs ref does not exist: go test",
+		},
+		{
+			name: "missing repo path",
+			ref:  "docs/specs/missing_diff.md",
+			want: "stable_candidate_diff_refs ref does not exist: docs/specs/missing_diff.md",
+		},
+		{
+			name: "absolute path",
+			ref:  filepath.ToSlash(filepath.Join("C:", "tmp", "diff.md")),
+			want: "stable_candidate_diff_refs ref must be a repository-relative path:",
+		},
+		{
+			name: "parent escape",
+			ref:  "../outside.md",
+			want: "stable_candidate_diff_refs ref must be a repository-relative path: ../outside.md",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			setupSnapshotValidationRepo(t, repoRoot)
+
+			expected, err := RebuildCurrent(repoRoot, "demo")
+			if err != nil {
+				t.Fatalf("RebuildCurrent: %v", err)
+			}
+
+			body := strings.Replace(renderFormalPlanProcessBody(expected), "stable_candidate_diff_refs: none", "stable_candidate_diff_refs: "+tc.ref, 1)
+			mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+			result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+			if err != nil {
+				t.Fatalf("ValidateProcessFile: %v", err)
+			}
+			if result.Valid {
+				t.Fatalf("expected invalid result, got valid")
+			}
+			if !containsMismatchPrefix(result.Mismatches, tc.want) {
+				t.Fatalf("expected stable candidate diff refs mismatch %q, got %+v", tc.want, result.Mismatches)
+			}
+		})
+	}
+}
+
+func TestValidateProcessFileRejectsPlanStableDiffRefsWithoutStableAndCandidate(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir)))
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir), "s_unit_demo.md"), `---
+id: demo
+layer: stable
+version: 1.0.0
+---
+
+# Demo Stable
+`)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	body := strings.Replace(renderFormalPlanProcessBody(expected), "stable_candidate_diff_refs: none", "stable_candidate_diff_refs: docs/specs/units/candidate/c_unit_demo.md", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "stable_candidate_diff_refs must contain stable spec ref: docs/specs/units/stable/s_unit_demo.md") {
+		t.Fatalf("expected stable diff ref mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileAcceptsPlanStableDiffRefsWithStableAndCandidate(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir)))
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(specpaths.StableDir), "s_unit_demo.md"), `---
+id: demo
+layer: stable
+version: 1.0.0
+---
+
+# Demo Stable
+`)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	body := strings.Replace(renderFormalPlanProcessBody(expected), "stable_candidate_diff_refs: none", "stable_candidate_diff_refs: docs/specs/units/stable/s_unit_demo.md;docs/specs/units/candidate/c_unit_demo.md", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if !result.Valid {
+		t.Fatalf("expected valid plan result, got mismatches %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsReplacementPlanWithoutRetirementTargets(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	replaceCandidateSpecText(t, repoRoot, "source_basis: new_design", "source_basis: replacement")
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+renderFormalPlanProcessBody(expected)+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "retirement_targets must not be none for change replacement candidates") {
+		t.Fatalf("expected replacement retirement mismatch, got %+v", result.Mismatches)
+	}
+}
+
 func TestValidateProcessFileRejectsPlanCoverageGap(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
@@ -1510,6 +1841,95 @@ func TestValidateProcessFileRejectsVerifyEvidenceGap(t *testing.T) {
 	}
 	if !containsMismatch(result.Mismatches, "acceptance_item_evidence_matrix invalid status for demo.core: skipped") {
 		t.Fatalf("expected invalid evidence status mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsVerifyMissingAcceptanceEvidenceRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "    evidence_refs: go test ./...\n", "", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "acceptance_item_evidence_matrix invalid: each item must include id, status, and evidence_refs") {
+		t.Fatalf("expected missing acceptance evidence refs mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsVerifyNoneAcceptanceEvidenceRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "    evidence_refs: go test ./...", "    evidence_refs: none", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "acceptance_item_evidence_matrix evidence_refs for demo.core must be durable refs") {
+		t.Fatalf("expected weak acceptance evidence refs mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsVerifyExecutableAcceptanceNotPass(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		status string
+	}{
+		{name: "fail", status: "fail"},
+		{name: "partial", status: "partial"},
+		{name: "not checked", status: "not_checked"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			setupSnapshotValidationRepo(t, repoRoot)
+			mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+			expected, err := RebuildCurrent(repoRoot, "demo")
+			if err != nil {
+				t.Fatalf("RebuildCurrent: %v", err)
+			}
+			activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+			body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "status: pass", "status: "+tc.status, 1)
+			mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+			result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+			if err != nil {
+				t.Fatalf("ValidateProcessFile: %v", err)
+			}
+			if result.Valid {
+				t.Fatalf("expected invalid result, got valid")
+			}
+			want := "acceptance_item_evidence_matrix status for demo.core must be pass"
+			if !containsMismatch(result.Mismatches, want) {
+				t.Fatalf("expected mismatch %q, got %+v", want, result.Mismatches)
+			}
+		})
 	}
 }
 
@@ -1729,6 +2149,66 @@ func TestValidateProcessFileRejectsStableVerifyAlignedEvidenceGap(t *testing.T) 
 	}
 	if !containsMismatch(result.Mismatches, "stable_verify aligned evidence for demo.core must be pass") {
 		t.Fatalf("expected aligned evidence pass mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsStableVerifyMissingAcceptanceEvidenceRefs(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupStableSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit"))
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	mapping, err := BuildRepositoryMappingSnapshot(repoRoot)
+	if err != nil {
+		t.Fatalf("BuildRepositoryMappingSnapshot: %v", err)
+	}
+	body := strings.Replace(renderFormalStableVerifyProcessBody(expected, mapping, "aligned"), "    evidence_refs: go test ./...\n", "", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/demo.md"), "# stable verify\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "stable_verify")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected invalid result, got valid")
+	}
+	if !containsMismatch(result.Mismatches, "acceptance_item_evidence_matrix invalid: each item must include id, status, and evidence_refs") {
+		t.Fatalf("expected missing stable acceptance evidence refs mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsStableVerifyNoneAcceptanceEvidenceRefs(t *testing.T) {
+	for _, decision := range []string{"aligned", "controlled_change_required"} {
+		t.Run(decision, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			setupStableSnapshotValidationRepo(t, repoRoot)
+			mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit"))
+
+			expected, err := RebuildCurrent(repoRoot, "demo")
+			if err != nil {
+				t.Fatalf("RebuildCurrent: %v", err)
+			}
+			mapping, err := BuildRepositoryMappingSnapshot(repoRoot)
+			if err != nil {
+				t.Fatalf("BuildRepositoryMappingSnapshot: %v", err)
+			}
+			body := strings.Replace(renderFormalStableVerifyProcessBody(expected, mapping, decision), "    evidence_refs: go test ./...", "    evidence_refs: none", 1)
+			mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/demo.md"), "# stable verify\n\n```yaml\n"+body+"\n```\n")
+
+			result, err := ValidateProcessFile(repoRoot, "demo", "stable_verify")
+			if err != nil {
+				t.Fatalf("ValidateProcessFile: %v", err)
+			}
+			if result.Valid {
+				t.Fatalf("expected invalid result, got valid")
+			}
+			if !containsMismatch(result.Mismatches, "acceptance_item_evidence_matrix evidence_refs for demo.core must be durable refs") {
+				t.Fatalf("expected stable evidence refs mismatch, got %+v", result.Mismatches)
+			}
+		})
 	}
 }
 
@@ -2082,6 +2562,13 @@ acceptance_item_set:
 		t.Fatalf("MainSpecFileRef: %v", err)
 	}
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(mainSpecRef)), mainSpec)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), `---
+id: repository_mapping
+version: 0.1.0
+---
+
+# Repository Mapping
+`)
 }
 
 func setupStableSnapshotValidationRepo(t *testing.T, repoRoot string) {
@@ -2196,6 +2683,8 @@ func renderFormalPlanProcessBody(expected Snapshot) string {
 		"spec_version_ref: " + expected.SpecVersionRef,
 		"spec_fingerprint: " + expected.SpecFingerprint,
 		"acceptance_behavior_fingerprint: " + expected.AcceptanceBehaviorFingerprint,
+		"stable_candidate_diff_refs: none",
+		"implementation_gap_refs: docs/specs/repository_mapping.md",
 		"unit_appendix_snapshot:",
 		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
 		"rule_snapshot: none",
@@ -2439,6 +2928,7 @@ func renderAcceptanceEvidenceMatrixForTest(entries []AcceptanceItemEntry) string
 		lines = append(lines,
 			"  - id: "+entry.ID,
 			"    status: "+status,
+			"    evidence_refs: go test ./...",
 		)
 	}
 	return strings.Join(lines, "\n")

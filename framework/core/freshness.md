@@ -16,9 +16,9 @@ It does not replace fingerprints. It prevents a text-level fingerprint change fr
 
 `dependency_drift` means appendix, unit dependency, rule, or repository mapping snapshots changed.
 
-`schema_drift` means the process file shape, gate fields, coverage fields, receipt fields, or evidence matrix is invalid.
+`schema_drift` means the process file shape, gate fields, coverage fields, receipt fields, required behavior fingerprint, or evidence matrix is invalid.
 
-`unknown_drift` means the process file predates the behavior fingerprint needed to distinguish text drift from semantic drift.
+`unknown_drift` means deterministic validation cannot classify the drift with the current freshness categories.
 
 ## Evidence Reuse
 

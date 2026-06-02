@@ -17,7 +17,7 @@ The candidate verify pass snapshot records:
 
 1. current unit truth ref, fingerprint, and acceptance behavior fingerprint
 2. accepted acceptance item set
-3. acceptance item evidence matrix
+3. acceptance item evidence matrix with per-item `evidence_refs`
 4. `active_plan_file_ref` and `active_plan_fingerprint`
 5. `retirement_evidence_matrix`
 6. `unit_appendix_snapshot`
@@ -29,6 +29,10 @@ The candidate verify pass snapshot records:
 `retirement_evidence_matrix` must be literal `none` when the active plan has `retirement_targets: none`.
 When the active plan lists retirement targets, every target id must appear exactly once with `result: pass`, `mainline_dependency: not_required`, and durable `evidence_refs`.
 The verify result proves planned retirement targets; it does not authorize automatic code deletion.
+
+Each executable acceptance item in `acceptance_item_evidence_matrix` must record `status: pass` and durable `evidence_refs` before promotion readiness can close.
+Items marked `not_runnable_yet: yes` in current truth must record `status: not_runnable_yet`.
+Generic test success, missing old strings, present new files, or present new fields are not sufficient by themselves for semantic replacement evidence.
 
 These files are process evidence, not behavior truth.
 

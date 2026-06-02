@@ -235,11 +235,17 @@ func appendPromotionCoverageSummary(builder *strings.Builder, entries []snapshot
 	if len(entries) == 0 {
 		builder.WriteString("  - id: none\n")
 		builder.WriteString("    status: not_checked\n")
+		builder.WriteString("    evidence_refs: none\n")
 		return
 	}
 	for _, entry := range entries {
 		builder.WriteString("  - id: " + entry.ID + "\n")
 		builder.WriteString("    status: " + entry.Status + "\n")
+		evidenceRefs := strings.TrimSpace(entry.EvidenceRefs)
+		if evidenceRefs == "" {
+			evidenceRefs = "none"
+		}
+		builder.WriteString("    evidence_refs: " + evidenceRefs + "\n")
 	}
 }
 
@@ -258,6 +264,15 @@ func promotionEvidenceRefs(verifyData snapshot.ProcessSnapshotData) []string {
 			continue
 		}
 		refs = appendUniqueString(refs, value)
+	}
+	for _, entry := range verifyData.AcceptanceEvidence {
+		for _, ref := range strings.Split(entry.EvidenceRefs, ";") {
+			ref = strings.TrimSpace(ref)
+			if ref == "" || ref == "none" {
+				continue
+			}
+			refs = appendUniqueString(refs, ref)
+		}
 	}
 	for _, entry := range verifyData.RetirementEvidence {
 		for _, ref := range strings.Split(entry.EvidenceRefs, ";") {

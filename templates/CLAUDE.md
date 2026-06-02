@@ -86,7 +86,7 @@ specflow/framework/lifecycle/overview.md
 | `unit_verify:{unit}` | `specflow/framework/lifecycle/unit_verify.md` | Verify implementation against candidate truth. |
 | `unit_promote:{unit}` | `specflow/framework/lifecycle/unit_promote.md` | Promote verified candidate truth to stable truth. |
 | `unit_stable_verify:{unit}` | `specflow/framework/lifecycle/unit_stable_verify.md` | Check whether current implementation still conforms to stable truth. |
-| `unit_advance:{unit}` | `specflow/framework/advance_policy.md` | Automatically advance through the next legal command recorded in `_status.md`. |
+| `unit_advance:{unit}` | `specflow/framework/advance_policy.md` | Automatically advance through `unit_check`, `unit_plan`, `unit_impl`, and `unit_verify`; stop before `unit_promote`. |
 
 #### Framework Commands
 

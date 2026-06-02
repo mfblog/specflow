@@ -110,9 +110,9 @@ Review Standard Refs:
 Allowed Inputs:
 
 1. user goal or exact `unit_plan:{unit}` target.
-2. candidate unit truth and valid `_check_result/unit/{unit}.md`.
+2. candidate unit truth, stable unit truth when it exists, and valid `_check_result/unit/{unit}.md`.
 3. active plan under review.
-4. plan acceptance coverage criteria from `framework/lifecycle/unit_plan.md`.
+4. plan acceptance coverage, stable-to-candidate diff, implementation-gap, and retirement-target criteria from `framework/lifecycle/unit_plan.md`.
 
 Forbidden Inputs:
 
@@ -123,9 +123,11 @@ Forbidden Inputs:
 Evaluation Questions:
 
 1. Does the plan cover every accepted acceptance item?
-2. Does the plan stay inside checked truth and named implementation surfaces?
-3. Does the plan declare `retirement_targets` as `none`, or list concrete retired paths, helpers, wrappers, compatibility layers, or dependencies with verification actions?
-4. Can `unit_impl` execute without inventing behavior or ownership?
+2. When stable truth exists, does the plan cite and use the stable-to-candidate behavior diff instead of planning from the candidate name alone?
+3. Does the plan cite the implementation refs inspected for current entry points, main paths, rendering/API/generation paths, and gaps?
+4. For `candidate_intent: change` with `source_basis: replacement`, does the plan reject `retirement_targets: none` and list the old structures, entries, primary paths, wrappers, compatibility layers, or dependencies that must stop being required?
+5. Does the plan stay inside checked truth and named implementation surfaces?
+6. Can `unit_impl` execute without inventing behavior or ownership?
 
 Legal Output:
 
@@ -156,9 +158,11 @@ Forbidden Inputs:
 Evaluation Questions:
 
 1. Does the verify result cover every executable acceptance item?
-2. Are evidence refs inspectable and aligned with the active plan?
-3. Does the verify result prove every retirement target with `pass` and `mainline_dependency: not_required` evidence?
-4. Is the candidate ready for promotion without hiding unresolved gaps?
+2. Does each executable acceptance item have inspectable evidence refs that prove the candidate behavior through the declared verification surface?
+3. Does the verify result reject weak evidence as sufficient by itself, including generic test success, absent old strings, present new files, or present new fields?
+4. For primary protocol, default page, primary presentation, API, or artifact-generation changes, does the evidence inspect real generated artifacts, API return values, DOM/screenshots, rendered text, CLI output, or tests proving the mainline path uses the candidate protocol?
+5. Does the verify result prove every retirement target with `pass` and `mainline_dependency: not_required` evidence?
+6. Is the candidate ready for promotion without hiding unresolved gaps?
 
 Legal Output:
 

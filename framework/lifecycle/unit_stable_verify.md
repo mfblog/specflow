@@ -24,6 +24,7 @@ Allowed writes are:
 2. local test output artifacts required by the verification method.
 
 The stable verify result must include stable truth refs and fingerprint, repository mapping snapshot, unit/rule/appendix snapshots, acceptance item set, acceptance item evidence matrix, implementation surface refs, evidence refs, and the independent evaluation receipt.
+Each `acceptance_item_evidence_matrix` item must include `id`, `status`, and `evidence_refs`.
 
 ## Forbidden Writes
 
