@@ -579,6 +579,9 @@ func TestEvaluationRequestCreatesPlanHandoffCLI(t *testing.T) {
 	text := string(content)
 	for _, phrase := range []string{
 		"reviewer_pack`: `unit_plan_plan_ready`",
+		"## Review Standard Refs",
+		"`framework/core/independent_evaluation.md`: reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
+		"`framework/lifecycle/unit_plan.md`: whether the active plan is ready to serve as the implementation handoff.",
 		"## Allowed Inputs",
 		"active plan under review.",
 		"## Forbidden Inputs",

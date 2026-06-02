@@ -48,9 +48,15 @@ type packConfig struct {
 	LifecycleRef        string
 	ReviewTitle         string
 	ReviewGoal          string
+	ReviewStandardRefs  []reviewStandardRef
 	AllowedInputs       []string
 	ForbiddenInputs     []string
 	EvaluationQuestions []string
+}
+
+type reviewStandardRef struct {
+	Ref       string
+	Authority string
 }
 
 type reviewRefs struct {
@@ -168,6 +174,16 @@ func configsByPack() map[string]packConfig {
 			LifecycleRef: "framework/lifecycle/unit_check.md",
 			ReviewTitle:  "Unit Check Pass Review",
 			ReviewGoal:   "Decide whether candidate unit truth is ready for planning.",
+			ReviewStandardRefs: []reviewStandardRef{
+				{
+					Ref:       "framework/core/independent_evaluation.md",
+					Authority: "reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
+				},
+				{
+					Ref:       "framework/lifecycle/unit_check.md",
+					Authority: "whether candidate truth is clear enough to become planning input.",
+				},
+			},
 			AllowedInputs: []string{
 				"user goal or exact `unit_check:{unit}` target.",
 				"candidate unit truth, candidate appendices owned by the unit, stable truth, and rules.",
@@ -191,6 +207,16 @@ func configsByPack() map[string]packConfig {
 			LifecycleRef: "framework/lifecycle/unit_plan.md",
 			ReviewTitle:  "Unit Plan Ready Review",
 			ReviewGoal:   "Decide whether the active plan is ready for implementation handoff.",
+			ReviewStandardRefs: []reviewStandardRef{
+				{
+					Ref:       "framework/core/independent_evaluation.md",
+					Authority: "reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
+				},
+				{
+					Ref:       "framework/lifecycle/unit_plan.md",
+					Authority: "whether the active plan is ready to serve as the implementation handoff.",
+				},
+			},
 			AllowedInputs: []string{
 				"user goal or exact `unit_plan:{unit}` target.",
 				"candidate unit truth and valid `_check_result/unit/{unit}.md`.",
@@ -215,6 +241,16 @@ func configsByPack() map[string]packConfig {
 			LifecycleRef: "framework/lifecycle/unit_verify.md",
 			ReviewTitle:  "Unit Verify Ready-To-Promote Review",
 			ReviewGoal:   "Decide whether candidate verification is ready for promotion.",
+			ReviewStandardRefs: []reviewStandardRef{
+				{
+					Ref:       "framework/core/independent_evaluation.md",
+					Authority: "reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
+				},
+				{
+					Ref:       "framework/lifecycle/unit_verify.md",
+					Authority: "whether verification evidence is sufficient for promotion readiness.",
+				},
+			},
 			AllowedInputs: []string{
 				"user goal or exact `unit_verify:{unit}` target.",
 				"candidate unit truth, valid check result, and active plan.",
@@ -239,6 +275,16 @@ func configsByPack() map[string]packConfig {
 			LifecycleRef: "framework/lifecycle/unit_stable_verify.md",
 			ReviewTitle:  "Stable Verify Advancing Review",
 			ReviewGoal:   "Decide whether the stable verify result supports the stored advancing decision.",
+			ReviewStandardRefs: []reviewStandardRef{
+				{
+					Ref:       "framework/core/independent_evaluation.md",
+					Authority: "reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
+				},
+				{
+					Ref:       "framework/lifecycle/unit_stable_verify.md",
+					Authority: "whether stable alignment or the controlled next step is supported.",
+				},
+			},
 			AllowedInputs: []string{
 				"exact `unit_stable_verify:{unit}` target.",
 				"stable unit truth, stable appendices owned by the unit, rules, and repository mapping snapshot.",
@@ -262,6 +308,16 @@ func configsByPack() map[string]packConfig {
 			RequiresProcess: true,
 			ReviewTitle:     "Freshness Text-Drift Reuse Review",
 			ReviewGoal:      "Decide whether text-only drift can reuse existing process evidence.",
+			ReviewStandardRefs: []reviewStandardRef{
+				{
+					Ref:       "framework/core/independent_evaluation.md",
+					Authority: "reviewer isolation, legal reviewer outputs, freshness receipt rules, and anti-patterns.",
+				},
+				{
+					Ref:       "framework/core/freshness.md",
+					Authority: "whether text drift may safely reuse existing process evidence.",
+				},
+			},
 			AllowedInputs: []string{
 				"current truth or spec file.",
 				"prior process evidence being reused.",
@@ -410,11 +466,14 @@ func renderRequest(options Options, config packConfig, processFile, requestFile 
 	writeField(&b, "request_file", requestFile)
 	writeField(&b, "created_at", options.Now.UTC().Format("2006-01-02T15:04:05Z"))
 	b.WriteString("\n## Reviewer Role\n\n")
-	b.WriteString("You are the independent reviewer for this request. Do not modify repository files. Read only the files listed in Review File Refs and the reviewer pack details in this request.\n\n")
+	b.WriteString("You are the independent reviewer for this request. Do not modify repository files. Read only the files listed in Review Standard Refs, Review File Refs, and the reviewer pack details in this request.\n\n")
+	b.WriteString("Use Review Standard Refs as the authoritative review criteria, not only as input files.\n\n")
 	b.WriteString("Use Review Evidence Refs only to judge whether the recorded evidence is sufficient and traceable; do not treat every evidence ref as a readable file.\n\n")
 	b.WriteString("## Review Goal\n\n")
 	b.WriteString(config.ReviewGoal)
-	b.WriteString("\n\n## Allowed Inputs\n\n")
+	b.WriteString("\n\n## Review Standard Refs\n\n")
+	writeStandardRefs(&b, config.ReviewStandardRefs)
+	b.WriteString("\n## Allowed Inputs\n\n")
 	writeBullets(&b, config.AllowedInputs)
 	b.WriteString("\n## Forbidden Inputs\n\n")
 	writeBullets(&b, config.ForbiddenInputs)
@@ -445,6 +504,20 @@ func renderRequest(options Options, config packConfig, processFile, requestFile 
 	b.WriteString(trigger)
 	b.WriteString("\n")
 	return b.String()
+}
+
+func writeStandardRefs(b *strings.Builder, refs []reviewStandardRef) {
+	if len(refs) == 0 {
+		b.WriteString("- none\n")
+		return
+	}
+	for _, ref := range refs {
+		b.WriteString("- `")
+		b.WriteString(ref.Ref)
+		b.WriteString("`: ")
+		b.WriteString(ref.Authority)
+		b.WriteString("\n")
+	}
 }
 
 func writeBullets(b *strings.Builder, items []string) {

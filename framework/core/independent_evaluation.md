@@ -22,6 +22,8 @@ docs/specs/_independent_evaluation/requests/unit/{unit}/{reviewer_pack}.md
 ```
 
 The request file is a handoff instruction. It is not lifecycle evidence and is not consumed by `command close`.
+The request file distinguishes review standard refs, review file refs, and review evidence refs.
+Review standard refs are the authoritative criteria for the reviewer decision.
 
 After the request file exists:
 
@@ -68,6 +70,11 @@ The reviewer reads only:
 
 ### `unit_check_pass`
 
+Review Standard Refs:
+
+1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.
+2. `framework/lifecycle/unit_check.md` - whether candidate truth is clear enough to become planning input.
+
 Allowed Inputs:
 
 1. user goal or exact `unit_check:{unit}` target.
@@ -94,6 +101,11 @@ pass | blocked | needs_human_decision
 ```
 
 ### `unit_plan_plan_ready`
+
+Review Standard Refs:
+
+1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.
+2. `framework/lifecycle/unit_plan.md` - whether the active plan is ready to serve as the implementation handoff.
 
 Allowed Inputs:
 
@@ -123,6 +135,11 @@ pass | blocked | needs_human_decision
 
 ### `unit_verify_ready_to_promote`
 
+Review Standard Refs:
+
+1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.
+2. `framework/lifecycle/unit_verify.md` - whether verification evidence is sufficient for promotion readiness.
+
 Allowed Inputs:
 
 1. user goal or exact `unit_verify:{unit}` target.
@@ -151,6 +168,11 @@ pass | blocked | needs_human_decision
 
 ### `unit_stable_verify_advancing`
 
+Review Standard Refs:
+
+1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.
+2. `framework/lifecycle/unit_stable_verify.md` - whether stable alignment or the controlled next step is supported.
+
 Allowed Inputs:
 
 1. exact `unit_stable_verify:{unit}` target.
@@ -178,6 +200,11 @@ pass | blocked | needs_human_decision
 ```
 
 ### `freshness_text_drift_reuse`
+
+Review Standard Refs:
+
+1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, freshness receipt rules, and anti-patterns.
+2. `framework/core/freshness.md` - whether text drift may safely reuse existing process evidence.
 
 Allowed Inputs:
 

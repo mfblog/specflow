@@ -41,6 +41,9 @@ func TestCreateFreshnessTextDriftRequestRendersFreshnessReceipt(t *testing.T) {
 
 	request := mustReadFile(t, filepath.Join(repoRoot, filepath.FromSlash(result.RequestFile)))
 	for _, phrase := range []string{
+		"## Review Standard Refs",
+		"`framework/core/independent_evaluation.md`: reviewer isolation, legal reviewer outputs, freshness receipt rules, and anti-patterns.",
+		"`framework/core/freshness.md`: whether text drift may safely reuse existing process evidence.",
 		"## Allowed Inputs",
 		"current truth or spec file.",
 		"## Forbidden Inputs",
@@ -82,6 +85,7 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 		name         string
 		pack         string
 		lifecycleRef string
+		standard     string
 		allowed      string
 		forbidden    string
 		question     string
@@ -91,6 +95,7 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 			name:         "check",
 			pack:         PackUnitCheckPass,
 			lifecycleRef: "framework/lifecycle/unit_check.md",
+			standard:     "`framework/lifecycle/unit_check.md`: whether candidate truth is clear enough to become planning input.",
 			allowed:      "candidate unit truth, candidate appendices owned by the unit, stable truth, and rules.",
 			forbidden:    "implementation plan drafts.",
 			question:     "Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for planning?",
@@ -109,6 +114,7 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 			name:         "plan",
 			pack:         PackUnitPlanPlanReady,
 			lifecycleRef: "framework/lifecycle/unit_plan.md",
+			standard:     "`framework/lifecycle/unit_plan.md`: whether the active plan is ready to serve as the implementation handoff.",
 			allowed:      "active plan under review.",
 			forbidden:    "implementation work not authorized by the active plan.",
 			question:     "Does the plan cover every accepted acceptance item?",
@@ -128,6 +134,7 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 			name:         "verify",
 			pack:         PackUnitVerifyReadyToPromote,
 			lifecycleRef: "framework/lifecycle/unit_verify.md",
+			standard:     "`framework/lifecycle/unit_verify.md`: whether verification evidence is sufficient for promotion readiness.",
 			allowed:      "verify result under review.",
 			forbidden:    "unrecorded executor claims that tests passed.",
 			question:     "Does the verify result cover every executable acceptance item?",
@@ -148,6 +155,7 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 			name:         "stable verify",
 			pack:         PackUnitStableVerifyAdvancing,
 			lifecycleRef: "framework/lifecycle/unit_stable_verify.md",
+			standard:     "`framework/lifecycle/unit_stable_verify.md`: whether stable alignment or the controlled next step is supported.",
 			allowed:      "stable unit truth, stable appendices owned by the unit, rules, and repository mapping snapshot.",
 			forbidden:    "executor preference for aligned, controlled repair, or controlled change outcomes.",
 			question:     "Does current implementation align with stable truth, or does the stored decision correctly identify the controlled next step?",
@@ -190,6 +198,9 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 				t.Fatalf("request file missing lifecycle owner ref %s:\n%s", tc.lifecycleRef, request)
 			}
 			for _, phrase := range []string{
+				"## Review Standard Refs",
+				"`framework/core/independent_evaluation.md`: reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
+				tc.standard,
 				"## Allowed Inputs",
 				tc.allowed,
 				"## Forbidden Inputs",

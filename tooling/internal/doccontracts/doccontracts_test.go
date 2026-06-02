@@ -1141,6 +1141,7 @@ func TestIndependentEvaluationDefinesFixedReviewerPacks(t *testing.T) {
 	for _, phrase := range []string{
 		"## Minimal Context",
 		"## Reviewer Packs",
+		"Review Standard Refs:",
 		"Allowed Inputs:",
 		"Forbidden Inputs:",
 		"Evaluation Questions:",
