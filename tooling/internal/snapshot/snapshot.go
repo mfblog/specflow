@@ -81,6 +81,20 @@ type RetirementEvidenceEntry struct {
 	EvidenceRefs       string
 }
 
+type PlannedChangeScopeEntry struct {
+	ID                 string
+	BasisRefs          string
+	AcceptanceItemIDs  string
+	ImplementationRefs string
+	VerificationAction string
+}
+
+type PackageDeltaVerificationEntry struct {
+	PlannedChangeScopeID string
+	Result               string
+	EvidenceRefs         string
+}
+
 type Snapshot struct {
 	ObjectType                    string
 	Object                        string
@@ -123,13 +137,15 @@ type ProcessSnapshotData struct {
 	AcceptanceBehaviorFingerprint string
 	ModuleAppendixSnapshot        []AppendixEntry
 	RepositoryMapping             RepositoryMappingEntry
-	ModuleSnapshot                []ObjectSnapshotEntry
+	UnitSnapshot                []ObjectSnapshotEntry
 	RuleSnapshot                  []RuleEntry
 	AcceptanceItemSet             []AcceptanceItemEntry
 	AcceptancePlanCoverage        []AcceptancePlanCoverageEntry
 	AcceptanceEvidence            []AcceptanceEvidenceEntry
 	RetirementTargets             []RetirementTargetEntry
 	RetirementEvidence            []RetirementEvidenceEntry
+	PlannedChangeScope            []PlannedChangeScopeEntry
+	PackageDeltaVerification      []PackageDeltaVerificationEntry
 }
 
 const (
@@ -185,6 +201,7 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"acceptance_behavior_fingerprint",
 		"acceptance_item_set",
 		"unit_appendix_snapshot",
+		"unit_snapshot",
 		"rule_snapshot",
 	),
 	"plan": withIndependentEvaluationReceipt(
@@ -195,9 +212,14 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"stable_candidate_diff_refs",
 		"implementation_gap_refs",
 		"unit_appendix_snapshot",
+		"unit_snapshot",
 		"rule_snapshot",
 		"acceptance_item_plan_coverage",
 		"retirement_targets",
+		"planned_change_scope",
+		"package_constraint_review",
+		"package_constraint_refs",
+		"package_constraint_summary",
 	),
 	"verify": withIndependentEvaluationReceipt(
 		"object_type",
@@ -215,12 +237,13 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"acceptance_behavior_fingerprint",
 		"acceptance_item_set",
 		"unit_appendix_snapshot",
-		"verification_scope_ref",
+		"unit_snapshot",
 		"active_plan_file_ref",
 		"active_plan_fingerprint",
 		"rule_snapshot",
 		"acceptance_item_evidence_matrix",
 		"retirement_evidence_matrix",
+		"package_delta_verification",
 	),
 	"stable_verify": withIndependentEvaluationReceipt(
 		"object_type",
@@ -281,6 +304,12 @@ var allowedMainlineDependencyResults = map[string]bool{
 	"not_required":   true,
 	"still_required": true,
 	"unknown":        true,
+}
+
+var allowedPackageDeltaVerificationResults = map[string]bool{
+	"pass":        true,
+	"fail":        true,
+	"not_checked": true,
 }
 
 var allowedVerificationSurfaces = map[string]bool{
@@ -552,7 +581,7 @@ func stableVerifyIntentGuardValid(repoRoot, objectType, object string, processDa
 	if normalizeAppendixList(processData.ModuleAppendixSnapshot) != normalizeAppendixList(expected.ModuleAppendixSnapshot) {
 		return false
 	}
-	if normalizeObjectSnapshotList(processData.ModuleSnapshot) != normalizeObjectSnapshotList(expected.UnitSnapshot) {
+	if normalizeObjectSnapshotList(processData.UnitSnapshot) != normalizeObjectSnapshotList(expected.UnitSnapshot) {
 		return false
 	}
 	return true
@@ -693,6 +722,14 @@ func validateProcessFileForObject(repoRoot, objectType, object, processKind stri
 				result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_appendix_snapshot mismatch: actual=%s expected=%s", actualAppendix, expectedAppendix))
 			}
 		}
+		if actual.modulePresent || actual.scalars["unit_snapshot"] != "" {
+			actualUnits := normalizeObjectSnapshotList(actual.moduleEntries)
+			expectedUnits := normalizeObjectSnapshotList(expected.UnitSnapshot)
+			if actualUnits != expectedUnits {
+				result.Valid = false
+				result.Mismatches = append(result.Mismatches, fmt.Sprintf("unit_snapshot mismatch: actual=%s expected=%s", actualUnits, expectedUnits))
+			}
+		}
 		if _, ok := actual.scalars["rule_snapshot"]; ok || actual.sharedPresent {
 			actualShared := normalizeSharedList(actual.sharedEntries)
 			expectedShared := normalizeSharedList(expected.RuleSnapshot)
@@ -704,6 +741,8 @@ func validateProcessFileForObject(repoRoot, objectType, object, processKind stri
 		validateAcceptancePlanCoverage(&result, actual, expected.AcceptanceItemSet)
 		validatePlanReferenceFields(repoRoot, &result, actual, expected)
 		validateRetirementTargets(repoRoot, &result, actual, expected)
+		validatePackageConstraintReview(&result, actual, expected)
+		validatePlannedChangeScope(repoRoot, &result, actual, expected)
 		finalizeValidationResult(&result, actual)
 		return result, nil
 	}
@@ -733,7 +772,15 @@ func validateProcessFileForObject(repoRoot, objectType, object, processKind stri
 	if processKind == "verify" {
 		validateAcceptanceEvidenceMatrix(&result, actual, expected.AcceptanceItemSet, true)
 		validateActivePlanBinding(repoRoot, &result, actual, expected)
-		validateRetirementEvidence(repoRoot, &result, actual, expected)
+				planParsed, planErr := parseActivePlan(repoRoot, expected.Object)
+				var targetEntries []RetirementTargetEntry
+				var plannedEntries []PlannedChangeScopeEntry
+				if planErr == nil {
+					targetEntries, _ = retirementTargetEntriesFromParsed(planParsed)
+					plannedEntries, _ = plannedChangeScopeEntriesFromParsed(planParsed)
+				}
+				validateRetirementEvidence(repoRoot, &result, actual, expected, targetEntries)
+				validatePackageDeltaVerification(repoRoot, &result, actual, expected, plannedEntries)
 	}
 
 	if actual.scalars["unit_appendix_snapshot"] != "" || actual.appendixPresent {
@@ -1086,7 +1133,7 @@ func LoadProcessSnapshot(repoRoot, objectType, object, processKind string) (Proc
 		Scalars:                       scalars,
 		AcceptanceBehaviorFingerprint: scalars["acceptance_behavior_fingerprint"],
 		ModuleAppendixSnapshot:        append([]AppendixEntry(nil), parsed.appendixEntries...),
-		ModuleSnapshot:                append([]ObjectSnapshotEntry(nil), parsed.moduleEntries...),
+		UnitSnapshot:                append([]ObjectSnapshotEntry(nil), parsed.moduleEntries...),
 		RuleSnapshot:                  append([]RuleEntry(nil), parsed.sharedEntries...),
 		RepositoryMapping:             parsed.repositoryMapping,
 		AcceptanceItemSet:             append([]AcceptanceItemEntry(nil), parsed.acceptanceItemEntries...),
@@ -1094,6 +1141,8 @@ func LoadProcessSnapshot(repoRoot, objectType, object, processKind string) (Proc
 		AcceptanceEvidence:            append([]AcceptanceEvidenceEntry(nil), parsed.acceptanceEvidenceEntries...),
 		RetirementTargets:             append([]RetirementTargetEntry(nil), parsed.retirementTargetEntries...),
 		RetirementEvidence:            append([]RetirementEvidenceEntry(nil), parsed.retirementEvidenceEntries...),
+		PlannedChangeScope:            append([]PlannedChangeScopeEntry(nil), parsed.plannedChangeEntries...),
+		PackageDeltaVerification:      append([]PackageDeltaVerificationEntry(nil), parsed.packageDeltaEntries...),
 	}, nil
 }
 
@@ -1675,6 +1724,10 @@ type processSnapshot struct {
 	retirementTargetPresent   bool
 	retirementEvidenceEntries []RetirementEvidenceEntry
 	retirementEvidencePresent bool
+	plannedChangeEntries      []PlannedChangeScopeEntry
+	plannedChangePresent      bool
+	packageDeltaEntries       []PackageDeltaVerificationEntry
+	packageDeltaPresent       bool
 	invalidFields             []string
 }
 
@@ -1732,6 +1785,12 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 					currentList = key
 				case "retirement_evidence_matrix":
 					result.retirementEvidencePresent = true
+					currentList = key
+				case "planned_change_scope":
+					result.plannedChangePresent = true
+					currentList = key
+				case "package_delta_verification":
+					result.packageDeltaPresent = true
 					currentList = key
 				}
 				continue
@@ -1801,6 +1860,18 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 					currentIndex = len(result.retirementEvidenceEntries) - 1
 				}
 				assignRetirementEvidenceField(&result.retirementEvidenceEntries[currentIndex], key, value)
+			case "planned_change_scope":
+				if currentIndex < 0 || (listItemStart && key == "id") {
+					result.plannedChangeEntries = append(result.plannedChangeEntries, PlannedChangeScopeEntry{})
+					currentIndex = len(result.plannedChangeEntries) - 1
+				}
+				assignPlannedChangeScopeField(&result.plannedChangeEntries[currentIndex], key, value)
+			case "package_delta_verification":
+				if currentIndex < 0 || (listItemStart && key == "planned_change_scope_id") {
+					result.packageDeltaEntries = append(result.packageDeltaEntries, PackageDeltaVerificationEntry{})
+					currentIndex = len(result.packageDeltaEntries) - 1
+				}
+				assignPackageDeltaVerificationField(&result.packageDeltaEntries[currentIndex], key, value)
 			}
 		}
 	}
@@ -1840,6 +1911,14 @@ func parseProcessSnapshot(content string) (processSnapshot, error) {
 	if raw, ok := result.scalars["retirement_evidence_matrix"]; ok && raw == "none" {
 		result.retirementEvidencePresent = true
 		result.retirementEvidenceEntries = nil
+	}
+	if raw, ok := result.scalars["planned_change_scope"]; ok && raw == "none" {
+		result.plannedChangePresent = true
+		result.plannedChangeEntries = nil
+	}
+	if raw, ok := result.scalars["package_delta_verification"]; ok && raw == "none" {
+		result.packageDeltaPresent = true
+		result.packageDeltaEntries = nil
 	}
 	return result, nil
 }
@@ -2007,6 +2086,32 @@ func assignRetirementEvidenceField(entry *RetirementEvidenceEntry, key, value st
 	}
 }
 
+func assignPlannedChangeScopeField(entry *PlannedChangeScopeEntry, key, value string) {
+	switch key {
+	case "id":
+		entry.ID = value
+	case "basis_refs":
+		entry.BasisRefs = value
+	case "acceptance_item_ids":
+		entry.AcceptanceItemIDs = value
+	case "implementation_refs":
+		entry.ImplementationRefs = value
+	case "verification_action":
+		entry.VerificationAction = value
+	}
+}
+
+func assignPackageDeltaVerificationField(entry *PackageDeltaVerificationEntry, key, value string) {
+	switch key {
+	case "planned_change_scope_id":
+		entry.PlannedChangeScopeID = value
+	case "result":
+		entry.Result = value
+	case "evidence_refs":
+		entry.EvidenceRefs = value
+	}
+}
+
 func compareScalar(result *ValidationResult, field, actual, expected string) {
 	if actual == "" {
 		return
@@ -2127,6 +2232,169 @@ func validatePlanReferenceFields(repoRoot string, result *ValidationResult, actu
 	if gapRefs != "none" {
 		validateRepositoryRelativeExistingRefs(repoRoot, result, "implementation_gap_refs", splitProcessRefList(gapRefs))
 	}
+}
+
+func validatePackageConstraintReview(result *ValidationResult, actual processSnapshot, expected Snapshot) {
+	compareScalar(result, "package_constraint_review", actual.scalars["package_constraint_review"], "pass")
+	rawRefs := strings.TrimSpace(actual.scalars["package_constraint_refs"])
+	if rawRefs == "" {
+			result.Valid = false
+                     result.Mismatches = append(result.Mismatches,
+  "package_constraint_refs must not be empty")
+		return
+	}
+	if rawRefs == "none" {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "package_constraint_refs must cite package refs")
+		return
+	}
+	if !validateNoneOrRefList(result, "package_constraint_refs", rawRefs) {
+		return
+	}
+	validatePackageBasisRefs(result, "package_constraint_refs", splitProcessRefList(rawRefs), expected)
+}
+
+func validatePlannedChangeScope(repoRoot string, result *ValidationResult, actual processSnapshot, expected Snapshot) {
+	entries, err := plannedChangeScopeEntriesFromParsed(actual)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "planned_change_scope invalid: "+err.Error())
+		return
+	}
+	if len(entries) == 0 {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "planned_change_scope must contain at least one pcs.<slug> item")
+		return
+	}
+	expectedAcceptanceIDs := acceptanceItemIDSet(expected.AcceptanceItemSet)
+	seen := map[string]bool{}
+	for _, entry := range entries {
+		if seen[entry.ID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("planned_change_scope duplicate id: %s", entry.ID))
+			continue
+		}
+		seen[entry.ID] = true
+		if !strings.HasPrefix(entry.ID, "pcs.") || strings.TrimSpace(strings.TrimPrefix(entry.ID, "pcs.")) == "" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("planned_change_scope id must use pcs.<slug>: %s", entry.ID))
+		}
+		if strings.TrimSpace(entry.VerificationAction) == "" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("planned_change_scope verification_action for %s must not be empty", entry.ID))
+		}
+		basisRefs := strings.TrimSpace(entry.BasisRefs)
+		if basisRefs == "" || basisRefs == "none" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("planned_change_scope basis_refs for %s must cite package refs", entry.ID))
+		} else if validateNoneOrRefList(result, "planned_change_scope basis_refs for "+entry.ID, basisRefs) {
+			validatePackageBasisRefs(result, "planned_change_scope basis_refs for "+entry.ID, splitProcessRefList(basisRefs), expected)
+		}
+		acceptanceIDs, err := splitCommaSeparatedField(entry.AcceptanceItemIDs)
+		if err != nil {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("planned_change_scope acceptance_item_ids invalid for %s: %v", entry.ID, err))
+		} else {
+			seenAcceptanceIDs := map[string]bool{}
+			for _, id := range acceptanceIDs {
+				if seenAcceptanceIDs[id] {
+					result.Valid = false
+					result.Mismatches = append(result.Mismatches, fmt.Sprintf("planned_change_scope duplicate acceptance_item_ids for %s: %s", entry.ID, id))
+					continue
+				}
+				seenAcceptanceIDs[id] = true
+				if !expectedAcceptanceIDs[id] {
+					result.Valid = false
+					result.Mismatches = append(result.Mismatches, fmt.Sprintf("planned_change_scope unknown acceptance_item_ids for %s: %s", entry.ID, id))
+				}
+			}
+		}
+		implementationRefs := strings.TrimSpace(entry.ImplementationRefs)
+		if implementationRefs == "" || implementationRefs == "none" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("planned_change_scope implementation_refs for %s must cite durable refs", entry.ID))
+		} else if validateNoneOrRefList(result, "planned_change_scope implementation_refs for "+entry.ID, implementationRefs) {
+			validateRepositoryRelativeExistingRefs(repoRoot, result, "planned_change_scope implementation_refs for "+entry.ID, splitProcessRefList(implementationRefs))
+		}
+	}
+}
+
+func validatePackageDeltaVerification(repoRoot string, result *ValidationResult, actual processSnapshot, expected Snapshot, plannedEntries []PlannedChangeScopeEntry) {
+	actualEntries, err := packageDeltaVerificationEntriesFromParsed(actual)
+	if err != nil {
+		result.Valid = false
+		result.Mismatches = append(result.Mismatches, "package_delta_verification invalid: "+err.Error())
+		return
+	}
+	expectedIDs := map[string]bool{}
+	for _, entry := range plannedEntries {
+		expectedIDs[entry.ID] = true
+	}
+	actualIDs := map[string]bool{}
+	for _, entry := range actualEntries {
+		if actualIDs[entry.PlannedChangeScopeID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("package_delta_verification duplicate planned_change_scope_id: %s", entry.PlannedChangeScopeID))
+			continue
+		}
+		actualIDs[entry.PlannedChangeScopeID] = true
+		if !expectedIDs[entry.PlannedChangeScopeID] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("package_delta_verification unknown planned_change_scope_id: %s", entry.PlannedChangeScopeID))
+			continue
+		}
+		if !allowedPackageDeltaVerificationResults[entry.Result] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("package_delta_verification invalid result for %s: %s", entry.PlannedChangeScopeID, entry.Result))
+		}
+		if entry.Result != "pass" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("package_delta_verification result for %s must be pass", entry.PlannedChangeScopeID))
+		}
+		if strings.TrimSpace(entry.EvidenceRefs) == "" || strings.TrimSpace(entry.EvidenceRefs) == "none" {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("package_delta_verification evidence_refs for %s must be durable refs", entry.PlannedChangeScopeID))
+		}
+	}
+	for id := range expectedIDs {
+		if !actualIDs[id] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("package_delta_verification missing planned_change_scope_id: %s", id))
+		}
+	}
+}
+
+func validatePackageBasisRefs(result *ValidationResult, field string, refs []string, expected Snapshot) {
+	allowed := packageBasisRefSet(expected)
+	for _, ref := range refs {
+		if !allowed[ref] {
+			result.Valid = false
+			result.Mismatches = append(result.Mismatches, fmt.Sprintf("%s unknown package ref: %s", field, ref))
+		}
+	}
+}
+
+func packageBasisRefSet(expected Snapshot) map[string]bool {
+	refs := map[string]bool{}
+	if expected.SpecFileRef != "" {
+		refs[expected.SpecFileRef] = true
+	}
+	for _, entry := range expected.ModuleAppendixSnapshot {
+		if entry.FileRef != "" {
+			refs[entry.FileRef] = true
+		}
+	}
+	for _, entry := range expected.UnitSnapshot {
+		if entry.FileRef != "" {
+			refs[entry.FileRef] = true
+		}
+	}
+	for _, entry := range expected.RuleSnapshot {
+		if entry.FileRef != "" {
+			refs[entry.FileRef] = true
+		}
+	}
+	return refs
 }
 
 func validateNoneOrRefList(result *ValidationResult, field, value string) bool {
@@ -2352,13 +2620,7 @@ func validateActivePlanBinding(repoRoot string, result *ValidationResult, actual
 	compareScalar(result, "active_plan_fingerprint", actual.scalars["active_plan_fingerprint"], expectedFingerprint)
 }
 
-func validateRetirementEvidence(repoRoot string, result *ValidationResult, actual processSnapshot, expected Snapshot) {
-	targetEntries, err := activePlanRetirementTargets(repoRoot, expected.Object)
-	if err != nil {
-		result.Valid = false
-		result.Mismatches = append(result.Mismatches, "retirement_evidence_matrix active plan retirement_targets invalid: "+err.Error())
-		return
-	}
+func validateRetirementEvidence(repoRoot string, result *ValidationResult, actual processSnapshot, expected Snapshot, targetEntries []RetirementTargetEntry) {
 	actualEntries, err := retirementEvidenceEntriesFromParsed(actual)
 	if err != nil {
 		result.Valid = false
@@ -2548,6 +2810,76 @@ func retirementEvidenceEntriesFromParsed(parsed processSnapshot) ([]RetirementEv
 		return items[i].ID < items[j].ID
 	})
 	return items, nil
+}
+
+func plannedChangeScopeEntriesFromParsed(parsed processSnapshot) ([]PlannedChangeScopeEntry, error) {
+	if raw, ok := parsed.scalars["planned_change_scope"]; ok {
+		if raw != "none" {
+			return nil, fmt.Errorf("must be literal none or a list")
+		}
+		return nil, nil
+	}
+	if !parsed.plannedChangePresent {
+		return nil, nil
+	}
+	items := append([]PlannedChangeScopeEntry(nil), parsed.plannedChangeEntries...)
+	if len(items) == 0 {
+		return nil, fmt.Errorf("must be a non-empty list")
+	}
+	for _, item := range items {
+		if strings.TrimSpace(item.ID) == "" ||
+			strings.TrimSpace(item.BasisRefs) == "" ||
+			strings.TrimSpace(item.AcceptanceItemIDs) == "" ||
+			strings.TrimSpace(item.ImplementationRefs) == "" ||
+			strings.TrimSpace(item.VerificationAction) == "" {
+			return nil, fmt.Errorf("each item must include id, basis_refs, acceptance_item_ids, implementation_refs, and verification_action")
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].ID < items[j].ID
+	})
+	return items, nil
+}
+
+func packageDeltaVerificationEntriesFromParsed(parsed processSnapshot) ([]PackageDeltaVerificationEntry, error) {
+	if raw, ok := parsed.scalars["package_delta_verification"]; ok {
+		if raw != "none" {
+			return nil, fmt.Errorf("must be literal none or a list")
+		}
+		return nil, nil
+	}
+	if !parsed.packageDeltaPresent {
+		return nil, nil
+	}
+	items := append([]PackageDeltaVerificationEntry(nil), parsed.packageDeltaEntries...)
+	if len(items) == 0 {
+		return nil, fmt.Errorf("must be a non-empty list")
+	}
+	for _, item := range items {
+		if strings.TrimSpace(item.PlannedChangeScopeID) == "" ||
+			strings.TrimSpace(item.Result) == "" ||
+			strings.TrimSpace(item.EvidenceRefs) == "" {
+			return nil, fmt.Errorf("each item must include planned_change_scope_id, result, and evidence_refs")
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].PlannedChangeScopeID < items[j].PlannedChangeScopeID
+	})
+	return items, nil
+}
+
+
+func parseActivePlan(repoRoot, object string) (processSnapshot, error) {
+	planRef := ActivePlanFilePath(object)
+	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(planRef)))
+	if err != nil {
+		return processSnapshot{}, fmt.Errorf("read %s: %w", planRef, err)
+	}
+	parsed, err := parseProcessSnapshot(string(content))
+	if err != nil {
+		return processSnapshot{}, fmt.Errorf("%s: %w", planRef, err)
+	}
+	return parsed, nil
 }
 
 func activePlanRetirementTargets(repoRoot, object string) ([]RetirementTargetEntry, error) {

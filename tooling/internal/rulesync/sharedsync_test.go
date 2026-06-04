@@ -1877,7 +1877,6 @@ func renderModuleProcessSnapshotForTest(t *testing.T, repoRoot, processKind, mod
 		"human_decision_refs: none",
 	}
 	if processKind == "verify" {
-		scalars = append(scalars, "verification_scope_ref: current candidate")
 	}
 	appendixLines := []string{}
 	for _, entry := range appendixEntries {
@@ -1899,6 +1898,7 @@ func renderModuleProcessSnapshotForTest(t *testing.T, repoRoot, processKind, mod
 	lists := [][]string{
 		append([]string{"acceptance_item_set: "}, prefixNestedList(acceptanceItemSnapshotFixtureLines(module))...),
 		append([]string{"unit_appendix_snapshot: " + noneOrBlank(appendixLines)}, prefixNestedList(appendixLines)...),
+		{"unit_snapshot: none"},
 		append([]string{"rule_snapshot: " + noneOrBlank(sharedLines)}, prefixNestedList(sharedLines)...),
 	}
 	if processKind == "verify" {

@@ -519,6 +519,7 @@ func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
 	lines = append(lines, renderImpactAcceptanceItemSet(snap.AcceptanceItemSet)...)
 	lines = append(lines,
 		"unit_appendix_snapshot: none",
+		"unit_snapshot: none",
 		"rule_snapshot:",
 	)
 	for _, entry := range snap.RuleSnapshot {
@@ -580,6 +581,7 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 		"stable_candidate_diff_refs: none",
 		"implementation_gap_refs: docs/specs/repository_mapping.md",
 		"unit_appendix_snapshot: none",
+		"unit_snapshot: none",
 		"rule_snapshot:",
 		"  - rule_id: " + snap.RuleSnapshot[0].RuleID,
 		"    layer: " + snap.RuleSnapshot[0].Layer,
@@ -589,6 +591,17 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 	}
 	lines = append(lines, renderImpactAcceptancePlanCoverage(snap.AcceptanceItemSet)...)
 	lines = append(lines, "retirement_targets: none")
+	lines = append(lines,
+		"planned_change_scope:",
+		"  - id: pcs.core",
+		"    basis_refs: "+snap.SpecFileRef,
+		"    acceptance_item_ids: "+renderImpactAcceptanceIDsCSV(snap.AcceptanceItemSet),
+		"    implementation_refs: docs/specs/repository_mapping.md",
+		"    verification_action: verify package-aware delta",
+		"package_constraint_review: pass",
+		"package_constraint_refs: "+snap.SpecFileRef,
+		"package_constraint_summary: current package constraints reviewed for this delta",
+	)
 	lines = append(lines, renderImpactIndependentEvaluationReceipt(snap.Object, "unit_plan_plan_ready", snap.SpecFileRef)...)
 	lines = append(lines,
 		"```",
@@ -625,6 +638,17 @@ func renderImpactAcceptancePlanCoverage(entries []snapshot.AcceptanceItemEntry) 
 		)
 	}
 	return lines
+}
+
+func renderImpactAcceptanceIDsCSV(entries []snapshot.AcceptanceItemEntry) string {
+	ids := []string{}
+	for _, entry := range entries {
+		ids = append(ids, entry.ID)
+	}
+	if len(ids) == 0 {
+		return "none"
+	}
+	return strings.Join(ids, ",")
 }
 
 func renderImpactRuleSnapshot(entries []snapshot.RuleEntry) []string {

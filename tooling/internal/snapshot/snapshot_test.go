@@ -613,6 +613,7 @@ func TestValidateProcessFileRejectsMissingRequiredSnapshotField(t *testing.T) {
 		"truth_file_ref: docs/specs/units/candidate/c_unit_demo.md",
 		"truth_version_ref: c_unit_demo@0.1.0",
 		"unit_appendix_snapshot: none",
+		"unit_snapshot: none",
 		"rule_snapshot: none",
 	}, "\n"))
 
@@ -866,6 +867,7 @@ layer: candidate
 		"- `unit_appendix_snapshot`:",
 		"  - `file_ref`: `" + expected.ModuleAppendixSnapshot[0].FileRef + "`",
 		"  - `fingerprint`: `" + expected.ModuleAppendixSnapshot[0].Fingerprint + "`",
+		"- `unit_snapshot`: `none`",
 		"- `rule_snapshot`: `none`",
 		"- `evaluation_mode`: `independent`",
 		"- `reviewer_result`: `pass`",
@@ -943,6 +945,7 @@ layer: candidate
 		"  - file_ref: " + expected.ModuleAppendixSnapshot[0].FileRef,
 		"    " + unsupportedField + ": c_unit_demo_prompt",
 		"    fingerprint: " + expected.ModuleAppendixSnapshot[0].Fingerprint,
+		"unit_snapshot: none",
 		"rule_snapshot: none",
 		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_check_pass", expected.SpecFileRef),
 	}, "\n"))
@@ -1414,6 +1417,89 @@ func TestValidateProcessFileRejectsPlanMissingRetirementTargets(t *testing.T) {
 	}
 	if !containsMismatch(result.Mismatches, "missing required field: retirement_targets") {
 		t.Fatalf("expected missing retirement targets mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsPlanMissingPlannedChangeScope(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	body := strings.Replace(renderFormalPlanProcessBody(expected), strings.Join([]string{
+		"planned_change_scope:",
+		"  - id: pcs.core",
+		"    basis_refs: " + expected.SpecFileRef,
+		"    acceptance_item_ids: " + renderAcceptanceIDsCSVForTest(expected.AcceptanceItemSet),
+		"    implementation_refs: docs/specs/repository_mapping.md",
+		"    verification_action: verify package-aware delta",
+	}, "\n")+"\n", "", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if !containsMismatch(result.Mismatches, "missing required field: planned_change_scope") {
+		t.Fatalf("expected missing planned_change_scope mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsPlanMissingPackageConstraintFields(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	body := renderFormalPlanProcessBody(expected)
+	for _, line := range []string{
+		"package_constraint_review: pass\n",
+		"package_constraint_refs: " + expected.SpecFileRef + "\n",
+		"package_constraint_summary: current package constraints reviewed for this delta\n",
+	} {
+		body = strings.Replace(body, line, "", 1)
+	}
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	for _, want := range []string{
+		"missing required field: package_constraint_review",
+		"missing required field: package_constraint_refs",
+		"missing required field: package_constraint_summary",
+	} {
+		if !containsMismatch(result.Mismatches, want) {
+			t.Fatalf("expected mismatch %q, got %+v", want, result.Mismatches)
+		}
+	}
+}
+
+func TestValidateProcessFileRejectsUnknownPackageConstraintRef(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+
+	body := strings.Replace(renderFormalPlanProcessBody(expected), "package_constraint_refs: "+expected.SpecFileRef, "package_constraint_refs: docs/specs/unknown.md", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if !containsMismatch(result.Mismatches, "package_constraint_refs unknown package ref: docs/specs/unknown.md") {
+		t.Fatalf("expected unknown package ref mismatch, got %+v", result.Mismatches)
 	}
 }
 
@@ -1955,6 +2041,77 @@ func TestValidateProcessFileRejectsVerifyMissingActivePlanBinding(t *testing.T) 
 	}
 	if !containsMismatch(result.Mismatches, "missing required field: active_plan_file_ref") {
 		t.Fatalf("expected active plan file ref mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsVerifyMissingPackageDeltaVerification(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), strings.Join([]string{
+		"package_delta_verification:",
+		"  - planned_change_scope_id: pcs.core",
+		"    result: pass",
+		"    evidence_refs: go test ./...",
+	}, "\n")+"\n", "", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if !containsMismatch(result.Mismatches, "missing required field: package_delta_verification") {
+		t.Fatalf("expected missing package_delta_verification mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsVerifyMissingPlannedChangeScopeEvidence(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "planned_change_scope_id: pcs.core", "planned_change_scope_id: pcs.other", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if !containsMismatch(result.Mismatches, "package_delta_verification missing planned_change_scope_id: pcs.core") {
+		t.Fatalf("expected missing planned change scope evidence mismatch, got %+v", result.Mismatches)
+	}
+}
+
+func TestValidateProcessFileRejectsVerifyPackageDeltaNotPass(t *testing.T) {
+	repoRoot := t.TempDir()
+	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
+
+	expected, err := RebuildCurrent(repoRoot, "demo")
+	if err != nil {
+		t.Fatalf("RebuildCurrent: %v", err)
+	}
+	activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "result: pass", "result: not_checked", 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
+
+	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
+	if err != nil {
+		t.Fatalf("ValidateProcessFile: %v", err)
+	}
+	if !containsMismatch(result.Mismatches, "package_delta_verification result for pcs.core must be pass") {
+		t.Fatalf("expected package delta result mismatch, got %+v", result.Mismatches)
 	}
 }
 
@@ -2672,7 +2829,10 @@ func renderFormalCheckProcessBody(expected Snapshot) string {
 		renderAcceptanceItemSetForTest(expected.AcceptanceItemSet),
 		"unit_appendix_snapshot:",
 		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
-		"rule_snapshot: none",
+		"unit_snapshot:",
+		renderObjectSnapshotLinesForTest(expected.UnitSnapshot),
+		"rule_snapshot:",
+		renderSharedLinesForTest(expected.RuleSnapshot),
 		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_check_pass", expected.SpecFileRef),
 	}, "\n")
 }
@@ -2687,10 +2847,22 @@ func renderFormalPlanProcessBody(expected Snapshot) string {
 		"implementation_gap_refs: docs/specs/repository_mapping.md",
 		"unit_appendix_snapshot:",
 		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
-		"rule_snapshot: none",
+		"unit_snapshot:",
+		renderObjectSnapshotLinesForTest(expected.UnitSnapshot),
+		"rule_snapshot:",
+		renderSharedLinesForTest(expected.RuleSnapshot),
 		"acceptance_item_plan_coverage:",
 		renderAcceptancePlanCoverageForTest(expected.AcceptanceItemSet),
 		"retirement_targets: none",
+		"planned_change_scope:",
+		"  - id: pcs.core",
+		"    basis_refs: " + expected.SpecFileRef,
+		"    acceptance_item_ids: " + renderAcceptanceIDsCSVForTest(expected.AcceptanceItemSet),
+		"    implementation_refs: docs/specs/repository_mapping.md",
+		"    verification_action: verify package-aware delta",
+		"package_constraint_review: pass",
+		"package_constraint_refs: " + expected.SpecFileRef,
+		"package_constraint_summary: current package constraints reviewed for this delta",
 		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_plan_plan_ready", expected.SpecFileRef),
 	}, "\n")
 }
@@ -2712,14 +2884,21 @@ func renderFormalVerifyProcessBody(expected Snapshot, activePlanFingerprint stri
 		"acceptance_behavior_fingerprint: " + expected.AcceptanceBehaviorFingerprint,
 		"acceptance_item_set:",
 		renderAcceptanceItemSetForTest(expected.AcceptanceItemSet),
-		"unit_appendix_snapshot: none",
-		"verification_scope_ref: current candidate",
+		"unit_appendix_snapshot:",
+		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
+		"unit_snapshot:",
+		renderObjectSnapshotLinesForTest(expected.UnitSnapshot),
 		"active_plan_file_ref: " + ActivePlanFilePath(expected.Object),
 		"active_plan_fingerprint: " + activePlanFingerprint,
-		"rule_snapshot: none",
+		"rule_snapshot:",
+		renderSharedLinesForTest(expected.RuleSnapshot),
 		"acceptance_item_evidence_matrix:",
 		renderAcceptanceEvidenceMatrixForTest(expected.AcceptanceItemSet),
 		"retirement_evidence_matrix: none",
+		"package_delta_verification:",
+		"  - planned_change_scope_id: pcs.core",
+		"    result: pass",
+		"    evidence_refs: go test ./...",
 		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_verify_ready_to_promote", expected.SpecFileRef),
 	}, "\n")
 }
@@ -2913,6 +3092,17 @@ func renderAcceptancePlanCoverageForTest(entries []AcceptanceItemEntry) string {
 		)
 	}
 	return strings.Join(lines, "\n")
+}
+
+func renderAcceptanceIDsCSVForTest(entries []AcceptanceItemEntry) string {
+	ids := []string{}
+	for _, entry := range entries {
+		ids = append(ids, entry.ID)
+	}
+	if len(ids) == 0 {
+		return "none"
+	}
+	return strings.Join(ids, ",")
 }
 
 func renderAcceptanceEvidenceMatrixForTest(entries []AcceptanceItemEntry) string {

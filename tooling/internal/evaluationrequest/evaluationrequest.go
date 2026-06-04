@@ -197,6 +197,7 @@ func configsByPack() map[string]packConfig {
 			},
 			EvaluationQuestions: []string{
 				"Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for planning?",
+				"Is the full unit package, including main Spec, owned appendices, unit dependencies, and applicable rules, clear and consistent enough for planning?",
 				"Are acceptance items testable without inventing behavior?",
 				"Does the check result match the candidate truth and evidence refs?",
 			},
@@ -221,7 +222,7 @@ func configsByPack() map[string]packConfig {
 				"user goal or exact `unit_plan:{unit}` target.",
 				"candidate unit truth, stable unit truth when it exists, and valid `_check_result/unit/{unit}.md`.",
 				"active plan under review.",
-				"plan acceptance coverage, stable-to-candidate diff, implementation-gap, and retirement-target criteria from `framework/lifecycle/unit_plan.md`.",
+				"plan acceptance coverage, stable-to-candidate diff, implementation-gap, planned-change-scope, package-constraint, and retirement-target criteria from `framework/lifecycle/unit_plan.md`.",
 			},
 			ForbiddenInputs: []string{
 				"implementation work not authorized by the active plan.",
@@ -233,6 +234,8 @@ func configsByPack() map[string]packConfig {
 				"When stable truth exists, does the plan cite and use the stable-to-candidate behavior diff instead of planning from the candidate name alone?",
 				"Does the plan cite the implementation refs inspected for current entry points, main paths, rendering/API/generation paths, and gaps?",
 				"For candidate_intent change with source_basis replacement, does the plan reject retirement_targets none and list the old structures, entries, primary paths, wrappers, compatibility layers, or dependencies that must stop being required?",
+				"Does the plan define this round's delta through planned_change_scope without requiring a whole-package implementation plan?",
+				"Does package_constraint_review show that the delta was planned under the full unit package constraints, without dropping relevant appendix, rule, unit dependency, or acceptance truth?",
 				"Does the plan stay inside checked truth and named implementation surfaces?",
 				"Can unit_impl execute without inventing behavior or ownership?",
 			},
@@ -257,7 +260,7 @@ func configsByPack() map[string]packConfig {
 				"user goal or exact `unit_verify:{unit}` target.",
 				"candidate unit truth, valid check result, and active plan.",
 				"verify result under review.",
-				"evidence refs needed to inspect acceptance coverage.",
+				"evidence refs needed to inspect acceptance coverage, retirement evidence, and package-aware delta verification.",
 			},
 			ForbiddenInputs: []string{
 				"unrecorded executor claims that tests passed.",
@@ -270,6 +273,7 @@ func configsByPack() map[string]packConfig {
 				"Does the verify result reject weak evidence as sufficient by itself, including generic test success, absent old strings, present new files, or present new fields?",
 				"For primary protocol, default page, primary presentation, API, or artifact-generation changes, does the evidence inspect real generated artifacts, API return values, DOM/screenshots, rendered text, CLI output, or tests proving the mainline path uses the candidate protocol?",
 				"Does the verify result prove every retirement target with pass and mainline_dependency not_required evidence?",
+				"Does package_delta_verification prove every planned_change_scope entry without violating appendix, rule, unit dependency, or acceptance truth?",
 				"Is the candidate ready for promotion without hiding unresolved gaps?",
 			},
 		},
@@ -362,7 +366,11 @@ func collectReviewRefs(options Options, config packConfig, processFile string, v
 	switch config.Pack {
 	case PackUnitPlanPlanReady:
 		fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
-		fileRefs = appendScalarRefs(fileRefs, processData, "implementation_gap_refs")
+		fileRefs = appendScalarRefs(fileRefs, processData, "implementation_gap_refs", "package_constraint_refs")
+		for _, entry := range processData.PlannedChangeScope {
+			fileRefs = appendSplitRefs(fileRefs, entry.BasisRefs)
+			fileRefs = appendSplitRefs(fileRefs, entry.ImplementationRefs)
+		}
 	case PackUnitVerifyReadyToPromote:
 		fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object), snapshot.ActivePlanFilePath(options.Object))
 		evidenceRefs = appendScalarRefs(evidenceRefs, processData, "evidence_refs")
@@ -370,6 +378,9 @@ func collectReviewRefs(options Options, config packConfig, processFile string, v
 			evidenceRefs = appendSplitRefs(evidenceRefs, entry.EvidenceRefs)
 		}
 		for _, entry := range processData.RetirementEvidence {
+			evidenceRefs = appendSplitRefs(evidenceRefs, entry.EvidenceRefs)
+		}
+		for _, entry := range processData.PackageDeltaVerification {
 			evidenceRefs = appendSplitRefs(evidenceRefs, entry.EvidenceRefs)
 		}
 	case PackUnitStableVerifyAdvancing:

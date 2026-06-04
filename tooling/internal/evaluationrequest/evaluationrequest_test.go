@@ -575,6 +575,7 @@ func writeCheckProcessWithoutReceipt(t *testing.T, repoRoot string, expected sna
 		"acceptance_item_set:",
 		renderAcceptanceItems(expected.AcceptanceItemSet),
 		"unit_appendix_snapshot: none",
+		"unit_snapshot: none",
 		"rule_snapshot: none",
 	}, "\n")+"\n```\n")
 }
@@ -598,6 +599,7 @@ func writeCheckProcess(t *testing.T, repoRoot string, expected snapshot.Snapshot
 		"acceptance_item_set:",
 		renderAcceptanceItems(expected.AcceptanceItemSet),
 		"unit_appendix_snapshot: none",
+		"unit_snapshot: none",
 		"rule_snapshot: none",
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
@@ -642,7 +644,8 @@ func writeVerifyProcessWithoutReceipt(t *testing.T, repoRoot string, expected sn
 		renderAcceptanceItems(expected.AcceptanceItemSet),
 		"unit_appendix_snapshot:",
 		renderAppendix(expected.ModuleAppendixSnapshot),
-		"verification_scope_ref: current candidate",
+		"unit_snapshot:",
+		renderUnits(expected.UnitSnapshot),
 		"active_plan_file_ref: " + snapshot.ActivePlanFilePath(expected.Object),
 		"active_plan_fingerprint: " + activePlanFingerprint,
 		"rule_snapshot:",
@@ -652,6 +655,10 @@ func writeVerifyProcessWithoutReceipt(t *testing.T, repoRoot string, expected sn
 		"    status: pass",
 		"    evidence_refs: go test ./...",
 		"retirement_evidence_matrix: none",
+		"package_delta_verification:",
+		"  - planned_change_scope_id: pcs.core",
+		"    result: pass",
+		"    evidence_refs: go test ./...",
 	}, "\n")+"\n```\n")
 }
 
@@ -666,12 +673,23 @@ func writePlanProcessWithoutReceipt(t *testing.T, repoRoot string, expected snap
 		"implementation_gap_refs: docs/specs/repository_mapping.md",
 		"unit_appendix_snapshot:",
 		renderAppendix(expected.ModuleAppendixSnapshot),
+		"unit_snapshot:",
+		renderUnits(expected.UnitSnapshot),
 		"rule_snapshot:",
 		renderRules(expected.RuleSnapshot),
 		"acceptance_item_plan_coverage:",
 		"  - id: demo.core",
 		"    coverage: implementation slice and verification target",
 		"retirement_targets: none",
+		"planned_change_scope:",
+		"  - id: pcs.core",
+		"    basis_refs: " + expected.SpecFileRef,
+		"    acceptance_item_ids: demo.core",
+		"    implementation_refs: docs/specs/repository_mapping.md",
+		"    verification_action: verify package-aware delta",
+		"package_constraint_review: pass",
+		"package_constraint_refs: " + expected.SpecFileRef,
+		"package_constraint_summary: current package constraints reviewed for this delta",
 	}, "\n")+"\n```\n")
 }
 
@@ -757,6 +775,23 @@ func renderRules(entries []snapshot.RuleEntry) string {
 	for _, entry := range entries {
 		lines = append(lines,
 			"  - rule_id: "+entry.RuleID,
+			"    layer: "+entry.Layer,
+			"    file_ref: "+entry.FileRef,
+			"    version_ref: "+entry.VersionRef,
+			"    fingerprint: "+entry.Fingerprint,
+		)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func renderUnits(entries []snapshot.ObjectSnapshotEntry) string {
+	if len(entries) == 0 {
+		return "  none"
+	}
+	lines := []string{}
+	for _, entry := range entries {
+		lines = append(lines,
+			"  - unit: "+entry.ObjectRef,
 			"    layer: "+entry.Layer,
 			"    file_ref: "+entry.FileRef,
 			"    version_ref: "+entry.VersionRef,

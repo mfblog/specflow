@@ -186,7 +186,6 @@ func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processK
 		"truth_fingerprint",
 	}
 	if processKind == "verify" {
-		requiredScalars = append(requiredScalars, "verification_scope_ref")
 	}
 	for _, field := range requiredScalars {
 		if !processSnapshot.PresentFields[field] {
@@ -242,9 +241,6 @@ func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processK
 	if processSnapshot.Scalars["truth_layer_ref"] != activeLayer {
 		return false, nil
 	}
-	if processKind == "verify" && strings.TrimSpace(processSnapshot.Scalars["verification_scope_ref"]) == "" {
-		return false, nil
-	}
 	truthMatches, err := matchesRemovedBindingTruth(processSnapshot, currentSnapshot.SpecFileRef, currentTruthContent, processSnapshot.RuleSnapshot)
 	if err != nil {
 		return false, err
@@ -255,7 +251,7 @@ func isValidModuleRemovedBindingEvidence(repoRoot, module, activeLayer, processK
 	if !equalAppendixEntries(processSnapshot.ModuleAppendixSnapshot, currentSnapshot.ModuleAppendixSnapshot) {
 		return false, nil
 	}
-	if !equalObjectSnapshotEntries(processSnapshot.ModuleSnapshot, currentSnapshot.UnitSnapshot) {
+	if !equalObjectSnapshotEntries(processSnapshot.UnitSnapshot, currentSnapshot.UnitSnapshot) {
 		return false, nil
 	}
 	if !equalAcceptanceItemEntries(processSnapshot.AcceptanceItemSet, currentSnapshot.AcceptanceItemSet) {
