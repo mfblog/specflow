@@ -173,13 +173,14 @@ Cycle semantics are fixed:
 
 ## 7. Process Evidence
 
-Unit process files may record:
+Candidate check, plan, and verify process files must record:
 
 1. `unit_appendix_snapshot`
 2. `unit_snapshot`
 3. `rule_snapshot`
 
-`unit_snapshot` records the resolved stable unit dependencies listed in `unit_refs`. If it is present, tooling must validate it against current truth. New snapshots should include it when `unit_refs` is non-empty.
+`unit_snapshot` records the resolved stable unit dependencies listed in `unit_refs`.
+Tooling must validate package snapshot fields against current truth.
 
 Process evidence does not replace truth. It proves what was checked in one command round.
 

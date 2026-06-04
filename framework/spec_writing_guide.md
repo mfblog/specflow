@@ -136,7 +136,7 @@ The candidate may have additional candidate appendices.
 
 ## 8. Process Snapshots
 
-Process files may include:
+Candidate check, plan, and verify process files must include:
 
 1. `unit_appendix_snapshot`
 2. `unit_snapshot`
@@ -148,4 +148,4 @@ Process files may include:
 
 `rule_snapshot` records resolved stable global rules and resolved bound shared rule dependencies from `rule_refs`.
 
-Snapshots prove what one command reviewed. They do not create or replace formal truth.
+Snapshots prove what one command reviewed and preserve package constraints across handoff. They do not create or replace formal truth.

@@ -1,6 +1,8 @@
 # Unit Implementation Context Card
 
-`unit_impl:{unit}` changes implementation files according to the active plan.
+`unit_impl:{unit}` changes implementation files according to the active plan's planned delta.
+
+`unit_impl` executes `planned_change_scope` from the active plan. It does not redesign the full unit package.
 
 ## Required Context
 
@@ -44,6 +46,7 @@ Do not write:
 
 If behavior truth is missing or wrong, stop and fall back to `unit_check`.
 If the plan is incomplete but truth stands, fall back to `unit_plan`.
+If implementation discovers that a package constraint from the active plan is relevant but not handled by `planned_change_scope`, stop and fall back to `unit_plan`.
 
 ## On-Demand Expansions
 

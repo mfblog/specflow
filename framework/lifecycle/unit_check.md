@@ -16,7 +16,11 @@ Read only:
 8. rule files explicitly bound by the target unit or its referenced truth.
 9. `docs/specs/repository_mapping.md` only when ownership or boundary mapping is part of the check.
 
-`unit_check` validates candidate truth, not implementation strategy. It answers:
+`unit_check` validates the full current unit package truth, not implementation strategy.
+
+The unit package is the current candidate main Spec, candidate appendices owned by the unit, resolved stable unit dependencies from `unit_refs`, applicable global and bound rule truth, the acceptance item set, and repository ownership boundaries when they affect the handoff.
+
+An advancing `pass` means the full unit package is clear and internally consistent enough for package-bounded delta planning. It answers:
 
 1. Is the unit goal and responsibility clear?
 2. Are dependencies, rule bindings, and ownership boundaries explicit?
@@ -71,6 +75,7 @@ If no such capability is explicitly available, stop and give the user the genera
 The reviewer returns the result to the executor and must not modify repository files.
 
 `docs/specs/_check_result/unit/{unit}.md` must contain the independent evaluation receipt defined in `framework/core/independent_evaluation.md`.
+It must also record the current package snapshots required by `framework/process_snapshot_contract.md`, including `unit_appendix_snapshot`, `unit_snapshot`, `rule_snapshot`, and the accepted acceptance item set.
 
 ## Close Requirements
 

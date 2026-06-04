@@ -1,6 +1,8 @@
 # Unit Plan Context Card
 
-`unit_plan:{unit}` creates the implementation handoff from checked candidate truth.
+`unit_plan:{unit}` creates the package-bounded delta implementation handoff from checked candidate truth.
+
+`unit_plan` must plan from the full unit package passed by `unit_check`, but the active plan output is only for this round's delta. Unchanged appendices, rules, stable unit dependencies, and acceptance truth do not need implementation tasks, but they must remain visible as package constraints for the delta.
 
 ## Required Context
 
@@ -33,13 +35,20 @@ Allowed writes are:
 1. `docs/specs/_plans/active/{unit}.md` when the handoff is ready and independently reviewed.
 2. `docs/specs/_plans/draft/{unit}.md` for non-consumable planning notes when blocked.
 
-The active plan must bind to current candidate truth by normalized content fingerprint, cover every accepted acceptance item, and include `stable_candidate_diff_refs`, `implementation_gap_refs`, and `retirement_targets`.
+The active plan must bind to current candidate truth by normalized content fingerprint, cover every accepted acceptance item, and include `stable_candidate_diff_refs`, `implementation_gap_refs`, `planned_change_scope`, `package_constraint_review`, `package_constraint_refs`, `package_constraint_summary`, and `retirement_targets`.
+It must also record the current `unit_appendix_snapshot`, `unit_snapshot`, and `rule_snapshot` so downstream implementation and verification can prove they are using the same package basis.
 When stable truth exists, `stable_candidate_diff_refs` must cite both the current stable main Spec and the current candidate main Spec.
 `implementation_gap_refs` must cite the implementation and mapping refs inspected for the plan, or be literal `none` only when there is no current implementation surface to inspect.
+`planned_change_scope` lists only the round's delta scopes. Each item must use an `id` of `pcs.<slug>` and record `basis_refs`, `acceptance_item_ids`, `implementation_refs`, and `verification_action`.
+`basis_refs` must cite package refs that constrain the delta.
+`package_constraint_review` must be `pass`.
+`package_constraint_refs` must cite refs from the current package snapshot that were considered as constraints for the delta.
+`package_constraint_summary` must state how the delta remains bounded by the package.
 `retirement_targets` must be literal `none`, or list concrete retired paths, helpers, wrappers, compatibility layers, dependencies, or equivalent targets with retirement method, acceptance item ids, and verification action.
 For `candidate_intent: change` with `source_basis: replacement`, `retirement_targets` must not be `none`.
 Replacement plans must identify old primary paths, new primary paths, cutover slices, and the retirement target ids that prove old primary paths no longer carry mainline behavior.
 Planning must not claim a retained compatibility path is retired; if it remains required, it must stay visible in the plan or be deferred by explicit later planning.
+Planning must not expand into a whole-package implementation plan merely because the whole package is used as the constraint surface.
 
 ## Forbidden Writes
 

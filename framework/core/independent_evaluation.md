@@ -91,8 +91,9 @@ Forbidden Inputs:
 Evaluation Questions:
 
 1. Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for planning?
-2. Are acceptance items testable without inventing behavior?
-3. Does `_check_result` match the candidate truth and evidence refs?
+2. Is the full unit package, including main Spec, owned appendices, unit dependencies, and applicable rules, clear and consistent enough for planning?
+3. Are acceptance items testable without inventing behavior?
+4. Does `_check_result` match the candidate truth and evidence refs?
 
 Legal Output:
 
@@ -112,7 +113,7 @@ Allowed Inputs:
 1. user goal or exact `unit_plan:{unit}` target.
 2. candidate unit truth, stable unit truth when it exists, and valid `_check_result/unit/{unit}.md`.
 3. active plan under review.
-4. plan acceptance coverage, stable-to-candidate diff, implementation-gap, and retirement-target criteria from `framework/lifecycle/unit_plan.md`.
+4. plan acceptance coverage, stable-to-candidate diff, implementation-gap, planned-change-scope, package-constraint, and retirement-target criteria from `framework/lifecycle/unit_plan.md`.
 
 Forbidden Inputs:
 
@@ -126,8 +127,10 @@ Evaluation Questions:
 2. When stable truth exists, does the plan cite and use the stable-to-candidate behavior diff instead of planning from the candidate name alone?
 3. Does the plan cite the implementation refs inspected for current entry points, main paths, rendering/API/generation paths, and gaps?
 4. For `candidate_intent: change` with `source_basis: replacement`, does the plan reject `retirement_targets: none` and list the old structures, entries, primary paths, wrappers, compatibility layers, or dependencies that must stop being required?
-5. Does the plan stay inside checked truth and named implementation surfaces?
-6. Can `unit_impl` execute without inventing behavior or ownership?
+5. Does the plan define this round's delta through `planned_change_scope` without requiring a whole-package implementation plan?
+6. Does `package_constraint_review` show that the delta was planned under the full unit package constraints, without dropping relevant appendix, rule, unit dependency, or acceptance truth?
+7. Does the plan stay inside checked truth and named implementation surfaces?
+8. Can `unit_impl` execute without inventing behavior or ownership?
 
 Legal Output:
 
@@ -147,7 +150,7 @@ Allowed Inputs:
 1. user goal or exact `unit_verify:{unit}` target.
 2. candidate unit truth, valid check result, and active plan.
 3. verify result under review.
-4. evidence refs needed to inspect acceptance coverage.
+4. evidence refs needed to inspect acceptance coverage, retirement evidence, and package-aware delta verification.
 
 Forbidden Inputs:
 
@@ -162,7 +165,8 @@ Evaluation Questions:
 3. Does the verify result reject weak evidence as sufficient by itself, including generic test success, absent old strings, present new files, or present new fields?
 4. For primary protocol, default page, primary presentation, API, or artifact-generation changes, does the evidence inspect real generated artifacts, API return values, DOM/screenshots, rendered text, CLI output, or tests proving the mainline path uses the candidate protocol?
 5. Does the verify result prove every retirement target with `pass` and `mainline_dependency: not_required` evidence?
-6. Is the candidate ready for promotion without hiding unresolved gaps?
+6. Does `package_delta_verification` prove every `planned_change_scope` entry without violating appendix, rule, unit dependency, or acceptance truth?
+7. Is the candidate ready for promotion without hiding unresolved gaps?
 
 Legal Output:
 

@@ -42,6 +42,9 @@ truth_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 truth_version_ref: c_unit_{unit}@x.y.z
 truth_fingerprint: {fingerprint}
 acceptance_behavior_fingerprint: {fingerprint}
+unit_appendix_snapshot: none | list
+unit_snapshot: none | list
+rule_snapshot: none | list
 evaluation_mode: independent
 reviewer_result: pass
 reviewer_context: minimal_context
@@ -89,7 +92,15 @@ spec_fingerprint: {fingerprint}
 acceptance_behavior_fingerprint: {fingerprint}
 stable_candidate_diff_refs: none | {refs}
 implementation_gap_refs: none | {refs}
+unit_appendix_snapshot: none | list
+unit_snapshot: none | list
+rule_snapshot: none | list
+acceptance_item_plan_coverage: list
 retirement_targets: none | list
+planned_change_scope: list
+package_constraint_review: pass
+package_constraint_refs: {refs}
+package_constraint_summary: {summary}
 evaluation_mode: independent
 reviewer_result: pass
 reviewer_context: minimal_context
@@ -123,6 +134,30 @@ Each target id must use `rt.<slug>`.
 `acceptance_item_ids` must be a single comma-separated scalar of current candidate acceptance item ids.
 It must not be a YAML list and must not use semicolon delimiters.
 
+`planned_change_scope` is mandatory for active plans.
+It records only the current round's delta scopes and must not be used to force a whole-package implementation plan.
+Each item must contain `id`, `basis_refs`, `acceptance_item_ids`, `implementation_refs`, and `verification_action`.
+List form must use this exact shape:
+
+```yaml
+planned_change_scope:
+  - id: pcs.<slug>
+    basis_refs: {semicolon-delimited package refs}
+    acceptance_item_ids: {acceptance_item_id},{acceptance_item_id}
+    implementation_refs: {semicolon-delimited refs}
+    verification_action: {verification action}
+```
+
+Each planned change scope id must use `pcs.<slug>`.
+`basis_refs` may cite only refs from the current package snapshot: the current candidate main Spec, unit-owned appendix files, stable unit dependency files resolved from `unit_refs`, and stable or candidate rule files resolved from applicable global rules and `rule_refs`.
+`acceptance_item_ids` must be a single comma-separated scalar of current candidate acceptance item ids.
+`implementation_refs` must cite durable repository-relative refs inspected or changed by the delta.
+
+`package_constraint_review`, `package_constraint_refs`, and `package_constraint_summary` are mandatory for active plans.
+`package_constraint_review` must be `pass`.
+`package_constraint_refs` must cite refs from the current package snapshot.
+Tooling validates that cited refs belong to the package snapshot, but the independent reviewer judges whether relevant package constraints were missed.
+
 Candidate verify process YAML must also bind to the active plan and record retirement evidence:
 
 ```yaml
@@ -133,6 +168,7 @@ acceptance_item_evidence_matrix:
     status: pass|fail|partial|not_checked|not_runnable_yet
     evidence_refs: {refs}
 retirement_evidence_matrix: none | list
+package_delta_verification: list
 ```
 
 Each `acceptance_item_evidence_matrix` item must include `id`, `status`, and `evidence_refs`.
@@ -147,6 +183,18 @@ Promotion-ready evidence requires `result: pass` and `mainline_dependency: not_r
 Valid `result` values are `pass`, `fail`, and `not_checked`.
 Valid `mainline_dependency` values are `not_required`, `still_required`, and `unknown`.
 Tooling must not delete implementation code or judge whether a retained compatibility path is business-safe; explicit planning and verification evidence drive the outcome.
+
+`package_delta_verification` is mandatory for candidate verify evidence.
+It must contain exactly one item for each active-plan `planned_change_scope` id:
+
+```yaml
+package_delta_verification:
+  - planned_change_scope_id: pcs.<slug>
+    result: pass|fail|not_checked
+    evidence_refs: {refs}
+```
+
+Promotion-ready verify evidence requires every package delta item to use `result: pass` and non-empty durable `evidence_refs`.
 
 Advancing check, active plan, verify, and stable verify files must include the independent evaluation receipt.
 Tooling validates the receipt fields mechanically; it does not prove reviewer session isolation and does not judge whether the reviewer made a good semantic decision.
@@ -185,7 +233,7 @@ Text drift evidence reuse requires the freshness receipt above and independent r
 
 ## 3. Dependency Snapshots
 
-Process files may record:
+Candidate check, plan, and verify process files must record the current package snapshots:
 
 ```yaml
 unit_appendix_snapshot: none
@@ -205,7 +253,7 @@ Candidate-only appendices are allowed.
 `rule_snapshot` records stable global rules plus bound shared rules resolved from current unit `rule_refs`.
 Stable global rules are included even when the unit has `rule_refs: none`.
 
-If a snapshot field is present, tooling must validate it against current truth.
+Tooling must validate these snapshots against current truth.
 
 ## 4. Fallback Layers
 
@@ -213,7 +261,7 @@ Process validation failure maps to these layers:
 
 1. truth mismatch -> `truth_layer`
 2. check schema or gate evidence mismatch -> `gate_layer`
-3. plan schema or plan coverage mismatch -> `plan_layer`
+3. plan schema, plan coverage, planned-change-scope, or package-constraint mismatch -> `plan_layer`
 4. implementation mismatch while truth, check, and plan still validate -> `implementation_layer`
 5. verify evidence mismatch -> `evidence_layer`
 6. stable verify evidence mismatch -> `evidence_layer`, with `unit_stable_verify` as the restart command
@@ -473,12 +521,13 @@ At minimum, validation must rebuild:
 7. `rule_snapshot` from stable global rules and current unit `rule_refs`
 8. `acceptance_item_set` from the current unit truth for check, verify, and stable verify files
 9. `acceptance_item_plan_coverage` against the current candidate acceptance item ids for active plan files
-10. `stable_candidate_diff_refs`, `implementation_gap_refs`, and `retirement_targets` shape, ids, target fields, and acceptance item refs for active plan files
+10. `stable_candidate_diff_refs`, `implementation_gap_refs`, `planned_change_scope`, `package_constraint_review`, `package_constraint_refs`, `package_constraint_summary`, and `retirement_targets` shape, ids, target fields, package refs, and acceptance item refs for active plan files
 11. `active_plan_file_ref` and `active_plan_fingerprint` for candidate verify files
 12. `acceptance_item_evidence_matrix` status and evidence refs against the current acceptance item ids for verify and stable verify files
 13. `retirement_evidence_matrix` against the current active plan retirement target ids for candidate verify files
-14. independent evaluation receipt fields for check, active plan, verify, and stable verify files
-15. acceptance behavior fingerprint and conditional freshness reuse receipt fields when text drift is being reused
+14. `package_delta_verification` against the current active plan `planned_change_scope` ids for candidate verify files
+15. independent evaluation receipt fields for check, active plan, verify, and stable verify files
+16. acceptance behavior fingerprint and conditional freshness reuse receipt fields when text drift is being reused
 
 Deterministic validation rule:
 

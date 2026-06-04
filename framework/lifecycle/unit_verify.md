@@ -1,6 +1,8 @@
 # Unit Verify Context Card
 
-`unit_verify:{unit}` verifies implementation against checked candidate truth and the active plan.
+`unit_verify:{unit}` verifies implementation against checked candidate truth, the active plan, and the current unit package constraints.
+
+`unit_verify` proves the planned delta, not a whole-package implementation rewrite. It must still verify from a full package view so the delta does not violate appendices, rules, stable unit dependencies, or acceptance truth that constrained the plan.
 
 ## Required Context
 
@@ -34,12 +36,17 @@ Allowed writes are:
 
 Candidate verify evidence must bind to the current active plan through `active_plan_file_ref` and `active_plan_fingerprint`.
 It must also record per-item `acceptance_item_evidence_matrix.evidence_refs` and `retirement_evidence_matrix`.
+The verify result must also record the current `unit_appendix_snapshot`, `unit_snapshot`, and `rule_snapshot` per `framework/process_snapshot_contract.md` so downstream promotion can prove it used the same package basis as the check and plan.
+It must record `package_delta_verification` for every `planned_change_scope` item in the active plan.
+Each `package_delta_verification` item must include `planned_change_scope_id`, `result`, and `evidence_refs`.
+Promotion-ready evidence requires every planned change scope to have `result: pass` and durable evidence refs.
 For executable acceptance items, promotion-ready verify evidence requires `status: pass` and durable evidence refs that prove the candidate behavior through the declared verification surface.
 If the active plan has `retirement_targets: none`, the matrix must be `none`.
 If the active plan lists retirement targets, each target must have `result: pass`, `mainline_dependency: not_required`, and durable `evidence_refs` before `ready_to_promote` may close.
 For primary protocol, default page, primary presentation, API, or artifact-generation changes, evidence must inspect the real generated artifact, API return value, DOM/screenshot, rendered text, CLI output, or a test that proves the mainline path uses the candidate protocol.
 Generic test success, absence of old strings, presence of new files, or presence of new fields must not be used as the only evidence for semantic replacement.
 Verification must not delete code automatically or infer business compatibility safety; it only proves whether planned retirement targets are no longer required by the mainline path.
+Verification must not approve a delta that satisfies a local task while violating package constraints recorded by the active plan.
 
 ## Forbidden Writes
 

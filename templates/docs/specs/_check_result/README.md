@@ -24,3 +24,5 @@ The snapshot records:
 7. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
 
 These files are process evidence, not behavior truth.
+
+A pass snapshot means the full unit package is clear and internally consistent enough for package-bounded delta planning.

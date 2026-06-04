@@ -23,12 +23,16 @@ The candidate verify pass snapshot records:
 6. `unit_appendix_snapshot`
 7. `unit_snapshot`
 8. `rule_snapshot`
-9. independent evaluation receipt fields
-10. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
+9. `package_delta_verification`
+10. independent evaluation receipt fields
+11. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
 
 `retirement_evidence_matrix` must be literal `none` when the active plan has `retirement_targets: none`.
 When the active plan lists retirement targets, every target id must appear exactly once with `result: pass`, `mainline_dependency: not_required`, and durable `evidence_refs`.
 The verify result proves planned retirement targets; it does not authorize automatic code deletion.
+
+`package_delta_verification` must contain exactly one item for every `planned_change_scope` id in the active plan, matching the `planned_change_scope_id` from the active plan.
+Promotion-ready evidence requires every package delta item to use `result: pass` with durable `evidence_refs`.
 
 Each executable acceptance item in `acceptance_item_evidence_matrix` must record `status: pass` and durable `evidence_refs` before promotion readiness can close.
 Items marked `not_runnable_yet: yes` in current truth must record `status: not_runnable_yet`.
