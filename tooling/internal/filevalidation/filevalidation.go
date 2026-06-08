@@ -325,6 +325,8 @@ func parseYamlBlockFormat(input string) (Constraints, error) {
 			}
 		}
 	}
-
+	if len(c.AllowedWrites) == 0 && len(c.ForbiddenWrites) == 0 {
+		return Constraints{}, fmt.Errorf("yaml-like constraints block produced zero rules; must define at least one - pattern: entry under allowed_writes: or forbidden_writes:")
+	}
 	return c, nil
 }

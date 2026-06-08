@@ -12,7 +12,7 @@ They are user entry choices. They are not lifecycle states, not process schema, 
 |---|---|---|---|
 | `reader-only` | Start `specflow-reader` or inspect durable truth manually | Read existing status, truth, repository mapping, and process evidence | Stop before lifecycle commands, process evidence writes, status changes, implementation edits, promotion, stable verification, or governance review |
 | `implementation-only` | Natural language request routed through `framework/operations/entry_routing.md` (Implementation Classification section) | Change code or tests that already fit written formal truth | Stop when behavior, boundary, acceptance, rule, ownership truth, or lifecycle state must change |
-| `single-unit-trial` | Name one unit and use only the lifecycle steps needed for that unit | Use `unit_init`, `unit_new`, `unit_fork`, `unit_check` (optional), and `unit_verify` for one unit while the rest of the repository stays outside specFlow | Stop before promotion, stable verification, rule governance, or governance review unless the user explicitly asks |
+| `single-unit-trial` | Name one unit and use only the lifecycle steps needed for that unit | Use `unit_init`, `unit_new`, `unit_fork`, `unit_check`, and `unit_verify` for one unit while the rest of the repository stays outside specFlow | Stop before promotion, stable verification, rule governance, or governance review unless the user explicitly asks |
 | `unit-check-only` | Run `unit_check:{unit}` against candidate truth | Decide whether a candidate Spec is clear enough to plan from | Stop after pass, blocked, or fix-required check evidence; do not require plan, implementation, verification, promotion, stable verification, or governance review |
 
 ## Shared Rules
