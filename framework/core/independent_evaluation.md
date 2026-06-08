@@ -68,12 +68,14 @@ The reviewer reads only:
 
 ## Reviewer Packs
 
+The review criteria are embedded in the Evaluation Questions section of each pack. Review Standard Refs listed below are informational — they show the original source of the criteria but are not required reading. The reviewer should answer the Evaluation Questions directly.
+
 ### `unit_check_pass`
 
 Review Standard Refs:
 
 1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.
-2. `framework/lifecycle/unit_check.md` - whether candidate truth is clear enough to become planning input.
+2. `framework/lifecycle/unit_check.md` - whether candidate truth is clear enough for downstream work.
 
 Allowed Inputs:
 
@@ -84,53 +86,15 @@ Allowed Inputs:
 
 Forbidden Inputs:
 
-1. implementation plan drafts.
-2. implementation files unless repository mapping is part of the boundary question.
-3. executor rationale not present in durable truth or `_check_result`.
+1. implementation files unless repository mapping is part of the boundary question.
+2. executor rationale not present in durable truth or `_check_result`.
 
 Evaluation Questions:
 
-1. Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for planning?
-2. Is the full unit package, including main Spec, owned appendices, unit dependencies, and applicable rules, clear and consistent enough for planning?
+1. Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for downstream work?
+2. Is the full unit package, including main Spec, owned appendices, unit dependencies, and applicable rules, clear and consistent enough for downstream work?
 3. Are acceptance items testable without inventing behavior?
 4. Does `_check_result` match the candidate truth and evidence refs?
-
-Legal Output:
-
-```text
-pass | blocked | needs_human_decision
-```
-
-### `unit_plan_plan_ready`
-
-Review Standard Refs:
-
-1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.
-2. `framework/lifecycle/unit_plan.md` - whether the active plan is ready to serve as the implementation handoff.
-
-Allowed Inputs:
-
-1. user goal or exact `unit_plan:{unit}` target.
-2. candidate unit truth, stable unit truth when it exists, and valid `_check_result/unit/{unit}.md`.
-3. active plan under review.
-4. plan acceptance coverage, stable-to-candidate diff, implementation-gap, planned-change-scope, package-constraint, and retirement-target criteria from `framework/lifecycle/unit_plan.md`.
-
-Forbidden Inputs:
-
-1. implementation work not authorized by the active plan.
-2. executor-only design rationale that is absent from the active plan.
-3. unrelated repository architecture exploration.
-
-Evaluation Questions:
-
-1. Does the plan cover every accepted acceptance item?
-2. When stable truth exists, does the plan cite and use the stable-to-candidate behavior diff instead of planning from the candidate name alone?
-3. Does the plan cite the implementation refs inspected for current entry points, main paths, rendering/API/generation paths, and gaps?
-4. For `candidate_intent: change` with `source_basis: replacement`, does the plan reject `retirement_targets: none` and list the old structures, entries, primary paths, wrappers, compatibility layers, or dependencies that must stop being required?
-5. Does the plan define this round's delta through `planned_change_scope` without requiring a whole-package implementation plan?
-6. Does `package_constraint_review` show that the delta was planned under the full unit package constraints, without dropping relevant appendix, rule, unit dependency, or acceptance truth?
-7. Does the plan stay inside checked truth and named implementation surfaces?
-8. Can `unit_impl` execute without inventing behavior or ownership?
 
 Legal Output:
 
@@ -144,6 +108,7 @@ Review Standard Refs:
 
 1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.
 2. `framework/lifecycle/unit_verify.md` - whether verification evidence is sufficient for promotion readiness.
+3. `framework/spec_writing_guide.md` - acceptance item format standard, including `verification_type`, `evidence_requirements`, and `affects` fields.
 
 Allowed Inputs:
 
@@ -160,9 +125,24 @@ Forbidden Inputs:
 
 Evaluation Questions:
 
+**Functional Correctness:**
 1. Does the verify result cover every executable acceptance item?
 2. Does each executable acceptance item have inspectable evidence refs that prove the candidate behavior through the declared verification surface?
 3. Does the verify result reject weak evidence as sufficient by itself, including generic test success, absent old strings, present new files, or present new fields?
+
+**Scope Verification:**
+4. For acceptance items that declare `affects`, does the `scope_verification` record confirm that all affected files, appendices, rules, and dependencies were verified?
+
+**Code Quality:**
+5. Does the implementation contain dead code, unnecessary abstractions, or duplicated logic that could be simplified?
+6. Is the implementation concise and proportional to the acceptance item scope? (For replacement scenes: is the new code volume proportionate to the replaced code volume?)
+7. Does the implementation introduce over-engineering (layers, interfaces, or patterns not justified by current requirements)?
+
+**Retirement Completeness (replacement scenes only):**
+8. Are the old code paths declared in `affects.files` fully removed (not left as dead wrappers, compatibility stubs, or commented-out code)?
+9. Is there any remaining module, test, or configuration that references the deleted paths?
+
+The reviewer records findings for each dimension. An outcome of `pass` requires all functional and scope questions to pass. Code quality and retirement questions may produce `quality_concern` findings that are recorded in the review findings but do not automatically block promotion; the executor may address them in the current round or defer to a follow-up round.
 4. For primary protocol, default page, primary presentation, API, or artifact-generation changes, does the evidence inspect real generated artifacts, API return values, DOM/screenshots, rendered text, CLI output, or tests proving the mainline path uses the candidate protocol?
 5. Does the verify result prove every retirement target with `pass` and `mainline_dependency: not_required` evidence?
 6. Does `package_delta_verification` prove every `planned_change_scope` entry without violating appendix, rule, unit dependency, or acceptance truth?
@@ -284,10 +264,9 @@ These do not satisfy independent evaluation:
 
 The following advancing evidence requires the receipt:
 
-1. `docs/specs/_check_result/unit/{unit}.md`
-2. `docs/specs/_plans/active/{unit}.md`
-3. `docs/specs/_verify_result/unit/{unit}.md`
-4. `docs/specs/_stable_verify_result/unit/{unit}.md`
+1. `docs/specs/_check_result/unit/{unit}.md` — required only when `unit_check` is run with an advancing `pass` outcome.
+2. `docs/specs/_verify_result/unit/{unit}.md`
+3. `docs/specs/_stable_verify_result/unit/{unit}.md`
 
 `unit_init`, `unit_new`, and `unit_fork` create truth entry points and do not require this receipt by default.
 

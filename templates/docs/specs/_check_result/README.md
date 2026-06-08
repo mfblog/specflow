@@ -25,4 +25,4 @@ The snapshot records:
 
 These files are process evidence, not behavior truth.
 
-A pass snapshot means the full unit package is clear and internally consistent enough for package-bounded delta planning.
+A pass snapshot means the full unit package is clear and internally consistent enough for downstream verification work.

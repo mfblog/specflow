@@ -10,8 +10,7 @@ import (
 func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeLayeredFrameworkFiles(t, repoRoot)
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/repair.md"), "# repair\n")
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intents/change.md"), "# change\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intent.md"), "# candidate intent\n")
 	writeGuidanceSkillFiles(t, repoRoot)
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_status.md"), "# status\n")
 	mustWrite(t, filepath.Join(repoRoot, "specflow/templates/docs/specs/_check_result/README.md"), "# check\n")
@@ -55,18 +54,16 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	if err != nil {
 		t.Fatalf("CollectDefaultSpecFlowScope: %v", err)
 	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/agent_operability_standard.md") {
-		t.Fatalf("expected agent operability file in scope, got %+v", scope.AgentOperabilityFiles)
+	if containsString(scope.AgentOperabilityFiles, "specflow/framework/agent_operability_standard.md") {
+		t.Fatalf("deleted agent operability standard must stay outside agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
 	for _, input := range []string{
 		"specflow/framework/advance_policy.md",
 		"specflow/framework/core/adoption_modes.md",
-		"specflow/framework/core/context_card.md",
 		"specflow/framework/core/freshness.md",
 		"specflow/framework/core/independent_evaluation.md",
 		"specflow/framework/governance/review_scope.md",
 		"specflow/framework/spec_flow_review.md",
-		"specflow/framework/spec_policy.md",
 		"specflow/framework/spec_writing_guide.md",
 	} {
 		if !containsString(scope.AgentOperabilityFiles, input) {
@@ -88,25 +85,19 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	if !containsString(scope.CommandFiles, "specflow/framework/lifecycle/unit_plan.md") {
 		t.Fatalf("expected lifecycle files in command scope, got %+v", scope.CommandFiles)
 	}
-	if !containsString(scope.GuidanceSkillFiles, "specflow/framework/skills/using-specflow-guidance/SKILL.md") {
+	if !containsString(scope.GuidanceSkillFiles, "specflow/framework/guidance/using-specflow-guidance/SKILL.md") {
 		t.Fatalf("expected guidance skill files in scope, got %+v", scope.GuidanceSkillFiles)
 	}
-	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intent_policy.md") {
-		t.Fatalf("expected candidate intent policy in candidate intent scope, got %+v", scope.CandidateIntentFiles)
+	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intent.md") {
+		t.Fatalf("expected candidate intent file in candidate intent scope, got %+v", scope.CandidateIntentFiles)
 	}
-	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intents/repair.md") {
-		t.Fatalf("expected repair intent standard in candidate intent scope, got %+v", scope.CandidateIntentFiles)
+	if len(scope.CandidateIntentFiles) != 1 {
+		t.Fatalf("expected exactly 1 candidate intent file, got %d: %+v", len(scope.CandidateIntentFiles), scope.CandidateIntentFiles)
 	}
-	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intents/change.md") {
-		t.Fatalf("expected change intent standard in candidate intent scope, got %+v", scope.CandidateIntentFiles)
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/candidate_intent.md") {
+		t.Fatalf("expected candidate intent file in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/candidate_intent_policy.md") {
-		t.Fatalf("expected candidate intent policy in agent operability scope, got %+v", scope.AgentOperabilityFiles)
-	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/candidate_intents/repair.md") {
-		t.Fatalf("expected repair intent standard in agent operability scope, got %+v", scope.AgentOperabilityFiles)
-	}
-	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/skills/using-specflow-guidance/SKILL.md") {
+	if !containsString(scope.AgentOperabilityFiles, "specflow/framework/guidance/using-specflow-guidance/SKILL.md") {
 		t.Fatalf("expected guidance skill files in agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
 	if containsString(scope.RuleGovernanceFiles, "specflow/framework/onboarding_decision_policy.md") {
@@ -221,9 +212,8 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContract(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeLayeredFrameworkFiles(t, repoRoot)
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intent.md"), "# candidate intent\n")
 	for _, relPath := range []string{
-		"specflow/framework/candidate_intents/repair.md",
-		"specflow/framework/candidate_intents/change.md",
 		"specflow/templates/docs/specs/_status.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
 		"specflow/templates/docs/specs/_check_work/README.md",
@@ -277,17 +267,17 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/lifecycle/overview.md") {
 		t.Fatalf("expected lifecycle overview in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
-	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intent_policy.md") {
-		t.Fatalf("expected candidate intent policy in design candidate intent scope, got %+v", scope.CandidateIntentFiles)
+	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intent.md") {
+		t.Fatalf("expected candidate intent file in design candidate intent scope, got %+v", scope.CandidateIntentFiles)
 	}
-	if !containsString(scope.CandidateIntentFiles, "specflow/framework/candidate_intents/repair.md") {
-		t.Fatalf("expected repair candidate intent in design candidate intent scope, got %+v", scope.CandidateIntentFiles)
+	if len(scope.CandidateIntentFiles) != 1 {
+		t.Fatalf("expected exactly 1 candidate intent file, got %d: %+v", len(scope.CandidateIntentFiles), scope.CandidateIntentFiles)
 	}
-	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/candidate_intents/change.md") {
-		t.Fatalf("expected change candidate intent in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/candidate_intent.md") {
+		t.Fatalf("expected candidate intent file in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
-	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/operations/output_standard.md") {
-		t.Fatalf("expected output standard in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
+	if containsString(scope.FrameworkGuidelineFiles, "specflow/framework/operations/output_standard.md") {
+		t.Fatalf("deleted output standard must stay outside design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
 	if !containsString(scope.FrameworkGuidelineFiles, "specflow/framework/slice_work_state_protocol.md") {
 		t.Fatalf("expected slice work-state protocol in design foundation scope, got %+v", scope.FrameworkGuidelineFiles)
@@ -295,8 +285,8 @@ func TestCollectDefaultSpecFlowDesignScopeIncludesGovernanceReviewProcessContrac
 	if !containsString(scope.TemplateGovernanceFiles, "specflow/framework/slice_work_state_protocol.md") {
 		t.Fatalf("expected slice work-state protocol in lifecycle contract scope, got %+v", scope.TemplateGovernanceFiles)
 	}
-	if !containsString(scope.TemplateGovernanceFiles, "specflow/framework/operations/output_standard.md") {
-		t.Fatalf("expected output standard in lifecycle contract scope, got %+v", scope.TemplateGovernanceFiles)
+	if containsString(scope.TemplateGovernanceFiles, "specflow/framework/operations/output_standard.md") {
+		t.Fatalf("deleted output standard must stay outside lifecycle contract scope, got %+v", scope.TemplateGovernanceFiles)
 	}
 }
 
@@ -387,14 +377,14 @@ func TestCollectDefaultSpecFlowDesignScopeAutoDetectsSourceRepoLayout(t *testing
 	if scope.Layout != LayoutSourceRepo {
 		t.Fatalf("expected auto source layout, got %s", scope.Layout)
 	}
-	if !containsString(scope.FrameworkGuidelineFiles, "framework/operations/output_standard.md") {
-		t.Fatalf("expected source output standard in design scope, got %+v", scope.FrameworkGuidelineFiles)
+	if containsString(scope.FrameworkGuidelineFiles, "framework/operations/output_standard.md") {
+		t.Fatalf("deleted output standard must stay outside design scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
 	if !containsString(scope.FrameworkGuidelineFiles, "framework/governance/rule_system.md") {
 		t.Fatalf("expected source rule system in design scope, got %+v", scope.FrameworkGuidelineFiles)
 	}
-	if !containsString(scope.TemplateGovernanceFiles, "framework/operations/output_standard.md") {
-		t.Fatalf("expected source output standard in lifecycle contract scope, got %+v", scope.TemplateGovernanceFiles)
+	if containsString(scope.TemplateGovernanceFiles, "framework/operations/output_standard.md") {
+		t.Fatalf("deleted output standard must stay outside lifecycle contract scope, got %+v", scope.TemplateGovernanceFiles)
 	}
 	if containsString(scope.FrameworkGuidelineFiles, deletedCommandPolicyPath("framework")) {
 		t.Fatalf("deleted flat command owner must stay outside source design scope, got %+v", scope.FrameworkGuidelineFiles)
@@ -437,13 +427,11 @@ func writeLayeredFrameworkFiles(t *testing.T, repoRoot string) {
 	for _, relPath := range []string{
 		"specflow/framework/advance_policy.md",
 		"specflow/framework/core/adoption_modes.md",
-		"specflow/framework/core/context_card.md",
 		"specflow/framework/core/freshness.md",
 		"specflow/framework/core/independent_evaluation.md",
 		"specflow/framework/core/object_model.md",
 		"specflow/framework/core/status.md",
 		"specflow/framework/core/repository_mapping.md",
-		"specflow/framework/core/lifecycle_authority.md",
 		"specflow/framework/lifecycle/overview.md",
 		"specflow/framework/lifecycle/unit_init_new_fork.md",
 		"specflow/framework/lifecycle/unit_check.md",
@@ -464,24 +452,14 @@ func writeLayeredFrameworkFiles(t *testing.T, repoRoot string) {
 		"specflow/framework/governance/rules/rule_sync.md",
 		"specflow/framework/governance/rules/rule_topology.md",
 		"specflow/framework/operations/entry_routing.md",
-		"specflow/framework/operations/implementation_change.md",
-		"specflow/framework/operations/output_standard.md",
 		"specflow/framework/operations/migration.md",
 		"specflow/framework/severity_policy.md",
-		"specflow/framework/spec_authoring_baseline.md",
 		"specflow/framework/spec_flow_design_review.md",
 		"specflow/framework/spec_flow_review.md",
-		"specflow/framework/spec_policy.md",
 		"specflow/framework/spec_writing_guide.md",
-		"specflow/framework/agent_operability_standard.md",
-		"specflow/framework/onboarding_decision_policy.md",
-		"specflow/framework/candidate_intent_policy.md",
-		"specflow/framework/candidate_handoff_contract.md",
-		"specflow/framework/downgrade_policy.md",
 		"specflow/framework/process_snapshot_contract.md",
 		"specflow/framework/slice_work_state_protocol.md",
 		"specflow/framework/tooling_execution_policy.md",
-		"specflow/framework/entry_index_registry.md",
 	} {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
@@ -492,13 +470,11 @@ func writeSourceScopeRepo(t *testing.T, repoRoot string) {
 	for _, relPath := range []string{
 		"framework/advance_policy.md",
 		"framework/core/adoption_modes.md",
-		"framework/core/context_card.md",
 		"framework/core/freshness.md",
 		"framework/core/independent_evaluation.md",
 		"framework/core/object_model.md",
 		"framework/core/status.md",
 		"framework/core/repository_mapping.md",
-		"framework/core/lifecycle_authority.md",
 		"framework/lifecycle/overview.md",
 		"framework/lifecycle/unit_init_new_fork.md",
 		"framework/lifecycle/unit_check.md",
@@ -519,32 +495,21 @@ func writeSourceScopeRepo(t *testing.T, repoRoot string) {
 		"framework/governance/rules/rule_sync.md",
 		"framework/governance/rules/rule_topology.md",
 		"framework/operations/entry_routing.md",
-		"framework/operations/implementation_change.md",
-		"framework/operations/output_standard.md",
 		"framework/operations/migration.md",
 		"framework/spec_flow_review.md",
 		"framework/spec_flow_design_review.md",
-		"framework/spec_policy.md",
 		"framework/spec_writing_guide.md",
-		"framework/spec_authoring_baseline.md",
-		"framework/agent_operability_standard.md",
-		"framework/onboarding_decision_policy.md",
-		"framework/candidate_intent_policy.md",
-		"framework/candidate_handoff_contract.md",
-		"framework/downgrade_policy.md",
 		"framework/process_snapshot_contract.md",
 		"framework/slice_work_state_protocol.md",
 		"framework/tooling_execution_policy.md",
-		"framework/entry_index_registry.md",
 		"framework/severity_policy.md",
-		"framework/candidate_intents/repair.md",
-		"framework/candidate_intents/change.md",
-		"framework/skills/using-specflow-guidance/SKILL.md",
-		"framework/skills/project-framing/SKILL.md",
-		"framework/skills/scope-cutting/SKILL.md",
-		"framework/skills/solution-design/SKILL.md",
-		"framework/skills/design-quality-review/SKILL.md",
-		"framework/skills/spec-writeback-guidance/SKILL.md",
+		"framework/candidate_intent.md",
+		"framework/guidance/using-specflow-guidance/SKILL.md",
+		"framework/guidance/project-framing/SKILL.md",
+		"framework/guidance/scope-cutting/SKILL.md",
+		"framework/guidance/solution-design/SKILL.md",
+		"framework/guidance/design-quality-review/SKILL.md",
+		"framework/guidance/spec-writeback-guidance/SKILL.md",
 		"templates/docs/specs/_status.md",
 		"templates/docs/specs/_check_result/README.md",
 		"templates/docs/specs/_check_work/README.md",
@@ -602,12 +567,12 @@ func mustWrite(t *testing.T, path, content string) {
 func writeGuidanceSkillFiles(t *testing.T, repoRoot string) {
 	t.Helper()
 	for _, relPath := range []string{
-		"specflow/framework/skills/using-specflow-guidance/SKILL.md",
-		"specflow/framework/skills/project-framing/SKILL.md",
-		"specflow/framework/skills/scope-cutting/SKILL.md",
-		"specflow/framework/skills/solution-design/SKILL.md",
-		"specflow/framework/skills/design-quality-review/SKILL.md",
-		"specflow/framework/skills/spec-writeback-guidance/SKILL.md",
+		"specflow/framework/guidance/using-specflow-guidance/SKILL.md",
+		"specflow/framework/guidance/project-framing/SKILL.md",
+		"specflow/framework/guidance/scope-cutting/SKILL.md",
+		"specflow/framework/guidance/solution-design/SKILL.md",
+		"specflow/framework/guidance/design-quality-review/SKILL.md",
+		"specflow/framework/guidance/spec-writeback-guidance/SKILL.md",
 	} {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# skill\n")
 	}

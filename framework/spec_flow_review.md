@@ -207,10 +207,10 @@ If a fork, promote, auto-fork, cleanup, or impact-reconciliation path can leave 
 
 Governance files must be operable by a capable executor without prior `specFlow` memory.
 
-Default full-scope `spec_flow_review` must read and consume `<framework-root>/agent_operability_standard.md`.
-A narrowed review must read and consume that standard whenever the narrowed scope includes entry behavior, routing, commands, project-instance migration, checkpoints, rule governance, process state, entry files, or tooling contracts.
+A narrowed review must include entry behavior, routing, commands, project-instance migration, checkpoints, rule governance, process state, entry files, and tooling contracts when the narrowed scope covers those areas.
+Governance rules are enforced by tooling (`specflowctl`) rather than by agent-operability documents.
 
-Agent-operability review must cover execution clarity, content economy, and formal rule voice.
+Agent-operability review must cover execution clarity, content economy, formal rule voice, and self-containment under Section 2.12 — whether Agent-facing instruction files deliver essential phase instructions inline rather than through chain-linked reading.
 A pass claim for an in-scope governance file must not ignore an applicable agent-operability failure.
 
 ### 2.9 Tooling Boundary
@@ -278,7 +278,37 @@ The migration closure check must judge:
 
 If migration can rewrite project files without a current rule-derived target, preserve stale process pass claims, choose business meaning, or leave invalidated downstream state without a legal next action, it is a `spec_flow_review` finding.
 
-### 2.12 Relationship To The Slice Catalog
+### 2.12 Self-Containment
+
+When a governance file is an Agent-facing instruction file (Context Card, entry file, operation policy that an executor reads directly to decide the next governed action), the file must be self-contained for its essential instructions.
+
+A file fails self-containment when:
+
+1. the file contains an instruction that the Agent must follow to complete the current phase, but the instruction body is only available by reading a linked file
+2. the file requires the Agent to read N sequential linked files to obtain the set of essential phase instructions (chain reading)
+3. the file uses a link as the primary delivery mechanism for a required action, allowed write, forbidden write, close condition, or gate requirement
+
+Cross-file links are acceptable only for:
+
+1. non-essential background context or design rationale
+2. optional skill files that the Agent may choose to load
+3. data references (file paths to specs, truth, evidence) that the Agent needs to read as input — these are not instructions about what to do
+
+A review must find a self-containment finding when a Context Card or entry file requires the Agent to follow a chain of two or more links to obtain essential phase instructions that should have been stated directly.
+
+### 2.13 Tool-Enforcement Boundary
+
+When a governance rule describes a hard constraint — an allowed write, forbidden write, required gate, lifecycle state advancement rule, or permission requirement that the executor must not violate — the review must judge whether the rule could be enforced by deterministic tooling (`specflowctl`).
+
+Review rules:
+
+1. if a hard constraint can be validated by a deterministic check (pattern match, state comparison, file existence, fingerprint comparison, phase check), the governance file must not rely on Agent self-enforcement alone; the rule must be implemented in tooling or a documented finding must explain why tooling enforcement is not feasible
+2. if a hard constraint requires semantic judgment that cannot be mechanically validated, the governance file may state it as an Agent-facing rule, but the review must note this limitation
+3. a governance file that lists multiple hard constraints without tooling enforcement for any of them is a finding — the design is relying entirely on Agent self-discipline
+
+This standard does not require every rule to have tooling enforcement. It requires the review to distinguish between rules that could be enforced (and should be) and rules that inherently require judgment (and must rely on Agent capability).
+
+### 2.14 Relationship To The Slice Catalog
 
 `spec_flow_review` adopts `<framework-root>/slice_work_state_protocol.md` when it uses a review run-state file.
 This review file owns the adoption details, the review standard, the slice catalog, and the final conclusion rules.
@@ -333,9 +363,9 @@ The default scope includes:
    - active command contracts: `<framework-root>/lifecycle/*.md`
    - lifecycle Context Cards under `<framework-root>/lifecycle/*.md` are the active command contract
 3. candidate intent standard rules
-   - `<framework-root>/candidate_intents/*.md`
+   - `<framework-root>/candidate_intent.md`
 4. guidance skill rules
-   - `<framework-root>/skills/*/SKILL.md`
+   - `<framework-root>/guidance/*/SKILL.md`
 5. template-side process and state contracts
    - `<template-root>/docs/specs/_status.md`
    - `<template-root>/docs/specs/_check_work/README.md`
@@ -361,8 +391,7 @@ The default scope includes:
 9. source repository local-entry example for `source_repo`
    - `example.md`
 10. entry registry and project-level agent rule files
-   - `<framework-root>/entry_index_registry.md`
-   - `<framework-root>/operations/output_standard.md`
+   - `<framework-root>/operations/entry_routing.md` (Entry File Registration section)
 11. tooling contract, tooling source input, and reader runtime input
    - `<framework-root>/tooling_execution_policy.md`
    - `<framework-root>/slice_work_state_protocol.md`
@@ -415,7 +444,7 @@ It must not require real project-instance `docs/specs/_status.md`, `docs/specs/r
 Default scope must explicitly include:
 
 1. the onboarding source decision rule set
-   - at minimum `operations/entry_routing.md` where it enters onboarding source decision or advance routing, `advance_policy.md`, `onboarding_decision_policy.md`, `spec_policy.md`, `operations/implementation_change.md`, `lifecycle/unit_init_new_fork.md` for `unit_init`, `unit_new`, and `unit_fork`, `lifecycle/unit_check.md`, `lifecycle/unit_plan.md`, `lifecycle/unit_impl.md`, `lifecycle/unit_promote.md`, `candidate_handoff_contract.md`, `candidate_intent_policy.md`, and `candidate_intents/*.md`
+   - at minimum `operations/entry_routing.md` where it enters onboarding source decision or advance routing, `advance_policy.md`, `candidate_intent.md`, `spec_writing_guide.md`, `lifecycle/unit_init_new_fork.md` for `unit_init`, `unit_new`, and `unit_fork`, `lifecycle/unit_check.md`, `lifecycle/unit_promote.md`
 2. the rule-governance rule set
    - at minimum `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch, plus `governance/rules/rule_new.md`, `governance/rules/rule_extract.md`, `governance/rules/rule_bind.md`, `governance/rules/rule_topology.md`, `governance/rules/rule_sync.md`, and `governance/rules/rule_escape.md`
 3. the guidance-skill rule set
@@ -425,13 +454,13 @@ Default scope must explicitly include:
 5. the tooling execution contract set
    - at minimum `tooling_execution_policy.md`, `slice_work_state_protocol.md`, `<tooling-root>/README.md`, the in-scope tooling source files, and the runtime reader web files
 6. the agent-operability standard
-   - at minimum `agent_operability_standard.md`, entry files, routing policy files, `advance_policy.md`, `core/context_card.md`, `core/independent_evaluation.md`, `core/freshness.md`, onboarding source decision files, lifecycle overview, lifecycle Context Cards, candidate intent policy and standards, rule-governance files, guidance skill files, review policy files, Spec writing policy files, and process-state contract files in the current review scope
+   - at minimum entry files, routing policy files, `advance_policy.md`, `core/independent_evaluation.md`, `core/freshness.md`, `lifecycle/overview.md`, lifecycle Context Cards, `candidate_intent.md`, rule-governance files, guidance skill files, review policy files, Spec writing policy files, and process-state contract files in the current review scope
 7. the state-space closure check
    - at minimum routing policy, advance policy, lifecycle overview, lifecycle Context Cards, candidate intent policy and standards, implementation permission rules, process-state contracts, recovery rules, impact-sync rules, migration rules, and project-instance compatibility inputs needed to prove important non-success transitions
 8. the project-instance compatibility check
    - at minimum the layout-selected status, repository mapping, global rule, process-file, and formal truth compatibility inputs, limited by Section 2.10
 9. the project-instance migration flow
-   - at minimum `operations/migration.md`, `operations/entry_routing.md` where it routes project-instance migration, `lifecycle/overview.md` where it defines command boundaries, `process_snapshot_contract.md`, `lifecycle/recovery.md`, `entry_index_registry.md`, and the template-side process, independent-evaluation, and entry files that migration consumes
+   - at minimum `operations/migration.md`, `operations/entry_routing.md` where it routes project-instance migration, `lifecycle/overview.md` where it defines command boundaries, `process_snapshot_contract.md`, `lifecycle/recovery.md`, and the template-side process, independent-evaluation, and entry files that migration consumes
 10. the supporting-truth lifecycle closure check
    - at minimum fork commands, promote commands, process cleanup and recovery rules, Rule sync and release-version paths, project-instance compatibility inputs, tooling contracts, and tooling source that creates, retargets, preserves, or deletes supporting truth
 
@@ -456,13 +485,13 @@ Local slices review one owner area for internal closure, side effects, contract 
    - verifies default-scope collection, excluded project-instance truth, installed project entry files, source repository entry example files, and unassigned file handling
    - includes the deterministic scope produced by `review collect-default-scope --flow spec_flow_review`
 2. `review_entry_policy`
-   - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `governance/review.md`, `governance/review_scope.md`, `severity_policy.md`, and `operations/output_standard.md`
+   - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `governance/review.md`, `governance/review_scope.md`, `severity_policy.md`, and `operations/entry_routing.md` (User-Facing Output section)
    - verifies review entry meaning, output contracts, finding contracts, and stop behavior
 3. `routing_and_lifecycle_policy`
-   - reviews `operations/entry_routing.md`, `advance_policy.md`, `core/adoption_modes.md`, `core/context_card.md`, `core/lifecycle_authority.md`, `core/independent_evaluation.md`, `core/freshness.md`, `onboarding_decision_policy.md`, `lifecycle/overview.md`, `operations/migration.md`, `candidate_intent_policy.md`, `candidate_intents/*.md`, `lifecycle/*.md`, and `skills/*/SKILL.md`
+   - reviews `operations/entry_routing.md`, `advance_policy.md`, `core/adoption_modes.md`, `core/independent_evaluation.md`, `core/freshness.md`, `lifecycle/overview.md`, `operations/migration.md`, `candidate_intent.md`, `lifecycle/*.md`, and `guidance/*/SKILL.md`
    - verifies exact command routing, exact advance routing, exact project-instance migration routing, natural-language routing, onboarding source routing, unit command progression, and guidance entry behavior
 4. `truth_and_implementation_gates`
-   - reviews `spec_policy.md`, `spec_writing_guide.md`, `spec_authoring_baseline.md`, `core/status.md`, `core/lifecycle_authority.md`, `core/repository_mapping.md`, `operations/implementation_change.md`, `onboarding_decision_policy.md`, `candidate_intent_policy.md`, `candidate_intents/*.md`, `candidate_handoff_contract.md`, `downgrade_policy.md`, and `lifecycle/recovery.md`
+   - reviews `spec_writing_guide.md`, `core/status.md`, `core/repository_mapping.md`, `candidate_intent.md`, `lifecycle/recovery.md`, and `lifecycle/overview.md`
    - verifies truth ownership, candidate source fields, evidence appendix ownership, implementation diversion, handoff, fallback, and recovery rules
 5. `shared_governance`
    - reviews `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch
@@ -472,17 +501,17 @@ Local slices review one owner area for internal closure, side effects, contract 
    - verifies process-state contracts, independent-evaluation request contracts, snapshot invalidation, impact handling, and governance-review run-state boundaries
 7. `project_instance_contract_compatibility`
    - reviews the current project-instance files under `docs/specs/` only for format and contract compatibility with current framework rules
-   - reviews `core/object_model.md`, `core/status.md`, `core/repository_mapping.md`, `spec_policy.md`, and `spec_writing_guide.md` as the owner contracts for object family, object state, registry shape, formal Spec shape, reference format, and rule binding format
+   - reviews `core/status.md`, `core/repository_mapping.md`, and `spec_writing_guide.md` as the owner contracts for object family, object state, registry shape, formal Spec shape, reference format, and rule binding format
    - reviews `operations/migration.md` as the migration owner for project-instance shape drift discovered by this slice
    - verifies status shape, repository mapping shape, global rules shape, process-file shape, formal object file shape, candidate source metadata shape, candidate intent standard shape, evidence appendix reference shape, evidence appendix file shape, current-layer supporting-truth reference shape, appendix owner/layer/path agreement, reference format, status values, command names, rule binding format, migration writeback boundary, migration state invalidation, migration blocked-stop handling, and migration output closure
    - must not judge unit, rule, or evidence-appendix business truth correctness
 8. `entry_and_project_extension`
-   - reviews `entry_index_registry.md`, `operations/output_standard.md`, registered entry files, and template entry files
+   - reviews `operations/entry_routing.md` (Entry File Registration section), registered entry files, and template entry files
 9. `tooling_execution`
    - reviews `tooling_execution_policy.md`, `slice_work_state_protocol.md`, `<tooling-root>/README.md`, in-scope tooling source files, and runtime reader web files
    - verifies tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness, reader runtime coverage, and document/source/runtime agreement
 10. `agent_operability_local`
-   - reviews `agent_operability_standard.md`, entry files, routing policy files, `advance_policy.md`, `core/context_card.md`, `core/independent_evaluation.md`, `core/freshness.md`, onboarding source decision files, lifecycle overview, lifecycle Context Cards, candidate intent policy and standards, rule-governance files, guidance skill files, review policy files, Spec writing policy files, and process-state contract files in the current review scope
+   - reviews entry files, routing policy files, `advance_policy.md`, `core/independent_evaluation.md`, `core/freshness.md`, `lifecycle/overview.md`, lifecycle Context Cards, `candidate_intent.md`, rule-governance files, guidance skill files, review policy files, Spec writing policy files, and process-state contract files in the current review scope
    - verifies that local slice conclusions, including candidate intent policy, entry-file consumption, tooling-root command refs, and review entry behavior, did not rely on prior conversation, ordinary term meanings, hidden layout assumptions, or avoidable repeated reading
 
 ### 4.2 Cross-Convergence Baseline Slices

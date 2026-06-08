@@ -262,15 +262,17 @@ stable ⟶ candidate ⟶ verify ⟶ promote ⟶ new stable
 The command chain for a unit:
 
 ```
-unit_new / unit_fork → unit_check → unit_plan → unit_impl → unit_verify → unit_promote
+unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promote
 ```
 
 - **stable** is the currently accepted behavior truth on disk
 - **candidate** is the next truth being prepared (new requirements, behavior changes)
-- **check** decides whether candidate truth is clear enough to plan from
-- **plan** turns checked truth into an executable implementation handoff
+- **check** validates candidate truth clarity and acceptance item format compliance before verification
 - **verify** checks the implementation against the candidate
 - **promote** makes the accepted candidate the new stable
+
+`unit_plan` is not a SpecFlow-governed command; agent frameworks handle planning internally.
+`unit_impl` is a lifecycle state set by `unit_check pass` close, not a user command. Agents handle implementation internally.
 
 For a brand-new unit, start at `unit_new`. For an existing unit with stable truth, start at `unit_fork`.
 
@@ -291,16 +293,14 @@ This means the same two concepts and one lifecycle pattern can govern a single f
 | Existing capability entering governance for the first time | `unit_init:{unit}` |
 | Brand-new capability entering governance | `unit_new:{unit}` |
 | Accepted capability opening a new change round | `unit_fork:{unit}` |
-| Check whether candidate truth is clear enough | `unit_check:{unit}` |
-| Create an implementation plan from truth | `unit_plan:{unit}` |
-| Implement according to the plan | `unit_impl:{unit}` |
+| Validate candidate truth clarity and acceptance item format (required) | `unit_check:{unit}` |
 | Verify implementation against truth | `unit_verify:{unit}` |
 | Promote candidate to new stable | `unit_promote:{unit}` |
 | Check whether implementation still matches stable truth | `unit_stable_verify:{unit}` |
 
 The command form is `{command}:{unit}`, for example `unit_check:payment`.
 
-`unit_check` and `unit_plan` are intentionally separate. `unit_check` closes the behavior and acceptance truth; `unit_plan` consumes that validated check result and decides how to implement it. This keeps truth review from being hidden inside planning.
+`unit_check` is a required quality gate that validates candidate truth clarity and acceptance item format compliance. `unit_plan` is handled by the agent internally and is not a SpecFlow-governed command. `unit_impl` is a lifecycle state set by `unit_check pass` close, not a user command. SpecFlow's core gate is `unit_verify`, which verifies implementation directly against candidate truth.
 
 ## Development Workflow
 

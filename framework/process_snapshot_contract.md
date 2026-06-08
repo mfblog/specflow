@@ -12,17 +12,17 @@ Supported unit process paths:
 
 1. unit check checklist: `docs/specs/_check_work/unit/{unit}.md`
 2. check result: `docs/specs/_check_result/unit/{unit}.md`
-3. active plan: `docs/specs/_plans/active/{unit}.md`
-4. draft plan: `docs/specs/_plans/draft/{unit}.md`
-5. verify result: `docs/specs/_verify_result/unit/{unit}.md`
-6. stable promotion summary: `docs/specs/_verify_result/stable/unit/{unit}.md`
-7. stable verify result: `docs/specs/_stable_verify_result/unit/{unit}.md`
+3. verify result: `docs/specs/_verify_result/unit/{unit}.md`
+4. stable promotion summary: `docs/specs/_verify_result/stable/unit/{unit}.md`
+5. stable verify result: `docs/specs/_stable_verify_result/unit/{unit}.md`
+
+Active plan (`docs/specs/_plans/active/{unit}.md`) and draft plan (`docs/specs/_plans/draft/{unit}.md`) are agent-internal artifacts. They are not SpecFlow process evidence and are not consumed by SpecFlow lifecycle gates.
 
 No `scenario` process path is supported.
 
 `_check_work` is a command-local checklist path for `unit_check`.
-It is not a pass gate and is not consumed by `unit_plan`.
-Downstream handoff commands consume only `_check_result`, `_plans/active`, and `_verify_result` according to their command contracts.
+It is not a pass gate and is not consumed by downstream commands.
+Downstream handoff commands consume only `_check_result` and `_verify_result` according to their command contracts.
 `unit_stable_verify` close consumes only tool-valid `_stable_verify_result` for lifecycle advancement from stable verification.
 Other process files may carry command-owned review records only when their owning command defines that adoption in its command file.
 
@@ -35,8 +35,8 @@ object_type: unit
 object_ref: {unit}
 gate: unit_check|unit_verify
 decision: pass
-allow_next: true
-next_command: unit_plan|unit_promote
+allow_next: true|false
+next_command: unit_verify|unit_promote|none
 truth_layer_ref: candidate
 truth_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 truth_version_ref: c_unit_{unit}@x.y.z
@@ -83,92 +83,48 @@ review_findings: none
 human_decision_refs: none | list
 ```
 
-Plan process YAML must identify the unit truth it planned from:
+Plan process YAML (defined in `docs/specs/_plans/active/{unit}.md`) is an agent-internal artifact. It is not SpecFlow process evidence and is not consumed by `unit_verify` or `unit_promote`.
+
+When the agent creates an internal plan and chooses to reference it in verify evidence, the candidate verify process YAML may include plan-related fields:
 
 ```yaml
-spec_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
-spec_version_ref: c_unit_{unit}@x.y.z
-spec_fingerprint: {fingerprint}
-acceptance_behavior_fingerprint: {fingerprint}
-stable_candidate_diff_refs: none | {refs}
-implementation_gap_refs: none | {refs}
-unit_appendix_snapshot: none | list
-unit_snapshot: none | list
-rule_snapshot: none | list
-acceptance_item_plan_coverage: list
-retirement_targets: none | list
-planned_change_scope: list
-package_constraint_review: pass
-package_constraint_refs: {refs}
-package_constraint_summary: {summary}
-evaluation_mode: independent
-reviewer_result: pass
-reviewer_context: minimal_context
-review_input_refs: {reviewer_pack};{request_file};{durable_input_refs}
-review_findings: none
-human_decision_refs: none | list
-```
-
-`stable_candidate_diff_refs` and `implementation_gap_refs` are mandatory.
-When stable truth exists for the unit, `stable_candidate_diff_refs` must cite both the current candidate main Spec and the current stable main Spec.
-When no stable truth exists, `stable_candidate_diff_refs` may be literal `none`.
-`implementation_gap_refs` must be literal `none`, or cite durable repository-relative refs that show the implementation entry points, main paths, rendering/API/generation paths, or repository mapping inspected by the plan.
-
-`retirement_targets` is mandatory. It must be literal `none`, or a YAML list whose items contain `id`, `target_ref`, `target_kind`, `retirement_method`, `verification_action`, and `acceptance_item_ids`.
-For `candidate_intent: change` with `source_basis: replacement`, `retirement_targets` must not be `none`; the plan must name the old structures, entries, primary paths, wrappers, compatibility layers, or dependencies that must stop being required before promotion.
-List form must use this exact shape:
-
-```yaml
-retirement_targets:
-  - id: rt.<slug>
-    target_ref: {path-or-name}
-    target_kind: path|helper|wrapper|compat_layer|dependency|other
-    retirement_method: remove|reroute|replace|isolate
-    verification_action: {verification action}
-    acceptance_item_ids: {acceptance_item_id},{acceptance_item_id}
-```
-
-Valid `target_kind` values are `path`, `helper`, `wrapper`, `compat_layer`, `dependency`, and `other`.
-Valid `retirement_method` values are `remove`, `reroute`, `replace`, and `isolate`.
-Each target id must use `rt.<slug>`.
-`acceptance_item_ids` must be a single comma-separated scalar of current candidate acceptance item ids.
-It must not be a YAML list and must not use semicolon delimiters.
-
-`planned_change_scope` is mandatory for active plans.
-It records only the current round's delta scopes and must not be used to force a whole-package implementation plan.
-Each item must contain `id`, `basis_refs`, `acceptance_item_ids`, `implementation_refs`, and `verification_action`.
-List form must use this exact shape:
-
-```yaml
-planned_change_scope:
-  - id: pcs.<slug>
-    basis_refs: {semicolon-delimited package refs}
-    acceptance_item_ids: {acceptance_item_id},{acceptance_item_id}
-    implementation_refs: {semicolon-delimited refs}
-    verification_action: {verification action}
-```
-
-Each planned change scope id must use `pcs.<slug>`.
-`basis_refs` may cite only refs from the current package snapshot: the current candidate main Spec, unit-owned appendix files, stable unit dependency files resolved from `unit_refs`, and stable or candidate rule files resolved from applicable global rules and `rule_refs`.
-`acceptance_item_ids` must be a single comma-separated scalar of current candidate acceptance item ids.
-`implementation_refs` must cite durable repository-relative refs inspected or changed by the delta.
-
-`package_constraint_review`, `package_constraint_refs`, and `package_constraint_summary` are mandatory for active plans.
-`package_constraint_review` must be `pass`.
-`package_constraint_refs` must cite refs from the current package snapshot.
-Tooling validates that cited refs belong to the package snapshot, but the independent reviewer judges whether relevant package constraints were missed.
-
-Candidate verify process YAML must also bind to the active plan and record retirement evidence:
-
-```yaml
-active_plan_file_ref: docs/specs/_plans/active/{unit}.md
-active_plan_fingerprint: {fingerprint}
 acceptance_item_evidence_matrix:
   - id: {acceptance_item_id}
     status: pass|fail|partial|not_checked|not_runnable_yet
     evidence_refs: {refs}
+```
+
+```yaml
+acceptance_item_evidence_matrix:
+  - id: {acceptance_item_id}
+    status: pass|fail|partial|not_checked|not_runnable_yet
+    evidence_refs: {refs}
+    scope_verification:              # required when the acceptance item declares affects
+      files:
+        - path: {file_path}
+          status: pass|fail|not_checked
+          evidence_refs: {refs}
+      appendices:
+        - name: {appendix_name}
+          status: pass|fail|not_checked
+          evidence_refs: {refs}
+      rules:
+        - name: {rule_name}
+          status: pass|fail|not_checked
+          evidence_refs: {refs}
+      dependencies:
+        - name: {dependency_name}
+          status: pass|fail|not_checked
+          evidence_refs: {refs}
+```
+
+When the agent created an internal plan and chooses to reference it, these optional fields may also appear:
+
+```yaml
+active_plan_file_ref: docs/specs/_plans/active/{unit}.md | none
+active_plan_fingerprint: {fingerprint} | none
 retirement_evidence_matrix: none | list
-package_delta_verification: list
+package_delta_verification: none | list
 ```
 
 Each `acceptance_item_evidence_matrix` item must include `id`, `status`, and `evidence_refs`.
@@ -176,16 +132,15 @@ For executable candidate acceptance items, promotion-ready verify evidence requi
 Items whose current truth records `not_runnable_yet: yes` must use `status: not_runnable_yet`; they may use `evidence_refs: none`.
 Generic test success, renamed files, new fields, or absent old strings are not sufficient by themselves for semantic replacement claims.
 
-`retirement_evidence_matrix` is mandatory. When the active plan has `retirement_targets: none`, it must be literal `none`.
-When the active plan lists retirement targets, the matrix must contain exactly those target ids.
-Each item must include `id`, `result`, `mainline_dependency`, and `evidence_refs`.
+`retirement_evidence_matrix` is optional. When no plan exists or the plan has no retirement targets, it must be literal `none`.
+When present, each item must include `id`, `result`, `mainline_dependency`, and `evidence_refs`.
 Promotion-ready evidence requires `result: pass` and `mainline_dependency: not_required` for every retirement target.
 Valid `result` values are `pass`, `fail`, and `not_checked`.
 Valid `mainline_dependency` values are `not_required`, `still_required`, and `unknown`.
-Tooling must not delete implementation code or judge whether a retained compatibility path is business-safe; explicit planning and verification evidence drive the outcome.
+Tooling must not delete implementation code or judge whether a retained compatibility path is business-safe.
 
-`package_delta_verification` is mandatory for candidate verify evidence.
-It must contain exactly one item for each active-plan `planned_change_scope` id:
+`package_delta_verification` is optional. When no plan exists, it must be literal `none`.
+When present, it must contain exactly one item for each planned change scope id:
 
 ```yaml
 package_delta_verification:
@@ -194,9 +149,7 @@ package_delta_verification:
     evidence_refs: {refs}
 ```
 
-Promotion-ready verify evidence requires every package delta item to use `result: pass` and non-empty durable `evidence_refs`.
-
-Advancing check, active plan, verify, and stable verify files must include the independent evaluation receipt.
+Advancing check (when run), verify, and stable verify files must include the independent evaluation receipt.
 Tooling validates the receipt fields mechanically; it does not prove reviewer session isolation and does not judge whether the reviewer made a good semantic decision.
 Independent evaluation request files under `docs/specs/_independent_evaluation/requests/**` are handoff instructions only.
 They are not process snapshots, are not lifecycle evidence, and are not consumed by `command close`.
@@ -224,7 +177,7 @@ freshness_review_findings: none
 ```
 
 `acceptance_behavior_fingerprint` is the normalized SHA-256 of the full formal acceptance item behavior fields: `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `pass_condition`, `not_runnable_yet`, and `not_runnable_yet_reason`.
-Advancing check, active plan, verify, and stable verify evidence must record it.
+Advancing check (when run), verify, and stable verify evidence must record it.
 Evidence without this field uses the old snapshot schema and is not current valid advancing evidence until it is migrated or recreated.
 It must not be treated as accepted `text_drift` reuse.
 
@@ -233,7 +186,7 @@ Text drift evidence reuse requires the freshness receipt above and independent r
 
 ## 3. Dependency Snapshots
 
-Candidate check, plan, and verify process files must record the current package snapshots:
+Candidate check (when run) and verify process files must record the current package snapshots:
 
 ```yaml
 unit_appendix_snapshot: none
@@ -261,20 +214,16 @@ Process validation failure maps to these layers:
 
 1. truth mismatch -> `truth_layer`
 2. check schema or gate evidence mismatch -> `gate_layer`
-3. plan schema, plan coverage, planned-change-scope, or package-constraint mismatch -> `plan_layer`
-4. implementation mismatch while truth, check, and plan still validate -> `implementation_layer`
-5. verify evidence mismatch -> `evidence_layer`
-6. stable verify evidence mismatch -> `evidence_layer`, with `unit_stable_verify` as the restart command
-7. unaccepted text drift -> `freshness_layer`, with no automatic status reroute
+3. verify evidence mismatch -> `evidence_layer`
+4. stable verify evidence mismatch -> `evidence_layer`, with `unit_stable_verify` as the restart command
+5. unaccepted text drift -> `freshness_layer`, with no automatic status reroute
 
 The legal fallback commands are:
 
-1. `truth_layer` -> `unit_check`
-2. `gate_layer` -> `unit_check`
-3. `plan_layer` -> `unit_plan`
-4. `implementation_layer` -> `unit_impl`
-5. `evidence_layer` -> `unit_verify`
-6. `stable_verify` validation failure -> `unit_stable_verify`
+1. `truth_layer` -> candidate truth repair or `unit_check` (optional)
+2. `gate_layer` -> candidate truth repair or `unit_check` (optional)
+3. `evidence_layer` -> `unit_verify`
+4. `stable_verify` validation failure -> `unit_stable_verify`
 
 `freshness_layer` is not a fallback layer. It means the process file may be reusable after independent freshness review, so tooling must not delete process files or advance `_status.md` from that result alone.
 

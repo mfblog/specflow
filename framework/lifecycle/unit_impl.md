@@ -1,78 +1,27 @@
-# Unit Implementation Context Card
+# Unit Implementation
 
-`unit_impl:{unit}` changes implementation files according to the active plan's planned delta.
+`unit_impl` is the implementation phase between candidate truth validation and verification.
 
-`unit_impl` executes `planned_change_scope` from the active plan. It does not redesign the full unit package.
+## 输入
 
-## Required Context
+- `docs/specs/units/candidate/c_unit_{unit}.md`
+- 当前 unit 的候选层附录文件
+- 当前 unit 引用的稳定层 truth 和 rule 文件
+- `docs/specs/_check_result/unit/{unit}.md`（如存在）
 
-Read only:
+## 本步骤做什么
 
-1. `framework/core/context_card.md`
-2. `framework/core/lifecycle_authority.md`
-3. `docs/specs/_status.md` for the target unit row.
-4. `docs/specs/_check_result/unit/{unit}.md`
-5. `docs/specs/_plans/active/{unit}.md`
-6. `docs/specs/units/candidate/c_unit_{unit}.md`
-7. candidate appendices, stable truth, and rule files named by the active plan.
-8. `docs/specs/repository_mapping.md` entries for implementation paths touched by the plan.
-9. existing implementation files explicitly named by the plan or repository mapping.
+根据候选 Spec 中的 acceptance items 实现代码。
+实现过程中如果发现 Spec 缺失或错误，停止并问用户。
 
-Before treating `docs/specs/_check_result/unit/{unit}.md` or `docs/specs/_plans/active/{unit}.md` as usable implementation input, or before writing implementation files, local fixtures, support files, or repository mapping, run:
+## 不允许
 
-```text
-<tooling-root>/bin/specflowctl-<os>-<arch> command preflight --repo-root <repo-root> --command unit_impl --object-type unit --object <unit>
-```
+- 修改 Spec 文件（候选或稳定层）
+- 修改 lifecycle 状态
+- 实现超出候选 Spec 范围的行为
+- 修改 rule truth 或 global rules
 
-If command preflight is unavailable, run explicit `snapshot validate-process` checks for `check` and `plan` before any implementation write.
+## 如何结束
 
-## Allowed Writes
-
-Allowed writes are:
-
-1. implementation files named by the active plan and repository mapping.
-2. local test fixtures or support files required by the active plan.
-3. `docs/specs/repository_mapping.md` only when the active plan requires adding the implementation paths being touched and no ownership decision is invented.
-
-## Forbidden Writes
-
-Do not write:
-
-1. candidate or stable truth.
-2. lifecycle status.
-3. check, plan, verify, or stable-verify process evidence.
-4. rule truth or global rules.
-5. implementation behavior not already covered by candidate truth and active plan.
-
-If behavior truth is missing or wrong, stop and fall back to `unit_check`.
-If the plan is incomplete but truth stands, fall back to `unit_plan`.
-If implementation discovers that a package constraint from the active plan is relevant but not handled by `planned_change_scope`, stop and fall back to `unit_plan`.
-
-## On-Demand Expansions
-
-Enter only when the trigger appears:
-
-1. `framework/operations/implementation_change.md` when the request includes implementation changes outside an exact `unit_impl:{unit}` route.
-2. `framework/governance/rule_system.md` when implementation exposes rule ownership or global-rule conflicts; use `framework/governance/rules/rule_escape.md` when current truth is insufficient to choose or finish the rule flow safely.
-3. `framework/lifecycle/recovery.md` when the active plan, check result, or repository mapping is stale or missing.
-4. `framework/operations/migration.md` when implementation paths cannot be mapped with the current repository mapping shape.
-5. `framework/core/freshness.md` when preflight reports `freshness_layer` or accepted `text_drift` on required input evidence.
-
-## Independent Evaluation
-
-`unit_impl` does not require an independent reviewer receipt for `ready_for_verify`.
-
-This command changes code; it does not approve that code. Verification and promotion readiness are independently evaluated in `unit_verify`.
-
-## Close Requirements
-
-Successful close uses outcome `ready_for_verify` and advances to `unit_verify`.
-
-Do not close `ready_for_verify` until implementation work is complete, local evidence named by the active plan has been run or explicitly bounded, and this close command accepts the lifecycle transition:
-
-```text
-<tooling-root>/bin/specflowctl-<os>-<arch> command close --repo-root <repo-root> --command unit_impl --object-type unit --object <unit> --outcome ready_for_verify --apply
-```
-
-Accepted `text_drift` input evidence can be consumed by preflight; unaccepted freshness drift must stop before implementation close.
-`ready_for_verify` does not require an independent reviewer receipt because verification, not implementation, approves correctness.
+所有 acceptance items 实现完成后，进入 `unit_verify:{unit}`。
+无需特殊 close 命令。

@@ -735,10 +735,6 @@ func humanNextCommand(command string) string {
 		return "检查实现是否仍符合已确认设计"
 	case "unit_check":
 		return "检查设计是否足够支撑开发"
-	case "unit_plan":
-		return "把设计整理成开发计划"
-	case "unit_impl":
-		return "按计划实现"
 	case "unit_verify":
 		return "验证实现是否符合设计"
 	case "unit_promote":

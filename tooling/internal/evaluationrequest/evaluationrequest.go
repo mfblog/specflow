@@ -14,7 +14,6 @@ import (
 
 const (
 	PackUnitCheckPass             = "unit_check_pass"
-	PackUnitPlanPlanReady         = "unit_plan_plan_ready"
 	PackUnitVerifyReadyToPromote  = "unit_verify_ready_to_promote"
 	PackUnitStableVerifyAdvancing = "unit_stable_verify_advancing"
 	PackFreshnessTextDriftReuse   = "freshness_text_drift_reuse"
@@ -173,7 +172,7 @@ func configsByPack() map[string]packConfig {
 			ProcessKind:  "check",
 			LifecycleRef: "framework/lifecycle/unit_check.md",
 			ReviewTitle:  "Unit Check Pass Review",
-			ReviewGoal:   "Decide whether candidate unit truth is ready for planning.",
+			ReviewGoal:   "Decide whether candidate unit truth is clear enough for downstream work.",
 			ReviewStandardRefs: []reviewStandardRef{
 				{
 					Ref:       "framework/core/independent_evaluation.md",
@@ -181,7 +180,7 @@ func configsByPack() map[string]packConfig {
 				},
 				{
 					Ref:       "framework/lifecycle/unit_check.md",
-					Authority: "whether candidate truth is clear enough to become planning input.",
+					Authority: "whether candidate truth is clear enough for downstream work.",
 				},
 			},
 			AllowedInputs: []string{
@@ -191,53 +190,14 @@ func configsByPack() map[string]packConfig {
 				"`framework/lifecycle/unit_check.md` check questions.",
 			},
 			ForbiddenInputs: []string{
-				"implementation plan drafts.",
 				"implementation files unless repository mapping is part of the boundary question.",
 				"executor rationale not present in durable truth or `_check_result`.",
 			},
 			EvaluationQuestions: []string{
-				"Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for planning?",
-				"Is the full unit package, including main Spec, owned appendices, unit dependencies, and applicable rules, clear and consistent enough for planning?",
+				"Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for downstream work?",
+				"Is the full unit package, including main Spec, owned appendices, unit dependencies, and applicable rules, clear and consistent enough for downstream work?",
 				"Are acceptance items testable without inventing behavior?",
 				"Does the check result match the candidate truth and evidence refs?",
-			},
-		},
-		PackUnitPlanPlanReady: {
-			Pack:         PackUnitPlanPlanReady,
-			ProcessKind:  "plan",
-			LifecycleRef: "framework/lifecycle/unit_plan.md",
-			ReviewTitle:  "Unit Plan Ready Review",
-			ReviewGoal:   "Decide whether the active plan is ready for implementation handoff.",
-			ReviewStandardRefs: []reviewStandardRef{
-				{
-					Ref:       "framework/core/independent_evaluation.md",
-					Authority: "reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
-				},
-				{
-					Ref:       "framework/lifecycle/unit_plan.md",
-					Authority: "whether the active plan is ready to serve as the implementation handoff.",
-				},
-			},
-			AllowedInputs: []string{
-				"user goal or exact `unit_plan:{unit}` target.",
-				"candidate unit truth, stable unit truth when it exists, and valid `_check_result/unit/{unit}.md`.",
-				"active plan under review.",
-				"plan acceptance coverage, stable-to-candidate diff, implementation-gap, planned-change-scope, package-constraint, and retirement-target criteria from `framework/lifecycle/unit_plan.md`.",
-			},
-			ForbiddenInputs: []string{
-				"implementation work not authorized by the active plan.",
-				"executor-only design rationale that is absent from the active plan.",
-				"unrelated repository architecture exploration.",
-			},
-			EvaluationQuestions: []string{
-				"Does the plan cover every accepted acceptance item?",
-				"When stable truth exists, does the plan cite and use the stable-to-candidate behavior diff instead of planning from the candidate name alone?",
-				"Does the plan cite the implementation refs inspected for current entry points, main paths, rendering/API/generation paths, and gaps?",
-				"For candidate_intent change with source_basis replacement, does the plan reject retirement_targets none and list the old structures, entries, primary paths, wrappers, compatibility layers, or dependencies that must stop being required?",
-				"Does the plan define this round's delta through planned_change_scope without requiring a whole-package implementation plan?",
-				"Does package_constraint_review show that the delta was planned under the full unit package constraints, without dropping relevant appendix, rule, unit dependency, or acceptance truth?",
-				"Does the plan stay inside checked truth and named implementation surfaces?",
-				"Can unit_impl execute without inventing behavior or ownership?",
 			},
 		},
 		PackUnitVerifyReadyToPromote: {
@@ -258,13 +218,11 @@ func configsByPack() map[string]packConfig {
 			},
 			AllowedInputs: []string{
 				"user goal or exact `unit_verify:{unit}` target.",
-				"candidate unit truth, valid check result, and active plan.",
-				"verify result under review.",
-				"evidence refs needed to inspect acceptance coverage, retirement evidence, and package-aware delta verification.",
+				"candidate unit truth and valid verify result.",
 			},
 			ForbiddenInputs: []string{
 				"unrecorded executor claims that tests passed.",
-				"implementation changes not represented by plan or evidence refs.",
+				"implementation changes not represented by evidence refs.",
 				"promotion judgment not grounded in verify evidence.",
 			},
 			EvaluationQuestions: []string{
@@ -272,8 +230,7 @@ func configsByPack() map[string]packConfig {
 				"Does each executable acceptance item have inspectable evidence refs that prove the candidate behavior through the declared verification surface?",
 				"Does the verify result reject weak evidence as sufficient by itself, including generic test success, absent old strings, present new files, or present new fields?",
 				"For primary protocol, default page, primary presentation, API, or artifact-generation changes, does the evidence inspect real generated artifacts, API return values, DOM/screenshots, rendered text, CLI output, or tests proving the mainline path uses the candidate protocol?",
-				"Does the verify result prove every retirement target with pass and mainline_dependency not_required evidence?",
-				"Does package_delta_verification prove every planned_change_scope entry without violating appendix, rule, unit dependency, or acceptance truth?",
+				"Does the verify result prove every retirement target (if any) with pass and mainline_dependency not_required evidence?",
 				"Is the candidate ready for promotion without hiding unresolved gaps?",
 			},
 		},
@@ -353,7 +310,6 @@ func requestFilePath(objectType, object, pack string) string {
 func collectReviewRefs(options Options, config packConfig, processFile string, validation snapshot.ValidationResult, processData snapshot.ProcessSnapshotData) reviewRefs {
 	expected := validation.Expected
 	fileRefs := []string{
-		"framework/core/independent_evaluation.md",
 		processFile,
 	}
 	if config.LifecycleRef != "" {
@@ -364,15 +320,15 @@ func collectReviewRefs(options Options, config packConfig, processFile string, v
 	evidenceRefs := []string{}
 
 	switch config.Pack {
-	case PackUnitPlanPlanReady:
-		fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
-		fileRefs = appendScalarRefs(fileRefs, processData, "implementation_gap_refs", "package_constraint_refs")
-		for _, entry := range processData.PlannedChangeScope {
-			fileRefs = appendSplitRefs(fileRefs, entry.BasisRefs)
-			fileRefs = appendSplitRefs(fileRefs, entry.ImplementationRefs)
-		}
 	case PackUnitVerifyReadyToPromote:
-		fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object), snapshot.ActivePlanFilePath(options.Object))
+		checkPath := filepath.Join(options.RepoRoot, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
+		if _, err := os.Stat(checkPath); err == nil {
+			fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
+		}
+		planPath := filepath.Join(options.RepoRoot, snapshot.ActivePlanFilePath(options.Object))
+		if _, err := os.Stat(planPath); err == nil {
+			fileRefs = append(fileRefs, snapshot.ActivePlanFilePath(options.Object))
+		}
 		evidenceRefs = appendScalarRefs(evidenceRefs, processData, "evidence_refs")
 		for _, entry := range processData.AcceptanceEvidence {
 			evidenceRefs = appendSplitRefs(evidenceRefs, entry.EvidenceRefs)
@@ -488,12 +444,13 @@ func renderRequest(options Options, config packConfig, processFile, requestFile 
 	writeField(&b, "request_file", requestFile)
 	writeField(&b, "created_at", options.Now.UTC().Format("2006-01-02T15:04:05Z"))
 	b.WriteString("\n## Reviewer Role\n\n")
-	b.WriteString("You are the independent reviewer for this request. Do not modify repository files. Read only the files listed in Review Standard Refs, Review File Refs, and the reviewer pack details in this request.\n\n")
-	b.WriteString("Use Review Standard Refs as the authoritative review criteria, not only as input files.\n\n")
+	b.WriteString("You are the independent reviewer for this request. Do not modify repository files. Read only the files listed in Review File Refs, Review Evidence Refs, and Evaluation Questions below.\n\n")
+	b.WriteString("Use Evaluation Questions as the authoritative review criteria.\n\n")
 	b.WriteString("Use Review Evidence Refs only to judge whether the recorded evidence is sufficient and traceable; do not treat every evidence ref as a readable file.\n\n")
 	b.WriteString("## Review Goal\n\n")
 	b.WriteString(config.ReviewGoal)
 	b.WriteString("\n\n## Review Standard Refs\n\n")
+	b.WriteString("These refs show the original source of the review criteria. The actual criteria are embedded in Evaluation Questions below.\n\n")
 	writeStandardRefs(&b, config.ReviewStandardRefs)
 	b.WriteString("\n## Allowed Inputs\n\n")
 	writeBullets(&b, config.AllowedInputs)

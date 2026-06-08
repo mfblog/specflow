@@ -1,5 +1,7 @@
 # Recovery
 
+<!-- AGENT: 该文件是框架内部文档，Agent 只在工具重定向或出现 recovery 场景时才需要读。正常情况下不需要主动阅读。 -->
+
 Recovery resets unsafe process evidence to the smallest legal restart point.
 
 It applies to unit lifecycle work, rule-governance work that already mutated files, and impact sync outcomes that invalidate downstream evidence.
@@ -8,10 +10,8 @@ It applies to unit lifecycle work, rule-governance work that already mutated fil
 
 | Failure Layer | Reason Codes | Deletes | Next Command |
 |---|---|---|---|
-| `truth_layer` | `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete` | check checklist, check result, plan, verify result | `unit_check` |
-| `gate_layer` | `gate_missing` | check checklist, check result | `unit_check` |
-| `plan_layer` | `plan_drift` | plan, verify result | `unit_plan` |
-| `implementation_layer` | `implementation_deviation` | verify result | `unit_impl` |
+| `truth_layer` | `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete` | check checklist, check result (if any), verify result | candidate truth repair |
+| `gate_layer` | `gate_missing` | check checklist, check result (if any) | candidate truth repair |
 | `evidence_layer` | `evidence_incomplete`, `stable_verify_invalid` | verify result or stable-verify result | `unit_verify` or `unit_stable_verify` |
 
 Only reason codes in this table are valid for fallback cleanup.
@@ -28,8 +28,7 @@ When candidate truth changes, bound rule references change, repository mapping c
 3. keep still-valid upstream evidence only when deterministic validation proves it still matches current truth.
 4. rerun impact sync when the change may affect other units.
 
-If a candidate main Spec changes after `unit_check`, the default fallback is `unit_check`.
-Use a later fallback only when the change is proven not to affect the earlier gate.
+If a candidate main Spec changes after `unit_check`, the check result (if any) may need revalidation. Verify evidence may still be valid if the spec change does not affect acceptance items or verification scope.
 
 ## Stable Unit Recovery
 
@@ -48,7 +47,7 @@ If promotion has already mutated stable truth but closure is incomplete:
 1. do not silently keep partial promotion state.
 2. restore the unit to a deterministic candidate state when stable truth cannot be proven complete.
 3. delete process evidence that references the incomplete promotion result.
-4. set the next command to `unit_check` unless only verification evidence is invalid.
+4. set the next command to `unit_verify` unless only check evidence was relied upon.
 5. rerun impact sync for any stable dependency or rule consumer that could observe the promotion attempt.
 
 ## Rule-Governance Recovery

@@ -50,7 +50,7 @@ func Run(repoRoot, command, objectType, object string) Result {
 		result.RecommendedNextCommand = "none"
 		return result
 	}
-	if status.NextCommand != result.Command {
+	if status.NextCommand != result.Command && !(result.Command == "unit_verify" && status.NextCommand == "unit_impl") {
 		result.MayContinue = false
 		result.FailureLayer = "status_layer"
 		result.RecommendedNextCommand = status.NextCommand
@@ -88,14 +88,10 @@ func ProcessKinds(objectType, command string) ([]string, error) {
 		switch command {
 		case "unit_init", "unit_new", "unit_fork", "unit_stable_verify", "unit_check":
 			return nil, nil
-		case "unit_plan":
-			return []string{"check"}, nil
-		case "unit_impl":
-			return []string{"check", "plan"}, nil
 		case "unit_verify":
-			return []string{"check", "plan"}, nil
+			return nil, nil
 		case "unit_promote":
-			return []string{"plan", "verify"}, nil
+			return []string{"verify"}, nil
 		default:
 			return nil, fmt.Errorf("command %q is not supported for object type %q", command, objectType)
 		}
@@ -159,8 +155,6 @@ func fallbackForMissingOrUnavailableProcess(objectType, processKind string) (str
 		switch processKind {
 		case "check":
 			return "gate_layer", "unit_check"
-		case "plan":
-			return "plan_layer", "unit_plan"
 		case "verify":
 			return "evidence_layer", "unit_verify"
 		case "stable_verify":

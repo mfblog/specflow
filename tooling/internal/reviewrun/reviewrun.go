@@ -780,7 +780,6 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 					scope.FrameworkPath("spec_flow_design_review.md"),
 					scope.FrameworkPath("governance/review.md"),
 					scope.FrameworkPath("governance/review_scope.md"),
-					scope.FrameworkPath("operations/output_standard.md"),
 					scope.FrameworkPath("severity_policy.md"),
 				}
 			},
@@ -793,14 +792,11 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 				return union([]string{
 					scope.FrameworkPath("advance_policy.md"),
 					scope.FrameworkPath("core/adoption_modes.md"),
-					scope.FrameworkPath("core/context_card.md"),
 					scope.FrameworkPath("core/freshness.md"),
 					scope.FrameworkPath("core/independent_evaluation.md"),
-					scope.FrameworkPath("core/lifecycle_authority.md"),
 					scope.FrameworkPath("operations/entry_routing.md"),
 					scope.FrameworkPath("lifecycle/overview.md"),
 					scope.FrameworkPath("operations/migration.md"),
-					scope.FrameworkPath("onboarding_decision_policy.md"),
 				}, scope.CommandFiles, scope.CandidateIntentFiles, scope.GuidanceSkillFiles)
 			},
 		},
@@ -813,16 +809,8 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 					scope.FrameworkPath("core/object_model.md"),
 					scope.FrameworkPath("core/repository_mapping.md"),
 					scope.FrameworkPath("core/status.md"),
-					scope.FrameworkPath("core/lifecycle_authority.md"),
-					scope.FrameworkPath("spec_policy.md"),
 					scope.FrameworkPath("spec_writing_guide.md"),
-					scope.FrameworkPath("spec_authoring_baseline.md"),
 					scope.FrameworkPath("lifecycle/unit_check.md"),
-					scope.FrameworkPath("lifecycle/unit_plan.md"),
-					scope.FrameworkPath("operations/implementation_change.md"),
-					scope.FrameworkPath("onboarding_decision_policy.md"),
-					scope.FrameworkPath("candidate_handoff_contract.md"),
-					scope.FrameworkPath("downgrade_policy.md"),
 					scope.FrameworkPath("lifecycle/recovery.md"),
 				}, scope.CandidateIntentFiles)
 			},
@@ -861,10 +849,8 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 					scope.FrameworkPath("core/object_model.md"),
 					scope.FrameworkPath("core/status.md"),
 					scope.FrameworkPath("core/repository_mapping.md"),
-					scope.FrameworkPath("spec_policy.md"),
 					scope.FrameworkPath("spec_writing_guide.md"),
 					scope.FrameworkPath("lifecycle/overview.md"),
-					scope.FrameworkPath("onboarding_decision_policy.md"),
 					scope.FrameworkPath("process_snapshot_contract.md"),
 					scope.FrameworkPath("operations/migration.md"),
 				}, scope.CandidateIntentFiles, scope.RuleGovernanceFiles, scope.TemplateGovernanceFiles, scope.TemplateProjectInstanceFiles, scope.ProjectInstanceCompatibilityFiles)
@@ -876,8 +862,6 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			ReviewQuestion: "Do entry files and project-level agent rules stay bounded by framework governance.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
-					scope.FrameworkPath("entry_index_registry.md"),
-					scope.FrameworkPath("operations/output_standard.md"),
 				}, scope.TemplateEntryFiles, scope.ProjectEntryFiles, scope.SourceRepoEntryExampleFiles)
 			},
 		},
@@ -994,8 +978,6 @@ func specFlowDesignReviewBaselineDefinitions() []sliceDefinition {
 			ReviewQuestion: "Can normal users and executors operate the entry surfaces without excessive burden.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
-					scope.FrameworkPath("entry_index_registry.md"),
-					scope.FrameworkPath("operations/output_standard.md"),
 				}, scope.ProjectEntryFiles, scope.SourceRepoEntryExampleFiles, scope.TemplateEntryFiles)
 			},
 		},

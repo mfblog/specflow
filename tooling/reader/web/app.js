@@ -2541,9 +2541,9 @@ function renderTodoCard(item) {
       <div class="todo-command-row">
         <span>${escapeHTML(t("todo.command"))}</span>
         <div class="todo-command-actions">
-          <button class="todo-copy-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(`${t("todo.nextEntry")}: ${item.commandText}`)}">
+          ${item.commandText ? `<button class="todo-copy-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(`${t("todo.nextEntry")}: ${item.commandText}`)}">
             <span>${escapeHTML(t("todo.nextEntry"))}</span>
-          </button>
+          </button>` : ""}
           ${renderAdvanceCommandButton(item, "todo-copy-command advance-entry")}
         </div>
       </div>
@@ -2615,13 +2615,15 @@ function todoItems() {
       const nextCommand = String(object.next_command || "").trim();
       const type = todoTypeForObject(object, nextCommand);
       const sources = todoSourcesForObject(object, nextCommand);
+      // unit_impl is a lifecycle state, not a user command — do not offer it as copyable text
+      const commandText = nextCommand === "unit_impl" ? "" : `${nextCommand}:${object.id}`;
       return {
         id: `todo:${object.kind}:${object.id}`,
         type,
         object,
         objectLabel: object.label || object.id || t("fallback.undeclared"),
         nextCommand,
-        commandText: `${nextCommand}:${object.id}`,
+        commandText,
         advanceCommandText: advanceEntryCommandForObject(object, nextCommand),
         relation: candidateRelationForObject(object),
         sources,
@@ -3198,6 +3200,8 @@ function reviewNextCommandText(item) {
   const command = String(item && item.nextCommand ? item.nextCommand : "").trim();
   const objectID = String(item && item.object && item.object.id ? item.object.id : "").trim();
   if (!command || !objectID) return "";
+  // unit_impl is a lifecycle state, not a user command — do not offer it as copyable text
+  if (command === "unit_impl") return "";
   return `${command}:${objectID}`;
 }
 
@@ -3665,9 +3669,9 @@ function renderTodoDetail(item) {
       <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
       ${renderNextRoundEntry(view, item.object)}
       <div class="review-command-actions">
-        <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(`${t("review.nextCommand")}: ${item.commandText}`)}">
+        ${item.commandText ? `<button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(`${t("review.nextCommand")}: ${item.commandText}`)}">
           <span>${escapeHTML(t("review.nextCommand"))}</span>
-        </button>
+        </button>` : ""}
         ${renderAdvanceCommandButton(item, "review-next-command advance-entry")}
       </div>
     </section>

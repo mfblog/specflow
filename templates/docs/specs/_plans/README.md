@@ -1,20 +1,22 @@
-# Candidate Plans
+# Candidate Plans (Agent-Internal)
 
-This directory stores the plan-family process files used during candidate progression.
+This directory stores plan-family files that are **agent-internal artifacts**. They are not SpecFlow process evidence and are not consumed by SpecFlow lifecycle gates.
 
-Rules:
+## Structure
 
-1. `_plans/` is divided into:
-   - `draft/`
-   - `active/`
-2. Neither draft nor active plan files are formal Specs or behavior sources of truth.
-3. `draft/{unit}.md` stores non-consumable planning work-in-progress for `unit_plan`.
-4. `active/{unit}.md` is the only plan file shape that downstream commands may consume.
-5. `unit_plan` writes or updates `active/{unit}.md` only when the round is `plan-ready`.
-6. `unit_plan` may write or update `draft/{unit}.md` when planning is blocked, in checkpoint, or still accumulating bounded implementation facts.
-7. `unit_impl` and `unit_verify` must consume only `active/{unit}.md`.
-8. `truth_layer`, `plan_layer`, `unit_fork`, `unit_promote`, candidate-side recovery, and `Candidate=no` must not leave stale draft/active plan files behind.
-9. `gate_layer` and `evidence_layer` recovery must not delete active plans that still match current truth.
-10. File-specific rules live in:
-   - `docs/specs/_plans/draft/README.md`
-   - `docs/specs/_plans/active/README.md`
+`_plans/` is divided into:
+- `draft/` — work-in-progress planning notes
+- `active/` — completed internal plan snapshots
+
+## Status
+
+Plan files are no longer SpecFlow-governed. The `unit_plan` command has been removed from the SpecFlow lifecycle. `unit_impl` is a lifecycle state set by `unit_check pass` close, not a user command. Agents handle planning and implementation internally.
+
+SpecFlow lifecycle commands (`unit_verify`, `unit_promote`) do NOT require or consume plan files. Plan fields in verify evidence (`active_plan_file_ref`, `retirement_evidence_matrix`, `package_delta_verification`) are optional.
+
+## Guidance for Agents
+
+- Plans may be structured however the agent framework prefers.
+- Plan files may be kept, discarded, or updated at the agent's discretion.
+- If an agent chooses to record retirement targets or planned change scope in a plan, it may optionally reference them in verify evidence.
+- Stale plan files from prior lifecycle rounds may be cleaned up or preserved as historical context.

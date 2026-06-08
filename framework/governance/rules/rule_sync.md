@@ -28,8 +28,8 @@ It is the rule-specific impact discovery layer. Once the affected unit set is fi
 
 Before impact is computed, read:
 
-1. `framework/spec_policy.md`
-2. `framework/spec_writing_guide.md`
+1. `framework/spec_writing_guide.md`
+2. `framework/candidate_intent.md`
 3. `framework/lifecycle/overview.md`
 4. `framework/governance/impact_sync.md`
 5. `docs/specs/repository_mapping.md`

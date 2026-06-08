@@ -1,106 +1,84 @@
 # Lifecycle Overview
 
-The unit lifecycle is available when the selected adoption mode or user request needs formal unit governance.
-Reader-only, implementation-only, single-unit-trial, and unit-check-only entry modes are defined in `framework/core/adoption_modes.md`; they do not require every project or task to run the full lifecycle by default.
+## 生命周期序列
 
-The formal unit lifecycle stays explicit:
+当需要正式 unit 治理时，标准生命周期为：
 
-```text
-unit_new / unit_fork -> unit_check -> unit_plan -> unit_impl -> unit_verify -> unit_promote
+```
+unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promote
 ```
 
-`unit_check` remains a formal command. It validates candidate truth readiness. `unit_plan` creates the implementation handoff from a valid check result.
+- `unit_check` 是可选的 pre-verify 质量门禁，验证候选 truth 是否足够清晰
+- `unit_impl` 是单元实现阶段，由 `unit_check pass` 自动触发
+- `unit_verify` 验证实现是否满足候选 truth
+- `unit_promote` 将已验证的候选 truth 晋升为稳定 truth
 
-Each lifecycle file is a Context Card. A selected lifecycle command reads the overview, then the matching card, then only that card's required context and triggered on-demand expansions.
+## 入口方式
 
-Lifecycle authority follows `framework/core/lifecycle_authority.md`: advancing state requires current valid evidence, required independent evaluation receipt, deterministic validation, and successful `command close`.
+`entry_routing.md` 决定一个自然语言请求走哪个生命周期路径。
+支持 exact command 匹配（`command:{unit}`）和自然语言两种方式。
 
-## Command Forms
+## 入口命令
 
-A lifecycle Context Card may be selected in either of two ways:
+| 命令 | 用途 |
+|------|------|
+| `unit_init:{unit}` | 已有能力→首个稳定 truth |
+| `unit_new:{unit}` | 全新→首个候选 truth |
+| `unit_fork:{unit}` | 稳定 truth→候选变更轮次 |
+| `unit_check:{unit}` | 候选 truth 质量检查（可选） |
+| `unit_verify:{unit}` | 验证实现 vs 候选 truth |
+| `unit_promote:{unit}` | 候选 truth→稳定 truth |
+| `unit_stable_verify:{unit}` | 检查实现 vs 稳定 truth |
 
-1. the request exactly states one of the command forms below
-2. `framework/operations/entry_routing.md` resolves a natural-language request to one of the existing command forms below from current durable truth
+`unit_impl` 是一个自动推进状态，由 `unit_check pass` 设置，不是用户输入命令。`entry_routing.md` 负责在状态为 `Next Command=unit_impl` 时路由到 `framework/lifecycle/unit_impl.md`。
 
-Only the existing exact command forms may select a lifecycle Context Card:
+## 命令执行规则
 
-```text
-unit_init:{unit}
-unit_new:{unit}
-unit_fork:{unit}
-unit_check:{unit}
-unit_plan:{unit}
-unit_impl:{unit}
-unit_verify:{unit}
-unit_promote:{unit}
-unit_stable_verify:{unit}
-```
+- `command close` 是唯一能推进 lifecycle 状态的操作
+- 推进式 evidence（`unit_check pass`、`unit_verify ready_to_promote`、`unit_stable_verify advancing`）需要独立评审 receipt
+- `unit_promote` 消费已验证的证据，不需要新的独立评审
+- 非推进式结果（blocked、fix_required、evidence_incomplete）不阻塞后续正确证据的推进
 
-Do not invent scenario commands, command aliases, or object-type shortcuts.
-Requests that use `scenario_*`, `scenario_advance:{id}`, or `object-type=scenario` must stop with a removed-lifecycle report.
+## 依赖管理
 
-## Unit Commands
+- 候选 unit 可依赖当前稳定层 unit 版本或当前候选 truth（如果 Context Card 允许）
+- 稳定层晋升不能静默改变其他 unit 消费的稳定版本
+- 稳定版本变更时，需运行 `governance/impact_sync.md` 检查其影响
 
-| Command | Purpose |
-|---|---|
-| `unit_init:{unit}` | Capture an existing accepted capability as first stable truth |
-| `unit_new:{unit}` | Create the first candidate for a new unit |
-| `unit_fork:{unit}` | Fork a candidate from existing stable truth |
-| `unit_check:{unit}` | Decide whether candidate truth is clear enough for planning |
-| `unit_plan:{unit}` | Create or update the implementation plan from checked truth |
-| `unit_impl:{unit}` | Implement according to the active plan |
-| `unit_verify:{unit}` | Verify implementation against candidate truth |
-| `unit_promote:{unit}` | Promote verified candidate truth to stable |
-| `unit_stable_verify:{unit}` | Check implementation alignment against stable truth |
+## Rule 消费
 
-## Dependencies
+- Global rules 自动应用于所有当前层的 unit
+- Bound rules 仅当 unit 的 `rule_refs` 中显式列出时才应用
+- Rule 变更通过 `framework/governance/rule_system.md` 管理
 
-Unit dependency truth is versioned at stable boundaries.
+## 生命周期状态
 
-1. Candidate units may depend on current stable unit versions or current candidate truth when the active Context Card permits it.
-2. Stable unit promotion must not silently change another unit's consumed stable version.
-3. When a stable unit version changes, run `framework/governance/impact_sync.md` for every unit that references the prior version.
-4. When a dependency change invalidates downstream process evidence, recover through `framework/lifecycle/recovery.md`.
+`docs/specs/_status.md` 记录每个 unit 的当前状态（layer、Next Command）。
+只有 `command close` 可以修改这个文件。
 
-## Rule Consumption
+## Context Card 格式（框架设计者参考）
 
-Lifecycle commands must respect current applicable rules:
+每个生命周期 Context Card 包含以下部分：
 
-1. global rules apply to every current-layer unit unless the rule defines an explicit exception.
-2. bound rules apply only when the unit frontmatter includes the rule in `rule_refs`.
-3. rule consumer lists are derived from unit truth, not stored in rule files.
-4. rule changes, bindings, and topology changes route through `framework/governance/rule_system.md` and `framework/governance/rules/*.md`.
+1. **输入** — 本步骤需要读取的文件
+2. **本步骤做什么** — 当前命令的目标和执行内容
+3. **不允许** — 硬边界
+4. **如何结束** — 成功/失败/阻塞的结果及下一步
 
-## Hard Gates
+Context Card 中的 `framework/...` 路径是相对于框架根目录的：
+- 已安装项目：`framework/...` → `specflow/framework/...`
+- 源代码仓库：`framework/...` → `framework/...`
 
-1. `unit_plan` consumes a valid `_check_result/unit/{unit}.md`.
-2. `unit_impl` and `unit_verify` consume valid check and plan evidence.
-3. `unit_promote` consumes valid active plan and verify evidence.
-4. `unit_stable_verify` advancing outcomes consume valid `_stable_verify_result/unit/{unit}.md`.
-5. Advancing check, plan, verify, and stable-verify evidence must contain a valid independent reviewer receipt.
-6. Command close is the only lifecycle advancement authority for `_status.md`.
-7. A prior non-advancing result does not block later progression when current evidence validates again and command close succeeds.
+## 生命周期权限规则
 
-## Shared Execution Gates
+`command close` 是推进 lifecycle 状态的唯一途径。
 
-Before mutating lifecycle truth or process files:
+推进式 evidence 的有效条件是：
+1. 当前 Context Card 允许该 evidence 写入
+2. 当前 process 文件通过对应的 `snapshot validate-process` 检查
+3. process 文件包含有效的独立评审 receipt（当 Context Card 要求时）
+4. `command close` 接受该结果和 evidence
 
-1. read the active lifecycle Context Card and its Required Context.
-2. prove current `_status.md` names the command as legal for the unit.
-3. validate any consumed process file with the matching deterministic tooling when tooling is available.
-4. capture the recovery baseline required by `framework/lifecycle/recovery.md` before the first mutation.
-5. use `docs/specs/repository_mapping.md` when path ownership, object ownership, or implementation surface ownership matters.
+有效输入 evidence 是消耗性的——只有当前通过确定性验证的文件才能被消耗。
 
-After mutation:
-
-1. run the required deterministic validation.
-2. generate the required independent evaluation request before any advancing check, plan, verify, or stable-verify outcome.
-3. run required independent evaluation from that request.
-4. close through command close before claiming `_status.md` advancement.
-5. run `framework/governance/impact_sync.md` when unit truth, rule truth, global rules, dependencies, or repository mapping may affect another unit.
-
-## Automatic Progression
-
-This overview is not the execution owner for `unit_advance:{unit}`.
-`unit_advance:{unit}` is governed by `framework/advance_policy.md`, including relation candidate-preflight, blocked candidate stops, and candidate cycle stops.
-At summary level, automatic progression may enter only commands already recorded as the next legal command in `_status.md`, and must stop when user intent is required for candidate creation, stable verification judgment, or unclear ownership.
+非推进式结果（blocked、fix_required、checkpoint）不会永久 disqualify 后续工作。修复后，当前 evidence 只要通过验证并携带独立评审 receipt，仍然可以推进。

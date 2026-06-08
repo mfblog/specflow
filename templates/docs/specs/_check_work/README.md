@@ -15,7 +15,7 @@ docs/specs/_check_work/unit/{unit}.md
 These files are not Specs, not behavior truth, and not downstream pass gates.
 They record only the current `unit_check` round's checklist progress, input fingerprints, finding references, blocked reason, and resume position.
 
-The only handoff gate from `unit_check` to `unit_plan` remains:
+The handoff from `unit_check` feeds into `unit_impl`:
 
 ```text
 docs/specs/_check_result/unit/{unit}.md

@@ -20,7 +20,7 @@ const (
 	managedEnd   = "<!-- SPECFLOW:END -->"
 )
 
-var registeredEntryPattern = regexp.MustCompile("^- `([^`]*)`$")
+var entryFileRegistrationLine = regexp.MustCompile("`([^`]+)`")
 
 type Inspection struct {
 	RegisteredFiles     []string
@@ -150,7 +150,7 @@ func Sync(repoRoot, source string) (SyncResult, error) {
 }
 
 func loadRegisteredFiles(repoRoot string, layout specflowlayout.Layout) ([]string, error) {
-	registryPath := specflowlayout.Relative(layout.FrameworkRoot, "entry_index_registry.md")
+	registryPath := specflowlayout.Relative(layout.FrameworkRoot, "operations/entry_routing.md")
 	data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(registryPath)))
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", registryPath, err)
@@ -160,7 +160,7 @@ func loadRegisteredFiles(repoRoot string, layout specflowlayout.Layout) ([]strin
 	inSection := false
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if trimmed == "## Registered Entry Index Files" {
+		if trimmed == "## Entry File Registration" {
 			inSection = true
 			continue
 		}
@@ -170,9 +170,14 @@ func loadRegisteredFiles(repoRoot string, layout specflowlayout.Layout) ([]strin
 		if !inSection {
 			continue
 		}
-		match := registeredEntryPattern.FindStringSubmatch(trimmed)
-		if len(match) == 2 {
-			files = append(files, resolveRegisteredEntry(layout, match[1]))
+		if strings.HasPrefix(trimmed, "Registered entry index files:") {
+			matches := entryFileRegistrationLine.FindAllStringSubmatch(trimmed, -1)
+			for _, match := range matches {
+				if len(match) == 2 {
+					files = append(files, resolveRegisteredEntry(layout, match[1]))
+				}
+			}
+			break
 		}
 	}
 	if len(files) == 0 {

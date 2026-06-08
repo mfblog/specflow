@@ -27,11 +27,12 @@ It is used when a rule-governance request is ambiguous, combines multiple rule a
 
 Before routing or checkpointing, read only the smallest durable truth needed for the decision:
 
-1. `framework/spec_policy.md`
-2. `framework/lifecycle/overview.md`
-3. `framework/operations/output_standard.md`
-4. `framework/lifecycle/recovery.md` when control returned after mutation
-5. `docs/specs/_status.md` when existing units are named or affected
+1. `framework/spec_writing_guide.md`
+2. `framework/candidate_intent.md`
+3. `framework/lifecycle/overview.md`
+4. `framework/operations/entry_routing.md` (User-Facing Output section)
+5. `framework/lifecycle/recovery.md` when control returned after mutation
+6. `docs/specs/_status.md` when existing units are named or affected
 6. the current-layer unit main Specs needed to judge unit-local truth, binding, or writeback legality
 7. the relevant rule files
 8. `docs/specs/repository_mapping.md` when path ownership or rule object registration matters
@@ -82,7 +83,7 @@ Use:
 2. `decision` when the user must choose between two valid formal landing points
 3. `prerequisite_action` when a legal upstream action, such as `unit_fork:{unit}`, must happen before writeback
 
-The stop report must follow `framework/operations/output_standard.md` and name:
+The stop report must follow `framework/operations/entry_routing.md` (User-Facing Output section) and name:
 
 1. the rule-governance request that is blocked
 2. the affected units, or `none` when no unit is involved

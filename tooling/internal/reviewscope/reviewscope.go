@@ -116,12 +116,9 @@ func CollectDefaultSpecFlowScopeForLayout(repoRoot, requestedLayout string) (Spe
 	if err != nil {
 		return scope, err
 	}
-	candidateIntentStandardFiles, err := globRelative(repoRoot, joinPath(roots.FrameworkRoot, "candidate_intents/*.md"))
-	if err != nil {
-		return scope, err
-	}
-	candidateIntentFiles := sortAndDedupe(append([]string{scope.FrameworkPath("candidate_intent_policy.md")}, candidateIntentStandardFiles...))
-	guidanceSkillFiles, err := globRelative(repoRoot, joinPath(roots.FrameworkRoot, "skills/*/SKILL.md"))
+	candidateIntentFile := scope.FrameworkPath("candidate_intent.md")
+	candidateIntentFiles := []string{candidateIntentFile}
+	guidanceSkillFiles, err := globRelative(repoRoot, joinPath(roots.FrameworkRoot, "guidance/*/SKILL.md"))
 	if err != nil {
 		return scope, err
 	}
@@ -129,17 +126,17 @@ func CollectDefaultSpecFlowScopeForLayout(repoRoot, requestedLayout string) (Spe
 	if err != nil {
 		return scope, err
 	}
-	if len(frameworkFiles) == 0 || len(commandFiles) == 0 || len(candidateIntentStandardFiles) == 0 || len(guidanceSkillFiles) == 0 || len(ruleFlowFiles) == 0 {
+	if len(frameworkFiles) == 0 || len(commandFiles) == 0 || !fileExists(repoRoot, candidateIntentFile) || len(guidanceSkillFiles) == 0 || len(ruleFlowFiles) == 0 {
 		return scope, fmt.Errorf("default governance files are incomplete")
 	}
 
 	minimumGuidanceSkillFiles := []string{
-		scope.FrameworkPath("skills/using-specflow-guidance/SKILL.md"),
-		scope.FrameworkPath("skills/project-framing/SKILL.md"),
-		scope.FrameworkPath("skills/scope-cutting/SKILL.md"),
-		scope.FrameworkPath("skills/solution-design/SKILL.md"),
-		scope.FrameworkPath("skills/design-quality-review/SKILL.md"),
-		scope.FrameworkPath("skills/spec-writeback-guidance/SKILL.md"),
+		scope.FrameworkPath("guidance/using-specflow-guidance/SKILL.md"),
+		scope.FrameworkPath("guidance/project-framing/SKILL.md"),
+		scope.FrameworkPath("guidance/scope-cutting/SKILL.md"),
+		scope.FrameworkPath("guidance/solution-design/SKILL.md"),
+		scope.FrameworkPath("guidance/design-quality-review/SKILL.md"),
+		scope.FrameworkPath("guidance/spec-writeback-guidance/SKILL.md"),
 	}
 	ruleFiles := []string{
 		scope.FrameworkPath("governance/rule_system.md"),
@@ -161,8 +158,6 @@ func CollectDefaultSpecFlowScopeForLayout(repoRoot, requestedLayout string) (Spe
 		scope.ToolingPath("README.md"),
 	}
 	processStateContractFiles := []string{
-		scope.FrameworkPath("candidate_handoff_contract.md"),
-		scope.FrameworkPath("downgrade_policy.md"),
 		scope.FrameworkPath("process_snapshot_contract.md"),
 		scope.FrameworkPath("slice_work_state_protocol.md"),
 		scope.FrameworkPath("lifecycle/recovery.md"),
@@ -267,45 +262,32 @@ func CollectDefaultSpecFlowDesignScopeForLayout(repoRoot, requestedLayout string
 	if len(commandFiles) == 0 {
 		return scope, fmt.Errorf("default design lifecycle files are incomplete")
 	}
-	candidateIntentStandardFiles, err := globRelative(repoRoot, joinPath(roots.FrameworkRoot, "candidate_intents/*.md"))
-	if err != nil {
-		return scope, err
-	}
-	if len(candidateIntentStandardFiles) == 0 {
+	candidateIntentFile := scope.FrameworkPath("candidate_intent.md")
+	candidateIntentFiles := []string{candidateIntentFile}
+	if !fileExists(repoRoot, candidateIntentFile) {
 		return scope, fmt.Errorf("default design candidate intent files are incomplete")
 	}
-	candidateIntentFiles := sortAndDedupe(append([]string{scope.FrameworkPath("candidate_intent_policy.md")}, candidateIntentStandardFiles...))
 
 	designFoundationFiles := []string{
 		scope.FrameworkPath("spec_flow_design_review.md"),
 		scope.FrameworkPath("governance/review.md"),
 		scope.FrameworkPath("governance/review_scope.md"),
 		scope.FrameworkPath("governance/rule_system.md"),
-		scope.FrameworkPath("agent_operability_standard.md"),
-		scope.FrameworkPath("spec_policy.md"),
 		scope.FrameworkPath("advance_policy.md"),
 		scope.FrameworkPath("core/object_model.md"),
 		scope.FrameworkPath("core/status.md"),
 		scope.FrameworkPath("core/repository_mapping.md"),
-		scope.FrameworkPath("core/lifecycle_authority.md"),
 		scope.FrameworkPath("lifecycle/overview.md"),
 		scope.FrameworkPath("operations/entry_routing.md"),
 		scope.FrameworkPath("operations/migration.md"),
-		scope.FrameworkPath("onboarding_decision_policy.md"),
-		scope.FrameworkPath("operations/implementation_change.md"),
 		scope.FrameworkPath("spec_writing_guide.md"),
-		scope.FrameworkPath("entry_index_registry.md"),
-		scope.FrameworkPath("operations/output_standard.md"),
 		scope.FrameworkPath("slice_work_state_protocol.md"),
 	}
 	designFoundationFiles = append(designFoundationFiles, candidateIntentFiles...)
 	lifecycleContractFiles := []string{
-		scope.FrameworkPath("candidate_handoff_contract.md"),
-		scope.FrameworkPath("downgrade_policy.md"),
 		scope.FrameworkPath("process_snapshot_contract.md"),
 		scope.FrameworkPath("slice_work_state_protocol.md"),
 		scope.FrameworkPath("lifecycle/recovery.md"),
-		scope.FrameworkPath("operations/output_standard.md"),
 	}
 	templateProcessStateFiles := templateProcessStateFiles(scope)
 	templateEntryFiles := templateEntryFiles(scope)
@@ -347,30 +329,22 @@ func (scope SpecFlowScope) ToolingPath(relPath string) string {
 func collectAgentOperabilityFiles(scope SpecFlowScope, projectEntryFiles, sourceRepoEntryExampleFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, candidateIntentFiles, guidanceSkillFiles, sharedGovernanceFiles, processStateContractFiles, toolingContractFiles []string) []string {
 	files := []string{
 		scope.FrameworkPath("advance_policy.md"),
-		scope.FrameworkPath("agent_operability_standard.md"),
 		scope.FrameworkPath("core/adoption_modes.md"),
-		scope.FrameworkPath("core/context_card.md"),
 		scope.FrameworkPath("core/freshness.md"),
 		scope.FrameworkPath("core/independent_evaluation.md"),
 		scope.FrameworkPath("core/object_model.md"),
 		scope.FrameworkPath("core/status.md"),
 		scope.FrameworkPath("core/repository_mapping.md"),
-		scope.FrameworkPath("core/lifecycle_authority.md"),
 		scope.FrameworkPath("lifecycle/overview.md"),
 		scope.FrameworkPath("governance/review.md"),
 		scope.FrameworkPath("governance/review_scope.md"),
 		scope.FrameworkPath("operations/migration.md"),
-		scope.FrameworkPath("onboarding_decision_policy.md"),
 		scope.FrameworkPath("operations/entry_routing.md"),
-		scope.FrameworkPath("operations/implementation_change.md"),
-		scope.FrameworkPath("operations/output_standard.md"),
 		scope.FrameworkPath("severity_policy.md"),
 		scope.FrameworkPath("slice_work_state_protocol.md"),
 		scope.FrameworkPath("spec_flow_design_review.md"),
 		scope.FrameworkPath("spec_flow_review.md"),
-		scope.FrameworkPath("spec_policy.md"),
 		scope.FrameworkPath("spec_writing_guide.md"),
-		scope.FrameworkPath("spec_authoring_baseline.md"),
 	}
 	files = append(files, projectEntryFiles...)
 	files = append(files, sourceRepoEntryExampleFiles...)

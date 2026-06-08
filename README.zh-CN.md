@@ -261,15 +261,16 @@ stable ⟶ candidate ⟶ verify ⟶ promote ⟶ 新的 stable
 对应到 unit 的命令链：
 
 ```
-unit_new / unit_fork → unit_check → unit_plan → unit_impl → unit_verify → unit_promote
+unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promote
 ```
 
 - **stable** 是当前正式接受的行为真相
 - **candidate** 是正在准备的下一版真相（新需求、行为调整）
-- **check** 判断 candidate 真相是否已经清楚到可以进入计划
-- **plan** 把通过检查的真相转成可执行的实现交接
+- **check** 验证 candidate 真相的清晰度和 acceptance item 格式合规性
 - **verify** 对照 candidate 验证实现
 - **promote** 把通过验收的 candidate 升级为新的 stable
+
+`unit_plan` 不再是 SpecFlow 治理的命令——agent 框架在内部自行处理规划。`unit_impl` 是生命周期状态标签，由 `unit_check pass` close 自动设置，非用户命令。实现由 agent 内部处理。
 
 全新 unit 从 `unit_new` 开始。已有 stable 真相的 unit 从 `unit_fork` 开始。
 
@@ -290,16 +291,14 @@ Unit 和 rule 可以自由组合：
 | 历史能力第一次纳入治理 | `unit_init:{unit}` |
 | 全新能力第一次进入治理 | `unit_new:{unit}` |
 | 已有正式真相的能力开启新一轮演进 | `unit_fork:{unit}` |
-| 检查 candidate 真相是否写清楚 | `unit_check:{unit}` |
-| 从真相生成实现计划 | `unit_plan:{unit}` |
-| 按计划实现 | `unit_impl:{unit}` |
+| 验证 candidate 真相清晰度和 acceptance item 格式合规性（必选） | `unit_check:{unit}` |
 | 对照真相验证实现 | `unit_verify:{unit}` |
 | 将 candidate 升级为新的 stable | `unit_promote:{unit}` |
 | 检查当前实现是否仍符合 stable 真相 | `unit_stable_verify:{unit}` |
 
 命令格式为 `{命令}:{unit}`，例如 `unit_check:payment`。
 
-`unit_check` 和 `unit_plan` 故意保持分离。`unit_check` 关闭行为和验收真相，`unit_plan` 消费这个已校验的 check 结果并决定如何实现。这样 truth review 不会被藏进 planning 里。
+`unit_check` 是必选的质量门，验证 candidate 真相清晰度和 acceptance item 格式合规性。`unit_plan` 由 agent 内部处理，不再是 SpecFlow 治理的命令。`unit_impl` 是生命周期状态标签，由 `unit_check pass` close 自动设置，非用户命令。SpecFlow 的核心门是 `unit_verify`，它直接对照 candidate truth 验证实现。
 
 ## 开发流程
 

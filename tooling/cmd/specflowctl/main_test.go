@@ -1,5 +1,4 @@
 package main
-
 import (
 	"bytes"
 	"crypto/sha256"
@@ -8,17 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/testfixtures"
 )
-
 func TestReviewRunInitAndValidateCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-
 	if err := runReview([]string{"run-init", "--flow", "spec_flow_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
 		t.Fatalf("run-init failed: %v\nstderr=%s", err, stderr.String())
 	}
@@ -29,7 +25,6 @@ func TestReviewRunInitAndValidateCLI(t *testing.T) {
 	if !strings.Contains(filepath.ToSlash(output), "docs/specs/_governance_review/spec_flow_review.md") {
 		t.Fatalf("expected fixed spec_flow_review run-state path, got %s", output)
 	}
-
 	stdout.Reset()
 	stderr.Reset()
 	if err := runReview([]string{"run-validate", "--flow", "spec_flow_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -38,7 +33,6 @@ func TestReviewRunInitAndValidateCLI(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Review run-state is valid:") {
 		t.Fatalf("expected valid output, got %s", stdout.String())
 	}
-
 	stdout.Reset()
 	stderr.Reset()
 	if err := runReview([]string{"run-refresh", "--flow", "spec_flow_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -47,7 +41,6 @@ func TestReviewRunInitAndValidateCLI(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Review run-state refreshed:") {
 		t.Fatalf("expected refreshed output, got %s", stdout.String())
 	}
-
 	stdout.Reset()
 	stderr.Reset()
 	if err := runReview([]string{"run-touch", "--flow", "spec_flow_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -57,33 +50,28 @@ func TestReviewRunInitAndValidateCLI(t *testing.T) {
 		t.Fatalf("expected touched output, got %s", stdout.String())
 	}
 }
-
 func TestReviewRunRequiresFlowCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-
 	err := runReview([]string{"run-init", "--repo-root", repoRoot}, &stdout, &stderr)
 	if err == nil || !strings.Contains(err.Error(), "flow is required") {
 		t.Fatalf("expected flow required error, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
 }
-
 func TestProcessCheckWorkCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepo(t)
 	for _, relPath := range []string{
 		"specflow/framework/core/object_model.md",
 		"specflow/framework/core/repository_mapping.md",
 		"specflow/framework/lifecycle/unit_check.md",
-		"specflow/framework/lifecycle/unit_plan.md",
 		"specflow/framework/operations/implementation_change.md",
 		"specflow/framework/process_snapshot_contract.md",
 		"specflow/framework/candidate_handoff_contract.md",
-		"specflow/framework/candidate_intent_policy.md",
+		"specflow/framework/candidate_intent.md",
 	} {
 		writeCLITestFile(t, filepath.Join(repoRoot, filepath.FromSlash(relPath)), "# "+filepath.Base(relPath)+"\n")
 	}
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if err := runProcess([]string{"check-work-init", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -92,7 +80,6 @@ func TestProcessCheckWorkCLI(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Check checklist created:") {
 		t.Fatalf("expected created output, got %s", stdout.String())
 	}
-
 	stdout.Reset()
 	stderr.Reset()
 	if err := runProcess([]string{"check-work-validate", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -101,7 +88,6 @@ func TestProcessCheckWorkCLI(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Check checklist is valid:") {
 		t.Fatalf("expected valid output, got %s", stdout.String())
 	}
-
 	stdout.Reset()
 	stderr.Reset()
 	if err := runProcess([]string{"check-work-refresh", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -110,7 +96,6 @@ func TestProcessCheckWorkCLI(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Check checklist refreshed:") {
 		t.Fatalf("expected refreshed output, got %s", stdout.String())
 	}
-
 	stdout.Reset()
 	stderr.Reset()
 	if err := runProcess([]string{"check-work-touch", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -120,7 +105,6 @@ func TestProcessCheckWorkCLI(t *testing.T) {
 		t.Fatalf("expected touched output, got %s", stdout.String())
 	}
 }
-
 func TestUnitReleaseVersionCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, ""+
@@ -129,7 +113,6 @@ func TestUnitReleaseVersionCLI(t *testing.T) {
 	writeCLIUnitReleaseSpec(t, repoRoot, "stable", "assistant", "0.9.0", nil)
 	writeCLIUnitReleaseSpec(t, repoRoot, "stable", "agent", "0.1.0", []string{"s_unit_assistant@0.8.0"})
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/agent.md"), "# stable verify\n")
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if err := runUnit([]string{"release-version", "--unit", "assistant", "--from-ref", "s_unit_assistant@0.8.0", "--to-ref", "s_unit_assistant@0.9.0", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -151,18 +134,15 @@ func TestUnitReleaseVersionCLI(t *testing.T) {
 	}
 	assertCLITestFileNotExists(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/agent.md"))
 }
-
 func TestUnitReleaseVersionCLIRequiresInputs(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-
 	err := runUnit([]string{"release-version", "--unit", "assistant", "--repo-root", repoRoot}, &stdout, &stderr)
 	if err == nil || !strings.Contains(err.Error(), "unit, from-ref, and to-ref are required") {
 		t.Fatalf("expected required input error, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
 }
-
 func TestRuleSyncImpactDeletedRuleRefsCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | test |\n")
@@ -188,7 +168,6 @@ func TestRuleSyncImpactDeletedRuleRefsCLI(t *testing.T) {
 		"# Demo",
 		"",
 	}, "\n"))
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if err := runRule([]string{"sync-impact", "--deleted-rule-refs", "c_b_rule_demo@0.1.0", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -202,12 +181,10 @@ func TestRuleSyncImpactDeletedRuleRefsCLI(t *testing.T) {
 		t.Fatalf("expected no unit results, got %s", output)
 	}
 }
-
 func TestReviewCollectDefaultScopePrintsToolingScriptAndRuntimeFilesCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-
 	if err := runReview([]string{"collect-default-scope", "--flow", "spec_flow_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
 		t.Fatalf("collect-default-scope failed: %v\nstderr=%s", err, stderr.String())
 	}
@@ -218,7 +195,7 @@ func TestReviewCollectDefaultScopePrintsToolingScriptAndRuntimeFilesCLI(t *testi
 	if !strings.Contains(output, "Candidate intent files") {
 		t.Fatalf("expected candidate intent heading, got %s", output)
 	}
-	if !strings.Contains(output, "specflow/framework/candidate_intents/repair.md") {
+	if !strings.Contains(output, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected repair intent standard in collect-default-scope output, got %s", output)
 	}
 	if !strings.Contains(output, "specflow/tooling/scripts/tooling_fingerprint.sh") {
@@ -251,12 +228,10 @@ func TestReviewCollectDefaultScopePrintsToolingScriptAndRuntimeFilesCLI(t *testi
 		t.Fatalf("expected global rule template in collect-default-scope output, got %s", output)
 	}
 }
-
 func TestReviewCollectDefaultDesignScopePrintsCandidateIntentFilesCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-
 	if err := runReview([]string{"collect-default-scope", "--flow", "spec_flow_design_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
 		t.Fatalf("collect-default-scope failed: %v\nstderr=%s", err, stderr.String())
 	}
@@ -264,25 +239,21 @@ func TestReviewCollectDefaultDesignScopePrintsCandidateIntentFilesCLI(t *testing
 	if !strings.Contains(output, "Candidate intent files") {
 		t.Fatalf("expected candidate intent heading, got %s", output)
 	}
-	if !strings.Contains(output, "specflow/framework/candidate_intent_policy.md") {
+	if !strings.Contains(output, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected candidate intent policy in design collect-default-scope output, got %s", output)
 	}
-	if !strings.Contains(output, "specflow/framework/candidate_intents/repair.md") {
+	if !strings.Contains(output, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected repair intent standard in design collect-default-scope output, got %s", output)
 	}
-	if !strings.Contains(output, "specflow/framework/candidate_intents/change.md") {
+	if !strings.Contains(output, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected change intent standard in design collect-default-scope output, got %s", output)
 	}
-	if !strings.Contains(output, "specflow/framework/operations/output_standard.md") {
-		t.Fatalf("expected output standard in design collect-default-scope output, got %s", output)
-	}
-}
 
+}
 func TestReviewCollectDefaultScopePrintsSourceLayoutCLI(t *testing.T) {
 	repoRoot := createCLISourceReviewRepo(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-
 	if err := runReview([]string{"collect-default-scope", "--flow", "spec_flow_review", "--layout", "source", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
 		t.Fatalf("source collect-default-scope failed: %v\nstderr=%s", err, stderr.String())
 	}
@@ -306,11 +277,9 @@ func TestReviewCollectDefaultScopePrintsSourceLayoutCLI(t *testing.T) {
 		t.Fatalf("source scope output must not use installed framework paths, got %s", output)
 	}
 }
-
 func TestReviewScopeAliasIsNotSupportedCLI(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-
 	err := runReview([]string{"scope"}, &stdout, &stderr)
 	if err == nil {
 		t.Fatalf("expected review scope alias to be rejected")
@@ -325,22 +294,16 @@ func TestReviewScopeAliasIsNotSupportedCLI(t *testing.T) {
 		t.Fatalf("expected no stdout for rejected alias, got %s", stdout.String())
 	}
 }
-
 func TestEntryCheckSourceRepoUsesTemplateEntriesCLI(t *testing.T) {
 	repoRoot := createCLISourceReviewRepo(t)
-	writeCLITestFile(t, filepath.Join(repoRoot, "framework/entry_index_registry.md"), `# Entry Index Registry
-
-## Registered Entry Index Files
-
-- `+"`AGENTS.md`"+`
-- `+"`GEMINI.md`"+`
-- `+"`CLAUDE.md`"+`
+	writeCLITestFile(t, filepath.Join(repoRoot, "framework/operations/entry_routing.md"), `# Entry Routing
+## Entry File Registration
+Registered entry index files: `+"`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`"+`.
 `)
 	block := "<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n"
 	for _, name := range []string{"AGENTS.md", "GEMINI.md", "CLAUDE.md"} {
 		writeCLITestFile(t, filepath.Join(repoRoot, "templates", name), block)
 	}
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if err := runEntry([]string{"check", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -350,7 +313,6 @@ func TestEntryCheckSourceRepoUsesTemplateEntriesCLI(t *testing.T) {
 		t.Fatalf("expected source entry check success, got stdout=%s stderr=%s", stdout.String(), stderr.String())
 	}
 }
-
 func TestRepositoryMappingValidateCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
@@ -366,7 +328,6 @@ func TestRepositoryMappingValidateCLI(t *testing.T) {
 		"|---|---|---|---|---|---|\n"+
 		"| unit | demo | planned | none | `docs/specs/units/candidate/c_unit_demo.md` | demo unit |\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo\n")
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if err := runRepositoryMapping([]string{"validate", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -376,11 +337,9 @@ func TestRepositoryMappingValidateCLI(t *testing.T) {
 		t.Fatalf("expected valid output, got %s", stdout.String())
 	}
 }
-
 func TestRelationCandidatesCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIRelationRepo(t, repoRoot, false)
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if err := runRelation([]string{"candidates", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -400,11 +359,9 @@ func TestRelationCandidatesCLI(t *testing.T) {
 		}
 	}
 }
-
 func TestRelationCandidatePreflightCLIBlocksWhenUpstreamCandidateIsNotStable(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIRelationRepo(t, repoRoot, false)
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err := runRelation([]string{"candidate-preflight", "--object", "alpha", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -424,11 +381,9 @@ func TestRelationCandidatePreflightCLIBlocksWhenUpstreamCandidateIsNotStable(t *
 		}
 	}
 }
-
 func TestRelationCandidatesCLIReportsCycles(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIRelationRepo(t, repoRoot, true)
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if err := runRelation([]string{"candidates", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -445,12 +400,10 @@ func TestRelationCandidatesCLIReportsCycles(t *testing.T) {
 		}
 	}
 }
-
 func TestDesignReviewRunInitAndValidateCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-
 	if err := runReview([]string{"run-init", "--flow", "spec_flow_design_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
 		t.Fatalf("design run-init failed: %v\nstderr=%s", err, stderr.String())
 	}
@@ -461,7 +414,6 @@ func TestDesignReviewRunInitAndValidateCLI(t *testing.T) {
 	if !strings.Contains(filepath.ToSlash(output), "docs/specs/_governance_review/spec_flow_design_review.md") {
 		t.Fatalf("expected fixed spec_flow_design_review run-state path, got %s", output)
 	}
-
 	stdout.Reset()
 	stderr.Reset()
 	if err := runReview([]string{"run-validate", "--flow", "spec_flow_design_review", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
@@ -471,7 +423,6 @@ func TestDesignReviewRunInitAndValidateCLI(t *testing.T) {
 		t.Fatalf("expected valid output, got %s", stdout.String())
 	}
 }
-
 func writeCLIRelationRepo(t *testing.T, repoRoot string, cycle bool) {
 	t.Helper()
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
@@ -488,7 +439,6 @@ func writeCLIRelationRepo(t *testing.T, repoRoot string, cycle bool) {
 	writeCLICandidateUnit(t, repoRoot, "alpha", "0.1.0", "`c_unit_beta@0.1.0`")
 	writeCLICandidateUnit(t, repoRoot, "beta", "0.1.0", betaBody)
 }
-
 func writeCLICandidateUnit(t *testing.T, repoRoot, object, version, body string) {
 	t.Helper()
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_"+object+".md"), strings.Join([]string{
@@ -506,7 +456,6 @@ func writeCLICandidateUnit(t *testing.T, repoRoot, object, version, body string)
 		body,
 	}, "\n")+"\n")
 }
-
 func TestSnapshotValidateProcessUsesObjectFlagsCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepo(t)
 	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
@@ -539,11 +488,10 @@ func TestSnapshotValidateProcessUsesObjectFlagsCLI(t *testing.T) {
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + cliReviewInputRefsForTest(expected.Object, "unit_plan_plan_ready", expected.SpecFileRef),
+		"review_input_refs: " + cliReviewInputRefsForTest(expected.Object, "unit_verify_ready_to_promote", expected.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err = runSnapshot([]string{"validate-process", "--object-type", "unit", "--object", "demo", "--process", "plan", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -554,80 +502,6 @@ func TestSnapshotValidateProcessUsesObjectFlagsCLI(t *testing.T) {
 		t.Fatalf("expected valid output, got %s", stdout.String())
 	}
 }
-
-func TestEvaluationRequestCreatesPlanHandoffCLI(t *testing.T) {
-	repoRoot := createCLISnapshotRepo(t)
-	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+strings.Join([]string{
-		"spec_file_ref: " + expected.SpecFileRef,
-		"spec_version_ref: " + expected.SpecVersionRef,
-		"spec_fingerprint: " + expected.SpecFingerprint,
-		"acceptance_behavior_fingerprint: " + expected.AcceptanceBehaviorFingerprint,
-		"stable_candidate_diff_refs: none",
-		"implementation_gap_refs: docs/specs/repository_mapping.md",
-		"unit_appendix_snapshot: none",
-		"unit_snapshot: none",
-		"rule_snapshot: none",
-		"acceptance_item_plan_coverage:",
-		"  - id: demo.core",
-		"    coverage: implementation slice and verification target",
-		"retirement_targets: none",
-		"planned_change_scope:",
-		"  - id: pcs.core",
-		"    basis_refs: " + expected.SpecFileRef,
-		"    acceptance_item_ids: demo.core",
-		"    implementation_refs: docs/specs/repository_mapping.md",
-		"    verification_action: verify package-aware delta",
-		"package_constraint_review: pass",
-		"package_constraint_refs: " + expected.SpecFileRef,
-		"package_constraint_summary: current package constraints reviewed for this delta",
-	}, "\n")+"\n```\n")
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	err = runEvaluation([]string{"request", "--object-type", "unit", "--object", "demo", "--pack", "unit_plan_plan_ready", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err != nil {
-		t.Fatalf("evaluation request failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
-	}
-	output := stdout.String()
-	requestFile := "docs/specs/_independent_evaluation/requests/unit/demo/unit_plan_plan_ready.md"
-	if !strings.Contains(output, "evaluation_request_result: created") || !strings.Contains(output, "request_file: "+requestFile) || !strings.Contains(output, "trigger_instruction: Read and execute this independent evaluation request: "+requestFile) {
-		t.Fatalf("unexpected evaluation request output:\n%s", output)
-	}
-	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(requestFile)))
-	if err != nil {
-		t.Fatalf("read request file: %v", err)
-	}
-	text := string(content)
-	for _, phrase := range []string{
-		"reviewer_pack`: `unit_plan_plan_ready`",
-		"## Review Standard Refs",
-		"`framework/core/independent_evaluation.md`: reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
-		"`framework/lifecycle/unit_plan.md`: whether the active plan is ready to serve as the implementation handoff.",
-		"## Allowed Inputs",
-		"active plan under review.",
-		"## Forbidden Inputs",
-		"implementation work not authorized by the active plan.",
-		"## Review File Refs",
-		"- framework/lifecycle/unit_plan.md",
-		"## Review Evidence Refs",
-		"- none",
-		"Does the plan cover every accepted acceptance item?",
-		"## Reviewer Output",
-		"pass | blocked | needs_human_decision",
-		"## Executor Receipt After Pass",
-		"Only the executor writes this receipt into process evidence after receiving reviewer result `pass`.",
-		"review_input_refs: unit_plan_plan_ready;" + requestFile,
-	} {
-		if !strings.Contains(text, phrase) {
-			t.Fatalf("request file missing %q:\n%s", phrase, text)
-		}
-	}
-}
-
 func TestEvaluationRequestRejectsUnsupportedPackCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepo(t)
 	var stdout bytes.Buffer
@@ -637,17 +511,15 @@ func TestEvaluationRequestRejectsUnsupportedPackCLI(t *testing.T) {
 		t.Fatalf("expected unsupported pack error, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
 }
-
 func TestEvaluationRequestRejectsUnsupportedObjectTypeCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepo(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := runEvaluation([]string{"request", "--object-type", "scenario", "--object", "demo_flow", "--pack", "unit_plan_plan_ready", "--repo-root", repoRoot}, &stdout, &stderr)
+	err := runEvaluation([]string{"request", "--object-type", "scenario", "--object", "demo_flow", "--pack", "unit_verify_ready_to_promote", "--repo-root", repoRoot}, &stdout, &stderr)
 	if err == nil || !strings.Contains(err.Error(), "object type \"scenario\" is not supported; only unit is supported") {
 		t.Fatalf("expected unsupported object type error, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
 }
-
 func TestEvaluationRequestCreatesFreshnessTextDriftHandoffCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepo(t)
 	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
@@ -661,7 +533,6 @@ func TestEvaluationRequestCreatesFreshnessTextDriftHandoffCLI(t *testing.T) {
 		t.Fatalf("read candidate: %v", err)
 	}
 	writeCLITestFile(t, candidatePath, strings.Replace(string(content), "# Demo\n", "# Demo\n\nEditorial note only.\n", 1))
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err = runEvaluation([]string{"request", "--object-type", "unit", "--object", "demo", "--pack", "freshness_text_drift_reuse", "--process", "check", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -704,7 +575,6 @@ func TestEvaluationRequestCreatesFreshnessTextDriftHandoffCLI(t *testing.T) {
 		}
 	}
 }
-
 func TestEvaluationRequestRejectsFreshnessSemanticDriftCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepo(t)
 	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
@@ -718,7 +588,6 @@ func TestEvaluationRequestRejectsFreshnessSemanticDriftCLI(t *testing.T) {
 		t.Fatalf("read candidate: %v", err)
 	}
 	writeCLITestFile(t, candidatePath, strings.Replace(string(content), "The demo behavior passes under the declared checks.", "The demo behavior passes with a different condition.", 1))
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err = runEvaluation([]string{"request", "--object-type", "unit", "--object", "demo", "--pack", "freshness_text_drift_reuse", "--process", "check", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -726,7 +595,6 @@ func TestEvaluationRequestRejectsFreshnessSemanticDriftCLI(t *testing.T) {
 		t.Fatalf("expected semantic drift rejection, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
 }
-
 func TestSnapshotValidateProcessAcceptsStableVerifyCLI(t *testing.T) {
 	repoRoot := createCLIStableSnapshotRepo(t)
 	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
@@ -734,7 +602,6 @@ func TestSnapshotValidateProcessAcceptsStableVerifyCLI(t *testing.T) {
 		t.Fatalf("RebuildCurrentObject: %v", err)
 	}
 	writeCLIStableVerifyProcess(t, repoRoot, expected, "aligned")
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err = runSnapshot([]string{"validate-process", "--object-type", "unit", "--object", "demo", "--process", "stable_verify", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -745,7 +612,6 @@ func TestSnapshotValidateProcessAcceptsStableVerifyCLI(t *testing.T) {
 		t.Fatalf("expected valid output, got %s", stdout.String())
 	}
 }
-
 func TestSnapshotValidateProcessRejectsScenarioPlanCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepo(t)
 	var stdout bytes.Buffer
@@ -755,38 +621,8 @@ func TestSnapshotValidateProcessRejectsScenarioPlanCLI(t *testing.T) {
 		t.Fatalf("expected scenario rejection, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
 }
-
-func TestCommandPreflightPassesWithValidUnitImplementationInputsCLI(t *testing.T) {
-	repoRoot := createCLISnapshotRepo(t)
-	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	writeCLIUnitCheckProcess(t, repoRoot, expected)
-	writeCLIUnitPlanProcess(t, repoRoot, expected)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	err = runCommand([]string{"preflight", "--command", "unit_impl", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err != nil {
-		t.Fatalf("preflight failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
-	}
-	output := stdout.String()
-	for _, expectedText := range []string{
-		"preflight_result: pass",
-		"may_continue: true",
-		"- process: check",
-		"- process: plan",
-		"result: valid",
-	} {
-		if !strings.Contains(output, expectedText) {
-			t.Fatalf("expected %q in output, got %s", expectedText, output)
-		}
-	}
-}
-
 func TestCommandPreflightUsesNormalizedSnapshotFingerprintCLI(t *testing.T) {
-	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
+	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_verify")
 	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrentObject: %v", err)
@@ -801,10 +637,9 @@ func TestCommandPreflightUsesNormalizedSnapshotFingerprintCLI(t *testing.T) {
 	if err := os.WriteFile(specPath, []byte(crlfContent), 0o644); err != nil {
 		t.Fatalf("rewrite spec with CRLF: %v", err)
 	}
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err = runCommand([]string{"preflight", "--command", "unit_plan", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
+	err = runCommand([]string{"preflight", "--command", "unit_verify", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
 	if err != nil {
 		t.Fatalf("preflight should pass with normalized line endings: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
 	}
@@ -812,7 +647,6 @@ func TestCommandPreflightUsesNormalizedSnapshotFingerprintCLI(t *testing.T) {
 		t.Fatalf("expected pass output, got %s", stdout.String())
 	}
 }
-
 func TestCommandPreflightDoesNotValidateRuleBindingsCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_check")
 	specPath := filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md")
@@ -825,7 +659,6 @@ func TestCommandPreflightDoesNotValidateRuleBindingsCLI(t *testing.T) {
 	if err := os.WriteFile(specPath, []byte(updated), 0o644); err != nil {
 		t.Fatalf("rewrite spec with unresolved rule ref: %v", err)
 	}
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err = runCommand([]string{"preflight", "--command", "unit_check", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -851,167 +684,6 @@ func TestCommandPreflightDoesNotValidateRuleBindingsCLI(t *testing.T) {
 		}
 	}
 }
-
-func TestCommandPreflightRejectsRawHashWithoutCleanupSideEffectsCLI(t *testing.T) {
-	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
-	specPath := filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md")
-	content, err := os.ReadFile(specPath)
-	if err != nil {
-		t.Fatalf("read spec: %v", err)
-	}
-	crlfContent := strings.ReplaceAll(strings.ReplaceAll(string(content), "\r\n", "\n"), "\n", "\r\n")
-	if err := os.WriteFile(specPath, []byte(crlfContent), 0o644); err != nil {
-		t.Fatalf("rewrite spec with CRLF: %v", err)
-	}
-	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	content, err = os.ReadFile(specPath)
-	if err != nil {
-		t.Fatalf("read spec: %v", err)
-	}
-	rawHash := fmt.Sprintf("%x", sha256.Sum256(content))
-	if rawHash == expected.SpecFingerprint {
-		t.Fatalf("test fixture must produce a raw byte hash that differs from normalized fingerprint")
-	}
-	stale := expected
-	stale.SpecFingerprint = rawHash
-	writeCLIUnitCheckProcess(t, repoRoot, stale)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	err = runCommand([]string{"preflight", "--command", "unit_plan", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err == nil {
-		t.Fatalf("expected preflight failure, got stdout=%s stderr=%s", stdout.String(), stderr.String())
-	}
-	output := stdout.String()
-	if !strings.Contains(output, "preflight_result: fail") || !strings.Contains(output, "may_continue: false") {
-		t.Fatalf("expected fail output, got %s", output)
-	}
-	statusContent, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/_status.md"))
-	if err != nil {
-		t.Fatalf("read status: %v", err)
-	}
-	if !strings.Contains(string(statusContent), "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | test |") {
-		t.Fatalf("preflight must not rewrite status, got %s", string(statusContent))
-	}
-	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md")); err != nil {
-		t.Fatalf("preflight must not delete process file: %v", err)
-	}
-}
-
-func TestCommandCloseRejectsStaleCandidateInputWithoutStatusUpdateCLI(t *testing.T) {
-	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
-	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	stale := expected
-	stale.SpecFingerprint = "stale-fingerprint"
-	writeCLIUnitCheckProcess(t, repoRoot, stale)
-
-	statusPath := filepath.Join(repoRoot, "docs/specs/_status.md")
-	beforeStatus := mustReadCLITestFile(t, statusPath)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	err = runCommand([]string{"close", "--command", "unit_plan", "--object-type", "unit", "--object", "demo", "--outcome", "blocked", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err == nil || !strings.Contains(err.Error(), "command close input preflight failed") {
-		t.Fatalf("expected input preflight failure, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
-	}
-	output := stdout.String()
-	for _, expectedText := range []string{
-		"command_close_result: failed",
-		"apply: true",
-		"input_validation_action: command_preflight",
-		"input_validated_processes:",
-		"- process: check",
-		"result: invalid",
-		"input_validation_mismatches",
-	} {
-		if !strings.Contains(output, expectedText) {
-			t.Fatalf("expected %q in output, got %s", expectedText, output)
-		}
-	}
-	if afterStatus := mustReadCLITestFile(t, statusPath); afterStatus != beforeStatus {
-		t.Fatalf("stale input must not rewrite status\nbefore=%s\nafter=%s", beforeStatus, afterStatus)
-	}
-}
-
-func TestCommandPreflightReportsMissingProcessFileAsCommandLayerCLI(t *testing.T) {
-	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	err := runCommand([]string{"preflight", "--command", "unit_plan", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err == nil {
-		t.Fatalf("expected preflight failure for missing check result, got stdout=%s stderr=%s", stdout.String(), stderr.String())
-	}
-	output := stdout.String()
-	for _, expectedText := range []string{
-		"preflight_result: fail",
-		"may_continue: false",
-		"failure_layer: gate_layer",
-		"recommended_next_command: unit_check",
-		"diagnostic: missing process file: docs/specs/_check_result/unit/demo.md",
-	} {
-		if !strings.Contains(output, expectedText) {
-			t.Fatalf("expected %q in output, got %s", expectedText, output)
-		}
-	}
-}
-
-func TestCommandPreflightTreatsValidationExecutionErrorAsToolingGapCLI(t *testing.T) {
-	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_plan")
-	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	writeCLIUnitCheckProcess(t, repoRoot, expected)
-	specPath := filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md")
-	if err := os.Remove(specPath); err != nil {
-		t.Fatalf("remove candidate spec: %v", err)
-	}
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	err = runCommand([]string{"preflight", "--command", "unit_plan", "--object-type", "unit", "--object", "demo", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err == nil {
-		t.Fatalf("expected preflight failure for validation execution error, got stdout=%s stderr=%s", stdout.String(), stderr.String())
-	}
-	output := stdout.String()
-	for _, expectedText := range []string{
-		"preflight_result: fail",
-		"may_continue: false",
-		"failure_layer: tooling_gap",
-		"recommended_next_command: none",
-		"diagnostic: read docs/specs/units/candidate/c_unit_demo.md",
-	} {
-		if !strings.Contains(output, expectedText) {
-			t.Fatalf("expected %q in output, got %s", expectedText, output)
-		}
-	}
-	for _, forbiddenText := range []string{
-		"failure_layer: gate_layer",
-		"failure_layer: truth_layer",
-	} {
-		if strings.Contains(output, forbiddenText) {
-			t.Fatalf("validation execution error must not produce cleanup layer %q, got %s", forbiddenText, output)
-		}
-	}
-	statusContent, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/_status.md"))
-	if err != nil {
-		t.Fatalf("read status: %v", err)
-	}
-	if !strings.Contains(string(statusContent), "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | test |") {
-		t.Fatalf("preflight must not rewrite status, got %s", string(statusContent))
-	}
-	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md")); err != nil {
-		t.Fatalf("preflight must not delete process file: %v", err)
-	}
-}
-
 func TestCommandCloseUnitStableVerifyControlledRepairDryRunAndApplyCLI(t *testing.T) {
 	repoRoot := createCLIStableSnapshotRepo(t)
 	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
@@ -1024,7 +696,6 @@ func TestCommandCloseUnitStableVerifyControlledRepairDryRunAndApplyCLI(t *testin
 	if err != nil {
 		t.Fatalf("read status: %v", err)
 	}
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err = runCommand([]string{"close", "--command", "unit_stable_verify", "--object-type", "unit", "--object", "demo", "--outcome", "controlled_repair_required", "--candidate-intent", "repair", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -1049,7 +720,6 @@ func TestCommandCloseUnitStableVerifyControlledRepairDryRunAndApplyCLI(t *testin
 	if string(afterDryRun) != string(before) {
 		t.Fatalf("dry-run must not rewrite status\nbefore=%s\nafter=%s", string(before), string(afterDryRun))
 	}
-
 	stdout.Reset()
 	stderr.Reset()
 	err = runCommand([]string{"close", "--command", "unit_stable_verify", "--object-type", "unit", "--object", "demo", "--outcome", "controlled_repair_required", "--candidate-intent", "repair", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -1067,11 +737,9 @@ func TestCommandCloseUnitStableVerifyControlledRepairDryRunAndApplyCLI(t *testin
 		t.Fatalf("expected unit_fork after apply, got %+v", status)
 	}
 }
-
 func TestCommandCloseUnitStableVerifyControlledRepairRequiresIntentCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `no` | `stable` | `unit_stable_verify` | test |\n")
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err := runCommand([]string{"close", "--command", "unit_stable_verify", "--object-type", "unit", "--object", "demo", "--outcome", "controlled_repair_required", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -1086,11 +754,9 @@ func TestCommandCloseUnitStableVerifyControlledRepairRequiresIntentCLI(t *testin
 		t.Fatalf("missing intent must not advance status, got %+v", status)
 	}
 }
-
 func TestCommandCloseUnitStableVerifyControlledRepairRejectsWrongIntentCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `no` | `stable` | `unit_stable_verify` | test |\n")
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err := runCommand([]string{"close", "--command", "unit_stable_verify", "--object-type", "unit", "--object", "demo", "--outcome", "controlled_repair_required", "--candidate-intent", "change", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -1105,10 +771,8 @@ func TestCommandCloseUnitStableVerifyControlledRepairRejectsWrongIntentCLI(t *te
 		t.Fatalf("wrong intent must not advance status, got %+v", status)
 	}
 }
-
 func TestCommandCloseUnitCheckPassRejectsInvalidGateCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_check")
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err := runCommand([]string{"close", "--command", "unit_check", "--object-type", "unit", "--object", "demo", "--outcome", "pass", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -1126,7 +790,6 @@ func TestCommandCloseUnitCheckPassRejectsInvalidGateCLI(t *testing.T) {
 		t.Fatalf("invalid gate must not advance status, got %+v", status)
 	}
 }
-
 func TestCommandCloseUnitVerifyReadyToPromoteRejectsInvalidVerifyCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_verify")
 	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
@@ -1135,7 +798,6 @@ func TestCommandCloseUnitVerifyReadyToPromoteRejectsInvalidVerifyCLI(t *testing.
 	}
 	writeCLIUnitCheckProcess(t, repoRoot, expected)
 	writeCLIUnitPlanProcess(t, repoRoot, expected)
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err = runCommand([]string{"close", "--command", "unit_verify", "--object-type", "unit", "--object", "demo", "--outcome", "ready_to_promote", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -1153,7 +815,6 @@ func TestCommandCloseUnitVerifyReadyToPromoteRejectsInvalidVerifyCLI(t *testing.
 		t.Fatalf("invalid verify result must not advance status, got %+v", status)
 	}
 }
-
 func TestCommandCloseUnitPromoteDryRunKeepsCandidateAndProcessFilesCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_promote")
 	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
@@ -1162,14 +823,12 @@ func TestCommandCloseUnitPromoteDryRunKeepsCandidateAndProcessFilesCLI(t *testin
 	}
 	writeCLIUnitPlanProcess(t, repoRoot, expected)
 	writeCLIUnitVerifyProcess(t, repoRoot, expected)
-
 	statusPath := filepath.Join(repoRoot, "docs/specs/_status.md")
 	candidatePath := filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md")
 	verifyPath := filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md")
 	beforeStatus := mustReadCLITestFile(t, statusPath)
 	beforeCandidate := mustReadCLITestFile(t, candidatePath)
 	beforeVerify := mustReadCLITestFile(t, verifyPath)
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err = runCommand([]string{"close", "--command", "unit_promote", "--object-type", "unit", "--object", "demo", "--outcome", "promoted", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -1181,7 +840,6 @@ func TestCommandCloseUnitPromoteDryRunKeepsCandidateAndProcessFilesCLI(t *testin
 		"command_close_result: dry_run",
 		"input_validation_action: command_preflight",
 		"input_validated_processes:",
-		"- process: plan",
 		"- process: verify",
 		"result: valid",
 		"validation_action: validate_process:verify",
@@ -1203,13 +861,11 @@ func TestCommandCloseUnitPromoteDryRunKeepsCandidateAndProcessFilesCLI(t *testin
 		t.Fatalf("dry-run must not rewrite verify result\nbefore=%s\nafter=%s", beforeVerify, afterVerify)
 	}
 }
-
 func TestCommandCloseRejectsScenarioObjectTypeCLI(t *testing.T) {
-	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_impl")
+	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_verify")
 	writeCLIStatusRows(t, repoRoot, ""+
 		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_impl` | test |\n"+
 		"| `scenario` | `demo_flow` | `no` | `yes` | `candidate` | `scenario_promote` | test |\n")
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err := runCommand([]string{"close", "--command", "scenario_promote", "--object-type", "scenario", "--object", "demo_flow", "--outcome", "dependency_not_ready", "--apply", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -1217,7 +873,6 @@ func TestCommandCloseRejectsScenarioObjectTypeCLI(t *testing.T) {
 		t.Fatalf("expected scenario object type rejection, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 	}
 }
-
 func TestCommandCloseDryRunDoesNotModifyTrackedLikeFilesCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | test |\n")
@@ -1232,7 +887,6 @@ func TestCommandCloseDryRunDoesNotModifyTrackedLikeFilesCLI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read check: %v", err)
 	}
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err = runCommand([]string{"close", "--command", "unit_fork", "--object-type", "unit", "--object", "demo", "--outcome", "candidate_created", "--repo-root", repoRoot}, &stdout, &stderr)
@@ -1251,7 +905,6 @@ func TestCommandCloseDryRunDoesNotModifyTrackedLikeFilesCLI(t *testing.T) {
 		t.Fatalf("dry-run must not modify files\nstatus before=%s\nstatus after=%s\ncheck before=%s\ncheck after=%s", string(beforeStatus), string(afterStatus), string(beforeCheck), string(afterCheck))
 	}
 }
-
 func createCLITestRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
@@ -1261,7 +914,7 @@ func createCLITestRepo(t *testing.T) string {
 		"spec_flow_design_review.md",
 		"agent_operability_standard.md",
 		"onboarding_decision_policy.md",
-		"candidate_intent_policy.md",
+		"candidate_intent.md",
 		"tooling_execution_policy.md",
 		"slice_work_state_protocol.md",
 		"severity_policy.md",
@@ -1288,8 +941,6 @@ func createCLITestRepo(t *testing.T) string {
 		"specflow/framework/lifecycle/overview.md",
 		"specflow/framework/lifecycle/unit_init_new_fork.md",
 		"specflow/framework/lifecycle/unit_check.md",
-		"specflow/framework/lifecycle/unit_plan.md",
-		"specflow/framework/lifecycle/unit_impl.md",
 		"specflow/framework/lifecycle/unit_verify.md",
 		"specflow/framework/lifecycle/unit_promote.md",
 		"specflow/framework/lifecycle/unit_stable_verify.md",
@@ -1312,18 +963,18 @@ func createCLITestRepo(t *testing.T) string {
 		writeCLITestFile(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
 	for _, relPath := range []string{
-		"specflow/framework/candidate_intents/repair.md",
-		"specflow/framework/candidate_intents/change.md",
+		"specflow/framework/candidate_intent.md",
+		"specflow/framework/candidate_intent.md",
 	} {
 		writeCLITestFile(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
 	for _, relPath := range []string{
-		"specflow/framework/skills/using-specflow-guidance/SKILL.md",
-		"specflow/framework/skills/project-framing/SKILL.md",
-		"specflow/framework/skills/scope-cutting/SKILL.md",
-		"specflow/framework/skills/solution-design/SKILL.md",
-		"specflow/framework/skills/design-quality-review/SKILL.md",
-		"specflow/framework/skills/spec-writeback-guidance/SKILL.md",
+		"specflow/framework/guidance/using-specflow-guidance/SKILL.md",
+		"specflow/framework/guidance/project-framing/SKILL.md",
+		"specflow/framework/guidance/scope-cutting/SKILL.md",
+		"specflow/framework/guidance/solution-design/SKILL.md",
+		"specflow/framework/guidance/design-quality-review/SKILL.md",
+		"specflow/framework/guidance/spec-writeback-guidance/SKILL.md",
 	} {
 		writeCLITestFile(t, filepath.Join(repoRoot, relPath), "# skill\n")
 	}
@@ -1365,7 +1016,6 @@ func createCLITestRepo(t *testing.T) string {
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo Candidate\n")
 	return repoRoot
 }
-
 func createCLISourceReviewRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
@@ -1375,7 +1025,7 @@ func createCLISourceReviewRepo(t *testing.T) string {
 		"spec_flow_design_review.md",
 		"agent_operability_standard.md",
 		"onboarding_decision_policy.md",
-		"candidate_intent_policy.md",
+		"candidate_intent.md",
 		"tooling_execution_policy.md",
 		"slice_work_state_protocol.md",
 		"severity_policy.md",
@@ -1401,8 +1051,6 @@ func createCLISourceReviewRepo(t *testing.T) string {
 		"framework/lifecycle/overview.md",
 		"framework/lifecycle/unit_init_new_fork.md",
 		"framework/lifecycle/unit_check.md",
-		"framework/lifecycle/unit_plan.md",
-		"framework/lifecycle/unit_impl.md",
 		"framework/lifecycle/unit_verify.md",
 		"framework/lifecycle/unit_promote.md",
 		"framework/lifecycle/unit_stable_verify.md",
@@ -1421,14 +1069,14 @@ func createCLISourceReviewRepo(t *testing.T) string {
 		"framework/operations/implementation_change.md",
 		"framework/operations/output_standard.md",
 		"framework/operations/migration.md",
-		"framework/candidate_intents/repair.md",
-		"framework/candidate_intents/change.md",
-		"framework/skills/using-specflow-guidance/SKILL.md",
-		"framework/skills/project-framing/SKILL.md",
-		"framework/skills/scope-cutting/SKILL.md",
-		"framework/skills/solution-design/SKILL.md",
-		"framework/skills/design-quality-review/SKILL.md",
-		"framework/skills/spec-writeback-guidance/SKILL.md",
+		"framework/candidate_intent.md",
+		"framework/candidate_intent.md",
+		"framework/guidance/using-specflow-guidance/SKILL.md",
+		"framework/guidance/project-framing/SKILL.md",
+		"framework/guidance/scope-cutting/SKILL.md",
+		"framework/guidance/solution-design/SKILL.md",
+		"framework/guidance/design-quality-review/SKILL.md",
+		"framework/guidance/spec-writeback-guidance/SKILL.md",
 		"templates/docs/specs/_status.md",
 		"templates/docs/specs/_check_work/README.md",
 		"templates/docs/specs/_check_result/README.md",
@@ -1473,11 +1121,9 @@ func createCLISourceReviewRepo(t *testing.T) string {
 	}
 	return repoRoot
 }
-
 func createCLISnapshotRepo(t *testing.T) string {
-	return createCLISnapshotRepoWithStatus(t, "unit_impl")
+	return createCLISnapshotRepoWithStatus(t, "unit_verify")
 }
-
 func currentCLIToolingScriptFiles() []string {
 	return []string{
 		"specflow/tooling/scripts/build_release.sh",
@@ -1491,7 +1137,6 @@ func currentCLIToolingScriptFiles() []string {
 		"specflow/tooling/scripts/tooling_fingerprint.sh",
 	}
 }
-
 func createCLISnapshotRepoWithStatus(t *testing.T, unitNextCommand string) string {
 	t.Helper()
 	repoRoot := t.TempDir()
@@ -1507,13 +1152,9 @@ id: demo
 layer: candidate
 version: 0.1.0
 ---
-
 # Demo
-
 rule_refs: none
-
 ## Testability / Acceptance Criteria
-
 acceptance_item_set:
   - id: demo.core
     target: Demo behavior is accepted.
@@ -1527,12 +1168,10 @@ acceptance_item_set:
 id: repository_mapping
 version: 0.1.0
 ---
-
 # Repository Mapping
 `)
 	return repoRoot
 }
-
 func createCLIStableSnapshotRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
@@ -1542,13 +1181,9 @@ id: demo
 layer: stable
 version: 1.0.0
 ---
-
 # Demo
-
 rule_refs: none
-
 ## Testability / Acceptance Criteria
-
 acceptance_item_set:
   - id: demo.core
     target: Demo behavior is accepted.
@@ -1562,12 +1197,10 @@ acceptance_item_set:
 id: repository_mapping
 version: 0.1.0
 ---
-
 # Repository Mapping
 `)
 	return repoRoot
 }
-
 func writeCLIStatusRows(t *testing.T, repoRoot, rows string) {
 	t.Helper()
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
@@ -1577,7 +1210,6 @@ func writeCLIStatusRows(t *testing.T, repoRoot, rows string) {
 		"|---|---|---|---|---|---|---|\n"+
 		rows)
 }
-
 func writeCLIUnitCheckProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot) {
 	t.Helper()
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md"), "# check\n\n```yaml\n"+strings.Join([]string{
@@ -1586,7 +1218,7 @@ func writeCLIUnitCheckProcess(t *testing.T, repoRoot string, snap snapshot.Snaps
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_plan",
+		"next_command: unit_check",
 		"blocking_summary: none",
 		"coverage_summary: demo",
 		"truth_layer_ref: " + snap.TruthLayerRef,
@@ -1609,12 +1241,10 @@ func writeCLIUnitCheckProcess(t *testing.T, repoRoot string, snap snapshot.Snaps
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
 }
-
 func cliReviewInputRefsForTest(object, pack string, refs ...string) string {
 	requestFile := filepath.ToSlash(filepath.Join("docs/specs/_independent_evaluation/requests/unit", object, pack+".md"))
 	return strings.Join(append([]string{pack, requestFile}, refs...), ";")
 }
-
 func writeCLIUnitPlanProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot) {
 	t.Helper()
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+strings.Join([]string{
@@ -1643,12 +1273,11 @@ func writeCLIUnitPlanProcess(t *testing.T, repoRoot string, snap snapshot.Snapsh
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + cliReviewInputRefsForTest(snap.Object, "unit_plan_plan_ready", snap.SpecFileRef),
+		"review_input_refs: " + cliReviewInputRefsForTest(snap.Object, "unit_verify_ready_to_promote", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
 }
-
 func writeCLIUnitVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot) {
 	t.Helper()
 	activePlanFingerprint := cliFileFingerprint(t, repoRoot, snapshot.ActivePlanFilePath(snap.Object))
@@ -1692,7 +1321,6 @@ func writeCLIUnitVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snap
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
 }
-
 func cliFileFingerprint(t *testing.T, repoRoot, fileRef string) string {
 	t.Helper()
 	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)))
@@ -1705,7 +1333,6 @@ func cliFileFingerprint(t *testing.T, repoRoot, fileRef string) string {
 	sum := sha256.Sum256([]byte(text))
 	return fmt.Sprintf("%x", sum)
 }
-
 func writeCLIStableVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Snapshot, decision string) {
 	t.Helper()
 	mapping, err := snapshot.BuildRepositoryMappingSnapshot(repoRoot)
@@ -1757,7 +1384,6 @@ func writeCLIStableVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Sn
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
 }
-
 func writeCLIUnitReleaseSpec(t *testing.T, repoRoot, layer, unit, version string, unitRefs []string) {
 	t.Helper()
 	dir := "stable"
@@ -1787,7 +1413,6 @@ func writeCLIUnitReleaseSpec(t *testing.T, repoRoot, layer, unit, version string
 		"",
 	}, "\n"))
 }
-
 func mustReadCLITestFile(t *testing.T, path string) string {
 	t.Helper()
 	content, err := os.ReadFile(path)
@@ -1796,7 +1421,6 @@ func mustReadCLITestFile(t *testing.T, path string) string {
 	}
 	return string(content)
 }
-
 func assertCLITestFileNotExists(t *testing.T, path string) {
 	t.Helper()
 	if _, err := os.Stat(path); err == nil {
@@ -1805,7 +1429,6 @@ func assertCLITestFileNotExists(t *testing.T, path string) {
 		t.Fatalf("stat %s: %v", path, err)
 	}
 }
-
 func writeCLITestFile(t *testing.T, path, content string) {
 	t.Helper()
 	content = testfixtures.NormalizeSpecFlowContent(path, content)
@@ -1816,7 +1439,6 @@ func writeCLITestFile(t *testing.T, path, content string) {
 		t.Fatalf("write %s: %v", path, err)
 	}
 }
-
 func writeCLIReaderWebFiles(t *testing.T, repoRoot string) {
 	t.Helper()
 	writeCLITestFile(t, filepath.Join(repoRoot, "specflow/tooling/reader/web/index.html"), "<!doctype html>\n")

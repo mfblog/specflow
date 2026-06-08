@@ -168,11 +168,7 @@ func reconcileCandidate(repoRoot string, binding ModuleBinding, result ModuleRes
 		failureLayer = "truth_layer"
 	case nonSharedMismatch:
 		switch failureLayer {
-		case "plan_layer":
-			fallbackReason = "plan_drift"
-		case "implementation_layer":
-			fallbackReason = "implementation_deviation"
-		case "evidence_layer":
+			case "evidence_layer":
 			fallbackReason = "evidence_incomplete"
 		case "gate_layer":
 			fallbackReason = "gate_missing"
@@ -262,12 +258,6 @@ func applyCandidateFallback(repoRoot string, result ModuleResult, fallbackReason
 	case "gate_layer":
 		result.NextCommand = "unit_check"
 		processKinds = []string{"check_work", "check"}
-	case "plan_layer":
-		result.NextCommand = "unit_plan"
-		processKinds = []string{"plan", "verify"}
-	case "implementation_layer":
-		result.NextCommand = "unit_impl"
-		processKinds = []string{"verify"}
 	case "evidence_layer":
 		result.NextCommand = "unit_verify"
 		processKinds = []string{"verify"}

@@ -29,7 +29,7 @@ The required read surface is the smallest set that proves the target shape:
 3. `framework/core/repository_mapping.md` when object registration or path ownership shape is touched
 4. `framework/core/object_model.md`, `framework/core/status.md`, and `docs/specs/_status.md` when object state rows are touched
 5. `framework/process_snapshot_contract.md` when process files or stored process evidence are touched
-6. `framework/entry_index_registry.md` when a registered entry managed block is touched
+6. `framework/operations/entry_routing.md` (Entry File Registration section) when a registered entry managed block is touched
 7. `framework/tooling_execution_policy.md` and `<tooling-root>/README.md` when existing tooling is used
 
 Repository history, chat agreement, old file examples, and ordinary word meaning are not target-shape sources.
@@ -59,7 +59,7 @@ Allowed writes are limited to:
 
 1. updating framework policy documents or templates so they state the current shape directly
 2. updating project-instance tables, frontmatter, status rows, paths, or registered fields to match the current shape
-3. updating registered entry managed blocks under `framework/entry_index_registry.md`
+3. updating registered entry managed blocks per `framework/operations/entry_routing.md` (Entry File Registration section)
 4. removing obsolete shape fields when the current owner contract says the field is no longer part of the shape
 5. rebuilding deterministic derivatives or running validators when the tooling contract already allows that action
 

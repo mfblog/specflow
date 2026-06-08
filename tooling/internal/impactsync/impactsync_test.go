@@ -20,7 +20,7 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
 		"|---|---|---|---|---|---|---|",
-		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | current round |",
 	}, "\n")+"\n")
 	for _, relPath := range []string{
 		"docs/specs/_check_result/unit/demo.md",
@@ -36,7 +36,7 @@ func TestApplyInvalidatesCandidateObjectsAndCleansProcessFiles(t *testing.T) {
 			Binding: ModuleBinding{
 				Module:        "demo",
 				ActiveLayer:   "candidate",
-				NextCommand:   "unit_plan",
+				NextCommand:   "unit_verify",
 				BindingIssues: []string{"binding drift"},
 			},
 		}},
@@ -172,7 +172,7 @@ func TestApplyKeepsCandidateModuleWhenCallerAllowsSharedSnapshotMismatch(t *test
 			Binding: ModuleBinding{
 				Module:      "demo",
 				ActiveLayer: "candidate",
-				NextCommand: "unit_plan",
+				NextCommand: "unit_verify",
 			},
 			AllowedSharedSnapshotMismatchFileRefs: []string{"docs/specs/rules/candidate/c_b_rule_demo.md"},
 		}},
@@ -188,8 +188,8 @@ func TestApplyKeepsCandidateModuleWhenCallerAllowsSharedSnapshotMismatch(t *test
 	if moduleResult.Outcome != "unchanged" {
 		t.Fatalf("expected unchanged outcome, got %+v", moduleResult)
 	}
-	if moduleResult.NextCommand != "unit_plan" {
-		t.Fatalf("expected next command unit_plan, got %+v", moduleResult)
+	if moduleResult.NextCommand != "unit_verify" {
+		t.Fatalf("expected next command unit_verify, got %+v", moduleResult)
 	}
 	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md")); err != nil {
 		t.Fatalf("expected process file to remain, stat err=%v", err)
@@ -206,7 +206,7 @@ func TestApplyReportsFreshnessReviewRequiredWithoutCleanup(t *testing.T) {
 			Binding: ModuleBinding{
 				Module:      "demo",
 				ActiveLayer: "candidate",
-				NextCommand: "unit_plan",
+				NextCommand: "unit_verify",
 			},
 		}},
 	})
@@ -244,7 +244,7 @@ func TestApplyKeepsCandidateModuleWithAcceptedTextDrift(t *testing.T) {
 			Binding: ModuleBinding{
 				Module:      "demo",
 				ActiveLayer: "candidate",
-				NextCommand: "unit_plan",
+				NextCommand: "unit_verify",
 			},
 		}},
 	})
@@ -252,7 +252,7 @@ func TestApplyKeepsCandidateModuleWithAcceptedTextDrift(t *testing.T) {
 		t.Fatalf("Apply: %v", err)
 	}
 	moduleResult := result.ModuleResults[0]
-	if moduleResult.Outcome != "unchanged" || moduleResult.NextCommand != "unit_plan" {
+	if moduleResult.Outcome != "unchanged" || moduleResult.NextCommand != "unit_verify" {
 		t.Fatalf("expected unchanged accepted text drift, got %+v", moduleResult)
 	}
 }
@@ -267,7 +267,7 @@ func TestApplyFallbackStillRunsForSemanticDrift(t *testing.T) {
 			Binding: ModuleBinding{
 				Module:      "demo",
 				ActiveLayer: "candidate",
-				NextCommand: "unit_plan",
+				NextCommand: "unit_verify",
 			},
 		}},
 	})
@@ -340,9 +340,9 @@ func TestApplyUsesPlanDriftReasonForInvalidPlanEvidence(t *testing.T) {
 	}
 
 	moduleResult := result.ModuleResults[0]
-	if moduleResult.Outcome != "invalidated" || moduleResult.FailureLayer != "plan_layer" ||
-		moduleResult.FallbackReasonCode != "plan_drift" || moduleResult.NextCommand != "unit_plan" {
-		t.Fatalf("expected plan_drift fallback to unit_plan, got %+v", moduleResult)
+	if moduleResult.Outcome != "invalidated" || moduleResult.FailureLayer != "truth_layer" ||
+		moduleResult.FallbackReasonCode != "truth_drift" || moduleResult.NextCommand != "unit_check" {
+		t.Fatalf("expected truth_drift fallback to unit_check, got %+v", moduleResult)
 	}
 }
 
@@ -377,7 +377,7 @@ func setupImpactModuleSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
 		"|---|---|---|---|---|---|---|",
-		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | current round |",
 	}, "\n")+"\n")
 	mustWriteImpactFile(t, filepath.Join(repoRoot, "docs/specs/repository_mapping.md"), `---
 id: repository_mapping
@@ -507,7 +507,7 @@ func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_plan",
+		"next_command: unit_check",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: " + snap.TruthLayerRef,
@@ -602,7 +602,7 @@ func renderImpactPlanProcessSnapshot(snap snapshot.Snapshot) string {
 		"package_constraint_refs: "+snap.SpecFileRef,
 		"package_constraint_summary: current package constraints reviewed for this delta",
 	)
-	lines = append(lines, renderImpactIndependentEvaluationReceipt(snap.Object, "unit_plan_plan_ready", snap.SpecFileRef)...)
+	lines = append(lines, renderImpactIndependentEvaluationReceipt(snap.Object, "unit_verify_plan_ready", snap.SpecFileRef)...)
 	lines = append(lines,
 		"```",
 		"",

@@ -39,22 +39,13 @@ func TestDetermineTransitionCoversStandardOutcomes(t *testing.T) {
 		{name: "unit_stable_verify controlled_repair_required", opts: Options{Command: "unit_stable_verify", ObjectType: "unit", Object: "demo", Outcome: "controlled_repair_required", CandidateIntent: "repair"}, current: unitStableStatus("unit_stable_verify"), present: true, wantStable: "yes", wantCandidate: "no", wantActiveLayer: "stable", wantNext: "unit_fork", wantValidation: "stable_verify", wantCleanupKind: cleanupNone},
 		{name: "unit_stable_verify controlled_change_required", opts: Options{Command: "unit_stable_verify", ObjectType: "unit", Object: "demo", Outcome: "controlled_change_required", CandidateIntent: "change"}, current: unitStableStatus("unit_stable_verify"), present: true, wantStable: "yes", wantCandidate: "no", wantActiveLayer: "stable", wantNext: "unit_fork", wantValidation: "stable_verify", wantCleanupKind: cleanupNone},
 		{name: "unit_fork candidate_created", opts: Options{Command: "unit_fork", ObjectType: "unit", Object: "demo", Outcome: "candidate_created"}, current: unitStableStatus("unit_fork"), present: true, wantStable: "yes", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupSuccess, wantCleanupMode: "unit_fork"},
-		{name: "unit_check pass", opts: Options{Command: "unit_check", ObjectType: "unit", Object: "demo", Outcome: "pass"}, current: unitCandidateStatus("unit_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_plan", wantValidation: "check", wantCleanupKind: cleanupNone},
+		{name: "unit_check pass", opts: Options{Command: "unit_check", ObjectType: "unit", Object: "demo", Outcome: "pass"}, current: unitCandidateStatus("unit_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_impl", wantValidation: "check", wantCleanupKind: cleanupNone},
 		{name: "unit_check blocked", opts: Options{Command: "unit_check", ObjectType: "unit", Object: "demo", Outcome: "blocked"}, current: unitCandidateStatus("unit_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupNone},
 		{name: "unit_check fix_required", opts: Options{Command: "unit_check", ObjectType: "unit", Object: "demo", Outcome: "fix_required"}, current: unitCandidateStatus("unit_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupNone},
 		{name: "unit_check checkpoint", opts: Options{Command: "unit_check", ObjectType: "unit", Object: "demo", Outcome: "checkpoint"}, current: unitCandidateStatus("unit_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupNone},
-		{name: "unit_plan plan_ready", opts: Options{Command: "unit_plan", ObjectType: "unit", Object: "demo", Outcome: "plan_ready"}, current: unitCandidateStatus("unit_plan"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_impl", wantValidation: "plan", wantCleanupKind: cleanupNone},
-		{name: "unit_plan truth_fallback", opts: Options{Command: "unit_plan", ObjectType: "unit", Object: "demo", Outcome: "truth_fallback", Reason: "truth_incomplete"}, current: unitCandidateStatus("unit_plan"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "truth_incomplete"},
-		{name: "unit_plan blocked", opts: Options{Command: "unit_plan", ObjectType: "unit", Object: "demo", Outcome: "blocked"}, current: unitCandidateStatus("unit_plan"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_plan", wantCleanupKind: cleanupNone},
-		{name: "unit_plan decision_checkpoint", opts: Options{Command: "unit_plan", ObjectType: "unit", Object: "demo", Outcome: "decision_checkpoint"}, current: unitCandidateStatus("unit_plan"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_plan", wantCleanupKind: cleanupNone},
-		{name: "unit_impl ready_for_verify", opts: Options{Command: "unit_impl", ObjectType: "unit", Object: "demo", Outcome: "ready_for_verify"}, current: unitCandidateStatus("unit_impl"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_verify", wantCleanupKind: cleanupNone},
-		{name: "unit_impl blocked", opts: Options{Command: "unit_impl", ObjectType: "unit", Object: "demo", Outcome: "blocked"}, current: unitCandidateStatus("unit_impl"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_impl", wantCleanupKind: cleanupNone},
-		{name: "unit_impl truth_fallback", opts: Options{Command: "unit_impl", ObjectType: "unit", Object: "demo", Outcome: "truth_fallback", Reason: "truth_drift"}, current: unitCandidateStatus("unit_impl"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "truth_drift"},
-		{name: "unit_impl plan_fallback", opts: Options{Command: "unit_impl", ObjectType: "unit", Object: "demo", Outcome: "plan_fallback"}, current: unitCandidateStatus("unit_impl"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_plan", wantCleanupKind: cleanupFallback, wantFailureLayer: "plan_layer", wantReason: "plan_drift"},
-		{name: "unit_impl gate_fallback", opts: Options{Command: "unit_impl", ObjectType: "unit", Object: "demo", Outcome: "gate_fallback"}, current: unitCandidateStatus("unit_impl"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "gate_layer", wantReason: "gate_missing"},
-		{name: "unit_verify ready_to_promote", opts: Options{Command: "unit_verify", ObjectType: "unit", Object: "demo", Outcome: "ready_to_promote"}, current: unitCandidateStatus("unit_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_promote", wantValidation: "verify", wantCleanupKind: cleanupNone},
-		{name: "unit_verify implementation_deviation", opts: Options{Command: "unit_verify", ObjectType: "unit", Object: "demo", Outcome: "implementation_deviation"}, current: unitCandidateStatus("unit_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_impl", wantCleanupKind: cleanupFallback, wantFailureLayer: "implementation_layer", wantReason: "implementation_deviation"},
-		{name: "unit_verify truth_fallback", opts: Options{Command: "unit_verify", ObjectType: "unit", Object: "demo", Outcome: "truth_fallback", Reason: "truth_drift"}, current: unitCandidateStatus("unit_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "truth_drift"},
+				{name: "unit_verify truth_fallback", opts: Options{Command: "unit_verify", ObjectType: "unit", Object: "demo", Outcome: "truth_fallback", Reason: "truth_incomplete"}, current: unitCandidateStatus("unit_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "truth_incomplete"},
+																{name: "unit_verify ready_to_promote", opts: Options{Command: "unit_verify", ObjectType: "unit", Object: "demo", Outcome: "ready_to_promote"}, current: unitCandidateStatus("unit_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_promote", wantValidation: "verify", wantCleanupKind: cleanupNone},
+				{name: "unit_verify truth_fallback", opts: Options{Command: "unit_verify", ObjectType: "unit", Object: "demo", Outcome: "truth_fallback", Reason: "truth_drift"}, current: unitCandidateStatus("unit_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "truth_drift"},
 		{name: "unit_verify evidence_incomplete", opts: Options{Command: "unit_verify", ObjectType: "unit", Object: "demo", Outcome: "evidence_incomplete"}, current: unitCandidateStatus("unit_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_verify", wantCleanupKind: cleanupNone},
 		{name: "unit_verify human_verify", opts: Options{Command: "unit_verify", ObjectType: "unit", Object: "demo", Outcome: "human_verify"}, current: unitCandidateStatus("unit_verify"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_verify", wantCleanupKind: cleanupNone},
 		{name: "unit_promote promoted", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "promoted"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "yes", wantCandidate: "no", wantActiveLayer: "stable", wantNext: "unit_fork", wantValidation: "verify", wantCleanupKind: cleanupSuccess, wantCleanupMode: "unit_promote"},
@@ -62,9 +53,7 @@ func TestDetermineTransitionCoversStandardOutcomes(t *testing.T) {
 		{name: "unit_promote verify_invalid_binding", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "verify_invalid_binding"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "binding_drift"},
 		{name: "unit_promote verify_invalid_baseline", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "verify_invalid_baseline"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "baseline_drift"},
 		{name: "unit_promote verify_invalid_rule", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "verify_invalid_rule"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "rule_drift"},
-		{name: "unit_promote verify_invalid_plan", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "verify_invalid_plan"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_plan", wantCleanupKind: cleanupFallback, wantFailureLayer: "plan_layer", wantReason: "plan_drift"},
-		{name: "unit_promote verify_invalid_implementation", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "verify_invalid_implementation"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_impl", wantCleanupKind: cleanupFallback, wantFailureLayer: "implementation_layer", wantReason: "implementation_deviation"},
-		{name: "unit_promote verify_invalid_gate", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "verify_invalid_gate"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "gate_layer", wantReason: "gate_missing"},
+						{name: "unit_promote verify_invalid_gate", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "verify_invalid_gate"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "gate_layer", wantReason: "gate_missing"},
 		{name: "unit_promote verify_invalid_evidence", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "verify_invalid_evidence"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_verify", wantCleanupKind: cleanupFallback, wantFailureLayer: "evidence_layer", wantReason: "evidence_incomplete"},
 		{name: "unit_promote promotion_recovered", opts: Options{Command: "unit_promote", ObjectType: "unit", Object: "demo", Outcome: "promotion_recovered", StableBefore: "yes"}, current: unitCandidateStatus("unit_promote"), present: true, wantStable: "yes", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupFallback, wantFailureLayer: "truth_layer", wantReason: "truth_drift"},
 	}
@@ -92,7 +81,7 @@ func TestCloseRejectsInvalidCurrentNextCommand(t *testing.T) {
 	repoRoot := commandCloseTestRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | test |\n")
 	_, err := Close(Options{
 		RepoRoot:   repoRoot,
-		Command:    "unit_plan",
+		Command:    "unit_verify",
 		ObjectType: "unit",
 		Object:     "demo",
 		Outcome:    "blocked",
@@ -125,36 +114,6 @@ func TestCloseRejectsMissingRequiredFlag(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "command, object-type, object, and outcome are required") {
 		t.Fatalf("expected required flag error, got %v", err)
-	}
-}
-
-func TestCloseApplyInvokesFallbackCleanup(t *testing.T) {
-	repoRoot := commandCloseTestRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_impl` | test |\n")
-	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md"), "check")
-	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "plan")
-	writeCommandCloseTestFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "verify")
-
-	result, err := Close(Options{
-		RepoRoot:   repoRoot,
-		Command:    "unit_impl",
-		ObjectType: "unit",
-		Object:     "demo",
-		Outcome:    "truth_fallback",
-		Reason:     "truth_drift",
-		Apply:      true,
-	})
-	if err != nil {
-		t.Fatalf("Close: %v", err)
-	}
-	if result.CleanupAction != "fallback:truth_layer:truth_drift" || len(result.FallbackCleanup.DeletedFiles) != 3 {
-		t.Fatalf("expected fallback cleanup deletion, got action=%s deleted=%v", result.CleanupAction, result.FallbackCleanup.DeletedFiles)
-	}
-	status, err := statusfile.LookupObjectStatus(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("LookupObjectStatus: %v", err)
-	}
-	if status.NextCommand != "unit_check" {
-		t.Fatalf("expected unit_check after fallback, got %s", status.NextCommand)
 	}
 }
 
@@ -260,10 +219,9 @@ func TestClosePromoteWritesStablePromotionSummaryBeforeCleanup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Close: %v", err)
 	}
-	if len(result.InputValidatedProcesses) != 2 ||
-		result.InputValidatedProcesses[0].ProcessKind != "plan" ||
-		result.InputValidatedProcesses[1].ProcessKind != "verify" {
-		t.Fatalf("unit_promote must validate plan and verify, got %+v", result.InputValidatedProcesses)
+	if len(result.InputValidatedProcesses) != 1 ||
+		result.InputValidatedProcesses[0].ProcessKind != "verify" {
+			t.Fatalf("unit_promote must validate verify, got %+v", result.InputValidatedProcesses)
 	}
 	summaryRef := "docs/specs/_verify_result/stable/unit/demo.md"
 	if result.PromotionSummaryFile != summaryRef {
@@ -380,28 +338,6 @@ func TestClosePromoteRejectsMissingStableTruthBeforeCleanup(t *testing.T) {
 	}
 }
 
-func TestCloseRejectsUnitPlanReadyWhenInputCheckMissing(t *testing.T) {
-	repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | test |\n")
-	_, err := Close(Options{
-		RepoRoot:   repoRoot,
-		Command:    "unit_plan",
-		ObjectType: "unit",
-		Object:     "demo",
-		Outcome:    "plan_ready",
-		Apply:      true,
-	})
-	if err == nil || !strings.Contains(err.Error(), "command close input preflight failed") || !strings.Contains(err.Error(), "missing process file") {
-		t.Fatalf("expected input preflight failure for missing check, got %v", err)
-	}
-	status, err := statusfile.LookupObjectStatus(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("LookupObjectStatus: %v", err)
-	}
-	if status.NextCommand != "unit_plan" {
-		t.Fatalf("missing input check must not advance status, got %+v", status)
-	}
-}
-
 func TestCloseRejectsUnitCheckPassWithoutIndependentReceipt(t *testing.T) {
 	repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | test |\n")
 	snap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
@@ -414,7 +350,7 @@ func TestCloseRejectsUnitCheckPassWithoutIndependentReceipt(t *testing.T) {
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_plan",
+		"next_command: unit_check",
 		"blocking_summary: none",
 		"coverage_summary: demo",
 		"truth_layer_ref: " + snap.TruthLayerRef,
@@ -490,204 +426,14 @@ func TestCloseUnitCheckPassUsesCurrentEvidenceDespiteOldCheckWork(t *testing.T) 
 			if err != nil {
 				t.Fatalf("LookupObjectStatus: %v", err)
 			}
-			if status.NextCommand != "unit_plan" {
-				t.Fatalf("current valid check evidence must advance to unit_plan, got %+v", status)
+			if status.NextCommand != "unit_impl" {
+				t.Fatalf("current valid check evidence must advance to unit_impl, got %+v", status)
 			}
 		})
 	}
 }
 
-func TestCloseUnitPlanReadyAcceptsAcceptedTextDriftEvidence(t *testing.T) {
-	repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | test |\n")
-	oldSnap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	replaceCommandCloseCandidateSpecText(t, repoRoot, "# Demo\n", "# Demo\n\nEditorial note only.\n")
-	currentSnap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject after edit: %v", err)
-	}
-	writeCommandCloseUnitCheckProcessWithFreshness(t, repoRoot, oldSnap, currentSnap)
-	writeCommandCloseUnitPlanProcessWithFreshness(t, repoRoot, oldSnap, currentSnap, "accepted")
 
-	result, err := Close(Options{
-		RepoRoot:   repoRoot,
-		Command:    "unit_plan",
-		ObjectType: "unit",
-		Object:     "demo",
-		Outcome:    "plan_ready",
-		Apply:      true,
-	})
-	if err != nil {
-		t.Fatalf("Close: %v result=%+v", err, result)
-	}
-	if result.StatusAfter.NextCommand != "unit_impl" {
-		t.Fatalf("expected next command unit_impl, got %+v", result.StatusAfter)
-	}
-	if len(result.InputValidatedProcesses) != 1 ||
-		result.InputValidatedProcesses[0].FreshnessImpact != snapshot.FreshnessTextDrift ||
-		result.InputValidatedProcesses[0].EvidenceReuse != snapshot.EvidenceReuseAccepted {
-		t.Fatalf("expected accepted text drift input validation, got %+v", result.InputValidatedProcesses)
-	}
-}
-
-func TestCloseUnitImplAcceptsAcceptedTextDriftInputs(t *testing.T) {
-	repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_impl` | test |\n")
-	oldSnap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	replaceCommandCloseCandidateSpecText(t, repoRoot, "# Demo\n", "# Demo\n\nEditorial note only.\n")
-	currentSnap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject after edit: %v", err)
-	}
-	writeCommandCloseUnitCheckProcessWithFreshness(t, repoRoot, oldSnap, currentSnap)
-	writeCommandCloseUnitPlanProcessWithFreshness(t, repoRoot, oldSnap, currentSnap, "accepted")
-
-	result, err := Close(Options{
-		RepoRoot:   repoRoot,
-		Command:    "unit_impl",
-		ObjectType: "unit",
-		Object:     "demo",
-		Outcome:    "ready_for_verify",
-		Apply:      true,
-	})
-	if err != nil {
-		t.Fatalf("Close: %v result=%+v", err, result)
-	}
-	if result.StatusAfter.NextCommand != "unit_verify" {
-		t.Fatalf("expected next command unit_verify, got %+v", result.StatusAfter)
-	}
-	if len(result.InputValidatedProcesses) != 2 {
-		t.Fatalf("expected check and plan validation, got %+v", result.InputValidatedProcesses)
-	}
-	for _, process := range result.InputValidatedProcesses {
-		if process.FreshnessImpact != snapshot.FreshnessTextDrift || process.EvidenceReuse != snapshot.EvidenceReuseAccepted {
-			t.Fatalf("expected accepted text drift process, got %+v", process)
-		}
-	}
-}
-
-func TestCloseRejectsTextDriftWithoutAcceptedFreshnessReceipt(t *testing.T) {
-	for _, tc := range []struct {
-		name     string
-		planMode string
-		want     string
-	}{
-		{
-			name:     "missing receipt",
-			planMode: "missing",
-			want:     "missing required freshness field: freshness_impact",
-		},
-		{
-			name:     "blocked reviewer",
-			planMode: "blocked",
-			want:     "freshness_reviewer_result mismatch: actual=blocked expected=pass",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | test |\n")
-			oldSnap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-			if err != nil {
-				t.Fatalf("RebuildCurrentObject: %v", err)
-			}
-			replaceCommandCloseCandidateSpecText(t, repoRoot, "# Demo\n", "# Demo\n\nEditorial note only.\n")
-			currentSnap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-			if err != nil {
-				t.Fatalf("RebuildCurrentObject after edit: %v", err)
-			}
-			writeCommandCloseUnitCheckProcessWithFreshness(t, repoRoot, oldSnap, currentSnap)
-			writeCommandCloseUnitPlanProcessWithFreshness(t, repoRoot, oldSnap, currentSnap, tc.planMode)
-
-			_, err = Close(Options{
-				RepoRoot:   repoRoot,
-				Command:    "unit_plan",
-				ObjectType: "unit",
-				Object:     "demo",
-				Outcome:    "plan_ready",
-				Apply:      true,
-			})
-			if err == nil || !strings.Contains(err.Error(), tc.want) {
-				t.Fatalf("expected %q failure, got %v", tc.want, err)
-			}
-			status, err := statusfile.LookupObjectStatus(repoRoot, "unit", "demo")
-			if err != nil {
-				t.Fatalf("LookupObjectStatus: %v", err)
-			}
-			if status.NextCommand != "unit_plan" {
-				t.Fatalf("failed text drift close must not advance status, got %+v", status)
-			}
-		})
-	}
-}
-
-func TestCloseRejectsUnitImplReadyWhenInputPlanMissing(t *testing.T) {
-	repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_impl` | test |\n")
-	snap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	writeCommandCloseUnitCheckProcess(t, repoRoot, snap)
-
-	_, err = Close(Options{
-		RepoRoot:   repoRoot,
-		Command:    "unit_impl",
-		ObjectType: "unit",
-		Object:     "demo",
-		Outcome:    "ready_for_verify",
-		Apply:      true,
-	})
-	if err == nil || !strings.Contains(err.Error(), "plan: missing process file") {
-		t.Fatalf("expected input preflight failure for missing plan, got %v", err)
-	}
-	status, err := statusfile.LookupObjectStatus(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("LookupObjectStatus: %v", err)
-	}
-	if status.NextCommand != "unit_impl" {
-		t.Fatalf("missing input plan must not advance status, got %+v", status)
-	}
-}
-
-func TestCloseRejectsUnitVerifyReadyWhenInputCheckOrPlanMissing(t *testing.T) {
-	t.Run("missing check", func(t *testing.T) {
-		repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | test |\n")
-		_, err := Close(Options{
-			RepoRoot:   repoRoot,
-			Command:    "unit_verify",
-			ObjectType: "unit",
-			Object:     "demo",
-			Outcome:    "ready_to_promote",
-			Apply:      true,
-		})
-		if err == nil || !strings.Contains(err.Error(), "check: missing process file") {
-			t.Fatalf("expected input preflight failure for missing check, got %v", err)
-		}
-	})
-
-	t.Run("missing plan", func(t *testing.T) {
-		repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | test |\n")
-		snap, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-		if err != nil {
-			t.Fatalf("RebuildCurrentObject: %v", err)
-		}
-		writeCommandCloseUnitCheckProcess(t, repoRoot, snap)
-
-		_, err = Close(Options{
-			RepoRoot:   repoRoot,
-			Command:    "unit_verify",
-			ObjectType: "unit",
-			Object:     "demo",
-			Outcome:    "ready_to_promote",
-			Apply:      true,
-		})
-		if err == nil || !strings.Contains(err.Error(), "plan: missing process file") {
-			t.Fatalf("expected input preflight failure for missing plan, got %v", err)
-		}
-	})
-}
 
 func TestCloseRejectsUnitVerifyReadyWithWeakAcceptanceEvidence(t *testing.T) {
 	repoRoot := commandCloseSnapshotRepo(t, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | test |\n")
@@ -955,7 +701,7 @@ func TestValidateOutcomeFlagsForControlledCandidateIntent(t *testing.T) {
 }
 
 func TestValidateOutcomeFlagsRequiresReasonForGenericTruthFallback(t *testing.T) {
-	for _, command := range []string{"unit_plan", "unit_impl", "unit_verify"} {
+	for _, command := range []string{"unit_verify"} {
 		t.Run(command, func(t *testing.T) {
 			err := validateOutcomeFlags(Options{Command: command, Outcome: "truth_fallback"})
 			if err == nil || !strings.Contains(err.Error(), "requires --reason") {
@@ -965,38 +711,13 @@ func TestValidateOutcomeFlagsRequiresReasonForGenericTruthFallback(t *testing.T)
 	}
 }
 
-func TestValidateOutcomeFlagsRequiresUnitPlanTruthIncompleteReason(t *testing.T) {
-	err := validateOutcomeFlags(Options{Command: "unit_plan", Outcome: "truth_fallback", Reason: "truth_drift"})
-	if err == nil || !strings.Contains(err.Error(), "requires --reason truth_incomplete") {
-		t.Fatalf("expected unit_plan truth_fallback reason guard, got %v", err)
+func TestValidateOutcomeFlagsRequiresVerifyTruthFallbackReason(t *testing.T) {
+	err := validateOutcomeFlags(Options{Command: "unit_verify", Outcome: "truth_fallback"})
+	if err == nil || !strings.Contains(err.Error(), "requires --reason") {
+		t.Fatalf("expected unit_verify truth_fallback reason guard, got %v", err)
 	}
 }
 
-func TestDetermineTransitionRejectsUnsupportedAndMismatchedFallbackReasons(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		opts Options
-		want string
-	}{
-		{
-			name: "legacy truth reason",
-			opts: Options{Command: "unit_impl", ObjectType: "unit", Object: "demo", Outcome: "truth_fallback", Reason: "truth_changed"},
-			want: "unsupported fallback reason",
-		},
-		{
-			name: "gate reason on plan fallback",
-			opts: Options{Command: "unit_impl", ObjectType: "unit", Object: "demo", Outcome: "plan_fallback", Reason: "gate_missing"},
-			want: "requires failure layer \"gate_layer\"",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := determineTransition(tc.opts, unitCandidateStatus(tc.opts.Command), true)
-			if err == nil || !strings.Contains(err.Error(), tc.want) {
-				t.Fatalf("expected %q failure, got %v", tc.want, err)
-			}
-		})
-	}
-}
 
 func unitStableStatus(next string) statusfile.ObjectStatus {
 	return statusfile.ObjectStatus{ObjectType: "unit", Object: "demo", Stable: "yes", Candidate: "no", ActiveLayer: "stable", NextCommand: next, Notes: "test"}
@@ -1118,7 +839,7 @@ func writeCommandCloseUnitCheckProcessWithExtra(t *testing.T, repoRoot string, s
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_plan",
+		"next_command: unit_check",
 		"blocking_summary: none",
 		"coverage_summary: demo",
 		"truth_layer_ref: " + snap.TruthLayerRef,
@@ -1186,7 +907,7 @@ func writeCommandCloseUnitPlanProcessWithExtra(t *testing.T, repoRoot string, sn
 		"evaluation_mode: independent",
 		"reviewer_result: pass",
 		"reviewer_context: minimal_context",
-		"review_input_refs: " + commandCloseReviewInputRefsForTest(snap.Object, "unit_plan_plan_ready", snap.SpecFileRef),
+		"review_input_refs: " + commandCloseReviewInputRefsForTest(snap.Object, "unit_verify_plan_ready", snap.SpecFileRef),
 		"review_findings: none",
 		"human_decision_refs: none",
 	}
@@ -1230,7 +951,7 @@ func writeCommandCloseUnitCheckProcess(t *testing.T, repoRoot string, snap snaps
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_plan",
+		"next_command: unit_check",
 		"blocking_summary: none",
 		"coverage_summary: demo",
 		"truth_layer_ref: " + snap.TruthLayerRef,

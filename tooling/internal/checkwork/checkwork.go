@@ -398,9 +398,7 @@ func collectTruthInfo(repoRoot, objectType, object string) (truthInfo, error) {
 		frameworkPath("core/repository_mapping.md"),
 		frameworkPath("lifecycle/unit_check.md"),
 		frameworkPath("process_snapshot_contract.md"),
-		frameworkPath("candidate_handoff_contract.md"),
-		frameworkPath("candidate_intent_policy.md"),
-		frameworkPath("operations/implementation_change.md"),
+		frameworkPath("candidate_intent.md"),
 	})
 	return truthInfo{
 		Layer:       "candidate",
@@ -420,9 +418,7 @@ func collectTruthInfo(repoRoot, objectType, object string) (truthInfo, error) {
 				frameworkPath("lifecycle/unit_check.md"),
 			}),
 			HandoffRuleFiles: existingFiles(repoRoot, []string{
-				frameworkPath("candidate_handoff_contract.md"),
 				frameworkPath("process_snapshot_contract.md"),
-				frameworkPath("lifecycle/unit_plan.md"),
 			}),
 		},
 	}, nil
@@ -481,7 +477,7 @@ func checklistDefinitions() []checklistDefinition {
 		},
 		{
 			ID:       "implementation_handoff",
-			Question: "Can unit_plan create an implementation handoff without inventing missing design, adapter, output, or test choices.",
+			Question: "Can downstream work proceed without missing design, adapter, output, or test choices.",
 			InputFiles: func(ctx inputContext) []string {
 				return union([]string{ctx.TruthFile}, ctx.AppendixFiles, ctx.HandoffRuleFiles)
 			},

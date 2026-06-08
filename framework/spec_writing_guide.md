@@ -6,8 +6,7 @@ Files under `specflow/` are framework and delivery documents and are written in 
 
 Files under `docs/` are project communication documents and are written in Chinese unless a specific delivery artifact requires otherwise.
 
-This file defines formal Spec shape and reference rules.
-The semantic authoring baseline for whether a Spec is ready for downstream check, planning, implementation, and verification is defined in `framework/spec_authoring_baseline.md`.
+This file defines formal Spec shape and reference rules, including the semantic authoring baseline in Section 9.
 
 Format compliance does not by itself prove handoff completeness.
 
@@ -107,15 +106,47 @@ The section must include structured acceptance items:
 ```yaml
 acceptance_item_set:
   - id: demo.core
-    target: Demo behavior is accepted.
+    description: Demo behavior is accepted.
+    verification_type: testable          # testable | inspectable | reviewable
     verification_surface: internal_flow
     implementation_surface: AgentCore/internal/demo
     verification_method: Go test for demo behavior.
     pass_condition: Demo behavior passes the declared checks.
     not_runnable_yet: no
+    evidence_requirements:               # minimum evidence required for this item
+      - automated_test_pass
+    affects:                             # scope that verify must check globally
+      files:
+        - internal/demo/handler.go
+      appendices: []
+      rules: []
+      dependencies: []
 ```
 
+### Acceptance Item Fields
+
+| Field | Required | Description |
+|---|---|---|
+| `id` | yes | Unique identifier within the item set; used as primary key in process evidence |
+| `description` | yes | Plain-language description of this acceptance item |
+| `verification_type` | yes | How this item is verified: `testable` (automated test), `inspectable` (file/artifact inspection), `reviewable` (human review) |
+| `verification_surface` | yes | Where verification is targeted (e.g. `internal_flow`, `api`, `ui`) |
+| `implementation_surface` | yes | Implementation code surface path |
+| `verification_method` | yes | How to verify (e.g. "Go test for demo behavior") |
+| `pass_condition` | yes | What constitutes a pass |
+| `not_runnable_yet` | yes | `yes` or `no` |
+| `evidence_requirements` | recommended | List of minimum evidence types needed (e.g. `automated_test_pass`, `integration_test_pass`, `old_code_deleted`, `no_remaining_refs`) |
+| `affects.files` | recommended | Implementation files that must be verified as part of this item's scope |
+| `affects.appendices` | recommended | Appendix names that must be checked |
+| `affects.rules` | recommended | Rule names that must be respected |
+| `affects.dependencies` | recommended | Stable unit dependency names that must be maintained |
+
+When `verification_type` is `inspectable`, the `evidence_requirements` should specify what inspection evidence is needed (e.g. `old_code_deleted`, `no_remaining_refs`).
+When `verification_type` is `reviewable`, human review is the primary verification method; `evidence_requirements` may include `human_review_pass`.
+
 The acceptance item ids are used by process evidence. Changing ids invalidates existing process files.
+
+For `candidate_intent: change` with `source_basis: replacement`, at least one acceptance item must have `verification_type: inspectable` and `evidence_requirements` that include `old_code_deleted` and `no_remaining_refs`. This declares the retirement scope for the replaced code paths.
 
 ## 7. Appendix Files
 
@@ -149,3 +180,92 @@ Candidate check, plan, and verify process files must include:
 `rule_snapshot` records resolved stable global rules and resolved bound shared rule dependencies from `rule_refs`.
 
 Snapshots prove what one command reviewed and preserve package constraints across handoff. They do not create or replace formal truth.
+
+## 9. Authoring Baseline
+
+A formal Spec must make the following clear for the next lifecycle step:
+
+1. the intended user, actor, or caller
+2. the unit responsibility and why the unit owns it
+3. the entry point or trigger
+4. the normal path from input to result
+5. the boundaries crossed on that path
+6. the data, state, or durable truth each step reads or writes
+7. the owner of each read/write responsibility
+8. the output artifact or observable result
+9. the way failures or unavailable dependencies are exposed
+10. the verification surface and success condition
+
+The Spec must close implementation-affecting decisions. The downstream executor must not be forced to choose:
+- which object owns a responsibility
+- which entry point starts the behavior
+- where state or durable truth lives
+- how ordered steps connect
+- how boundary failures are reported
+- what the result shape means
+- how acceptance proves the stated responsibility
+
+If a decision is intentionally not made, the Spec must state that boundary and explain why.
+
+### Appendix Handoff
+
+Appendix files may carry detailed truth for one unit but do not weaken the handoff baseline. An appendix used as implementation truth must not contain only background, motivation, principles, or patch notes — it must state the current rule or design as directly readable truth.
+
+## 10. Handoff Contract
+
+### Verify to Promote
+
+`unit_promote` consumes `docs/specs/_verify_result/unit/{unit}.md` only when it validates against current candidate unit truth. The verify result must prove every executable acceptance item through the `acceptance_item_evidence_matrix` with `status: pass` and durable `evidence_refs`.
+
+Before stable writeback, `unit_promote` must resolve:
+1. `unit_refs` (must reference stable unit versions)
+2. `rule_refs`
+3. global baseline rules
+
+### Stable Verify to Fork
+
+`unit_stable_verify` advancing outcomes consume `docs/specs/_stable_verify_result/unit/{unit}.md` only when it validates against current stable unit truth. If the stable verify result is missing, malformed, stale, or records a different decision, the unit must remain at `unit_stable_verify`.
+
+## 11. Candidate Relation Graph
+
+Candidate advancement order is a computed relation, not a manually maintained field.
+
+The relation graph reads only:
+1. `docs/specs/_status.md`
+2. current-layer candidate unit main Specs
+3. same-layer candidate appendix files owned by current-layer candidates
+4. `unit_refs`, `rule_refs`, Markdown `.md` links, explicit version refs
+
+The graph builder must not infer candidate order from prose alone.
+
+Edge meanings:
+- **stable dependency edge**: current-layer unit depends on stable unit or Rule truth
+- **candidate progression edge**: candidate explicitly references another current candidate — the referencing candidate waits for the referenced one
+- **reference-only edge**: evidence appendix references — traceability only, does not block
+
+Cycle rules:
+1. stable-dependency-only cycles: diagnostic only, does not block
+2. any cycle containing candidate progression edges: blocks all candidates in that cycle
+3. blocked candidates must not receive `unit_check pass` or be entered by `unit_advance`
+
+## 12. Rule Scope Resolution
+
+Rule scope is resolved from rule truth:
+- `rule_scope: global` or id beginning with `g_rule_` → repository-wide rule, applies to every current-layer unit
+- `rule_scope: bound` or id beginning with `b_rule_` → bound shared rule, applies only to units listing it in `rule_refs`
+
+Rule files must not store consumer lists. `bound_objects` is not the source of rule consumers. The bound shared rule consumer graph is reconstructed from current-layer unit frontmatter `rule_refs`.
+
+## 13. Dependency Order
+
+```text
+repository_mapping → unit → rule
+stable global rule → unit and rule
+rule → unit
+unit → unit through stable-only unit_refs
+```
+
+1. repository mapping decides path ownership
+2. unit truth owns behavior responsibility
+3. rule truth owns reusable constraints
+4. unit-to-unit dependency is explicit and stable-only

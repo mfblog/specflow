@@ -1,99 +1,43 @@
-# Unit Stable Verify Context Card
+# Unit Stable Verify
 
-`unit_stable_verify:{unit}` checks whether current implementation still matches stable truth.
+`unit_stable_verify:{unit}` 检查当前实现是否仍然符合稳定层 truth。
 
-## Required Context
+## 输入
 
-Read only:
+- `docs/specs/_status.md`
+- `docs/specs/units/stable/s_unit_{unit}.md`
+- 稳定层附录和本 unit 引用的 rule 文件
+- `docs/specs/repository_mapping.md` 中本 unit 的条目
+- 当前的实现文件和测试文件
+- 已有的 `_stable_verify_result/unit/{unit}.md`（如需要更新）
 
-1. `framework/core/context_card.md`
-2. `framework/core/lifecycle_authority.md`
-3. `framework/core/independent_evaluation.md`
-4. `docs/specs/_status.md` for the target unit row.
-5. `docs/specs/units/stable/s_unit_{unit}.md`
-6. stable appendices and rule files referenced by the unit.
-7. `docs/specs/repository_mapping.md` entries for the unit.
-8. current implementation files and tests named by repository mapping or stable truth.
-9. existing `docs/specs/_stable_verify_result/unit/{unit}.md` only when updating prior stable verification evidence.
+## 本步骤做什么
 
-## Allowed Writes
+检查当前实现与稳定层 truth 的一致性。
+输出应为 `aligned`（一致）、`controlled_repair_required`（需修复）、或 `controlled_change_required`（需变更）。
 
-Allowed writes are:
+## 注意
 
-1. `docs/specs/_stable_verify_result/unit/{unit}.md` for current stable implementation-alignment evidence with valid independent evaluation receipt.
-2. local test output artifacts required by the verification method.
+- 本步骤需要独立评审，不能自评通过
+- 稳定验证不创建候选 truth 本身。如需变更，结果是触发后续的 `unit_fork`
+- `aligned` 要求的每个 acceptance item 必须有 `pass` 证据
 
-The stable verify result must include stable truth refs and fingerprint, repository mapping snapshot, unit/rule/appendix snapshots, acceptance item set, acceptance item evidence matrix, implementation surface refs, evidence refs, and the independent evaluation receipt.
-Each `acceptance_item_evidence_matrix` item must include `id`, `status`, and `evidence_refs`.
+## 不允许
 
-## Forbidden Writes
+- 修改稳定层或候选层 truth
+- 修改实现文件
+- 修改 lifecycle 状态
+- 修改 rule truth
 
-Do not write:
+## 如何结束
 
-1. stable truth.
-2. candidate truth.
-3. implementation files.
-4. lifecycle status.
-5. rule truth or global rules.
-6. stable verify evidence that claims `aligned`, `controlled_repair_required`, or `controlled_change_required` when the independent reviewer result is not `pass`.
+| 结果 | 含义 | 下一步 |
+|------|------|--------|
+| `aligned` | 实现与稳定 truth 一致 | `unit_fork` |
+| `controlled_repair_required` | 需要修复 | `unit_fork` with repair intent |
+| `controlled_change_required` | 需要变更 | `unit_fork` with change intent |
+| `small_repair_required` | 需要小范围修复，不改变行为 truth | `unit_stable_verify`（重新验证） |
+| `truth_rejudge_required` | 稳定层 truth 需要重新判断 | `unit_stable_verify`（重新验证） |
+| `evidence_incomplete` | 证据不足 | 补充证据后重新验证 |
 
-Stable verification does not create candidate truth by itself.
-
-## On-Demand Expansions
-
-Enter only when the trigger appears:
-
-1. `framework/governance/rule_system.md` when verification exposes rule ownership or global-rule conflict; use `framework/governance/rules/rule_escape.md` when current truth is insufficient to choose or finish the rule flow safely.
-2. `framework/lifecycle/recovery.md` when stable truth, mapping, or evidence inputs are stale, missing, or internally inconsistent.
-3. `framework/operations/migration.md` when existing stable verify evidence uses an older shape that blocks validation.
-4. `framework/lifecycle/unit_init_new_fork.md` when controlled repair or controlled change requires new candidate truth after close.
-5. `framework/core/freshness.md` when validation reports `freshness_layer` or `text_drift`.
-
-## Independent Evaluation
-
-Advancing outcomes `aligned`, `controlled_repair_required`, and `controlled_change_required` require independent evaluation.
-
-The executor may write stable verify evidence, but stable alignment or controlled-change readiness must be reviewed by an isolated reviewer using reviewer pack `unit_stable_verify_advancing` from `framework/core/independent_evaluation.md`.
-
-Before requesting review, generate the handoff request:
-
-```text
-<tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack unit_stable_verify_advancing
-```
-
-If the current agent runtime explicitly exposes an independent executor capability, send only the generated request file to that executor.
-If no such capability is explicitly available, stop and give the user the generated request file path and trigger instruction.
-The reviewer returns the result to the executor and must not modify repository files.
-
-`docs/specs/_stable_verify_result/unit/{unit}.md` must contain the independent evaluation receipt defined in `framework/core/independent_evaluation.md`.
-
-## Close Requirements
-
-Outcomes:
-
-| Outcome | Status Result |
-|---|---|
-| `aligned` | Valid stable verify evidence proves stable truth and implementation align; next command is `unit_fork` |
-| `small_repair_required` | Stay at `unit_stable_verify` |
-| `evidence_incomplete` | Stay at `unit_stable_verify` |
-| `truth_rejudge_required` | Stay at `unit_stable_verify` |
-| `controlled_repair_required` | Valid matching stable verify evidence exists; next command is `unit_fork` with repair intent |
-| `controlled_change_required` | Valid matching stable verify evidence exists; next command is `unit_fork` with change intent |
-
-Before claiming `aligned`, `controlled_repair_required`, or `controlled_change_required`, run:
-
-```text
-<tooling-root>/bin/specflowctl-<os>-<arch> snapshot validate-process --repo-root <repo-root> --object-type unit --object <unit> --process stable_verify
-```
-
-For `aligned`, every executable acceptance item must have evidence status `pass`.
-Items marked `not_runnable_yet: yes` in stable truth must use evidence status `not_runnable_yet`.
-
-Do not advance until validation succeeds and the close command for the selected outcome accepts the evidence:
-
-```text
-<tooling-root>/bin/specflowctl-<os>-<arch> command close --repo-root <repo-root> --command unit_stable_verify --object-type unit --object <unit> --outcome <outcome> --apply
-```
-
-Accepted `text_drift` evidence is valid current evidence; unaccepted freshness drift must stop for independent freshness review or evidence recreation.
-A prior non-advancing stable verification result does not prevent later advancement when current stable verify evidence validates again, carries the required independent reviewer receipt, and matches the command close outcome.
+通过 `command close` 关闭。

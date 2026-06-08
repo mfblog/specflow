@@ -83,7 +83,10 @@ func Close(opts Options) (Result, error) {
 			return Result{}, fmt.Errorf("%s %q is not registered in docs/specs/_status.md", opts.ObjectType, opts.Object)
 		}
 		if before.NextCommand != opts.Command {
-			return Result{}, fmt.Errorf("status next command mismatch: actual=%s expected=%s", before.NextCommand, opts.Command)
+			// unit_verify may proceed when the preceding state is unit_impl
+			if !(opts.Command == "unit_verify" && before.NextCommand == "unit_impl") {
+				return Result{}, fmt.Errorf("status next command mismatch: actual=%s expected=%s", before.NextCommand, opts.Command)
+			}
 		}
 	}
 
@@ -377,15 +380,12 @@ func validateOutcomeFlags(opts Options) error {
 	if requiresExplicitTruthFallbackReason(opts) && opts.Reason == "" {
 		return fmt.Errorf("%s/%s requires --reason", opts.Command, opts.Outcome)
 	}
-	if opts.Command == "unit_plan" && opts.Outcome == "truth_fallback" && opts.Reason != "" && opts.Reason != "truth_incomplete" {
-		return fmt.Errorf("unit_plan/truth_fallback requires --reason truth_incomplete, got %q", opts.Reason)
-	}
 	return nil
 }
 
 func requiresExplicitTruthFallbackReason(opts Options) bool {
 	switch opts.Command {
-	case "unit_plan", "unit_impl", "unit_verify":
+	case "unit_verify":
 		return opts.Outcome == "truth_fallback"
 	default:
 		return false
@@ -426,7 +426,7 @@ func determineTransition(opts Options, before statusfile.ObjectStatus, present b
 		trans.CleanupMode = "unit_fork"
 	case "unit_check":
 		trans = nextOnlyTransition(opts, current, map[string]string{
-			"pass":         "unit_plan",
+			"pass":         "unit_impl",
 			"blocked":      "unit_check",
 			"fix_required": "unit_check",
 			"checkpoint":   "unit_check",
@@ -434,10 +434,6 @@ func determineTransition(opts Options, before statusfile.ObjectStatus, present b
 		if opts.Outcome == "pass" {
 			trans.ValidationProcess = "check"
 		}
-	case "unit_plan":
-		trans = unitPlanTransition(opts, current)
-	case "unit_impl":
-		trans = unitImplTransition(opts, current)
 	case "unit_verify":
 		trans = unitVerifyTransition(opts, current)
 	case "unit_promote":
@@ -503,42 +499,12 @@ func unitStableVerifyTransition(opts Options, current statusfile.ObjectStatus) t
 	}
 }
 
-func unitPlanTransition(opts Options, current statusfile.ObjectStatus) transition {
-	switch opts.Outcome {
-	case "plan_ready":
-		return withNextAndValidation(current, "unit_impl", "plan")
-	case "truth_fallback":
-		return fallback(current, "unit_check", "truth_layer", opts.Reason)
-	case "blocked", "decision_checkpoint":
-		return withNext(current, "unit_plan")
-	default:
-		return transition{}
-	}
-}
 
-func unitImplTransition(opts Options, current statusfile.ObjectStatus) transition {
-	switch opts.Outcome {
-	case "ready_for_verify":
-		return withNext(current, "unit_verify")
-	case "blocked":
-		return withNext(current, "unit_impl")
-	case "truth_fallback":
-		return fallback(current, "unit_check", "truth_layer", opts.Reason)
-	case "plan_fallback":
-		return fallback(current, "unit_plan", "plan_layer", defaultReason(opts.Reason, "plan_drift"))
-	case "gate_fallback":
-		return fallback(current, "unit_check", "gate_layer", defaultReason(opts.Reason, "gate_missing"))
-	default:
-		return transition{}
-	}
-}
 
 func unitVerifyTransition(opts Options, current statusfile.ObjectStatus) transition {
 	switch opts.Outcome {
 	case "ready_to_promote":
 		return withNextAndValidation(current, "unit_promote", "verify")
-	case "implementation_deviation":
-		return fallback(current, "unit_impl", "implementation_layer", defaultReason(opts.Reason, "implementation_deviation"))
 	case "truth_fallback":
 		return fallback(current, "unit_check", "truth_layer", opts.Reason)
 	case "evidence_incomplete", "human_verify":
@@ -580,16 +546,6 @@ func promoteInvalidTransition(opts Options, current statusfile.ObjectStatus, obj
 		return fallback(current, nextCheck, "truth_layer", defaultReason(opts.Reason, "baseline_drift"))
 	case "rule":
 		return fallback(current, nextCheck, "truth_layer", defaultReason(opts.Reason, "rule_drift"))
-	case "plan":
-		if objectType != "unit" {
-			return transition{}
-		}
-		return fallback(current, "unit_plan", "plan_layer", defaultReason(opts.Reason, "plan_drift"))
-	case "implementation":
-		if objectType != "unit" {
-			return transition{}
-		}
-		return fallback(current, "unit_impl", "implementation_layer", defaultReason(opts.Reason, "implementation_deviation"))
 	case "gate":
 		return fallback(current, nextCheck, "gate_layer", defaultReason(opts.Reason, "gate_missing"))
 	case "evidence":
@@ -720,7 +676,7 @@ func shouldValidateInput(command string, trans transition) bool {
 		return false
 	}
 	switch command {
-	case "unit_plan", "unit_impl", "unit_verify", "unit_promote":
+	case "unit_verify", "unit_promote":
 		return true
 	default:
 		return false

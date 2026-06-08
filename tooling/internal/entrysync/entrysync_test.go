@@ -11,23 +11,21 @@ func TestInspectOnlyReadsRegisteredEntrySection(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeInstalledLayoutMarker(t, repoRoot)
 
-	registryDir := filepath.Join(repoRoot, "specflow/framework")
-	if err := os.MkdirAll(registryDir, 0o755); err != nil {
+	regDir := filepath.Join(repoRoot, "specflow/framework/operations")
+	if err := os.MkdirAll(regDir, 0o755); err != nil {
 		t.Fatalf("mkdir registry dir: %v", err)
 	}
-	registry := `# Entry Index Registry
+	registry := `# Entry Routing
 
-## Registered Entry Index Files
+## Entry File Registration
 
-- ` + "`AGENTS.md`" + `
-- ` + "`GEMINI.md`" + `
-- ` + "`CLAUDE.md`" + `
+Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`" + `.
 
-## Manual Sync Trigger
+## Implementation Classification
 
-- ` + "`specflow/tooling/bin/specflowctl-linux-amd64 entry sync --source AGENTS.md`" + `
+Risk levels guide routing.
 `
-	if err := os.WriteFile(filepath.Join(registryDir, "entry_index_registry.md"), []byte(registry), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(regDir, "entry_routing.md"), []byte(registry), 0o644); err != nil {
 		t.Fatalf("write registry: %v", err)
 	}
 
@@ -54,19 +52,15 @@ func TestInspectSuggestsOnlyCurrentRoundChangedRegisteredFile(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeInstalledLayoutMarker(t, repoRoot)
 
-	registryDir := filepath.Join(repoRoot, "specflow/framework")
-	if err := os.MkdirAll(registryDir, 0o755); err != nil {
+	regDir := filepath.Join(repoRoot, "specflow/framework/operations")
+	if err := os.MkdirAll(regDir, 0o755); err != nil {
 		t.Fatalf("mkdir registry dir: %v", err)
 	}
-	registry := `# Entry Index Registry
+	registry := `## Entry File Registration
 
-## Registered Entry Index Files
-
-- ` + "`AGENTS.md`" + `
-- ` + "`GEMINI.md`" + `
-- ` + "`CLAUDE.md`" + `
+Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`" + `.
 `
-	if err := os.WriteFile(filepath.Join(registryDir, "entry_index_registry.md"), []byte(registry), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(regDir, "entry_routing.md"), []byte(registry), 0o644); err != nil {
 		t.Fatalf("write registry: %v", err)
 	}
 
@@ -105,19 +99,15 @@ func TestInspectTreatsUntrackedRegisteredEntryFileAsCurrentRoundChanged(t *testi
 	repoRoot := t.TempDir()
 	writeInstalledLayoutMarker(t, repoRoot)
 
-	registryDir := filepath.Join(repoRoot, "specflow/framework")
-	if err := os.MkdirAll(registryDir, 0o755); err != nil {
+	regDir := filepath.Join(repoRoot, "specflow/framework/operations")
+	if err := os.MkdirAll(regDir, 0o755); err != nil {
 		t.Fatalf("mkdir registry dir: %v", err)
 	}
-	initialRegistry := `# Entry Index Registry
+	initialRegistry := `## Entry File Registration
 
-## Registered Entry Index Files
-
-- ` + "`AGENTS.md`" + `
-- ` + "`GEMINI.md`" + `
-- ` + "`CLAUDE.md`" + `
+Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`" + `.
 `
-	if err := os.WriteFile(filepath.Join(registryDir, "entry_index_registry.md"), []byte(initialRegistry), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(regDir, "entry_routing.md"), []byte(initialRegistry), 0o644); err != nil {
 		t.Fatalf("write initial registry: %v", err)
 	}
 
@@ -129,16 +119,11 @@ func TestInspectTreatsUntrackedRegisteredEntryFileAsCurrentRoundChanged(t *testi
 
 	initGitRepo(t, repoRoot)
 
-	updatedRegistry := `# Entry Index Registry
+	updatedRegistry := `## Entry File Registration
 
-## Registered Entry Index Files
-
-- ` + "`AGENTS.md`" + `
-- ` + "`GEMINI.md`" + `
-- ` + "`CLAUDE.md`" + `
-- ` + "`GUIDE.md`" + `
+Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`, `GUIDE.md`" + `.
 `
-	if err := os.WriteFile(filepath.Join(registryDir, "entry_index_registry.md"), []byte(updatedRegistry), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(regDir, "entry_routing.md"), []byte(updatedRegistry), 0o644); err != nil {
 		t.Fatalf("write updated registry: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(repoRoot, "GUIDE.md"), []byte("<!-- SPECFLOW:BEGIN -->\nmanaged guide\n<!-- SPECFLOW:END -->\n"), 0o644); err != nil {
@@ -164,19 +149,15 @@ func TestInspectSourceRepoUsesTemplateEntryFiles(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeSourceLayoutMarker(t, repoRoot)
 
-	registryDir := filepath.Join(repoRoot, "framework")
-	if err := os.MkdirAll(registryDir, 0o755); err != nil {
+	regDir := filepath.Join(repoRoot, "framework/operations")
+	if err := os.MkdirAll(regDir, 0o755); err != nil {
 		t.Fatalf("mkdir registry dir: %v", err)
 	}
-	registry := `# Entry Index Registry
+	registry := `## Entry File Registration
 
-## Registered Entry Index Files
-
-- ` + "`AGENTS.md`" + `
-- ` + "`GEMINI.md`" + `
-- ` + "`CLAUDE.md`" + `
+Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`" + `.
 `
-	if err := os.WriteFile(filepath.Join(registryDir, "entry_index_registry.md"), []byte(registry), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(regDir, "entry_routing.md"), []byte(registry), 0o644); err != nil {
 		t.Fatalf("write registry: %v", err)
 	}
 
@@ -208,18 +189,15 @@ func TestSyncSourceRepoAcceptsLogicalRegisteredSource(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeSourceLayoutMarker(t, repoRoot)
 
-	registryDir := filepath.Join(repoRoot, "framework")
-	if err := os.MkdirAll(registryDir, 0o755); err != nil {
+	regDir := filepath.Join(repoRoot, "framework/operations")
+	if err := os.MkdirAll(regDir, 0o755); err != nil {
 		t.Fatalf("mkdir registry dir: %v", err)
 	}
-	registry := `# Entry Index Registry
+	registry := `## Entry File Registration
 
-## Registered Entry Index Files
-
-- ` + "`AGENTS.md`" + `
-- ` + "`GEMINI.md`" + `
+Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`" + `.
 `
-	if err := os.WriteFile(filepath.Join(registryDir, "entry_index_registry.md"), []byte(registry), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(regDir, "entry_routing.md"), []byte(registry), 0o644); err != nil {
 		t.Fatalf("write registry: %v", err)
 	}
 	if err := os.MkdirAll(filepath.Join(repoRoot, "templates"), 0o755); err != nil {

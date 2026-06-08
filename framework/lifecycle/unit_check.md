@@ -1,104 +1,37 @@
-# Unit Check Context Card
+# Unit Check
 
-`unit_check:{unit}` decides whether candidate truth is clear enough to become planning input.
+`unit_check:{unit}` 是验证前的质量门禁，检查候选 truth 是否足够清晰、完整。它本身不推进 lifecycle 状态——但 `pass` 结果的 `command close` 会将 `Next Command` 设置为 `unit_impl`。这是 close 操作的副作用，不是 `unit_check` 作为检查步骤的推进行为。
 
-## Required Context
+## 输入
 
-Read only:
+- `docs/specs/_status.md`
+- `docs/specs/units/candidate/c_unit_{unit}.md`
+- 当前 unit 的候选层附录文件
+- 当前 unit 引用的稳定层 truth 和 rule 文件
 
-1. `framework/core/context_card.md`
-2. `framework/core/lifecycle_authority.md`
-3. `framework/core/independent_evaluation.md`
-4. `docs/specs/_status.md` for the target unit row.
-5. `docs/specs/units/candidate/c_unit_{unit}.md`
-6. candidate appendices owned by the target unit.
-7. stable unit truth explicitly referenced by the target unit.
-8. rule files explicitly bound by the target unit or its referenced truth.
-9. `docs/specs/repository_mapping.md` only when ownership or boundary mapping is part of the check.
+## 本步骤做什么
 
-`unit_check` validates the full current unit package truth, not implementation strategy.
+检查以下 7 个问题。全部通过才算 `pass`：
 
-The unit package is the current candidate main Spec, candidate appendices owned by the unit, resolved stable unit dependencies from `unit_refs`, applicable global and bound rule truth, the acceptance item set, and repository ownership boundaries when they affect the handoff.
+1. unit 的目标和责任范围是否清晰？
+2. 依赖、rule binding、ownership 边界是否明确？
+3. 主流程、数据、协议、状态、错误路径是否完整到可以验证？
+4. 验证工作能否在不猜测行为/边界/acceptance 的前提下进行？
+5. 所有 acceptance items 的格式是否正确（`verification_type`、`evidence_requirements`、`affects`）？
+6. 如果是 `candidate_intent: change` + `source_basis: replacement`，是否有至少一个 `verification_type: inspectable` 的 item 且 `evidence_requirements` 包含 `old_code_deleted` 和 `no_remaining_refs`？
+7. 所有 `affects` 范围是否正确（不能为空且无理由）？
 
-An advancing `pass` means the full unit package is clear and internally consistent enough for package-bounded delta planning. It answers:
+## 不允许
 
-1. Is the unit goal and responsibility clear?
-2. Are dependencies, rule bindings, and ownership boundaries explicit?
-3. Are main flow, data, protocol, state, errors, and acceptance criteria complete enough for planning?
-4. Can `unit_plan` proceed without inventing missing behavior, boundary, or acceptance truth?
+- 修改实现文件
+- 修改稳定层 truth
+- 修改 lifecycle 状态
+- 修改 rule truth
 
-## Allowed Writes
+## 如何结束
 
-Allowed writes are:
-
-1. `docs/specs/_check_work/unit/{unit}.md` as an optional resume aid.
-2. `docs/specs/_check_result/unit/{unit}.md` only for an advancing `pass` result with valid independent evaluation receipt.
-3. `docs/specs/units/candidate/c_unit_{unit}.md` and candidate appendices owned by the target unit only when the outcome is `fix_required` and the repair stays inside the current unit truth.
-
-## Forbidden Writes
-
-Do not write:
-
-1. implementation files.
-2. stable truth.
-3. repository mapping unless ownership repair has been routed by an on-demand expansion.
-4. lifecycle status.
-5. rule truth or global rules unless rule governance is explicitly triggered.
-6. `_check_result` as pass evidence when the reviewer result is not `pass`.
-
-`_check_work` is not downstream gate evidence and must not be consumed by `unit_plan`.
-
-## On-Demand Expansions
-
-Enter only when the trigger appears:
-
-1. `framework/operations/entry_routing.md` when the request is not an exact `unit_check:{unit}` command or the target object is unclear.
-2. `framework/governance/rule_system.md` when rule ownership, rule truth, or repository-wide defaults must change; use `framework/governance/rules/rule_escape.md` when current truth is insufficient to choose or finish the rule flow safely.
-3. `framework/lifecycle/recovery.md` when required evidence is missing, stale, or internally inconsistent.
-4. `framework/operations/migration.md` when existing files use an older process shape that blocks deterministic validation.
-5. `framework/core/freshness.md` when validation reports `freshness_layer` or `text_drift`.
-
-## Independent Evaluation
-
-Advancing outcome `pass` requires independent evaluation.
-
-The executor may draft or update `_check_result`, but the pass gate must be reviewed by an isolated reviewer using reviewer pack `unit_check_pass` from `framework/core/independent_evaluation.md`.
-
-Before requesting review, generate the handoff request:
-
-```text
-<tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack unit_check_pass
-```
-
-If the current agent runtime explicitly exposes an independent executor capability, send only the generated request file to that executor.
-If no such capability is explicitly available, stop and give the user the generated request file path and trigger instruction.
-The reviewer returns the result to the executor and must not modify repository files.
-
-`docs/specs/_check_result/unit/{unit}.md` must contain the independent evaluation receipt defined in `framework/core/independent_evaluation.md`.
-It must also record the current package snapshots required by `framework/process_snapshot_contract.md`, including `unit_appendix_snapshot`, `unit_snapshot`, `rule_snapshot`, and the accepted acceptance item set.
-
-## Close Requirements
-
-Outcomes:
-
-| Outcome | Status Result |
-|---|---|
-| `pass` | Valid `_check_result` exists; next command is `unit_plan` |
-| `blocked` | Stay at `unit_check`; user, rule, ownership, or prerequisite input is missing |
-| `fix_required` | Stay at `unit_check`; candidate truth can be repaired before rerun |
-| `checkpoint` | Stay at `unit_check`; ask for the smallest missing decision in plain language |
-
-Before closing `pass`, run:
-
-```text
-<tooling-root>/bin/specflowctl-<os>-<arch> snapshot validate-process --repo-root <repo-root> --object-type unit --object <unit> --process check
-```
-
-Do not advance to `unit_plan` until validation succeeds and this close command accepts the current evidence:
-
-```text
-<tooling-root>/bin/specflowctl-<os>-<arch> command close --repo-root <repo-root> --command unit_check --object-type unit --object <unit> --outcome pass --apply
-```
-
-Accepted `text_drift` evidence is valid current evidence; unaccepted freshness drift must stop for independent freshness review or evidence recreation.
-A prior `blocked`, `fix_required`, or `checkpoint` result does not prevent later `pass` when current evidence validates again and carries the required independent reviewer receipt.
+| 结果 | 含义 | 下一步 |
+|------|------|--------|
+| `pass` | Spec 满足条件 | 写入 `_check_result`，需要独立评审通过后进入 `unit_impl` |
+| `fix_required` | Spec 需要修复 | 修复候选 Spec 后重新 check |
+| `blocked` | 缺少关键输入 | 问用户 |

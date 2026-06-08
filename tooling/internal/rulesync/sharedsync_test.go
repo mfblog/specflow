@@ -765,8 +765,8 @@ func TestSyncImpactDoesNotExpandScopeWithExplicitModuleSelector(t *testing.T) {
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
 		"|---|---|---|---|---|---|---|",
-		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
-		"| `unit` | `module_other` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | current round |",
+		"| `unit` | `module_other` | `no` | `yes` | `candidate` | `unit_verify` | current round |",
 	}, "\n")+"\n")
 
 	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "module_other")
@@ -1439,7 +1439,7 @@ func setupCandidateSharedRepo(t *testing.T, repoRoot string) string {
 		"",
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
 		"|---|---|---|---|---|---|---|",
-		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | current round |",
 	}, "\n")+"\n")
 
 	mainSpecRef, err := specpaths.MainSpecFileRef("candidate", "demo")
@@ -1554,7 +1554,7 @@ func setupStableGlobalRuleRepo(t *testing.T, repoRoot string) string {
 		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
 		"|---|---|---|---|---|---|---|",
 		"| `unit` | `agent` | `yes` | `no` | `stable` | `unit_fork` | stable round |",
-		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_plan` | current round |",
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | current round |",
 	}, "\n")+"\n")
 
 	writeUnitSpecWithRuleRefs(t, repoRoot, "stable", "agent", nil)
@@ -1587,7 +1587,7 @@ func setupStableLandingRetargetRepo(t *testing.T, repoRoot string, retargetAgent
 	agentLayer := "candidate"
 	agentStableCol := "no"
 	agentCandidateCol := "yes"
-	agentNext := "unit_plan"
+	agentNext := "unit_verify"
 	if agentStable {
 		agentLayer = "stable"
 		agentStableCol = "yes"
@@ -1861,7 +1861,7 @@ func renderModuleProcessSnapshotForTest(t *testing.T, repoRoot, processKind, mod
 		"gate: " + map[string]string{"check": "unit_check", "verify": "unit_verify"}[processKind],
 		"decision: pass",
 		"allow_next: true",
-		"next_command: " + map[string]string{"check": "unit_plan", "verify": "unit_promote"}[processKind],
+		"next_command: " + map[string]string{"check": "unit_check", "verify": "unit_promote"}[processKind],
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: candidate",

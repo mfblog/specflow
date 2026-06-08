@@ -17,22 +17,23 @@ The candidate verify pass snapshot records:
 
 1. current unit truth ref, fingerprint, and acceptance behavior fingerprint
 2. accepted acceptance item set
-3. acceptance item evidence matrix with per-item `evidence_refs`
-4. `active_plan_file_ref` and `active_plan_fingerprint`
-5. `retirement_evidence_matrix`
-6. `unit_appendix_snapshot`
-7. `unit_snapshot`
-8. `rule_snapshot`
-9. `package_delta_verification`
-10. independent evaluation receipt fields
-11. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
+3. acceptance item evidence matrix with per-item `evidence_refs` and optional `scope_verification`
+4. `unit_appendix_snapshot`
+5. `unit_snapshot`
+6. `rule_snapshot`
+7. independent evaluation receipt fields
+8. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
 
-`retirement_evidence_matrix` must be literal `none` when the active plan has `retirement_targets: none`.
-When the active plan lists retirement targets, every target id must appear exactly once with `result: pass`, `mainline_dependency: not_required`, and durable `evidence_refs`.
-The verify result proves planned retirement targets; it does not authorize automatic code deletion.
+When an acceptance item declares `affects` in its definition, the evidence matrix item should include `scope_verification` recording the verification result for each affected file, appendix, rule, and dependency. All scope items must pass for the acceptance item to be promotion-ready.
 
-`package_delta_verification` must contain exactly one item for every `planned_change_scope` id in the active plan, matching the `planned_change_scope_id` from the active plan.
-Promotion-ready evidence requires every package delta item to use `result: pass` with durable `evidence_refs`.
+When the agent created an internal plan and chooses to reference it, these optional fields may also appear:
+
+- `active_plan_file_ref` and `active_plan_fingerprint` — reference to the agent-internal plan
+- `retirement_evidence_matrix` — retirement target evidence (optional, `none` when no plan or no retirement targets)
+- `package_delta_verification` — planned change scope evidence (optional, `none` when no plan)
+
+When present, retirement evidence follows: each target id must appear exactly once with `result: pass`, `mainline_dependency: not_required`, and durable `evidence_refs`.
+When present, package delta evidence requires every item to use `result: pass` with durable `evidence_refs`.
 
 Each executable acceptance item in `acceptance_item_evidence_matrix` must record `status: pass` and durable `evidence_refs` before promotion readiness can close.
 Items marked `not_runnable_yet: yes` in current truth must record `status: not_runnable_yet`.

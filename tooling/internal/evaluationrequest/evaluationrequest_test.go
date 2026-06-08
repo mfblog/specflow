@@ -70,7 +70,6 @@ func TestCreateFreshnessTextDriftRequestRendersFreshnessReceipt(t *testing.T) {
 		"\nreview_input_refs: freshness_text_drift_reuse",
 		"\nhuman_decision_refs: none\n",
 		"framework/lifecycle/unit_check.md",
-		"framework/lifecycle/unit_plan.md",
 		"framework/lifecycle/unit_verify.md",
 		"framework/lifecycle/unit_stable_verify.md",
 	} {
@@ -95,10 +94,10 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 			name:         "check",
 			pack:         PackUnitCheckPass,
 			lifecycleRef: "framework/lifecycle/unit_check.md",
-			standard:     "`framework/lifecycle/unit_check.md`: whether candidate truth is clear enough to become planning input.",
+			standard:     "`framework/lifecycle/unit_check.md`: whether candidate truth is clear enough for downstream work.",
 			allowed:      "candidate unit truth, candidate appendices owned by the unit, stable truth, and rules.",
-			forbidden:    "implementation plan drafts.",
-			question:     "Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for planning?",
+			forbidden:    "implementation files unless repository mapping is part of the boundary question.",
+			question:     "Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for downstream work?",
 			setup: func(t *testing.T) string {
 				t.Helper()
 				repoRoot := setupCandidateRequestRepo(t)
@@ -111,32 +110,12 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 			},
 		},
 		{
-			name:         "plan",
-			pack:         PackUnitPlanPlanReady,
-			lifecycleRef: "framework/lifecycle/unit_plan.md",
-			standard:     "`framework/lifecycle/unit_plan.md`: whether the active plan is ready to serve as the implementation handoff.",
-			allowed:      "active plan under review.",
-			forbidden:    "implementation work not authorized by the active plan.",
-			question:     "Does the plan cover every accepted acceptance item?",
-			setup: func(t *testing.T) string {
-				t.Helper()
-				repoRoot := setupCandidateRequestRepoWithRefs(t)
-				expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-				if err != nil {
-					t.Fatalf("RebuildCurrentObject: %v", err)
-				}
-				writeFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md"), "# check\n")
-				writePlanProcessWithoutReceipt(t, repoRoot, expected)
-				return repoRoot
-			},
-		},
-		{
 			name:         "verify",
 			pack:         PackUnitVerifyReadyToPromote,
 			lifecycleRef: "framework/lifecycle/unit_verify.md",
 			standard:     "`framework/lifecycle/unit_verify.md`: whether verification evidence is sufficient for promotion readiness.",
-			allowed:      "verify result under review.",
-			forbidden:    "unrecorded executor claims that tests passed.",
+			allowed:      "candidate unit truth and valid verify result.",
+			forbidden:    "implementation changes not represented by evidence refs.",
 			question:     "Does the verify result cover every executable acceptance item?",
 			setup: func(t *testing.T) string {
 				t.Helper()
@@ -217,50 +196,6 @@ func TestCreateStandardRequestsIncludeLifecycleOwnerRefs(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestCreatePlanRequestIncludesSnapshotInputRefs(t *testing.T) {
-	repoRoot := setupCandidateRequestRepoWithRefs(t)
-	expected, err := snapshot.RebuildCurrentObject(repoRoot, "unit", "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrentObject: %v", err)
-	}
-	writeFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/demo.md"), "# check\n")
-	writePlanProcessWithoutReceipt(t, repoRoot, expected)
-
-	result, err := Create(Options{
-		RepoRoot:   repoRoot,
-		ObjectType: "unit",
-		Object:     "demo",
-		Pack:       PackUnitPlanPlanReady,
-		Now:        time.Date(2026, 5, 30, 1, 2, 3, 0, time.UTC),
-	})
-	if err != nil {
-		t.Fatalf("Create: %v", err)
-	}
-
-	for _, ref := range []string{
-		"docs/specs/units/candidate/c_unit_demo.md",
-		"docs/specs/units/stable/s_unit_demo.md",
-		"docs/specs/units/candidate/appendix/c_unit_demo_evidence.md",
-		"docs/specs/units/stable/s_unit_dependency.md",
-		"docs/specs/rules/candidate/c_b_rule_demo.md",
-		"docs/specs/repository_mapping.md",
-		"docs/specs/_check_result/unit/demo.md",
-		"docs/specs/_plans/active/demo.md",
-	} {
-		if !containsString(result.ReviewInputRefs, ref) {
-			t.Fatalf("expected review input ref %s, got %+v", ref, result.ReviewInputRefs)
-		}
-	}
-	if !containsString(result.ReviewFileRefs, "docs/specs/repository_mapping.md") {
-		t.Fatalf("expected implementation gap ref in review file refs, got %+v", result.ReviewFileRefs)
-	}
-	request := mustReadFile(t, filepath.Join(repoRoot, filepath.FromSlash(result.RequestFile)))
-	fileRefs := sectionBetween(t, request, "## Review File Refs", "## Review Evidence Refs")
-	if !strings.Contains(fileRefs, "docs/specs/repository_mapping.md") {
-		t.Fatalf("implementation gap ref missing from request file refs:\n%s", request)
 	}
 }
 
@@ -451,7 +386,7 @@ func setupCandidateRequestRepoWithRefs(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
 	writeStatus(t, repoRoot, strings.Join([]string{
-		"| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_plan` | test |",
+		"| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_verify` | test |",
 		"| `unit` | `dependency` | `yes` | `no` | `stable` | `unit_fork` | test |",
 	}, "\n")+"\n")
 	writeFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_demo.md"), stableUnitSpec("demo", "1.0.0"))
@@ -564,7 +499,7 @@ func writeCheckProcessWithoutReceipt(t *testing.T, repoRoot string, expected sna
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_plan",
+		"next_command: unit_check",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: " + expected.TruthLayerRef,
@@ -588,7 +523,7 @@ func writeCheckProcess(t *testing.T, repoRoot string, expected snapshot.Snapshot
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_plan",
+		"next_command: unit_check",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: " + expected.TruthLayerRef,

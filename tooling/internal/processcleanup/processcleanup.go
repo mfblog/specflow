@@ -44,19 +44,15 @@ var fallbackReasonLayers = map[string]string{
 	"baseline_drift":           "truth_layer",
 	"rule_drift":               "truth_layer",
 	"truth_incomplete":         "truth_layer",
-	"plan_drift":               "plan_layer",
 	"gate_missing":             "gate_layer",
-	"implementation_deviation": "implementation_layer",
-	"evidence_incomplete":      "evidence_layer",
+		"evidence_incomplete":      "evidence_layer",
 	"stable_verify_invalid":    "evidence_layer",
 }
 
 var layeredRules = map[string]map[string]cleanupRule{
 	"unit": {
-		"truth_layer":          {NextCommand: "unit_check", FileKinds: []string{"check_work", "check", "plan", "verify"}},
+		"truth_layer":          {NextCommand: "unit_check", FileKinds: []string{"check_work", "check", "verify"}},
 		"gate_layer":           {NextCommand: "unit_check", FileKinds: []string{"check_work", "check"}},
-		"plan_layer":           {NextCommand: "unit_plan", FileKinds: []string{"plan", "verify"}},
-		"implementation_layer": {NextCommand: "unit_impl", FileKinds: []string{"verify"}},
 		"evidence_layer":       {NextCommand: "unit_verify", FileKinds: []string{"verify"}},
 	},
 }

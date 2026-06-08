@@ -27,8 +27,8 @@ It is used only when the shared constraint already exists in current unit truth 
 
 Before any write, read:
 
-1. `framework/spec_policy.md`
-2. `framework/spec_writing_guide.md`
+1. `framework/spec_writing_guide.md`
+2. `framework/candidate_intent.md`
 3. `framework/lifecycle/overview.md`
 4. `framework/lifecycle/recovery.md`
 5. `framework/governance/rules/rule_sync.md`

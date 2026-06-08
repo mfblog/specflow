@@ -238,12 +238,8 @@ var requiredUnitProcessSnapshotFields = map[string][]string{
 		"acceptance_item_set",
 		"unit_appendix_snapshot",
 		"unit_snapshot",
-		"active_plan_file_ref",
-		"active_plan_fingerprint",
 		"rule_snapshot",
 		"acceptance_item_evidence_matrix",
-		"retirement_evidence_matrix",
-		"package_delta_verification",
 	),
 	"stable_verify": withIndependentEvaluationReceipt(
 		"object_type",
@@ -771,16 +767,18 @@ func validateProcessFileForObject(repoRoot, objectType, object, processKind stri
 	compareAcceptanceItemSet(&result, actual, expected.AcceptanceItemSet)
 	if processKind == "verify" {
 		validateAcceptanceEvidenceMatrix(&result, actual, expected.AcceptanceItemSet, true)
-		validateActivePlanBinding(repoRoot, &result, actual, expected)
-				planParsed, planErr := parseActivePlan(repoRoot, expected.Object)
-				var targetEntries []RetirementTargetEntry
-				var plannedEntries []PlannedChangeScopeEntry
-				if planErr == nil {
-					targetEntries, _ = retirementTargetEntriesFromParsed(planParsed)
-					plannedEntries, _ = plannedChangeScopeEntriesFromParsed(planParsed)
-				}
-				validateRetirementEvidence(repoRoot, &result, actual, expected, targetEntries)
-				validatePackageDeltaVerification(repoRoot, &result, actual, expected, plannedEntries)
+		if actual.presentFields["active_plan_file_ref"] {
+			validateActivePlanBinding(repoRoot, &result, actual, expected)
+		}
+		planParsed, planErr := parseActivePlan(repoRoot, expected.Object)
+		var targetEntries []RetirementTargetEntry
+		var plannedEntries []PlannedChangeScopeEntry
+		if planErr == nil {
+			targetEntries, _ = retirementTargetEntriesFromParsed(planParsed)
+			plannedEntries, _ = plannedChangeScopeEntriesFromParsed(planParsed)
+		}
+		validateRetirementEvidence(repoRoot, &result, actual, expected, targetEntries)
+		validatePackageDeltaVerification(repoRoot, &result, actual, expected, plannedEntries)
 	}
 
 	if actual.scalars["unit_appendix_snapshot"] != "" || actual.appendixPresent {
@@ -870,9 +868,7 @@ func expectedProcessRouting(objectType, processKind string) (string, string, err
 	case "unit":
 		switch processKind {
 		case "check":
-			return "unit_check", "unit_plan", nil
-		case "plan":
-			return "unit_plan", "unit_impl", nil
+			return "unit_check", "unit_check", nil
 		case "verify":
 			return "unit_verify", "unit_promote", nil
 		}
@@ -974,8 +970,6 @@ func packForProcessKind(processKind string) string {
 	switch processKind {
 	case "check":
 		return "unit_check_pass"
-	case "plan":
-		return "unit_plan_plan_ready"
 	case "verify":
 		return "unit_verify_ready_to_promote"
 	case "stable_verify":
@@ -3321,8 +3315,6 @@ func classifyFailureLayer(objectType, processKind string, mismatches []string) s
 		}
 	}
 	switch processKind {
-	case "plan":
-		return "plan_layer"
 	case "verify":
 		return "evidence_layer"
 	case "stable_verify":
@@ -3345,10 +3337,6 @@ func nextCommandForFailureLayer(objectType, processKind, failureLayer string) st
 			return ""
 		case "truth_layer", "gate_layer":
 			return "unit_check"
-		case "plan_layer":
-			return "unit_plan"
-		case "implementation_layer":
-			return "unit_impl"
 		case "evidence_layer":
 			if processKind == "stable_verify" {
 				return "unit_stable_verify"

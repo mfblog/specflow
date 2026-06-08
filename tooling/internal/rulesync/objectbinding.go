@@ -964,9 +964,7 @@ func detectRuleRefIndent(fieldLine string, existingListLines []string) string {
 func expectedModuleProcessRouting(processKind string) (string, string, bool) {
 	switch processKind {
 	case "check":
-		return "unit_check", "unit_plan", true
-	case "plan":
-		return "unit_plan", "unit_impl", true
+		return "unit_check", "unit_verify", true
 	case "verify":
 		return "unit_verify", "unit_promote", true
 	default:

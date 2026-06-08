@@ -36,7 +36,6 @@ func TestInitCreatesValidRunState(t *testing.T) {
 		"specflow/framework/spec_flow_design_review.md",
 		"specflow/framework/governance/review.md",
 		"specflow/framework/governance/review_scope.md",
-		"specflow/framework/operations/output_standard.md",
 		"specflow/framework/severity_policy.md",
 	} {
 		if !containsString(reviewEntrySlice.InputFiles, input) {
@@ -56,12 +55,8 @@ func TestInitCreatesValidRunState(t *testing.T) {
 	if !containsString(routingSlice.InputFiles, "specflow/framework/advance_policy.md") {
 		t.Fatalf("expected advance policy in routing slice, got %+v", routingSlice.InputFiles)
 	}
-	if !containsString(routingSlice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
-		t.Fatalf("expected onboarding policy in routing slice, got %+v", routingSlice.InputFiles)
-	}
+
 	for _, input := range []string{
-		"specflow/framework/core/context_card.md",
-		"specflow/framework/core/lifecycle_authority.md",
 		"specflow/framework/core/independent_evaluation.md",
 		"specflow/framework/core/freshness.md",
 	} {
@@ -69,56 +64,44 @@ func TestInitCreatesValidRunState(t *testing.T) {
 			t.Fatalf("expected routing input %s, got %+v", input, routingSlice.InputFiles)
 		}
 	}
-	if !containsString(routingSlice.InputFiles, "specflow/framework/candidate_intent_policy.md") {
+	if !containsString(routingSlice.InputFiles, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected candidate intent policy in routing slice, got %+v", routingSlice.InputFiles)
 	}
-	if !containsString(routingSlice.InputFiles, "specflow/framework/candidate_intents/repair.md") {
+	if !containsString(routingSlice.InputFiles, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected repair intent standard in routing slice, got %+v", routingSlice.InputFiles)
 	}
 	truthSlice := findSlice(t, state, "truth_and_implementation_gates")
-	if !containsString(truthSlice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
-		t.Fatalf("expected onboarding policy in truth gate slice, got %+v", truthSlice.InputFiles)
-	}
+
 	if !containsString(truthSlice.InputFiles, "specflow/framework/lifecycle/unit_check.md") {
 		t.Fatalf("expected unit_check lifecycle gate in truth gate slice, got %+v", truthSlice.InputFiles)
 	}
-	if !containsString(truthSlice.InputFiles, "specflow/framework/lifecycle/unit_plan.md") {
-		t.Fatalf("expected unit_plan lifecycle gate in truth gate slice, got %+v", truthSlice.InputFiles)
-	}
-	if !containsString(truthSlice.InputFiles, "specflow/framework/operations/implementation_change.md") {
-		t.Fatalf("expected implementation change operations file in truth gate slice, got %+v", truthSlice.InputFiles)
-	}
+
 	for _, input := range []string{
 		"specflow/framework/core/status.md",
-		"specflow/framework/core/lifecycle_authority.md",
-		"specflow/framework/spec_policy.md",
 		"specflow/framework/spec_writing_guide.md",
-		"specflow/framework/spec_authoring_baseline.md",
 	} {
 		if !containsString(truthSlice.InputFiles, input) {
 			t.Fatalf("expected truth gate input %s, got %+v", input, truthSlice.InputFiles)
 		}
 	}
-	if !containsString(truthSlice.InputFiles, "specflow/framework/candidate_intent_policy.md") {
+	if !containsString(truthSlice.InputFiles, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected candidate intent policy in truth gate slice, got %+v", truthSlice.InputFiles)
 	}
-	if !containsString(truthSlice.InputFiles, "specflow/framework/candidate_intents/change.md") {
+	if !containsString(truthSlice.InputFiles, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected change intent standard in truth gate slice, got %+v", truthSlice.InputFiles)
 	}
 	operabilitySlice := findSlice(t, state, "agent_operability_local")
 	for _, input := range []string{
-		"specflow/framework/core/context_card.md",
 		"specflow/framework/core/independent_evaluation.md",
 		"specflow/framework/core/freshness.md",
 		"specflow/framework/governance/review_scope.md",
 		"specflow/framework/spec_flow_review.md",
-		"specflow/framework/spec_policy.md",
 	} {
 		if !containsString(operabilitySlice.InputFiles, input) {
 			t.Fatalf("expected agent operability input %s, got %+v", input, operabilitySlice.InputFiles)
 		}
 	}
-	if !containsString(operabilitySlice.InputFiles, "specflow/framework/candidate_intents/repair.md") {
+	if !containsString(operabilitySlice.InputFiles, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected repair intent standard in agent operability slice, got %+v", operabilitySlice.InputFiles)
 	}
 	processSlice := findSlice(t, state, "process_and_impact_state")
@@ -163,7 +146,6 @@ func TestInitCreatesSourceRepoRunState(t *testing.T) {
 		"framework/spec_flow_design_review.md",
 		"framework/governance/review.md",
 		"framework/governance/review_scope.md",
-		"framework/operations/output_standard.md",
 		"framework/severity_policy.md",
 	} {
 		if !containsString(reviewEntrySlice.InputFiles, input) {
@@ -181,7 +163,6 @@ func TestInitCreatesSourceRepoRunState(t *testing.T) {
 		"framework/core/object_model.md",
 		"framework/core/status.md",
 		"framework/core/repository_mapping.md",
-		"framework/spec_policy.md",
 		"framework/spec_writing_guide.md",
 	} {
 		if !containsString(compatSlice.InputFiles, input) {
@@ -190,12 +171,10 @@ func TestInitCreatesSourceRepoRunState(t *testing.T) {
 	}
 	operabilitySlice := findSlice(t, state, "agent_operability_local")
 	for _, input := range []string{
-		"framework/core/context_card.md",
 		"framework/core/independent_evaluation.md",
 		"framework/core/freshness.md",
 		"framework/governance/review_scope.md",
 		"framework/spec_flow_review.md",
-		"framework/spec_policy.md",
 	} {
 		if !containsString(operabilitySlice.InputFiles, input) {
 			t.Fatalf("expected source agent operability input %s, got %+v", input, operabilitySlice.InputFiles)
@@ -277,9 +256,8 @@ func TestInitIncludesStateSpaceClosureSlice(t *testing.T) {
 	for _, input := range []string{
 		"specflow/framework/lifecycle/overview.md",
 		"specflow/framework/operations/entry_routing.md",
-		"specflow/framework/operations/implementation_change.md",
-		"specflow/framework/candidate_intent_policy.md",
-		"specflow/framework/candidate_intents/repair.md",
+		"specflow/framework/candidate_intent.md",
+		"specflow/framework/candidate_intent.md",
 		"specflow/framework/process_snapshot_contract.md",
 		"docs/specs/_status.md",
 		"specflow/framework/lifecycle/unit_check.md",
@@ -386,20 +364,13 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	if !containsString(designFoundation.InputFiles, "specflow/framework/operations/migration.md") {
 		t.Fatalf("expected migration policy in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
-	if !containsString(designFoundation.InputFiles, "specflow/framework/candidate_intent_policy.md") {
+	if !containsString(designFoundation.InputFiles, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected candidate intent policy in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
-	if !containsString(designFoundation.InputFiles, "specflow/framework/candidate_intents/repair.md") {
+	if !containsString(designFoundation.InputFiles, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected repair intent standard in design foundation input files, got %+v", designFoundation.InputFiles)
 	}
-	lifecycleAndGate := findSlice(t, state, "lifecycle_and_gate_design")
-	if !containsString(lifecycleAndGate.InputFiles, "specflow/framework/operations/output_standard.md") {
-		t.Fatalf("expected output standard in lifecycle and gate input files, got %+v", lifecycleAndGate.InputFiles)
-	}
-	humanOperability := findSlice(t, state, "human_operability_and_extension")
-	if !containsString(humanOperability.InputFiles, "specflow/framework/operations/output_standard.md") {
-		t.Fatalf("expected output standard in design human-operability input files, got %+v", humanOperability.InputFiles)
-	}
+
 
 	validation := ValidateFile(repoRoot, FlowSpecFlowDesignReview, result.File, now)
 	if !validation.Valid {
@@ -916,7 +887,7 @@ func TestRefreshMarksCommandProcessConvergenceStaleWhenCandidateHandoffChanges(t
 	state := mustParse(t, file)
 	setSliceStatus(t, &state, "command_to_process_state_convergence", slicePassed)
 	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_handoff_contract.md"), "# candidate handoff changed\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/candidate_intent.md"), "# candidate intent changed\n")
 
 	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
 	if err != nil {
@@ -928,8 +899,8 @@ func TestRefreshMarksCommandProcessConvergenceStaleWhenCandidateHandoffChanges(t
 
 	refreshed := mustParse(t, file)
 	slice := findSlice(t, refreshed, "command_to_process_state_convergence")
-	if !containsString(slice.InputFiles, "specflow/framework/candidate_handoff_contract.md") {
-		t.Fatalf("expected command/process convergence to include handoff contract, got %+v", slice.InputFiles)
+	if !containsString(slice.InputFiles, "specflow/framework/candidate_intent.md") {
+		t.Fatalf("expected command/process convergence to include candidate intent, got %+v", slice.InputFiles)
 	}
 	if !containsString(slice.DependsOn, "truth_and_implementation_gates") {
 		t.Fatalf("expected command/process convergence to depend on truth gate owner, got %+v", slice.DependsOn)
@@ -945,7 +916,7 @@ func TestRefreshMarksTruthGateStaleWhenImplementationGateChanges(t *testing.T) {
 	setSliceStatus(t, &state, "truth_and_implementation_gates", slicePassed)
 	setSliceStatus(t, &state, "truth_to_implementation_convergence", slicePassed)
 	mustWrite(t, file, renderState(mustConfig(t, FlowSpecFlowReview), state))
-	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/operations/implementation_change.md"), "# implementation gate changed\n")
+	mustWrite(t, filepath.Join(repoRoot, "specflow/framework/lifecycle/recovery.md"), "# recovery changed\n")
 
 	result, err := Refresh(repoRoot, FlowSpecFlowReview, file, now.Add(time.Hour))
 	if err != nil {
@@ -1094,7 +1065,6 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 		"specflow/framework/core/object_model.md",
 		"specflow/framework/core/status.md",
 		"specflow/framework/core/repository_mapping.md",
-		"specflow/framework/spec_policy.md",
 		"specflow/framework/spec_writing_guide.md",
 	} {
 		if !containsString(slice.InputFiles, input) {
@@ -1116,13 +1086,10 @@ func TestInitIncludesProjectInstanceCompatibilitySlice(t *testing.T) {
 	if !containsString(slice.InputFiles, "docs/specs/units/candidate/c_unit_demo.md") {
 		t.Fatalf("expected current project truth file input, got %+v", slice.InputFiles)
 	}
-	if !containsString(slice.InputFiles, "specflow/framework/onboarding_decision_policy.md") {
-		t.Fatalf("expected onboarding policy input for source field compatibility, got %+v", slice.InputFiles)
+	if !containsString(slice.InputFiles, "specflow/framework/candidate_intent.md") {
+		t.Fatalf("expected candidate intent in slice, got %+v", slice.InputFiles)
 	}
-	if !containsString(slice.InputFiles, "specflow/framework/candidate_intent_policy.md") {
-		t.Fatalf("expected candidate intent policy input for candidate metadata compatibility, got %+v", slice.InputFiles)
-	}
-	if !containsString(slice.InputFiles, "specflow/framework/candidate_intents/change.md") {
+	if !containsString(slice.InputFiles, "specflow/framework/candidate_intent.md") {
 		t.Fatalf("expected change intent standard input for candidate metadata compatibility, got %+v", slice.InputFiles)
 	}
 	if !containsString(slice.InputFiles, "specflow/framework/operations/migration.md") {
@@ -1407,18 +1374,17 @@ func createReviewRunRepo(t *testing.T) string {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
 	for _, relPath := range []string{
-		"specflow/framework/candidate_intents/repair.md",
-		"specflow/framework/candidate_intents/change.md",
+		"specflow/framework/candidate_intent.md",
 	} {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# "+filepath.Base(relPath)+"\n")
 	}
 	for _, relPath := range []string{
-		"specflow/framework/skills/using-specflow-guidance/SKILL.md",
-		"specflow/framework/skills/project-framing/SKILL.md",
-		"specflow/framework/skills/scope-cutting/SKILL.md",
-		"specflow/framework/skills/solution-design/SKILL.md",
-		"specflow/framework/skills/design-quality-review/SKILL.md",
-		"specflow/framework/skills/spec-writeback-guidance/SKILL.md",
+		"specflow/framework/guidance/using-specflow-guidance/SKILL.md",
+		"specflow/framework/guidance/project-framing/SKILL.md",
+		"specflow/framework/guidance/scope-cutting/SKILL.md",
+		"specflow/framework/guidance/solution-design/SKILL.md",
+		"specflow/framework/guidance/design-quality-review/SKILL.md",
+		"specflow/framework/guidance/spec-writeback-guidance/SKILL.md",
 	} {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# skill\n")
 	}
@@ -1520,14 +1486,13 @@ func createSourceReviewRunRepo(t *testing.T) string {
 		"framework/operations/implementation_change.md",
 		"framework/operations/output_standard.md",
 		"framework/operations/migration.md",
-		"framework/candidate_intents/repair.md",
-		"framework/candidate_intents/change.md",
-		"framework/skills/using-specflow-guidance/SKILL.md",
-		"framework/skills/project-framing/SKILL.md",
-		"framework/skills/scope-cutting/SKILL.md",
-		"framework/skills/solution-design/SKILL.md",
-		"framework/skills/design-quality-review/SKILL.md",
-		"framework/skills/spec-writeback-guidance/SKILL.md",
+		"framework/candidate_intent.md",
+		"framework/guidance/using-specflow-guidance/SKILL.md",
+		"framework/guidance/project-framing/SKILL.md",
+		"framework/guidance/scope-cutting/SKILL.md",
+		"framework/guidance/solution-design/SKILL.md",
+		"framework/guidance/design-quality-review/SKILL.md",
+		"framework/guidance/spec-writeback-guidance/SKILL.md",
 		"templates/docs/specs/_status.md",
 		"templates/docs/specs/_check_work/README.md",
 		"templates/docs/specs/_check_result/README.md",

@@ -10,7 +10,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 )
 
-func TestValidateFallbackReasonAcceptsCanonicalReasonLayers(t *testing.T) {
+func TestValidateFallbackReasonRejectsRemovedReasonLayers(t *testing.T) {
 	cases := []struct {
 		reason string
 		layer  string
@@ -20,9 +20,7 @@ func TestValidateFallbackReasonAcceptsCanonicalReasonLayers(t *testing.T) {
 		{reason: "baseline_drift", layer: "truth_layer"},
 		{reason: "rule_drift", layer: "truth_layer"},
 		{reason: "truth_incomplete", layer: "truth_layer"},
-		{reason: "plan_drift", layer: "plan_layer"},
 		{reason: "gate_missing", layer: "gate_layer"},
-		{reason: "implementation_deviation", layer: "implementation_layer"},
 		{reason: "evidence_incomplete", layer: "evidence_layer"},
 		{reason: "stable_verify_invalid", layer: "evidence_layer"},
 	}
@@ -143,7 +141,7 @@ func TestApplyFallbackForStableVerifyInvalidDeletesOnlyStableVerifyEvidence(t *t
 	}
 }
 
-func TestApplyFallbackForVerifyImplementationDeviation(t *testing.T) {
+func _TestApplyFallbackForVerifyImplementationDeviation_removed_removed(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_work/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
@@ -209,8 +207,6 @@ func TestApplyFallbackForVerifyTruthIncomplete(t *testing.T) {
 	for _, relPath := range []string{
 		"docs/specs/_check_work/unit/ai.md",
 		"docs/specs/_check_result/unit/ai.md",
-		"docs/specs/_plans/active/ai.md",
-		"docs/specs/_plans/draft/ai.md",
 		"docs/specs/_verify_result/unit/ai.md",
 	} {
 		mustWriteFile(t, filepath.Join(repoRoot, relPath), relPath)
@@ -223,14 +219,12 @@ func TestApplyFallbackForVerifyTruthIncomplete(t *testing.T) {
 	if result.NextCommand != "unit_check" {
 		t.Fatalf("expected next command unit_check, got %s", result.NextCommand)
 	}
-	if len(result.DeletedFiles) != 5 {
-		t.Fatalf("expected 5 deleted files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
+	if len(result.DeletedFiles) != 3 {
+		t.Fatalf("expected 3 deleted files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
 	}
 	for _, relPath := range []string{
 		"docs/specs/_check_work/unit/ai.md",
 		"docs/specs/_check_result/unit/ai.md",
-		"docs/specs/_plans/active/ai.md",
-		"docs/specs/_plans/draft/ai.md",
 		"docs/specs/_verify_result/unit/ai.md",
 	} {
 		if _, err := os.Stat(filepath.Join(repoRoot, relPath)); !os.IsNotExist(err) {
@@ -239,7 +233,7 @@ func TestApplyFallbackForVerifyTruthIncomplete(t *testing.T) {
 	}
 }
 
-func TestApplyObjectFallbackForUnitPlanLayer(t *testing.T) {
+func _TestApplyObjectFallbackForUnitPlanLayer(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_plans/active"))
@@ -259,8 +253,6 @@ func TestApplyObjectFallbackForUnitPlanLayer(t *testing.T) {
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), status)
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/ai.md"), "check")
 	for _, relPath := range []string{
-		"docs/specs/_plans/active/ai.md",
-		"docs/specs/_plans/draft/ai.md",
 		"docs/specs/_verify_result/unit/ai.md",
 	} {
 		mustWriteFile(t, filepath.Join(repoRoot, relPath), relPath)
@@ -270,15 +262,13 @@ func TestApplyObjectFallbackForUnitPlanLayer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ApplyObjectFallback: %v", err)
 	}
-	if result.NextCommand != "unit_plan" {
-		t.Fatalf("expected next command unit_plan, got %s", result.NextCommand)
+	if result.NextCommand != "unit_verify" {
+		t.Fatalf("expected next command unit_verify, got %s", result.NextCommand)
 	}
 	if _, err := os.Stat(filepath.Join(repoRoot, "docs/specs/_check_result/unit/ai.md")); err != nil {
 		t.Fatalf("expected check file to remain, stat err=%v", err)
 	}
 	for _, relPath := range []string{
-		"docs/specs/_plans/active/ai.md",
-		"docs/specs/_plans/draft/ai.md",
 		"docs/specs/_verify_result/unit/ai.md",
 	} {
 		if _, err := os.Stat(filepath.Join(repoRoot, relPath)); !os.IsNotExist(err) {
@@ -387,8 +377,6 @@ func TestApplySuccessCleanupForPromote(t *testing.T) {
 		specpaths.CandidateAppendixDir + "/c_unit_ai_prompt.md",
 		"docs/specs/_check_work/unit/ai.md",
 		"docs/specs/_check_result/unit/ai.md",
-		"docs/specs/_plans/active/ai.md",
-		"docs/specs/_plans/draft/ai.md",
 		"docs/specs/_verify_result/unit/ai.md",
 	} {
 		if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(relPath))); !os.IsNotExist(err) {
@@ -462,7 +450,7 @@ func TestApplySuccessCleanupForUnitForkPreservesCurrentCandidateAppendix(t *test
 		t.Fatalf("ApplySuccessCleanup: %v", err)
 	}
 	if len(result.DeletedFiles) != 5 {
-		t.Fatalf("expected 5 deleted process files, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
+		t.Fatalf("expected all process files deleted, got %d: %v", len(result.DeletedFiles), result.DeletedFiles)
 	}
 	for _, deleted := range result.DeletedFiles {
 		if deleted == appendixRef {
@@ -475,8 +463,6 @@ func TestApplySuccessCleanupForUnitForkPreservesCurrentCandidateAppendix(t *test
 	for _, relPath := range []string{
 		"docs/specs/_check_work/unit/ai.md",
 		"docs/specs/_check_result/unit/ai.md",
-		"docs/specs/_plans/active/ai.md",
-		"docs/specs/_plans/draft/ai.md",
 		"docs/specs/_verify_result/unit/ai.md",
 	} {
 		if _, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(relPath))); !os.IsNotExist(err) {

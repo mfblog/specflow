@@ -606,7 +606,7 @@ func TestValidateProcessFileRejectsMissingRequiredSnapshotField(t *testing.T) {
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_plan",
+		"next_command: unit_check",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: candidate",
@@ -852,7 +852,7 @@ layer: candidate
 		"- `gate`: `unit_check`",
 		"- `decision`: `pass`",
 		"- `allow_next`: `true`",
-		"- `next_command`: `unit_plan`",
+		"- `next_command`: `unit_check`",
 		"- `blocking_summary`: `none`",
 		"- `coverage_summary`: `current candidate`",
 		"- `truth_layer_ref`: `" + expected.TruthLayerRef + "`",
@@ -931,7 +931,7 @@ layer: candidate
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_plan",
+		"next_command: unit_check",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: " + expected.TruthLayerRef,
@@ -1856,15 +1856,17 @@ func TestValidateProcessFileRejectsPlanRetirementTargetGaps(t *testing.T) {
 func TestValidateProcessFileRejectsReceiptWithoutRequestRefs(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
 
 	expected, err := RebuildCurrent(repoRoot, "demo")
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
-	body := strings.Replace(renderFormalPlanProcessBody(expected), reviewInputRefsForTest(expected.Object, "unit_plan_plan_ready", expected.SpecFileRef), expected.SpecFileRef, 1)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
+	activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
+	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), reviewInputRefsForTest(expected.Object, "unit_verify_ready_to_promote", expected.SpecFileRef), expected.SpecFileRef, 1)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
 
-	result, err := ValidateProcessFile(repoRoot, "demo", "plan")
+	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
 	if err != nil {
 		t.Fatalf("ValidateProcessFile: %v", err)
 	}
@@ -1872,35 +1874,12 @@ func TestValidateProcessFileRejectsReceiptWithoutRequestRefs(t *testing.T) {
 		t.Fatalf("expected invalid result, got valid")
 	}
 	for _, want := range []string{
-		"review_input_refs must contain reviewer pack: unit_plan_plan_ready",
-		"review_input_refs must contain request file ref: docs/specs/_independent_evaluation/requests/unit/demo/unit_plan_plan_ready.md",
+		"review_input_refs must contain reviewer pack: unit_verify_ready_to_promote",
+		"review_input_refs must contain request file ref: docs/specs/_independent_evaluation/requests/unit/demo/unit_verify_ready_to_promote.md",
 	} {
 		if !containsMismatch(result.Mismatches, want) {
 			t.Fatalf("expected mismatch %q, got %+v", want, result.Mismatches)
 		}
-	}
-}
-
-func TestValidateProcessFileClassifiesPlanSchemaGapAsPlanLayer(t *testing.T) {
-	repoRoot := t.TempDir()
-	setupSnapshotValidationRepo(t, repoRoot)
-
-	expected, err := RebuildCurrent(repoRoot, "demo")
-	if err != nil {
-		t.Fatalf("RebuildCurrent: %v", err)
-	}
-	body := strings.Replace(renderFormalPlanProcessBody(expected), "    coverage: implementation slice and verification target", "", 1)
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/demo.md"), "# plan\n\n```yaml\n"+body+"\n```\n")
-
-	result, err := ValidateProcessFileForObject(repoRoot, "unit", "demo", "plan")
-	if err != nil {
-		t.Fatalf("ValidateProcessFileForObject: %v", err)
-	}
-	if result.Valid {
-		t.Fatalf("expected invalid result, got valid")
-	}
-	if result.FailureLayer != "plan_layer" || result.NextCommand != "unit_plan" {
-		t.Fatalf("expected plan_layer/unit_plan, got %s/%s mismatches=%v", result.FailureLayer, result.NextCommand, result.Mismatches)
 	}
 }
 
@@ -2019,7 +1998,7 @@ func TestValidateProcessFileRejectsVerifyExecutableAcceptanceNotPass(t *testing.
 	}
 }
 
-func TestValidateProcessFileRejectsVerifyMissingActivePlanBinding(t *testing.T) {
+func TestValidateProcessFileAcceptsVerifyWithoutActivePlanRef(t *testing.T) {
 	repoRoot := t.TempDir()
 	setupSnapshotValidationRepo(t, repoRoot)
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit"))
@@ -2028,19 +2007,15 @@ func TestValidateProcessFileRejectsVerifyMissingActivePlanBinding(t *testing.T) 
 	if err != nil {
 		t.Fatalf("RebuildCurrent: %v", err)
 	}
-	activePlanFingerprint := writeFormalPlanProcessForTest(t, repoRoot, expected)
-	body := strings.Replace(renderFormalVerifyProcessBody(expected, activePlanFingerprint), "active_plan_file_ref: docs/specs/_plans/active/demo.md\n", "", 1)
+	body := renderNoPlanVerifyProcessBody(expected)
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/demo.md"), "# verify\n\n```yaml\n"+body+"\n```\n")
 
 	result, err := ValidateProcessFile(repoRoot, "demo", "verify")
 	if err != nil {
 		t.Fatalf("ValidateProcessFile: %v", err)
 	}
-	if result.Valid {
-		t.Fatalf("expected invalid result, got valid")
-	}
-	if !containsMismatch(result.Mismatches, "missing required field: active_plan_file_ref") {
-		t.Fatalf("expected active plan file ref mismatch, got %+v", result.Mismatches)
+	if !result.Valid {
+		t.Fatalf("expected valid result (active_plan fields are optional), got mismatches %+v", result.Mismatches)
 	}
 }
 
@@ -2066,8 +2041,8 @@ func TestValidateProcessFileRejectsVerifyMissingPackageDeltaVerification(t *test
 	if err != nil {
 		t.Fatalf("ValidateProcessFile: %v", err)
 	}
-	if !containsMismatch(result.Mismatches, "missing required field: package_delta_verification") {
-		t.Fatalf("expected missing package_delta_verification mismatch, got %+v", result.Mismatches)
+	if !containsMismatchPrefix(result.Mismatches, "package_delta_verification missing planned_change_scope_id") {
+		t.Fatalf("expected package_delta_verification mismatch, got %+v", result.Mismatches)
 	}
 }
 
@@ -2817,7 +2792,7 @@ func renderFormalCheckProcessBody(expected Snapshot) string {
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_plan",
+		"next_command: unit_check",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: " + expected.TruthLayerRef,
@@ -2902,6 +2877,37 @@ func renderFormalVerifyProcessBody(expected Snapshot, activePlanFingerprint stri
 		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_verify_ready_to_promote", expected.SpecFileRef),
 	}, "\n")
 }
+
+func renderNoPlanVerifyProcessBody(expected Snapshot) string {
+	return strings.Join([]string{
+		"object_type: unit",
+		"object_ref: " + expected.Module,
+		"gate: unit_verify",
+		"decision: pass",
+		"allow_next: true",
+		"next_command: unit_promote",
+		"blocking_summary: none",
+		"coverage_summary: current candidate",
+		"truth_layer_ref: " + expected.TruthLayerRef,
+		"truth_file_ref: " + expected.SpecFileRef,
+		"truth_version_ref: " + expected.SpecVersionRef,
+		"truth_fingerprint: " + expected.SpecFingerprint,
+		"acceptance_behavior_fingerprint: " + expected.AcceptanceBehaviorFingerprint,
+		"acceptance_item_set:",
+		renderAcceptanceItemSetForTest(expected.AcceptanceItemSet),
+		"unit_appendix_snapshot:",
+		renderAppendixLinesForTest(expected.ModuleAppendixSnapshot),
+		"unit_snapshot:",
+		renderObjectSnapshotLinesForTest(expected.UnitSnapshot),
+		"rule_snapshot:",
+		renderSharedLinesForTest(expected.RuleSnapshot),
+		"acceptance_item_evidence_matrix:",
+		renderAcceptanceEvidenceMatrixForTest(expected.AcceptanceItemSet),
+		renderIndependentEvaluationReceiptForTest(expected.Object, "unit_verify_ready_to_promote", expected.SpecFileRef),
+	}, "\n")
+}
+
+
 
 func renderFormalStableVerifyProcessBody(expected Snapshot, mapping RepositoryMappingEntry, decision string) string {
 	route := stableVerifyDecisions[decision]

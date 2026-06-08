@@ -54,6 +54,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 	case toolingfreshness.HiddenBuildFingerprintCommand:
 		fmt.Fprintln(stdout, toolingfreshness.PrintBuildFingerprint())
 		return nil
+	case "context":
+		return runContext(args[1:], stdout, stderr)
 	case "init":
 		return runInit(args[1:], stdout, stderr)
 	case "doctor":
@@ -80,6 +82,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runSnapshot(args[1:], stdout, stderr)
 	case "status":
 		return runStatus(args[1:], stdout, stderr)
+	case "validate":
+		return runValidate(args[1:], stdout, stderr)
 	case "unit":
 		return runUnit(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
@@ -1261,6 +1265,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  init     Install specFlow files from manifest")
 	fmt.Fprintln(w, "  doctor   Check installed specFlow structure")
 	fmt.Fprintln(w, "  build-release Build platform binaries into <tooling-root>/bin")
+	fmt.Fprintln(w, "  context  Collect and assemble agent context packs")
 	fmt.Fprintln(w, "  command  Run standard-command mechanical preflight checks and close commands")
 	fmt.Fprintln(w, "  entry    Check or sync registered entry-file managed blocks")
 	fmt.Fprintln(w, "  evaluation Generate independent evaluation request handoff files")

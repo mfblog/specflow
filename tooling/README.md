@@ -301,7 +301,7 @@ It validates only facts that are already fixed by governance rules:
 Usage:
 
 ```bash
-./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command unit_plan --object-type unit --object assistant
+./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command unit_verify --object-type unit --object demo
 ```
 
 Output includes `preflight_result`, `validated_processes`, `failure_layer`, `recommended_next_command`, and `may_continue`.
@@ -335,7 +335,7 @@ Rules:
 2. the commands never judge candidate completeness, evidence quality, or promotion readiness
 3. `candidate-preflight` must fail when the requested candidate is blocked by another current candidate unit, a candidate Rule, or a candidate progression cycle
 4. the reader todo panel may use the same result to group candidates as ready, blocked, or cycle
-5. the reader todo panel must show `unit_advance:{unit}` only for ready candidates whose recorded next command is `unit_check`, `unit_plan`, `unit_impl`, or `unit_verify`; promotion-ready candidates must show the explicit `unit_promote:{unit}` command instead
+5. the reader todo panel must show `unit_advance:{unit}` only for ready candidates whose recorded next command is `unit_check`, `unit_impl`, or `unit_verify`; promotion-ready candidates must show the explicit `unit_promote:{unit}` command instead
 
 ## Tooling Input Set
 
@@ -418,7 +418,7 @@ Execution rules:
 5. controlled stable-verify outcomes require the matching `--candidate-intent`
 6. promotion recovery requires `--stable-before yes|no`
 7. generic `truth_fallback` outcomes require an explicit `--reason`, because the command result owns the fallback reason code
-8. `unit_plan` `truth_fallback` requires `--reason truth_incomplete`
+8. `unit_plan` is a removed command; requests using `unit_plan` as `--command` must be rejected
 9. fallback reasons must use the canonical recovery codes: `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete`, `plan_drift`, `gate_missing`, `implementation_deviation`, `evidence_incomplete`, or `stable_verify_invalid`
 10. each fallback reason is accepted only with its recovery-defined failure layer; `plan_drift` belongs to `plan_layer` and `gate_missing` belongs to `gate_layer`
 11. for commands that consume current process files, non-fallback close outcomes run `command preflight` internally before status progression, cleanup, or success reporting

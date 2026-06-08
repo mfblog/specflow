@@ -27,7 +27,7 @@ func TestUpdateNextCommand(t *testing.T) {
 		t.Fatalf("write status: %v", err)
 	}
 
-	updated, err := UpdateNextCommand(repoRoot, "ai", "unit_plan")
+	updated, err := UpdateNextCommand(repoRoot, "ai", "unit_verify")
 	if err != nil {
 		t.Fatalf("UpdateNextCommand: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestUpdateNextCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read status: %v", err)
 	}
-	if !strings.Contains(string(data), "| `unit` | `ai` | `yes` | `yes` | `candidate` | `unit_plan` | note |") {
+	if !strings.Contains(string(data), "| `unit` | `ai` | `yes` | `yes` | `candidate` | `unit_verify` | note |") {
 		t.Fatalf("updated status row not found:\n%s", string(data))
 	}
 }

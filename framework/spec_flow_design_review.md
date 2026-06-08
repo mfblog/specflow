@@ -52,26 +52,18 @@ That default scope includes:
    - `spec_flow_design_review.md`
    - `governance/review.md`
    - `governance/review_scope.md`
-   - `agent_operability_standard.md`
-   - `spec_policy.md`
    - `lifecycle/overview.md`
    - `advance_policy.md`
    - `operations/entry_routing.md`
    - `operations/migration.md`
-   - `onboarding_decision_policy.md`
-   - `operations/implementation_change.md`
    - `core/repository_mapping.md`
    - `spec_writing_guide.md`
-   - `candidate_intent_policy.md`
-   - `candidate_intents/`
-   - `operations/output_standard.md`
+   - `candidate_intent.md`
    - `slice_work_state_protocol.md`
    - `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch
 2. lifecycle and gate-shape rules
    - active command contracts under `<framework-root>/lifecycle/*.md`
    - lifecycle Context Cards under `<framework-root>/lifecycle/*.md` are the active command contract
-   - `candidate_handoff_contract.md`
-   - `downgrade_policy.md`
    - `process_snapshot_contract.md`
    - `slice_work_state_protocol.md`
    - `lifecycle/recovery.md`
@@ -91,8 +83,7 @@ That default scope includes:
    - `<template-root>/AGENTS.md`
    - `<template-root>/GEMINI.md`
    - `<template-root>/CLAUDE.md`
-   - `entry_index_registry.md`
-   - `operations/output_standard.md`
+   - `operations/entry_routing.md` (Entry File Registration section)
 
 The default scope excludes:
 
@@ -119,18 +110,13 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `spec_flow_design_review.md`
    - `governance/review.md`
    - `governance/review_scope.md`
-   - `agent_operability_standard.md`
-   - `spec_policy.md`
    - `lifecycle/overview.md`
    - `advance_policy.md`
    - `operations/entry_routing.md`
    - `operations/migration.md`
-   - `onboarding_decision_policy.md`
-   - `operations/implementation_change.md`
    - `core/repository_mapping.md`
    - `spec_writing_guide.md`
-   - `candidate_intent_policy.md`
-   - `candidate_intents/`
+   - `candidate_intent.md`
    - `slice_work_state_protocol.md`
    - `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch
    - `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` for `installed_project`
@@ -141,8 +127,6 @@ For the default design-baseline review, the execution-local `review_plan` must u
 2. `lifecycle_and_gate_design`
    - active command contracts under `<framework-root>/lifecycle/*.md`
    - lifecycle Context Cards under `<framework-root>/lifecycle/*.md`
-   - `candidate_handoff_contract.md`
-   - `downgrade_policy.md`
    - `process_snapshot_contract.md`
    - `slice_work_state_protocol.md`
    - `lifecycle/recovery.md`
@@ -155,15 +139,15 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `<template-root>/docs/specs/_verify_result/README.md`
    - `<template-root>/docs/specs/_stable_verify_result/README.md`
    - `<template-root>/docs/specs/_independent_evaluation/README.md`
-   - `operations/output_standard.md`
 3. `human_operability_and_extension`
-   - `entry_index_registry.md`
-   - `operations/output_standard.md`
+   - `operations/entry_routing.md` (Entry File Registration section)
    - `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` for `installed_project`
    - `example.md` for `source_repo`
    - `<template-root>/AGENTS.md`
    - `<template-root>/GEMINI.md`
    - `<template-root>/CLAUDE.md`
+
+The review must judge whether entry files and Context Cards deliver self-contained instruction packs to the executor, whether cross-file links are used only for non-essential context, and whether each lifecycle phase can be executed without context inherited from prior phases.
 
 Onboarding and evidence appendix design must be judged as part of `design_foundation`.
 The review must judge whether that design solves the real historical-project and partially implemented project onboarding problem, avoids creating an unnecessary lifecycle state, keeps evidence separate from implementation truth, and makes the current position and next action understandable to normal users and executors.
@@ -395,6 +379,18 @@ Allowed score values are fixed:
    - holds with only limited residual weakness
 5. `4`
    - clearly holds with strong evidence
+
+For Question 6, the score basis must explicitly evaluate:
+
+a. whether Agent-facing instruction files (Context Cards, entry files) are self-contained or require chain-linked reading across multiple files to obtain essential phase instructions
+b. whether each phase delivers a self-contained instruction pack or assumes the executor inherits context and decisions from prior phases
+c. whether the design expects the executor to hold governance context across lifecycle phases versus reloading it fresh per phase
+
+For Question 7, the score basis must explicitly evaluate:
+
+a. whether the design uses the minimum file surface needed for each phase or requires the executor to read files that contain only meta-governance content not relevant to the current action
+b. whether rules that could be tool-enforced are implemented in `specflowctl` or left as Agent-discipline-only
+c. whether the design has chain-reading requirements (read file A → A links to file B → B links to file C) for essential instructions
 
 Rule-weight classification is part of design judgment for Questions 6, 7, and 8.
 It does not create another review flow, another score group, or another output formula.
@@ -685,6 +681,7 @@ Any one of them forces the final conclusion to `blocked`, regardless of the weig
 16. the `entry_robustness_probe` shows that an independent executor can propose implementation-side work or mutate implementation-side repository files before selecting the first owner and proving implementation permission
 17. the `entry_robustness_probe` shows that the entry design trusts chat-only state or permission, accepts a custom intermediate flow as owner, or displaces an exact command with a broader route
 18. the `entry_robustness_probe` shows that implementation-change overmatching hides the real owner for work that already needs owner judgment; if the result is conservative overblocking without mutation leakage, report a finding or optimization instead of a hard blocker unless no smaller legal diagnostic path exists
+19. the design requires the executor to perform chain-linked reading (read file A, then follow a link to file B for essential instructions, then follow a link from B to file C) for the core execution path of any lifecycle phase, and the design provides no self-contained alternative path
 
 ### 7.5 Pass Gate
 

@@ -44,7 +44,6 @@ Process files record what a command checked in one round. They are evidence, not
 
 Downstream lifecycle gates consume only tool-valid process evidence:
 
-1. `_check_result` for `unit_check` pass evidence.
-2. `_plans/active` for `unit_plan` handoff.
-3. `_verify_result` for `unit_verify` evidence.
-4. `_stable_verify_result` for `unit_stable_verify` advancing evidence.
+1. `_check_result` for `unit_check` pass evidence (when run).
+2. `_verify_result` for `unit_verify` evidence.
+3. `_stable_verify_result` for `unit_stable_verify` advancing evidence.

@@ -62,8 +62,7 @@ Use `framework/lifecycle/recovery.md` for the actual process-file deletion and n
 
 1. `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, and `truth_incomplete` return affected candidate units to `unit_check`.
 2. `gate_missing` returns affected candidate units to `unit_check`.
-3. `plan_drift` returns affected candidate units to `unit_plan`.
-4. `implementation_deviation` returns affected candidate units to `unit_impl`.
+3. `plan_drift` and `implementation_deviation` are handled agent-internally; no SpecFlow command reroute is needed.
 5. `evidence_incomplete` returns affected candidate units to `unit_verify`.
 6. `stable_verify_invalid` routes affected stable units to `unit_stable_verify`.
 7. Stable units invalidated by `binding_drift` or `rule_drift` route to `unit_stable_verify` without rewriting stable truth.

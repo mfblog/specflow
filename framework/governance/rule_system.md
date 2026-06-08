@@ -20,7 +20,7 @@ Consumer lists are derived from unit frontmatter. Rule files must not store cons
 5. `rule_sync` -> `framework/governance/rules/rule_sync.md`
 6. `rule_escape` -> `framework/governance/rules/rule_escape.md`
 
-Rule-governance flows inherit `framework/governance/impact_sync.md`, `framework/lifecycle/recovery.md`, and `framework/operations/output_standard.md`.
+Rule-governance flows inherit `framework/governance/impact_sync.md` and `framework/lifecycle/recovery.md`. User-facing output follows `framework/operations/entry_routing.md` (User-Facing Output section).
 
 ## Routing
 

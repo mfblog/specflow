@@ -132,12 +132,12 @@ func syncManagedEntryFile(source, dest string) error {
 		if strings.HasSuffix(destText, "\r\n") {
 			destText = strings.TrimSuffix(destText, "\r\n") + "\n"
 		}
-		if strings.HasSuffix(destText, "\n") {
-			destText = strings.TrimRight(destText, "\n") + "\n\n" + block + "\n"
-		} else if strings.TrimSpace(destText) == "" {
+		if strings.TrimSpace(destText) == "" {
 			destText = block + "\n"
+		} else if strings.HasSuffix(destText, "\n") {
+			destText = block + "\n\n" + strings.TrimRight(destText, "\n") + "\n"
 		} else {
-			destText = destText + "\n\n" + block + "\n"
+			destText = block + "\n\n" + destText + "\n"
 		}
 		return os.WriteFile(dest, []byte(destText), 0o644)
 	default:
