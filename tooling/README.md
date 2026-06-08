@@ -425,12 +425,13 @@ Execution rules:
 6. promotion recovery requires `--stable-before yes|no`
 7. generic `truth_fallback` outcomes require an explicit `--reason`, because the command result owns the fallback reason code
 8. `unit_plan` is a removed command; requests using `unit_plan` as `--command` must be rejected
-9. fallback reasons must use the canonical recovery codes: `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete`, `plan_drift`, `gate_missing`, `implementation_deviation`, `evidence_incomplete`, or `stable_verify_invalid`
-10. each fallback reason is accepted only with its recovery-defined failure layer; `plan_drift` belongs to `plan_layer` and `gate_missing` belongs to `gate_layer`
-11. for commands that consume current process files, non-fallback close outcomes run `command preflight` internally before status progression, cleanup, or success reporting
-12. fallback and recovery close outcomes do not require currently valid input process files, because their purpose is to move the object back to the smallest legal recovery point
-13. `input_validation_action`, `input_validated_processes`, and `input_validation_mismatches` report the internal close-time preflight result separately from output process validation
-14. `command_close_result` is `dry_run`, `applied`, or `failed`; `failed` means the close operation returned an error, even when the caller passed `--apply`
+9. fallback reasons must use the canonical recovery codes: `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete`, `gate_missing`, `evidence_incomplete`, or `stable_verify_invalid`
+10. each fallback reason is accepted only with its recovery-defined failure layer; `gate_missing` belongs to `gate_layer`
+11. `plan_drift` and `implementation_deviation` are impact classifications handled agent-internally; they are not valid fallback cleanup reasons and must not be passed to process cleanup-fallback or fallback close
+12. for commands that consume current process files, non-fallback close outcomes run `command preflight` internally before status progression, cleanup, or success reporting
+13. fallback and recovery close outcomes do not require currently valid input process files, because their purpose is to move the object back to the smallest legal recovery point
+14. `input_validation_action`, `input_validated_processes`, and `input_validation_mismatches` report the internal close-time preflight result separately from output process validation
+15. `command_close_result` is `dry_run`, `applied`, or `failed`; `failed` means the close operation returned an error, even when the caller passed `--apply`
 
 ## Usage Examples
 

@@ -155,12 +155,12 @@ func TestEntryManagedBlocksDefineActionGuide(t *testing.T) {
 	for _, relPath := range []string{"templates/AGENTS.md", "templates/CLAUDE.md", "templates/GEMINI.md"} {
 		block := managedSpecFlowBlock(t, readDocContractFile(t, repoRoot, relPath), relPath)
 		for _, phrase := range []string{
-			"### 1. What specFlow Is",
-			"### 2. Spec Types",
-			"### 3. Layers",
-			"### 4. State Files",
-			"### 5. Development Flow",
-			"### 6. First Read",
+			"### 1. First Read",
+			"### 2. What specFlow Is",
+			"### 3. Spec Types",
+			"### 4. Layers",
+			"### 5. State Files",
+			"### 6. Development Flow",
 			"specFlow maintains project documents",
 			"unit_new / unit_fork",
 		} {
