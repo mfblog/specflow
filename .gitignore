@@ -1,5 +1,6 @@
 tooling/bin/
 tooling/specflowctl
+tooling/specflow-reader
 tooling/*.test
 tooling/*.test.exe
 AGENTS.md
