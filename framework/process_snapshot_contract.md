@@ -36,7 +36,7 @@ object_ref: {unit}
 gate: unit_check|unit_verify
 decision: pass
 allow_next: true|false
-next_command: unit_verify|unit_promote|none
+next_command: unit_impl|unit_verify|unit_promote|none
 truth_layer_ref: candidate
 truth_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 truth_version_ref: c_unit_{unit}@x.y.z
