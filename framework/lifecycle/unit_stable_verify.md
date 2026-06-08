@@ -1,43 +1,43 @@
 # Unit Stable Verify
 
-`unit_stable_verify:{unit}` 检查当前实现是否仍然符合稳定层 truth。
+`unit_stable_verify:{unit}` checks whether the current implementation still conforms to the stable-layer truth.
 
-## 输入
+## Input
 
 - `docs/specs/_status.md`
 - `docs/specs/units/stable/s_unit_{unit}.md`
-- 稳定层附录和本 unit 引用的 rule 文件
-- `docs/specs/repository_mapping.md` 中本 unit 的条目
-- 当前的实现文件和测试文件
-- 已有的 `_stable_verify_result/unit/{unit}.md`（如需要更新）
+- Stable-layer appendices and rule files referenced by the unit
+- The unit's entry in `docs/specs/repository_mapping.md`
+- Current implementation and test files
+- Existing `_stable_verify_result/unit/{unit}.md` (if an update is needed)
 
-## 本步骤做什么
+## What This Step Does
 
-检查当前实现与稳定层 truth 的一致性。
-输出应为 `aligned`（一致）、`controlled_repair_required`（需修复）、或 `controlled_change_required`（需变更）。
+Check current implementation consistency with stable-layer truth.
+Output should be `aligned` (consistent), `controlled_repair_required` (repair needed), or `controlled_change_required` (change needed).
 
-## 注意
+## Note
 
-- 本步骤需要独立评审，不能自评通过
-- 稳定验证不创建候选 truth 本身。如需变更，结果是触发后续的 `unit_fork`
-- `aligned` 要求的每个 acceptance item 必须有 `pass` 证据
+- This step requires independent review, not self-approval
+- Stable verification does not create candidate truth itself. If a change is needed, the result triggers a subsequent `unit_fork`
+- For `aligned`, every acceptance item must have `pass` evidence
 
-## 不允许
+## Not Allowed
 
-- 修改稳定层或候选层 truth
-- 修改实现文件
-- 修改 lifecycle 状态
-- 修改 rule truth
+- Modify stable-layer or candidate-layer truth
+- Modify implementation files
+- Modify lifecycle state
+- Modify rule truth
 
-## 如何结束
+## How to End
 
-| 结果 | 含义 | 下一步 |
-|------|------|--------|
-| `aligned` | 实现与稳定 truth 一致 | `unit_fork` |
-| `controlled_repair_required` | 需要修复 | `unit_fork` with repair intent |
-| `controlled_change_required` | 需要变更 | `unit_fork` with change intent |
-| `small_repair_required` | 需要小范围修复，不改变行为 truth | `unit_stable_verify`（重新验证） |
-| `truth_rejudge_required` | 稳定层 truth 需要重新判断 | `unit_stable_verify`（重新验证） |
-| `evidence_incomplete` | 证据不足 | 补充证据后重新验证 |
+| Result | Meaning | Next Step |
+|--------|---------|-----------|
+| `aligned` | Implementation matches stable truth | `unit_fork` |
+| `controlled_repair_required` | Repair needed | `unit_fork` with repair intent |
+| `controlled_change_required` | Change needed | `unit_fork` with change intent |
+| `small_repair_required` | Small repair needed, no behavior truth change | `unit_stable_verify` (re-verify) |
+| `truth_rejudge_required` | Stable-layer truth needs re-evaluation | `unit_stable_verify` (re-verify) |
+| `evidence_incomplete` | Evidence insufficient | Supplement evidence and re-verify |
 
-通过 `command close` 关闭。
+Close through `command close`.

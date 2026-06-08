@@ -1,4 +1,7 @@
 tooling/bin/
+tooling/specflowctl
+tooling/*.test
+tooling/*.test.exe
 AGENTS.md
 CLAUDE.md
 GEMINI.md

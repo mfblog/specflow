@@ -29,19 +29,49 @@ The active unit lifecycle commands are:
 
 ## Notes Field — Write Constraints
 
-The `Notes` field may carry a `constraints:` prefix to define write-permission boundaries for the current lifecycle phase. The optional format is:
+The `Notes` field may carry a `constraints:` prefix to define write-permission boundaries for the current lifecycle phase.
+
+When no `constraints:` prefix exists, no tool-enforced write boundary is active.
+
+The deterministic tooling entry is `specflowctl validate write --path <path> --phase <phase>`.
+
+### Compact Inline Format
 
 ```text
-constraints:phase=<phase> [deny=<glob>] [allow=<glob>]
+constraints:phase=<phase> deny=<glob> [allow=<glob>];phase=<phase> deny=<glob> [allow=<glob>]
 ```
 
 - `phase`: current lifecycle phase name (e.g. `unit_impl`, `unit_verify`)
 - `deny`: file glob pattern that the executor must not write in this phase
-- `allow`: file glob pattern that the executor may write in this phase
+- `allow`: file glob pattern that the executor may write in this phase (optional)
 
-Multiple constraints may be separated by `;`. When no `constraints:` prefix exists, no tool-enforced write boundary is active.
+Multiple constraint groups may be separated by `;`.
+When both `deny` and `allow` are specified within the same group, `deny` takes precedence.
 
-The deterministic tooling entry is `specflowctl validate write --path <path> --phase <phase>`.
+Example (single-line Notes value):
+
+```text
+constraints:phase=unit_impl deny=docs/specs/** allow=src/my_feature/**
+```
+
+### YAML-like Block Format
+
+When the Notes field contains multiple lines, the constraints may use a YAML-like block structure:
+
+```text
+constraints:allowed_writes:
+  - pattern: "src/my_feature/**"
+    phases: [unit_impl, unit_verify]
+  - pattern: "tests/my_feature/**"
+forbidden_writes:
+  - pattern: "docs/specs/units/stable/**"
+  - pattern: "docs/specs/_status.md"
+```
+
+- `allowed_writes:` defines patterns that the executor may write
+- `forbidden_writes:` defines patterns the executor must not write (takes precedence)
+- Each `- pattern:` specifies a glob pattern
+- `phases:` is an optional list of lifecycle phases the rule applies to; when absent, the rule applies to all phases
 
 ## Update Rules
 

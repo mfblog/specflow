@@ -37,7 +37,7 @@ It must not silently advance a different candidate unit.
 
 `unit_advance:{unit}` may automatically enter only these commands:
 
-1. `unit_check:{unit}` (optional — skipped when not needed)
+1. `unit_check:{unit}`
 2. `unit_verify:{unit}`
 
 It must stop when the next command is:

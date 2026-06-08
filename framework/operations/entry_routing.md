@@ -146,8 +146,8 @@ When a user request is limited to implementation-side work (code, tests, configs
 
 | Level | Scope | Typical Lifecycle |
 |-------|-------|-------------------|
-| **L1 — micro** | ≤3 files, 1 unit, no API/Schema change | Direct `unit_verify`, `unit_check` optional |
-| **L2 — repair** | Repair intent (`candidate_intent=repair`), 1 unit | `fork → verify → promote`, `unit_check` optional |
+| **L1 — micro** | ≤3 files, 1 unit, no API/Schema change | `unit_check → unit_verify` |
+| **L2 — repair** | Repair intent (`candidate_intent=repair`), 1 unit | `fork → check → verify → promote` |
 | **L3 — feature** | New behavior, API/Schema change, cross-unit | Full lifecycle: `fork → check → impl → verify → promote` |
 
 Risk level is a pre-classification guide only. The formal classification below determines the actual routing.

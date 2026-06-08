@@ -1,6 +1,6 @@
 # Recovery
 
-<!-- AGENT: 该文件是框架内部文档，Agent 只在工具重定向或出现 recovery 场景时才需要读。正常情况下不需要主动阅读。 -->
+<!-- AGENT: This is an internal framework document. The Agent only needs to read it when tooling redirects there or when a recovery scenario occurs. It is not needed during normal operation. -->
 
 Recovery resets unsafe process evidence to the smallest legal restart point.
 

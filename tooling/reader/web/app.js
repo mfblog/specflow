@@ -763,8 +763,7 @@ const TRANSLATIONS = {
       unit_stable_verify: "Check whether implementation still matches the confirmed design",
       unit_new: "Create a new capability design",
       unit_check: "Check whether the design is enough to support development",
-      unit_plan: "Turn the design into an implementation plan",
-      unit_impl: "Implement according to the plan",
+      unit_impl: "Implement according to the Spec",
       unit_verify: "Verify that implementation matches the design",
       unit_promote: "Promote the confirmed result into the formal baseline",
       unit_fork: "Start a new design round from a confirmed baseline"
@@ -774,7 +773,6 @@ const TRANSLATIONS = {
       unit_stable_verify: "Stable check",
       unit_new: "New",
       unit_check: "Check",
-      unit_plan: "Plan",
       unit_impl: "Implement",
       unit_verify: "Verify",
       unit_promote: "Promote",
@@ -2006,7 +2004,6 @@ function unitRoundSteps(object, command) {
   if (isNextRoundEntry(object, command)) {
     return [
       lifecycleStep("unit_check"),
-      lifecycleStep("unit_plan"),
       lifecycleStep("unit_impl"),
       lifecycleStep("unit_verify"),
       lifecycleStep("unit_promote")
@@ -2017,7 +2014,6 @@ function unitRoundSteps(object, command) {
       lifecycleStep("unit_init"),
       lifecycleStep("unit_new"),
       lifecycleStep("unit_check"),
-      lifecycleStep("unit_plan"),
       lifecycleStep("unit_impl"),
       lifecycleStep("unit_verify"),
       lifecycleStep("unit_promote")
@@ -2027,7 +2023,6 @@ function unitRoundSteps(object, command) {
   return [
     lifecycleStep(startCommand),
     lifecycleStep("unit_check"),
-    lifecycleStep("unit_plan"),
     lifecycleStep("unit_impl"),
     lifecycleStep("unit_verify"),
     lifecycleStep("unit_promote")
@@ -2778,7 +2773,7 @@ function advanceEntryCommandForObject(object, nextCommand) {
   const objectID = String(object && object.id ? object.id : "").trim();
   const command = String(nextCommand || "").trim();
   if (!kind || !objectID || !command) return "";
-  if (kind === "unit" && ["unit_check", "unit_plan", "unit_impl", "unit_verify"].includes(command)) {
+  if (kind === "unit" && ["unit_check", "unit_impl", "unit_verify"].includes(command)) {
     return `unit_advance:${objectID}`;
   }
   return "";

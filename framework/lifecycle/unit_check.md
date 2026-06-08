@@ -1,37 +1,37 @@
 # Unit Check
 
-`unit_check:{unit}` 是验证前的质量门禁，检查候选 truth 是否足够清晰、完整。它本身不推进 lifecycle 状态——但 `pass` 结果的 `command close` 会将 `Next Command` 设置为 `unit_impl`。这是 close 操作的副作用，不是 `unit_check` 作为检查步骤的推进行为。
+`unit_check:{unit}` is a pre-verify quality gate that checks whether candidate truth is sufficiently clear and complete. It does not itself advance lifecycle state — however, a `pass` outcome's `command close` sets `Next Command` to `unit_impl`. This is a side effect of the close operation, not a progression behavior of `unit_check` as a check step.
 
-## 输入
+## Input
 
 - `docs/specs/_status.md`
 - `docs/specs/units/candidate/c_unit_{unit}.md`
-- 当前 unit 的候选层附录文件
-- 当前 unit 引用的稳定层 truth 和 rule 文件
+- Current unit's candidate-layer appendix files
+- Stable-layer truth and rule files referenced by the current unit
 
-## 本步骤做什么
+## What This Step Does
 
-检查以下 7 个问题。全部通过才算 `pass`：
+Check the following 7 questions. All must pass for a `pass` result:
 
-1. unit 的目标和责任范围是否清晰？
-2. 依赖、rule binding、ownership 边界是否明确？
-3. 主流程、数据、协议、状态、错误路径是否完整到可以验证？
-4. 验证工作能否在不猜测行为/边界/acceptance 的前提下进行？
-5. 所有 acceptance items 的格式是否正确（`verification_type`、`evidence_requirements`、`affects`）？
-6. 如果是 `candidate_intent: change` + `source_basis: replacement`，是否有至少一个 `verification_type: inspectable` 的 item 且 `evidence_requirements` 包含 `old_code_deleted` 和 `no_remaining_refs`？
-7. 所有 `affects` 范围是否正确（不能为空且无理由）？
+1. Is the unit's goal and responsibility scope clear?
+2. Are dependencies, rule bindings, and ownership boundaries explicit?
+3. Are the main flow, data, protocol, states, and error paths complete enough for verification?
+4. Can verification proceed without guessing behavior, boundaries, or acceptance?
+5. Do all acceptance items have the correct format (`verification_type`, `evidence_requirements`, `affects`)?
+6. If `candidate_intent: change` + `source_basis: replacement`, is there at least one `verification_type: inspectable` item with `evidence_requirements` including `old_code_deleted` and `no_remaining_refs`?
+7. Are all `affects` scopes correct (must not be empty without reason)?
 
-## 不允许
+## Not Allowed
 
-- 修改实现文件
-- 修改稳定层 truth
-- 修改 lifecycle 状态
-- 修改 rule truth
+- Modify implementation files
+- Modify stable-layer truth
+- Modify lifecycle state
+- Modify rule truth
 
-## 如何结束
+## How to End
 
-| 结果 | 含义 | 下一步 |
-|------|------|--------|
-| `pass` | Spec 满足条件 | 写入 `_check_result`，需要独立评审通过后进入 `unit_impl` |
-| `fix_required` | Spec 需要修复 | 修复候选 Spec 后重新 check |
-| `blocked` | 缺少关键输入 | 问用户 |
+| Result | Meaning | Next Step |
+|--------|---------|-----------|
+| `pass` | Spec meets conditions | Write `_check_result`, requires independent review before entering `unit_impl` |
+| `fix_required` | Spec needs repair | Fix the candidate Spec and re-check |
+| `blocked` | Missing critical input | Ask the user |

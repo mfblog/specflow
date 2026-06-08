@@ -150,12 +150,103 @@ func phaseMatches(phase string, phases []string) bool {
 }
 
 // ParseConstraints parses a constraints string from _status.md.
+// Supports two formats:
+//
+// Compact inline format (documented in status.md):
+//
+//	phase=<phase> [deny=<glob>] [allow=<glob>];phase=<phase> [deny=<glob>] [allow=<glob>]
+//
+// YAML-like block format:
+//
+//	allowed_writes:
+//	  - pattern: "src/**"
+//	    phases: [unit_impl, unit_verify]
+//	forbidden_writes:
+//	  - pattern: "docs/specs/**"
 func ParseConstraints(constraintsStr string) (Constraints, error) {
+	trimmed := strings.TrimSpace(constraintsStr)
+	if trimmed == "" {
+		return Constraints{}, nil
+	}
+
+	// Detect format: YAML-like block format starts with "allowed_writes:" or "forbidden_writes:"
+	if strings.HasPrefix(trimmed, "allowed_writes:") || strings.HasPrefix(trimmed, "forbidden_writes:") {
+		return parseYamlBlockFormat(trimmed)
+	}
+
+	// Otherwise, treat as compact inline format
+	return parseCompactFormat(trimmed)
+}
+
+// parseCompactFormat parses the compact inline constraints format:
+//
+//	phase=<phase> [deny=<glob>] [allow=<glob>];phase=<phase> [deny=<glob>] [allow=<glob>]
+func parseCompactFormat(input string) (Constraints, error) {
 	var c Constraints
 
-	lines := strings.Split(constraintsStr, "\n")
+	// Split by ";" for multiple constraint groups
+	segments := strings.Split(input, ";")
+	for _, segment := range segments {
+		segment = strings.TrimSpace(segment)
+		if segment == "" {
+			continue
+		}
+
+		var phase string
+		var allowPattern string
+		var denyPattern string
+
+		// Parse key=value pairs separated by spaces
+		fields := strings.Fields(segment)
+		for _, field := range fields {
+			if !strings.Contains(field, "=") {
+				continue
+			}
+			key, value, _ := strings.Cut(field, "=")
+			key = strings.TrimSpace(key)
+			value = strings.TrimSpace(value)
+			value = strings.Trim(value, "\"'")
+
+			switch key {
+			case "phase":
+				phase = value
+			case "allow":
+				allowPattern = value
+			case "deny":
+				denyPattern = value
+			}
+		}
+
+		if phase == "" {
+			continue
+		}
+
+		if denyPattern != "" {
+			rule := WriteRule{Pattern: denyPattern}
+			if phase != "" {
+				rule.Phases = []string{phase}
+			}
+			c.ForbiddenWrites = append(c.ForbiddenWrites, rule)
+		}
+
+		if allowPattern != "" {
+			rule := WriteRule{Pattern: allowPattern}
+			if phase != "" {
+				rule.Phases = []string{phase}
+			}
+			c.AllowedWrites = append(c.AllowedWrites, rule)
+		}
+	}
+
+	return c, nil
+}
+
+// parseYamlBlockFormat parses the YAML-like block constraints format.
+func parseYamlBlockFormat(input string) (Constraints, error) {
+	var c Constraints
+
+	lines := strings.Split(input, "\n")
 	var currentSection string
-	var lastRuleIndex int
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -185,10 +276,8 @@ func ParseConstraints(constraintsStr string) (Constraints, error) {
 			switch currentSection {
 			case "allowed":
 				c.AllowedWrites = append(c.AllowedWrites, rule)
-				lastRuleIndex = len(c.AllowedWrites) - 1
 			case "forbidden":
 				c.ForbiddenWrites = append(c.ForbiddenWrites, rule)
-				lastRuleIndex = len(c.ForbiddenWrites) - 1
 			}
 			continue
 		}
@@ -218,7 +307,6 @@ func ParseConstraints(constraintsStr string) (Constraints, error) {
 					c.ForbiddenWrites[len(c.ForbiddenWrites)-1].Phases = cleanPhases
 				}
 			}
-			_ = lastRuleIndex
 		}
 	}
 

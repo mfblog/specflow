@@ -1,84 +1,84 @@
 # Lifecycle Overview
 
-## 生命周期序列
+## Lifecycle Sequence
 
-当需要正式 unit 治理时，标准生命周期为：
+When formal unit governance is needed, the standard lifecycle is:
 
 ```
 unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promote
 ```
 
-- `unit_check` 是可选的 pre-verify 质量门禁，验证候选 truth 是否足够清晰
-- `unit_impl` 是单元实现阶段，由 `unit_check pass` 自动触发
-- `unit_verify` 验证实现是否满足候选 truth
-- `unit_promote` 将已验证的候选 truth 晋升为稳定 truth
+- `unit_check` is a required pre-verify quality gate that validates whether candidate truth is clear enough
+- `unit_impl` is the unit implementation phase, automatically triggered by `unit_check pass`
+- `unit_verify` verifies whether the implementation satisfies the candidate truth
+- `unit_promote` promotes the verified candidate truth to stable truth
 
-## 入口方式
+## Entry Method
 
-`entry_routing.md` 决定一个自然语言请求走哪个生命周期路径。
-支持 exact command 匹配（`command:{unit}`）和自然语言两种方式。
+`entry_routing.md` decides which lifecycle path a natural-language request should follow.
+Both exact command matching (`command:{unit}`) and natural language are supported.
 
-## 入口命令
+## Entry Commands
 
-| 命令 | 用途 |
-|------|------|
-| `unit_init:{unit}` | 已有能力→首个稳定 truth |
-| `unit_new:{unit}` | 全新→首个候选 truth |
-| `unit_fork:{unit}` | 稳定 truth→候选变更轮次 |
-| `unit_check:{unit}` | 候选 truth 质量检查（可选） |
-| `unit_verify:{unit}` | 验证实现 vs 候选 truth |
-| `unit_promote:{unit}` | 候选 truth→稳定 truth |
-| `unit_stable_verify:{unit}` | 检查实现 vs 稳定 truth |
+| Command | Purpose |
+|---------|---------|
+| `unit_init:{unit}` | Existing capability → first stable truth |
+| `unit_new:{unit}` | Brand new → first candidate truth |
+| `unit_fork:{unit}` | Stable truth → candidate change round |
+| `unit_check:{unit}` | Candidate truth quality check |
+| `unit_verify:{unit}` | Verify implementation vs candidate truth |
+| `unit_promote:{unit}` | Candidate truth → stable truth |
+| `unit_stable_verify:{unit}` | Check implementation vs stable truth |
 
-`unit_impl` 是一个自动推进状态，由 `unit_check pass` 设置，不是用户输入命令。`entry_routing.md` 负责在状态为 `Next Command=unit_impl` 时路由到 `framework/lifecycle/unit_impl.md`。
+`unit_impl` is an auto-advance state set by `unit_check pass`, not a user-entered command. `entry_routing.md` routes to `framework/lifecycle/unit_impl.md` when `Next Command=unit_impl`.
 
-## 命令执行规则
+## Command Execution Rules
 
-- `command close` 是唯一能推进 lifecycle 状态的操作
-- 推进式 evidence（`unit_check pass`、`unit_verify ready_to_promote`、`unit_stable_verify advancing`）需要独立评审 receipt
-- `unit_promote` 消费已验证的证据，不需要新的独立评审
-- 非推进式结果（blocked、fix_required、evidence_incomplete）不阻塞后续正确证据的推进
+- `command close` is the only operation that can advance lifecycle state
+- Advancing evidence (`unit_check pass`, `unit_verify ready_to_promote`, `unit_stable_verify advancing`) requires an independent review receipt
+- `unit_promote` consumes already-verified evidence and does not need a new independent review
+- Non-advancing results (blocked, fix_required, evidence_incomplete) do not block subsequent correct evidence from advancing
 
-## 依赖管理
+## Dependency Management
 
-- 候选 unit 可依赖当前稳定层 unit 版本或当前候选 truth（如果 Context Card 允许）
-- 稳定层晋升不能静默改变其他 unit 消费的稳定版本
-- 稳定版本变更时，需运行 `governance/impact_sync.md` 检查其影响
+- A candidate unit may depend on current stable-layer unit versions or current candidate truth (when the Context Card allows it)
+- Stable-layer promotion must not silently change the stable versions consumed by other units
+- When a stable version changes, `governance/impact_sync.md` must be run to check the impact
 
-## Rule 消费
+## Rule Consumption
 
-- Global rules 自动应用于所有当前层的 unit
-- Bound rules 仅当 unit 的 `rule_refs` 中显式列出时才应用
-- Rule 变更通过 `framework/governance/rule_system.md` 管理
+- Global rules automatically apply to all current-layer units
+- Bound rules apply only when the unit explicitly lists them in `rule_refs`
+- Rule changes are managed through `framework/governance/rule_system.md`
 
-## 生命周期状态
+## Lifecycle State
 
-`docs/specs/_status.md` 记录每个 unit 的当前状态（layer、Next Command）。
-只有 `command close` 可以修改这个文件。
+`docs/specs/_status.md` records each unit's current state (layer, Next Command).
+Only `command close` may modify this file.
 
-## Context Card 格式（框架设计者参考）
+## Context Card Layout (Framework Designer Reference)
 
-每个生命周期 Context Card 包含以下部分：
+Each lifecycle Context Card contains the following sections:
 
-1. **输入** — 本步骤需要读取的文件
-2. **本步骤做什么** — 当前命令的目标和执行内容
-3. **不允许** — 硬边界
-4. **如何结束** — 成功/失败/阻塞的结果及下一步
+1. **Input** — files that must be read for this step
+2. **What This Step Does** — the goal and execution content of the current command
+3. **Not Allowed** — hard boundaries
+4. **How to End** — pass/fail/blocked results and the next step
 
-Context Card 中的 `framework/...` 路径是相对于框架根目录的：
-- 已安装项目：`framework/...` → `specflow/framework/...`
-- 源代码仓库：`framework/...` → `framework/...`
+`framework/...` paths in a Context Card are relative to the framework root:
+- Installed project: `framework/...` → `specflow/framework/...`
+- Source repository: `framework/...` → `framework/...`
 
-## 生命周期权限规则
+## Lifecycle Permission Rules
 
-`command close` 是推进 lifecycle 状态的唯一途径。
+`command close` is the only way to advance lifecycle state.
 
-推进式 evidence 的有效条件是：
-1. 当前 Context Card 允许该 evidence 写入
-2. 当前 process 文件通过对应的 `snapshot validate-process` 检查
-3. process 文件包含有效的独立评审 receipt（当 Context Card 要求时）
-4. `command close` 接受该结果和 evidence
+Advancing evidence is valid only when:
+1. The current Context Card allows that evidence to be written
+2. The current process file passes the corresponding `snapshot validate-process` check
+3. The process file contains a valid independent review receipt (when required by the Context Card)
+4. `command close` accepts the result and evidence
 
-有效输入 evidence 是消耗性的——只有当前通过确定性验证的文件才能被消耗。
+Valid input evidence is consumptive — only files that pass deterministic validation may be consumed.
 
-非推进式结果（blocked、fix_required、checkpoint）不会永久 disqualify 后续工作。修复后，当前 evidence 只要通过验证并携带独立评审 receipt，仍然可以推进。
+Non-advancing results (blocked, fix_required, checkpoint) do not permanently disqualify subsequent work. After repair, the current evidence may still advance as long as it passes validation and carries an independent review receipt.

@@ -1,19 +1,19 @@
 # Candidate Intent
 
-`candidate_intent` 说明 unit 候选层存在的原因。仅 unit 的候选层使用。
+`candidate_intent` explains why a unit candidate layer exists. Used only by the unit candidate layer.
 
-## 可取值
+## Allowed Values
 
-| Intent | 用途 |
-|--------|------|
-| `change` | 候选层有意改变稳定层的行为、依赖、rule binding、acceptance 或实现预期 |
-| `repair` | 候选层保持稳定层的预期行为，修复缺失/过时/格式错误/不充分的 truth |
+| Intent | Purpose |
+|--------|---------|
+| `change` | The candidate layer intends to change the stable layer's behavior, dependencies, rule binding, acceptance, or implementation expectations |
+| `repair` | The candidate layer preserves the stable layer's expected behavior, fixing missing/outdated/malformed/insufficient truth |
 
-`unit_fork` 必须写入 `candidate_intent`。
+`unit_fork` must write `candidate_intent`.
 
-## Change 候选
+## Change Candidate
 
-### 字段要求
+### Field Requirements
 
 ```yaml
 candidate_intent: change
@@ -21,21 +21,21 @@ source_basis: new_design | existing_implementation | mixed | replacement
 evidence_appendix_ref: none | <candidate appendix path>
 ```
 
-- `repair_basis` 不允许
-- 如果行为依赖当前实现/测试/运行时行为，必须使用 `existing_implementation` 或 `mixed` 并提供 evidence appendix
-- 如果替换现有行为但不将其作为 selected truth，使用 `replacement` + `evidence_appendix_ref=none`
-- `replacement` 场景下，至少需一个 `verification_type: inspectable` 的 acceptance item 且 `evidence_requirements` 包含 `old_code_deleted` 和 `no_remaining_refs`
+- `repair_basis` is not allowed
+- If the behavior depends on current implementation/tests/runtime behavior, `existing_implementation` or `mixed` must be used with an evidence appendix
+- If replacing existing behavior without using it as selected truth, use `replacement` + `evidence_appendix_ref=none`
+- For `replacement`, at least one acceptance item with `verification_type: inspectable` must have `evidence_requirements` including `old_code_deleted` and `no_remaining_refs`
 
-### 命令行为
+### Command Behavior
 
-- **unit_fork**: 从当前稳定层 main Spec 派生，写入 `candidate_intent=change`，记录与稳定层的行为差异
-- **unit_check**: 检查行为差异是否明确、边界清晰、acceptance items 可直接验证、source 字段一致
-- **unit_verify**: 验证实现满足候选 truth
-- **unit_promote**: 晋升后 `candidate_intent` 元数据不写入稳定层
+- **unit_fork**: Derive from current stable-layer main Spec, write `candidate_intent=change`, record behavior differences from stable layer
+- **unit_check**: Verify behavior differences are explicit, boundaries are clear, acceptance items are directly verifiable, and source fields are consistent
+- **unit_verify**: Verify the implementation satisfies the candidate truth
+- **unit_promote**: `candidate_intent` metadata is not written to the stable layer after promotion
 
-## Repair 候选
+## Repair Candidate
 
-### 字段要求
+### Field Requirements
 
 ```yaml
 candidate_intent: repair
@@ -44,20 +44,20 @@ source_basis: new_design
 evidence_appendix_ref: none
 ```
 
-- `repair_basis` 必须命名要恢复的稳定层版本
-- 必须包含 `Repair Scope` 章节，说明：正在恢复的 acceptance item ids、观察到的偏离、预期变更的实现面、需证明的验证证据
-- `Repair Scope` 不得 redefine 行为 truth
-- 晋升时 `Repair Scope` 和 `candidate_intent` 不写入稳定层
+- `repair_basis` must name the stable-layer version to restore
+- Must include a `Repair Scope` section specifying: acceptance item IDs being restored, observed deviations, expected implementation-side changes, and verification evidence required
+- `Repair Scope` must not redefine behavior truth
+- On promotion, `Repair Scope` and `candidate_intent` are not written to the stable layer
 
-### 命令行为
+### Command Behavior
 
-- **unit_fork**: 从稳定层 main Spec 派生，版本号使用下一个 PATCH
-- **unit_check**: 必须验证 repair 候选未改变稳定行为 truth。违规（如修改协议/字段/ownership/状态机语义）必须要求 `fix_required` 并建议转为 `change`
-- **unit_verify**: 必须证明实现满足 repair basis 和 acceptance items。不得将新行为/宽松 pass 条件视为修复成功
-- **unit_promote**: 稳定版本为 repair_basis 的 PATCH 版本；候选专用字段不写入稳定层
+- **unit_fork**: Derive from stable-layer main Spec, version uses the next PATCH
+- **unit_check**: Must verify the repair candidate does not change stable behavior truth. Violations (modifying protocol/fields/ownership/state machine semantics) must require `fix_required` and recommend switching to `change`
+- **unit_verify**: Must prove the implementation satisfies the repair basis and acceptance items. New behavior or relaxed pass conditions must not be treated as repair success
+- **unit_promote**: Stable version is the PATCH version of the repair basis; candidate-specific fields are not written to the stable layer
 
-## 不允许
+## Not Allowed
 
-- Chat-only 的行为决策成为 truth
-- 绕过 source_basis 和 evidence appendix 规则
-- 绕过标准 unit 候选命令链
+- Chat-only behavior decisions becoming truth
+- Bypassing `source_basis` and `evidence_appendix_ref` rules
+- Bypassing the standard unit candidate command chain

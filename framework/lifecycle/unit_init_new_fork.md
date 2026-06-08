@@ -1,56 +1,56 @@
 # Unit Entry Commands
 
-本文件覆盖 `unit_init:{unit}`、`unit_new:{unit}`、`unit_fork:{unit}` 三个入口命令。
+This file covers three entry commands: `unit_init:{unit}`, `unit_new:{unit}`, and `unit_fork:{unit}`.
 
-| 命令 | 用途 |
-|------|------|
-| `unit_init` | 将已有能力直接记录为首个稳定 truth（无需候选层） |
-| `unit_new` | 为一个全新的 unit 创建首个候选 truth |
-| `unit_fork` | 从现有稳定 truth 分支出一个候选轮次进行变更或修复 |
+| Command | Purpose |
+|---------|---------|
+| `unit_init` | Record an existing capability directly as first stable truth (no candidate layer needed) |
+| `unit_new` | Create the first candidate truth for a brand-new unit |
+| `unit_fork` | Branch a candidate round from existing stable truth for changes or repairs |
 
-## 输入
+## Input
 
-- `docs/specs/_status.md`（如果目标 unit 可能已注册）
-- `docs/specs/repository_mapping.md`（如果需确认路径所有权或注册）
-- `docs/specs/units/stable/s_unit_{unit}.md` + 稳定层附录（仅 `unit_fork`）
+- `docs/specs/_status.md` (if the target unit may already be registered)
+- `docs/specs/repository_mapping.md` (if path ownership or registration must be confirmed)
+- `docs/specs/units/stable/s_unit_{unit}.md` + stable-layer appendices (unit_fork only)
 
-## 各命令的要求
+## Requirements Per Command
 
 ### unit_init
-已有被接受的能力必须足够明确，能在不选择新行为/acceptance/ownership 的前提下写出稳定 truth。
+The existing accepted capability must be explicit enough to write stable truth without choosing new behavior, acceptance, or ownership.
 
 ### unit_new
-候选 truth 必须足够明确，能写出第一个候选 Spec 及其 source 字段。
+Candidate truth must be explicit enough to write the first candidate Spec and its source fields.
 
 ### unit_fork
-- 当前稳定 truth 是候选轮次的基线
-- 需确定 `candidate_intent`（`change` 或 `repair`）
-- 如果存在有效的稳定 verify 结果：
-  - `controlled_repair_required` → 写 `repair`
-  - `controlled_change_required` → 写 `change`
-  - `aligned` → 不强制特定 intent
-- 每个稳定层附录必须有对应的同名候选层附录
+- Current stable truth is the baseline for the candidate round
+- `candidate_intent` must be determined (`change` or `repair`)
+- If a valid stable verify result exists:
+  - `controlled_repair_required` → write `repair`
+  - `controlled_change_required` → write `change`
+  - `aligned` → no specific intent required
+- Every stable-layer appendix must have a corresponding same-named candidate-layer appendix
 
-## 不允许
+## Not Allowed
 
-- 修改实现文件
-- 手工修改 lifecycle 状态
-- 修改 rule truth 或 global rules
-- 修改其他 unit 的 truth
-- `unit_new` / `unit_fork` 期间修改稳定层 truth
-- `unit_init` 期间修改候选层 truth
-- 引入尚未在 Required Context 中决策的行为/acceptance/ownership/rule
+- Modify implementation files
+- Manually modify lifecycle state
+- Modify rule truth or global rules
+- Modify other units' truth
+- Modify stable-layer truth during `unit_new` / `unit_fork`
+- Modify candidate-layer truth during `unit_init`
+- Introduce behavior, acceptance, ownership, or rules not yet decided in the Required Context
 
-## 注意
+## Note
 
-`unit_check` 是这三个命令的可选后续质量门禁，不是必选步骤。
+`unit_check` is the required follow-up quality gate for all three commands. After unit_new and unit_fork complete, Next Command is set to `unit_check`.
 
-## 如何结束
+## How to End
 
-| 命令 | 成功结果 | 下一步 |
-|------|---------|--------|
+| Command | Success Result | Next Step |
+|---------|---------------|-----------|
 | `unit_init` | `stable_created` | `unit_fork` |
-| `unit_new` | `candidate_created` | `unit_verify` |
-| `unit_fork` | `candidate_created` | `unit_verify` |
+| `unit_new` | `candidate_created` | `unit_check` |
+| `unit_fork` | `candidate_created` | `unit_check` |
 
-通过 `command close` 关闭。关闭前确保所有写入完成，无未解决的 rule-governance 或 ownership 问题。
+Close through `command close`. Before closing, ensure all writes are complete and no unresolved rule-governance or ownership issues remain.
