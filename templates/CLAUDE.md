@@ -33,7 +33,7 @@ This does not mean every code edit must change a spec document. A request must e
 unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promote
 ```
 
-`unit_check` is an optional pre-verify quality gate. `unit_impl` is set automatically by `unit_check pass`. Agents handle implementation internally.
+`unit_check` is a required pre-verify quality gate. `unit_impl` is set automatically by `unit_check pass`. Agents handle implementation internally.
 
 For stable implementation alignment checks: `unit_stable_verify`.
 

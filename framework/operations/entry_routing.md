@@ -168,7 +168,7 @@ A request touches formal behavior truth when it changes: unit goal/boundary, ext
 2. No formal truth + undecided source → resolve onboarding source first
 3. Existing stable + behavior change → `unit_fork:{unit}` with `candidate_intent=change`
 4. Existing stable + large repair → `unit_fork:{unit}` with `candidate_intent=repair`
-5. Existing candidate + truth change → write candidate truth first, then `unit_verify:{unit}`
+5. Existing candidate + truth change → write candidate truth first, then `unit_check:{unit}`
 6. Small `implementation_only` on stable → continue within stable truth, then `unit_stable_verify:{unit}`
 7. `implementation_only` on candidate → continue only when `Next Command=unit_verify` allows
 

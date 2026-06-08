@@ -354,8 +354,7 @@ const TRANSLATIONS = {
       unit_stable_verify: "检查实现是否仍符合已确认设计",
       unit_new: "创建新的能力设计",
       unit_check: "检查设计是否足够支撑开发",
-      unit_plan: "把设计整理成开发计划",
-      unit_impl: "按计划实现",
+      unit_impl: "按 Spec 实现",
       unit_verify: "验证实现是否符合设计",
       unit_promote: "把确认结果沉淀为正式基线",
       unit_fork: "从已确认基线开启新一轮设计"
@@ -365,7 +364,6 @@ const TRANSLATIONS = {
       unit_stable_verify: "稳定复核",
       unit_new: "新建",
       unit_check: "检查",
-      unit_plan: "计划",
       unit_impl: "实现",
       unit_verify: "验证",
       unit_promote: "沉淀",
@@ -2644,7 +2642,6 @@ function todoItemForSource(path) {
 function todoTypeForCommand(command) {
   if (command === "unit_stable_verify") return "stableVerify";
   if (command === "unit_check") return "designCheck";
-  if (command === "unit_plan") return "plan";
   if (command === "unit_impl") return "implementation";
   if (command === "unit_verify") return "verify";
   if (command === "unit_promote") return "promote";
@@ -2838,14 +2835,9 @@ function todoSourcesForObject(object, command) {
     return sources;
   }
 
-  if (command === "unit_plan") {
+  if (command === "unit_impl") {
     activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
     addSource(processSource(object, "checkResult"), "checkResult");
-    return sources;
-  }
-
-  if (command === "unit_impl") {
-    addSource(processSource(object, "activePlan"), "activePlan");
     activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
     return sources;
   }

@@ -181,8 +181,12 @@ func ParseConstraints(constraintsStr string) (Constraints, error) {
 // parseCompactFormat parses the compact inline constraints format:
 //
 //	phase=<phase> [deny=<glob>] [allow=<glob>];phase=<phase> [deny=<glob>] [allow=<glob>]
+//
+// Returns an error when the input is non-empty but no valid constraint groups
+// could be parsed, because an empty result would silently allow all writes.
 func parseCompactFormat(input string) (Constraints, error) {
 	var c Constraints
+	anyValidSegment := false
 
 	// Split by ";" for multiple constraint groups
 	segments := strings.Split(input, ";")
@@ -218,8 +222,16 @@ func parseCompactFormat(input string) (Constraints, error) {
 		}
 
 		if phase == "" {
-			continue
+			// segment has content but no phase — malformed, fail closed
+			return Constraints{}, fmt.Errorf("malformed constraint segment %q: missing phase", segment)
 		}
+
+		if denyPattern == "" && allowPattern == "" {
+			// segment has phase but no deny or allow — malformed, fail closed
+			return Constraints{}, fmt.Errorf("malformed constraint segment %q: has phase=%s but no deny or allow pattern", segment, phase)
+		}
+
+		anyValidSegment = true
 
 		if denyPattern != "" {
 			rule := WriteRule{Pattern: denyPattern}
@@ -236,6 +248,10 @@ func parseCompactFormat(input string) (Constraints, error) {
 			}
 			c.AllowedWrites = append(c.AllowedWrites, rule)
 		}
+	}
+
+	if !anyValidSegment {
+		return Constraints{}, fmt.Errorf("constraints string %q produced zero valid rules; use empty string for no constraints", input)
 	}
 
 	return c, nil

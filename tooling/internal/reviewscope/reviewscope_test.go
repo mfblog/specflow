@@ -82,8 +82,8 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 	if containsString(scope.AgentOperabilityFiles, deletedCommandFilePath("specflow/framework", "unit_check.md")) {
 		t.Fatalf("deleted command files must stay outside active agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
-	if !containsString(scope.CommandFiles, "specflow/framework/lifecycle/unit_plan.md") {
-		t.Fatalf("expected lifecycle files in command scope, got %+v", scope.CommandFiles)
+	if containsString(scope.CommandFiles, "specflow/framework/lifecycle/unit_plan.md") {
+		t.Fatalf("removed command file unit_plan.md must not appear in command scope, got %+v", scope.CommandFiles)
 	}
 	if !containsString(scope.GuidanceSkillFiles, "specflow/framework/guidance/using-specflow-guidance/SKILL.md") {
 		t.Fatalf("expected guidance skill files in scope, got %+v", scope.GuidanceSkillFiles)
