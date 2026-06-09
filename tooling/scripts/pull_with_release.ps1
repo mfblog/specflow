@@ -43,8 +43,8 @@ function Invoke-CheckedOutput {
     ($output -join "`n").Trim()
 }
 
-$ManagedBegin = "<!-- SPECFLOW:BEGIN -->"
-$ManagedEnd = "<!-- SPECFLOW:END -->"
+$ManagedBegin = "==SPECFLOW:BEGIN=="
+$ManagedEnd = "==SPECFLOW:END=="
 
 function Get-ManagedBlockLines {
     param(

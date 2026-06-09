@@ -90,7 +90,7 @@ func TestDoctorReportsSourceRepoReaderPath(t *testing.T) {
 func TestInitAppendsManagedBlockToExistingEntryFile(t *testing.T) {
 	repoRoot := t.TempDir()
 	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "template host\n<!-- SPECFLOW:BEGIN -->\nmanaged body\n<!-- SPECFLOW:END -->\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "template host\n==SPECFLOW:BEGIN==\nmanaged body\n==SPECFLOW:END==\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "AGENTS.md"), "host content\n")
 
 	result, err := Init(repoRoot, false)
@@ -109,7 +109,7 @@ func TestInitAppendsManagedBlockToExistingEntryFile(t *testing.T) {
 	if !strings.Contains(text, "host content") {
 		t.Fatalf("expected host content to be preserved, got %q", text)
 	}
-	if !strings.Contains(text, "<!-- SPECFLOW:BEGIN -->\nmanaged body\n<!-- SPECFLOW:END -->") {
+	if !strings.Contains(text, "==SPECFLOW:BEGIN==\nmanaged body\n==SPECFLOW:END==") {
 		t.Fatalf("expected managed block to be appended, got %q", text)
 	}
 }
@@ -124,8 +124,8 @@ func setupDoctorRepoAt(t *testing.T, repoRoot, contentRoot, toolingRoot string) 
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "manifest.tsv"), strings.Join([]string{
 		"templates/AGENTS.md\tAGENTS.md\tframework",
 	}, "\n")+"\n")
-	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(contentRoot), "templates/AGENTS.md"), "template\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "AGENTS.md"), "host\n<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n")
+	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(contentRoot), "templates/AGENTS.md"), "template\n==SPECFLOW:BEGIN==\nmanaged\n==SPECFLOW:END==\n")
+	mustWriteFile(t, filepath.Join(repoRoot, "AGENTS.md"), "host\n==SPECFLOW:BEGIN==\nmanaged\n==SPECFLOW:END==\n")
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "go.mod"), "module github.com/Bingordinary/SpecFlow/specflow/tooling\n\ngo 1.22.2\n")
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "cmd/specflowctl/main.go"), "package main\n\nfunc main() {}\n")
 	mustWriteFile(t, filepath.Join(repoRoot, filepath.FromSlash(toolingRoot), "cmd/specflow-reader/main.go"), "package main\n\nfunc main() {}\n")

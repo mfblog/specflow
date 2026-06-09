@@ -34,7 +34,7 @@ PROJECT_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
 extract_managed_block() {
   local path="$1"
   awk '
-    $0 == "<!-- SPECFLOW:BEGIN -->" {
+    $0 == "==SPECFLOW:BEGIN==" {
       if (seen_begin) {
         err = "managed block begin marker must appear exactly once"
         exit 1
@@ -43,7 +43,7 @@ extract_managed_block() {
       in_block = 1
     }
     in_block { print }
-    $0 == "<!-- SPECFLOW:END -->" {
+    $0 == "==SPECFLOW:END==" {
       if (seen_end) {
         err = "managed block end marker must appear exactly once"
         exit 1
@@ -82,7 +82,7 @@ replace_managed_block() {
       close(block_file)
       sub(ORS "$", "", block)
     }
-    $0 == "<!-- SPECFLOW:BEGIN -->" {
+    $0 == "==SPECFLOW:BEGIN==" {
       if (seen_begin) {
         err = "managed block begin marker must appear exactly once"
         exit 1
@@ -92,7 +92,7 @@ replace_managed_block() {
       print block
       next
     }
-    $0 == "<!-- SPECFLOW:END -->" {
+    $0 == "==SPECFLOW:END==" {
       if (!in_block) {
         err = "managed block end marker is out of order"
         exit 1

@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	BeginMarker = "<!-- SPECFLOW:BEGIN -->"
-	EndMarker   = "<!-- SPECFLOW:END -->"
+	BeginMarker = "==SPECFLOW:BEGIN=="
+	EndMarker   = "==SPECFLOW:END=="
 )
 
 func Extract(content string) (string, error) {

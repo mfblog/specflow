@@ -29,7 +29,7 @@ Risk levels guide routing.
 		t.Fatalf("write registry: %v", err)
 	}
 
-	block := "<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n"
+	block := "==SPECFLOW:BEGIN==\nmanaged\n==SPECFLOW:END==\n"
 	for _, name := range []string{"AGENTS.md", "GEMINI.md", "CLAUDE.md"} {
 		if err := os.WriteFile(filepath.Join(repoRoot, name), []byte(block), 0o644); err != nil {
 			t.Fatalf("write %s: %v", name, err)
@@ -65,9 +65,9 @@ Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`" + `.
 	}
 
 	for name, content := range map[string]string{
-		"AGENTS.md": "<!-- SPECFLOW:BEGIN -->\nmanaged agents\n<!-- SPECFLOW:END -->\n",
-		"GEMINI.md": "<!-- SPECFLOW:BEGIN -->\nmanaged base\n<!-- SPECFLOW:END -->\n",
-		"CLAUDE.md": "<!-- SPECFLOW:BEGIN -->\nmanaged base\n<!-- SPECFLOW:END -->\n",
+		"AGENTS.md": "==SPECFLOW:BEGIN==\nmanaged agents\n==SPECFLOW:END==\n",
+		"GEMINI.md": "==SPECFLOW:BEGIN==\nmanaged base\n==SPECFLOW:END==\n",
+		"CLAUDE.md": "==SPECFLOW:BEGIN==\nmanaged base\n==SPECFLOW:END==\n",
 	} {
 		if err := os.WriteFile(filepath.Join(repoRoot, name), []byte(content), 0o644); err != nil {
 			t.Fatalf("write %s: %v", name, err)
@@ -76,7 +76,7 @@ Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`" + `.
 
 	initGitRepo(t, repoRoot)
 
-	if err := os.WriteFile(filepath.Join(repoRoot, "AGENTS.md"), []byte("<!-- SPECFLOW:BEGIN -->\nmanaged changed this round\n<!-- SPECFLOW:END -->\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repoRoot, "AGENTS.md"), []byte("==SPECFLOW:BEGIN==\nmanaged changed this round\n==SPECFLOW:END==\n"), 0o644); err != nil {
 		t.Fatalf("rewrite AGENTS.md: %v", err)
 	}
 
@@ -112,7 +112,7 @@ Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`" + `.
 	}
 
 	for _, name := range []string{"AGENTS.md", "GEMINI.md", "CLAUDE.md"} {
-		if err := os.WriteFile(filepath.Join(repoRoot, name), []byte("<!-- SPECFLOW:BEGIN -->\nmanaged base\n<!-- SPECFLOW:END -->\n"), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(repoRoot, name), []byte("==SPECFLOW:BEGIN==\nmanaged base\n==SPECFLOW:END==\n"), 0o644); err != nil {
 			t.Fatalf("write %s: %v", name, err)
 		}
 	}
@@ -126,7 +126,7 @@ Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`, `GUIDE
 	if err := os.WriteFile(filepath.Join(regDir, "entry_routing.md"), []byte(updatedRegistry), 0o644); err != nil {
 		t.Fatalf("write updated registry: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(repoRoot, "GUIDE.md"), []byte("<!-- SPECFLOW:BEGIN -->\nmanaged guide\n<!-- SPECFLOW:END -->\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repoRoot, "GUIDE.md"), []byte("==SPECFLOW:BEGIN==\nmanaged guide\n==SPECFLOW:END==\n"), 0o644); err != nil {
 		t.Fatalf("write GUIDE.md: %v", err)
 	}
 
@@ -161,7 +161,7 @@ Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`" + `.
 		t.Fatalf("write registry: %v", err)
 	}
 
-	block := "<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n"
+	block := "==SPECFLOW:BEGIN==\nmanaged\n==SPECFLOW:END==\n"
 	if err := os.MkdirAll(filepath.Join(repoRoot, "templates"), 0o755); err != nil {
 		t.Fatalf("mkdir templates dir: %v", err)
 	}
@@ -203,8 +203,8 @@ Registered entry index files: ` + "`AGENTS.md`, `GEMINI.md`" + `.
 	if err := os.MkdirAll(filepath.Join(repoRoot, "templates"), 0o755); err != nil {
 		t.Fatalf("mkdir templates dir: %v", err)
 	}
-	agentsBlock := "<!-- SPECFLOW:BEGIN -->\nmanaged agents\n<!-- SPECFLOW:END -->\n"
-	geminiBlock := "<!-- SPECFLOW:BEGIN -->\nmanaged gemini\n<!-- SPECFLOW:END -->\n"
+	agentsBlock := "==SPECFLOW:BEGIN==\nmanaged agents\n==SPECFLOW:END==\n"
+	geminiBlock := "==SPECFLOW:BEGIN==\nmanaged gemini\n==SPECFLOW:END==\n"
 	if err := os.WriteFile(filepath.Join(repoRoot, "templates/AGENTS.md"), []byte(agentsBlock), 0o644); err != nil {
 		t.Fatalf("write template AGENTS.md: %v", err)
 	}

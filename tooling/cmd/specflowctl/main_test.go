@@ -300,7 +300,7 @@ func TestEntryCheckSourceRepoUsesTemplateEntriesCLI(t *testing.T) {
 ## Entry File Registration
 Registered entry index files: `+"`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`"+`.
 `)
-	block := "<!-- SPECFLOW:BEGIN -->\nmanaged\n<!-- SPECFLOW:END -->\n"
+	block := "==SPECFLOW:BEGIN==\nmanaged\n==SPECFLOW:END==\n"
 	for _, name := range []string{"AGENTS.md", "GEMINI.md", "CLAUDE.md"} {
 		writeCLITestFile(t, filepath.Join(repoRoot, "templates", name), block)
 	}

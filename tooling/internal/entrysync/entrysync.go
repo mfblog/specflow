@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	managedBegin = "<!-- SPECFLOW:BEGIN -->"
-	managedEnd   = "<!-- SPECFLOW:END -->"
+	managedBegin = "==SPECFLOW:BEGIN=="
+	managedEnd   = "==SPECFLOW:END=="
 )
 
 var entryFileRegistrationLine = regexp.MustCompile("`([^`]+)`")

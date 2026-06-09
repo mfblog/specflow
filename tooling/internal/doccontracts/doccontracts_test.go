@@ -155,12 +155,13 @@ func TestEntryManagedBlocksDefineActionGuide(t *testing.T) {
 	for _, relPath := range []string{"templates/AGENTS.md", "templates/CLAUDE.md", "templates/GEMINI.md"} {
 		block := managedSpecFlowBlock(t, readDocContractFile(t, repoRoot, relPath), relPath)
 		for _, phrase := range []string{
-			"### 1. First Read",
-			"### 2. What specFlow Is",
-			"### 3. Spec Types",
-			"### 4. Layers",
-			"### 5. State Files",
-			"### 6. Development Flow",
+			"### What specFlow Is",
+			"### 1. Spec Types",
+			"### 2. Layers",
+			"### 3. State Files",
+			"### 4. Development Flow",
+			"### 5. Command Index",
+			"### 6. Rule Locations",
 			"specFlow maintains project documents",
 			"unit_new / unit_fork",
 		} {
@@ -1115,7 +1116,7 @@ func TestSourceRepoEntryExampleRoutesGovernanceAndDesignReview(t *testing.T) {
 		"specflow/framework/operations/entry_routing.md",
 		"specflow/framework/governance/review.md",
 		"specflow/framework/governance/review_scope.md",
-		"<!-- SPECFLOW:BEGIN -->",
+		"==SPECFLOW:BEGIN==",
 		"## First Read",
 		"## Authority Boundary",
 		"## Active Surface",
@@ -1279,8 +1280,8 @@ func readDocContractFile(t *testing.T, repoRoot, relPath string) string {
 
 func managedSpecFlowBlock(t *testing.T, content, relPath string) string {
 	t.Helper()
-	start := strings.Index(content, "<!-- SPECFLOW:BEGIN -->")
-	end := strings.Index(content, "<!-- SPECFLOW:END -->")
+	start := strings.Index(content, "==SPECFLOW:BEGIN==")
+	end := strings.Index(content, "==SPECFLOW:END==")
 	if start < 0 || end < 0 || end <= start {
 		t.Fatalf("%s missing managed specFlow block", relPath)
 	}
