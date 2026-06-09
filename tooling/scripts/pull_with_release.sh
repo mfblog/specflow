@@ -77,49 +77,58 @@ replace_managed_block() {
   local temp_file
   temp_file="$(mktemp)"
 
-  awk -v block_file="${block_file}" '
-    BEGIN {
-      while ((getline line < block_file) > 0) {
-        block = block line ORS
+  if ! grep -q '^==SPECFLOW:BEGIN==$' "${target}"; then
+    # Markers not found in target — insert block at the beginning.
+    {
+      cat "${block_file}"
+      echo ""
+      cat "${target}"
+    } >"${temp_file}"
+  else
+    awk -v block_file="${block_file}" '
+      BEGIN {
+        while ((getline line < block_file) > 0) {
+          block = block line ORS
+        }
+        close(block_file)
+        sub(ORS "$", "", block)
       }
-      close(block_file)
-      sub(ORS "$", "", block)
+      $0 == "==SPECFLOW:BEGIN==" {
+        if (seen_begin) {
+          err = "managed block begin marker must appear exactly once"
+          exit 1
+        }
+        seen_begin = 1
+        in_block = 1
+        print block
+        next
+      }
+      $0 == "==SPECFLOW:END==" {
+        if (!in_block) {
+          err = "managed block end marker is out of order"
+          exit 1
+        }
+        seen_end = 1
+        in_block = 0
+        next
+      }
+      in_block { next }
+      { print }
+      END {
+        if (err != "") {
+          print "Error: " err > "/dev/stderr"
+          exit 1
+        }
+        if (!seen_begin || !seen_end || in_block) {
+          print "Error: managed block markers are missing or out of order" > "/dev/stderr"
+          exit 1
+        }
+      }
+    ' "${target}" >"${temp_file}" || {
+      rm -f "${temp_file}"
+      return 1
     }
-    $0 == "==SPECFLOW:BEGIN==" {
-      if (seen_begin) {
-        err = "managed block begin marker must appear exactly once"
-        exit 1
-      }
-      seen_begin = 1
-      in_block = 1
-      print block
-      next
-    }
-    $0 == "==SPECFLOW:END==" {
-      if (!in_block) {
-        err = "managed block end marker is out of order"
-        exit 1
-      }
-      seen_end = 1
-      in_block = 0
-      next
-    }
-    in_block { next }
-    { print }
-    END {
-      if (err != "") {
-        print "Error: " err > "/dev/stderr"
-        exit 1
-      }
-      if (!seen_begin || !seen_end || in_block) {
-        print "Error: managed block markers are missing or out of order" > "/dev/stderr"
-        exit 1
-      }
-    }
-  ' "${target}" >"${temp_file}" || {
-    rm -f "${temp_file}"
-    return 1
-  }
+  fi
 
   if cmp -s "${target}" "${temp_file}"; then
     rm -f "${temp_file}"

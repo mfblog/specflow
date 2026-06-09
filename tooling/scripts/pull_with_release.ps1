@@ -101,16 +101,21 @@ function Set-ManagedBlock {
     }
 
     if ($begin -eq -1 -or $end -eq -1 -or $begin -ge $end) {
-        throw "Managed block markers are missing or out of order in $Path."
+        # Markers not found in target — insert the block at the beginning of the file.
+        $updated = [System.Collections.Generic.List[string]]::new()
+        $updated.AddRange($BlockLines)
+        $updated.Add("")
+        $updated.AddRange([string[]]$lines)
     }
-
-    $updated = [System.Collections.Generic.List[string]]::new()
-    if ($begin -gt 0) {
-        $updated.AddRange([string[]]$lines[0..($begin - 1)])
-    }
-    $updated.AddRange($BlockLines)
-    if ($end -lt ($lines.Length - 1)) {
-        $updated.AddRange([string[]]$lines[($end + 1)..($lines.Length - 1)])
+    else {
+        $updated = [System.Collections.Generic.List[string]]::new()
+        if ($begin -gt 0) {
+            $updated.AddRange([string[]]$lines[0..($begin - 1)])
+        }
+        $updated.AddRange($BlockLines)
+        if ($end -lt ($lines.Length - 1)) {
+            $updated.AddRange([string[]]$lines[($end + 1)..($lines.Length - 1)])
+        }
     }
 
     $originalText = [System.IO.File]::ReadAllText($Path)
