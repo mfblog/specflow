@@ -138,7 +138,6 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - close one standard command from explicit standardized outcome flags
    - default mode is dry-run; `--apply` is required before `_status.md` or process files are changed
    - this entry validates fixed state combinations and process gates, but it does not choose outcomes, judge evidence, or repair contradictory caller input
-   - the `unit_verify` command accepts `unit_impl` as a legal predecessor state: when `_status.md` records `Next Command=unit_impl`, `command close --command unit_verify` is allowed and advances the status row to `unit_verify`
 15. `snapshot rebuild`
    - rebuild current process snapshots from bound truth
 16. `snapshot validate-process`
@@ -342,7 +341,7 @@ Rules:
 2. the commands never judge candidate completeness, evidence quality, or promotion readiness
 3. `candidate-preflight` must fail when the requested candidate is blocked by another current candidate unit, a candidate Rule, or a candidate progression cycle
 4. the reader todo panel may use the same result to group candidates as ready, blocked, or cycle
-5. the reader todo panel must show `unit_advance:{unit}` only for ready candidates whose recorded next command is `unit_check`, `unit_impl`, or `unit_verify`; promotion-ready candidates must show the explicit `unit_promote:{unit}` command instead
+5. the reader todo panel must show `unit_advance:{unit}` only for ready candidates whose recorded next command is `unit_check` or `unit_verify`; promotion-ready candidates must show the explicit `unit_promote:{unit}` command instead
 
 ## Tooling Input Set
 
@@ -461,7 +460,7 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-validate --flow spec_flow_review --layout auto
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-refresh --flow spec_flow_design_review --layout auto
 ./specflow/tooling/bin/specflowctl-linux-amd64 review run-touch --flow spec_flow_design_review --layout auto
-./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command unit_impl --object-type unit --object ai
+./specflow/tooling/bin/specflowctl-linux-amd64 command preflight --command unit_verify --object-type unit --object ai
 ./specflow/tooling/bin/specflowctl-linux-amd64 command close --command unit_stable_verify --object-type unit --object ai --outcome controlled_repair_required --candidate-intent repair
 ./specflow/tooling/bin/specflowctl-linux-amd64 command close --command unit_stable_verify --object-type unit --object ai --outcome controlled_repair_required --candidate-intent repair --apply
 ./specflow/tooling/bin/specflowctl-linux-amd64 snapshot rebuild --object-type unit --object ai

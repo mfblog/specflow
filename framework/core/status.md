@@ -22,10 +22,9 @@ The active unit lifecycle commands are:
 2. `unit_new`
 3. `unit_fork`
 4. `unit_check`
-5. `unit_impl` (auto state, not a user command; set by `unit_check pass` close)
-6. `unit_verify`
-7. `unit_promote`
-8. `unit_stable_verify`
+5. `unit_verify`
+6. `unit_promote`
+7. `unit_stable_verify`
 
 ## Notes Field — Write Constraints
 
@@ -41,7 +40,7 @@ The deterministic tooling entry is `specflowctl validate write --path <path> --p
 constraints:phase=<phase> deny=<glob> [allow=<glob>];phase=<phase> deny=<glob> [allow=<glob>]
 ```
 
-- `phase`: current lifecycle phase name (e.g. `unit_impl`, `unit_verify`)
+- `phase`: current lifecycle phase name (e.g. `pending_impl`, `unit_verify`)
 - `deny`: file glob pattern that the executor must not write in this phase
 - `allow`: file glob pattern that the executor may write in this phase (optional)
 
@@ -51,7 +50,7 @@ When both `deny` and `allow` are specified within the same group, `deny` takes p
 Example (single-line Notes value):
 
 ```text
-constraints:phase=unit_impl deny=docs/specs/** allow=src/my_feature/**
+constraints:phase=pending_impl deny=docs/specs/** allow=src/my_feature/**
 ```
 
 ### YAML-like Block Format
@@ -61,7 +60,7 @@ When the Notes field contains multiple lines, the constraints may use a YAML-lik
 ```text
 constraints:allowed_writes:
   - pattern: "src/my_feature/**"
-    phases: [unit_impl, unit_verify]
+    phases: [pending_impl, unit_verify]
   - pattern: "tests/my_feature/**"
 forbidden_writes:
   - pattern: "docs/specs/units/stable/**"
@@ -72,6 +71,14 @@ forbidden_writes:
 - `forbidden_writes:` defines patterns the executor must not write (takes precedence)
 - Each `- pattern:` specifies a glob pattern
 - `phases:` is an optional list of lifecycle phases the rule applies to; when absent, the rule applies to all phases
+
+## Notes Field — Lifecycle Phase
+
+The `Notes` field may carry a lifecycle phase value to indicate the unit's current activity within a `Next Command`:
+
+- `pending_impl` — unit_check has passed; implementation has not started or is in progress. `Next Command` is `unit_verify`.
+
+This value is informational only. It does not affect routing or `command close` validation.
 
 ## Update Rules
 

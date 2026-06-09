@@ -272,7 +272,7 @@ unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promo
 - **promote** makes the accepted candidate the new stable
 
 `unit_plan` is not a SpecFlow-governed command; agent frameworks handle planning internally.
-`unit_impl` is a lifecycle state set by `unit_check pass` close, not a user command. Agents handle implementation internally.
+`unit_impl:{unit}` is a trigger command — it provides implementation context without changing lifecycle state. Agents handle implementation independently.
 
 For a brand-new unit, start at `unit_new`. For an existing unit with stable truth, start at `unit_fork`.
 
@@ -300,7 +300,7 @@ This means the same two concepts and one lifecycle pattern can govern a single f
 
 The command form is `{command}:{unit}`, for example `unit_check:payment`.
 
-`unit_check` is a required quality gate that validates candidate truth clarity and acceptance item format compliance. `unit_plan` is handled by the agent internally and is not a SpecFlow-governed command. `unit_impl` is a lifecycle state set by `unit_check pass` close, not a user command. SpecFlow's core gate is `unit_verify`, which verifies implementation directly against candidate truth.
+`unit_check` is a required quality gate that validates candidate truth clarity and acceptance item format compliance. `unit_plan` is handled by the agent internally and is not a SpecFlow-governed command. `unit_impl:{unit}` is a trigger command — it provides implementation context without changing lifecycle state. SpecFlow's core gate is `unit_verify`, which verifies implementation directly against candidate truth.
 
 ## Development Workflow
 

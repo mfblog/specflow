@@ -50,7 +50,7 @@ func Run(repoRoot, command, objectType, object string) Result {
 		result.RecommendedNextCommand = "none"
 		return result
 	}
-	if status.NextCommand != result.Command && !(result.Command == "unit_verify" && status.NextCommand == "unit_impl") {
+	if status.NextCommand != result.Command {
 		result.MayContinue = false
 		result.FailureLayer = "status_layer"
 		result.RecommendedNextCommand = status.NextCommand

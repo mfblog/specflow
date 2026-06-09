@@ -1,6 +1,6 @@
 # Unit Check
 
-`unit_check:{unit}` is a pre-verify quality gate that checks whether candidate truth is sufficiently clear and complete. It does not itself advance lifecycle state — however, a `pass` outcome's `command close` sets `Next Command` to `unit_impl`. This is a side effect of the close operation, not a progression behavior of `unit_check` as a check step.
+`unit_check:{unit}` is a pre-verify quality gate that checks whether candidate truth is sufficiently clear and complete. It does not itself advance lifecycle state — however, a `pass` outcome's `command close` sets `Next Command` to `unit_verify` and `Notes` to `pending_impl`. This is a side effect of the close operation, not a progression behavior of `unit_check` as a check step.
 
 ## Input
 
@@ -42,6 +42,6 @@ Check the following 7 questions. All must pass for a `pass` result:
 
 | Result | Meaning | Next Step |
 |--------|---------|-----------|
-| `pass` | Spec meets conditions | Write `_check_result`, requires independent review before entering `unit_impl` |
+| `pass` | Spec meets conditions | Write `_check_result`, requires independent review before entering `unit_verify`. `command close` sets `Next Command=unit_verify`, `Notes=pending_impl`. |
 | `fix_required` | Spec needs repair | Fix the candidate Spec and re-check |
 | `blocked` | Missing critical input | Ask the user |

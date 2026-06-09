@@ -2608,7 +2608,7 @@ function todoItems() {
       const nextCommand = String(object.next_command || "").trim();
       const type = todoTypeForObject(object, nextCommand);
       const sources = todoSourcesForObject(object, nextCommand);
-      // unit_impl is a lifecycle state, not a user command — do not offer it as copyable text
+      // unit_impl is no longer a valid Next Command — kept as safety check
       const commandText = nextCommand === "unit_impl" ? "" : `${nextCommand}:${object.id}`;
       return {
         id: `todo:${object.kind}:${object.id}`,
@@ -2770,7 +2770,7 @@ function advanceEntryCommandForObject(object, nextCommand) {
   const objectID = String(object && object.id ? object.id : "").trim();
   const command = String(nextCommand || "").trim();
   if (!kind || !objectID || !command) return "";
-  if (kind === "unit" && ["unit_check", "unit_impl", "unit_verify"].includes(command)) {
+  if (kind === "unit" && ["unit_check", "unit_verify"].includes(command)) {
     return `unit_advance:${objectID}`;
   }
   return "";
@@ -2832,13 +2832,6 @@ function todoSourcesForObject(object, command) {
     appendices.forEach((ref) => addSource(ref, "appendix"));
     ruleSources.forEach((ref) => addSource(ref, "rule"));
     addSource(processSource(object, "verifyResult", "stable"), "verifyResult");
-    return sources;
-  }
-
-  if (command === "unit_impl") {
-    activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
-    addSource(processSource(object, "checkResult"), "checkResult");
-    activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
     return sources;
   }
 

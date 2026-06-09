@@ -100,18 +100,12 @@ var lifecycleInputs = map[string]inputRules{
 		},
 	},
 
-	// unit_impl — 实现阶段（unit_check pass 后自动推进）
+	// unit_impl — 触发命令: 提供实现上下文，不改变生命周期状态
 	// Context Card: unit_impl.md
+	// 在 trigger command 模型中，所有文件为按需引用（非必需），匹配 governance 文档
 	"unit_impl": {
-		essential: []InputRule{
-			{PathTemplate: "docs/specs/units/candidate/c_unit_{object}.md", Essential: true},
-			{PathTemplate: "docs/specs/units/stable/s_unit_{object}.md", Essential: true},
-			{Resolve: resolveCandidateAppendices, Essential: true},
-			{Resolve: resolveRuleRefs, Essential: true},
-			{Resolve: resolveUnitRefs, Essential: true},
-		},
+		essential: []InputRule{},
 		reference: []InputRule{
-			{PathTemplate: "docs/specs/_check_result/unit/{object}.md", Essential: false, Optional: true},
 			{PathTemplate: "framework/lifecycle/unit_impl.md", Essential: false},
 		},
 	},

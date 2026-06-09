@@ -25,7 +25,7 @@ func runValidate(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		path := fs.String("path", "", "file path to validate")
-		phase := fs.String("phase", "", "current lifecycle phase (e.g. unit_impl, unit_verify)")
+		phase := fs.String("phase", "", "current lifecycle phase (e.g. pending_impl, unit_verify)")
 		unit := fs.String("unit", "", "unit name (optional, inferred from path if not set)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
@@ -124,7 +124,7 @@ func writeValidateUsage(w io.Writer) {
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Flags:")
 	fmt.Fprintln(w, "  --path PATH     File path to validate (required)")
-	fmt.Fprintln(w, "  --phase PHASE   Current lifecycle phase: unit_check, unit_impl, unit_verify, etc. (required)")
+	fmt.Fprintln(w, "  --phase PHASE   Current lifecycle phase: unit_check, pending_impl, unit_verify, etc. (required)")
 	fmt.Fprintln(w, "  --unit UNIT     Unit name (optional, restricts check to one unit)")
 	fmt.Fprintln(w, "  --repo-root PATH Repository root directory (default: current directory)")
 }

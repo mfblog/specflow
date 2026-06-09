@@ -10,7 +10,7 @@ This directory stores plan-family files that are **agent-internal artifacts**. T
 
 ## Status
 
-Plan files are no longer SpecFlow-governed. The `unit_plan` command has been removed from the SpecFlow lifecycle. `unit_impl` is a lifecycle state set by `unit_check pass` close, not a user command. Agents handle planning and implementation internally.
+Plan files are no longer SpecFlow-governed. The `unit_plan` command has been removed from the SpecFlow lifecycle. `unit_impl:{unit}` is a trigger command — it provides implementation context without changing lifecycle state. Agents handle planning and implementation internally.
 
 SpecFlow lifecycle commands (`unit_verify`, `unit_promote`) do NOT require or consume plan files. Plan fields in verify evidence (`active_plan_file_ref`, `retirement_evidence_matrix`, `package_delta_verification`) are optional.
 

@@ -202,5 +202,13 @@ sync_existing_entry_blocks
 echo "Pulling ${branch} from origin..."
 git pull --ff-only origin "${branch}"
 
+# Clear tooling/bin before updating binaries, so stale files are
+# removed before fresh ones are downloaded.
+BIN_DIR="${REPO_ROOT}/tooling/bin"
+if [[ -d "${BIN_DIR}" ]]; then
+  rm -rf "${BIN_DIR}"
+  echo "Cleared tooling/bin."
+fi
+
 # Delegate binary update to the standalone per-platform script.
 "${SCRIPT_DIR}/update_tooling_binaries.sh"

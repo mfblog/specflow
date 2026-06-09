@@ -39,9 +39,9 @@ unit_promote:{unit}
 unit_stable_verify:{unit}
 ```
 
-`unit_impl:{unit}` is an auto-advance state, not a user command. It is recorded as `Next Command` by `unit_check pass` close. If a user request arrives during the implementation phase (status shows `Next Command=unit_impl`), the agent should continue implementation work within the governance boundaries defined by `framework/lifecycle/unit_impl.md`.
+`unit_impl:{unit}` is a trigger command. It does not change lifecycle state or advance `_status.md`. Valid only when `Next Command=unit_verify`. Routes to `framework/lifecycle/unit_impl.md`.
 
-`unit_plan:{unit}` is a removed command. If the user explicitly requests `unit_plan:{unit}`, report that it is no longer a SpecFlow-governed command and that the agent handles planning internally. Route to `unit_impl` state or `unit_verify:{unit}` depending on current lifecycle state.
+`unit_plan:{unit}` is a removed command. If the user explicitly requests `unit_plan:{unit}`, report that it is no longer a SpecFlow-governed command and that the agent handles planning internally. Route to `unit_impl:{unit}` trigger or `unit_verify:{unit}` depending on current lifecycle state.
 
 After a lifecycle Context Card is selected, read only its Required Context. Enter On-Demand Expansions only when their trigger appears.
 

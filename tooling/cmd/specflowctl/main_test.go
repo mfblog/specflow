@@ -864,7 +864,7 @@ func TestCommandCloseUnitPromoteDryRunKeepsCandidateAndProcessFilesCLI(t *testin
 func TestCommandCloseRejectsScenarioObjectTypeCLI(t *testing.T) {
 	repoRoot := createCLISnapshotRepoWithStatus(t, "unit_verify")
 	writeCLIStatusRows(t, repoRoot, ""+
-		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_impl` | test |\n"+
+		"| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_verify` | test |\n"+
 		"| `scenario` | `demo_flow` | `no` | `yes` | `candidate` | `scenario_promote` | test |\n")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

@@ -207,6 +207,14 @@ try {
     Write-Host "Pulling $branch from origin..."
     Invoke-CheckedNative "git" @("pull", "--ff-only", "origin", $branch)
 
+    # Clear tooling/bin before updating binaries, so stale files are
+    # removed before fresh ones are downloaded.
+    $binDir = Join-Path $repoRoot "tooling/bin"
+    if (Test-Path -LiteralPath $binDir) {
+        Remove-Item -LiteralPath $binDir -Recurse -Force
+        Write-Host "Cleared tooling/bin."
+    }
+
     # Delegate binary update to the standalone per-platform script.
     & (Join-Path $scriptDir "update_tooling_binaries.ps1")
 }

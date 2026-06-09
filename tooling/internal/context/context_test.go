@@ -95,7 +95,7 @@ func createMiniRepo(t *testing.T) string {
 	repoRoot := t.TempDir()
 
 	// Status
-	writeStatus(t, repoRoot, "unit | auth | yes | yes | candidate | unit_impl |")
+	writeStatus(t, repoRoot, "unit | auth | yes | yes | candidate | unit_verify |")
 
 	// Candidate spec with rule ref
 	writeUnitSpec(t, repoRoot, "candidate", "auth", "0.2.0",
@@ -128,6 +128,10 @@ func createMiniRepo(t *testing.T) string {
 	writeFile(t, repoRoot, "framework/lifecycle/overview.md",
 		"# Lifecycle Overview\n")
 
+	// Unit impl trigger command Context Card
+	writeFile(t, repoRoot, "framework/lifecycle/unit_impl.md",
+		"# Unit Implementation (Trigger)\n")
+
 	return repoRoot
 }
 
@@ -153,56 +157,23 @@ func TestLifecycleCollector_UnitImpl(t *testing.T) {
 		t.Errorf("expected object auth, got %s", pack.Object)
 	}
 
-	// Check essential files.
-	essentials := map[string]bool{}
-	references := map[string]bool{}
+	// Trigger command has no essential files — all files are on-demand references.
 	for _, f := range pack.Files {
 		if f.Essential {
-			essentials[f.Path] = f.Exists
-		} else {
-			references[f.Path] = f.Exists
+			t.Errorf("unit_impl trigger command should not have essential files, got essential: %s", f.Path)
 		}
 	}
 
-	// Must have candidate spec inlined.
-	if !essentials["docs/specs/units/candidate/c_unit_auth.md"] {
-		t.Error("missing candidate spec in essential files")
-	}
-
-	// Must have stable spec inlined.
-	if !essentials["docs/specs/units/stable/s_unit_auth.md"] {
-		t.Error("missing stable spec in essential files")
-	}
-
-	// Must have rule file resolved from rule_refs.
-	if !essentials["docs/specs/rules/stable/s_g_rule_repository_baseline.md"] {
-		t.Error("missing rule file in essential files")
-	}
-
-	// Must have appendix.
-	if !essentials["docs/specs/units/candidate/appendix/c_unit_auth_details.md"] {
-		t.Error("missing appendix in essential files")
-	}
-
-	// Must have unit_refs resolved.
-	if !essentials["docs/specs/units/stable/s_unit_user.md"] {
-		t.Error("missing referenced unit spec in essential files")
-	}
-
-	// Check result should be in reference section.
-	if !references["docs/specs/_check_result/unit/auth.md"] {
-		t.Error("missing check result in reference files")
-	}
-
-	// Dedup: global rule should appear only once.
-	count := 0
+	// Context Card must be present as a reference.
+	foundContextCard := false
 	for _, f := range pack.Files {
-		if f.Path == "docs/specs/rules/stable/s_g_rule_repository_baseline.md" {
-			count++
+		if f.Path == "framework/lifecycle/unit_impl.md" {
+			foundContextCard = true
+			break
 		}
 	}
-	if count > 1 {
-		t.Errorf("rule file appears %d times (dedup failure)", count)
+	if !foundContextCard {
+		t.Error("unit_impl missing Context Card reference")
 	}
 }
 
@@ -267,7 +238,7 @@ func TestLifecycleCollector_UnitVerify(t *testing.T) {
 		}
 	}
 
-	// unit_verify needs _status.md (unlike unit_impl).
+	// unit_verify needs _status.md (as a lifecycle command).
 	if !essentials["docs/specs/_status.md"] {
 		t.Error("unit_verify missing _status.md in essential files")
 	}
@@ -446,9 +417,26 @@ func TestRenderPack(t *testing.T) {
 		t.Error("pack missing header")
 	}
 
-	// Must contain "Core Truth" section
-	if !strings.Contains(output, "## Core Truth") {
-		t.Error("pack missing Core Truth section")
+	// Must contain "Core Truth" section or no essential files
+	if len(pack.Files) > 0 {
+		hasEssential := false
+		for _, f := range pack.Files {
+			if f.Essential {
+				hasEssential = true
+				break
+			}
+		}
+		if hasEssential {
+			if !strings.Contains(output, "## Core Truth") {
+				t.Error("pack missing Core Truth section for essential files")
+			}
+			if !strings.Contains(output, "Acceptance: tested") {
+				t.Error("pack missing inlined spec content")
+			}
+			if !strings.Contains(output, "```markdown") {
+				t.Error("pack missing markdown code fences")
+			}
+		}
 	}
 
 	// Must contain "References" section
@@ -461,19 +449,9 @@ func TestRenderPack(t *testing.T) {
 		t.Error("pack missing Inventory section")
 	}
 
-	// Must contain actual content
-	if !strings.Contains(output, "Acceptance: tested") {
-		t.Error("pack missing inlined spec content")
-	}
-
-	// Must have code fences
-	if !strings.Contains(output, "```markdown") {
-		t.Error("pack missing markdown code fences")
-	}
-
-	// Reference files should not have content (just path)
-	if !strings.Contains(output, "docs/specs/_check_result/unit/auth.md") {
-		t.Error("pack missing check result reference")
+	// Context Card reference must be present
+	if !strings.Contains(output, "framework/lifecycle/unit_impl.md") {
+		t.Error("pack missing Context Card reference")
 	}
 }
 
@@ -489,17 +467,17 @@ func TestRenderRefs(t *testing.T) {
 
 	output := buf.String()
 
-	// Must contain "essential:" and "reference:" sections
-	if !strings.Contains(output, "essential:") {
-		t.Error("refs missing essential section")
+	// Trigger command has no essential files — only reference section
+	if strings.Contains(output, "essential:") {
+		t.Error("unit_impl trigger command should not have essential files in refs output")
 	}
 	if !strings.Contains(output, "reference:") {
 		t.Error("refs missing reference section")
 	}
 
-	// Must list files
-	if !strings.Contains(output, "docs/specs/units/candidate/c_unit_auth.md") {
-		t.Error("refs missing candidate spec in output")
+	// Context Card must be listed
+	if !strings.Contains(output, "framework/lifecycle/unit_impl.md") {
+		t.Error("refs missing Context Card reference")
 	}
 }
 
@@ -507,17 +485,21 @@ func TestCollector_MissingObject(t *testing.T) {
 	repoRoot := createMiniRepo(t)
 	collector, _ := NewLifecycleCollector("unit_impl")
 
-	// Object "nonexistent" — should not error, just produce empty pack.
+	// Object "nonexistent" — should not error, just produce minimal pack.
 	pack, err := collector.Collect(repoRoot, "nonexistent")
 	if err != nil {
 		t.Fatalf("Collect with nonexistent object should not error: %v", err)
 	}
 
-	// Most files should be missing.
+	// Trigger command files (Context Card) should still resolve regardless of object name.
+	foundContextCard := false
 	for _, f := range pack.Files {
-		if f.Path == "docs/specs/units/candidate/c_unit_nonexistent.md" && f.Exists {
-			t.Error("nonexistent candidate spec reported as existing")
+		if f.Path == "framework/lifecycle/unit_impl.md" && f.Exists {
+			foundContextCard = true
 		}
+	}
+	if !foundContextCard {
+		t.Error("trigger command missing Context Card reference despite object name")
 	}
 }
 
@@ -562,8 +544,8 @@ func TestNewLifecycleCollector_Map(t *testing.T) {
 func TestFileItemContent(t *testing.T) {
 	repoRoot := createMiniRepo(t)
 
-	// Verify inlined content is correct.
-	collector, _ := NewLifecycleCollector("unit_impl")
+	// Use unit_check (has essential files) to verify inlined content.
+	collector, _ := NewLifecycleCollector("unit_check")
 	pack, _ := collector.Collect(repoRoot, "auth")
 
 	for _, f := range pack.Files {

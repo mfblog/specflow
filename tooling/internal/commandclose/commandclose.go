@@ -83,10 +83,7 @@ func Close(opts Options) (Result, error) {
 			return Result{}, fmt.Errorf("%s %q is not registered in docs/specs/_status.md", opts.ObjectType, opts.Object)
 		}
 		if before.NextCommand != opts.Command {
-			// unit_verify may proceed when the preceding state is unit_impl
-			if !(opts.Command == "unit_verify" && before.NextCommand == "unit_impl") {
-				return Result{}, fmt.Errorf("status next command mismatch: actual=%s expected=%s", before.NextCommand, opts.Command)
-			}
+			return Result{}, fmt.Errorf("status next command mismatch: actual=%s expected=%s", before.NextCommand, opts.Command)
 		}
 	}
 
@@ -426,7 +423,7 @@ func determineTransition(opts Options, before statusfile.ObjectStatus, present b
 		trans.CleanupMode = "unit_fork"
 	case "unit_check":
 		trans = nextOnlyTransition(opts, current, map[string]string{
-			"pass":         "unit_impl",
+			"pass":         "unit_verify",
 			"blocked":      "unit_check",
 			"fix_required": "unit_check",
 			"checkpoint":   "unit_check",

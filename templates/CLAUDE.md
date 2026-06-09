@@ -20,7 +20,7 @@ You MUST read `docs/specs/_status.md` BEFORE writing, modifying, or proposing an
 ### HARD RULE 2: No Implementation Without Lifecycle Authority
 
 You MUST NOT modify implementation code unless:
-- An active lifecycle command authorizes it (Next Command = `unit_impl`), OR
+- An active lifecycle command authorizes it (Next Command = `unit_verify`), OR
 - The Implementation Classification in `framework/operations/entry_routing.md` classifies the work as `implementation_only`.
 
 If neither condition is met: STOP and report the current status.
@@ -75,7 +75,7 @@ unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promo
 ```
 
 - `unit_check` is a required pre-verify quality gate.
-- `unit_impl` is set automatically by `unit_check pass`. Agents handle implementation internally.
+- `unit_impl:{unit}` is a trigger command — provides implementation context without changing lifecycle state. Implementation proceeds during the `unit_verify` phase.
 - Lifecycle state advances only through legal `command close`. Do not manually edit `_status.md`.
 - For stable alignment checks: `unit_stable_verify`.
 

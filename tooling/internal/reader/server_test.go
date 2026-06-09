@@ -90,7 +90,7 @@ func TestSnapshotEndpointRefreshesFromDisk(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadFile(status) failed: %v", err)
 	}
-	updated := strings.Replace(string(data), "`unit_check` | note", "`unit_impl` | note", 1)
+	updated := strings.Replace(string(data), "`unit_check` | note", "`unit_verify` | note", 1)
 	if updated == string(data) {
 		t.Fatalf("test fixture did not contain the expected status row")
 	}
@@ -109,8 +109,8 @@ func TestSnapshotEndpointRefreshesFromDisk(t *testing.T) {
 		t.Fatalf("snapshot json invalid: %v", err)
 	}
 	unit := findObject(t, snapshot.Objects, "unit", "assistant")
-	if unit.NextCommand != "unit_impl" {
-		t.Fatalf("expected refreshed next command unit_impl, got %q", unit.NextCommand)
+	if unit.NextCommand != "unit_verify" {
+		t.Fatalf("expected refreshed next command unit_verify, got %q", unit.NextCommand)
 	}
 }
 

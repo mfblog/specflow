@@ -1,38 +1,43 @@
-# Unit Implementation
+# Unit Implementation (Trigger)
 
-`unit_impl` is the implementation phase between candidate truth validation and verification.
+`unit_impl:{unit}` is a trigger command that enters the implementation phase.
+It provides implementation context and boundaries without changing lifecycle state.
 
-## Input
+## Condition
 
-- `docs/specs/units/candidate/c_unit_{unit}.md`
-- Current unit's candidate-layer appendix files
-- Stable-layer truth and rule files referenced by the current unit
-- `docs/specs/_check_result/unit/{unit}.md` (if present)
+Before triggering, confirm from `docs/specs/_status.md` that `Next Command` is `unit_verify`.
 
-## Pre-Execution Self-Check (MANDATORY)
+## What This Step Does
 
-Before writing any code, you MUST verify:
+- Provide the agent with unit identity and acceptance item location
+- Agent implements independently based on candidate truth
+- Conversational iteration during implementation is normal
+- The agent is free to determine how to implement
 
-1. [ ] Read `docs/specs/_status.md` — confirm the target unit's `Next Command` is `unit_impl`.
-2. [ ] If `_status.md` is empty (no units registered): STOP, report that no units are registered, and suggest `unit_new` as the first step.
-3. [ ] Read `docs/specs/units/candidate/c_unit_{unit}.md` — this is the truth you must implement against.
-4. [ ] Read the candidate-layer acceptance items — confirm every item is clear enough to implement.
-5. [ ] If `Next Command` is NOT `unit_impl`: STOP, do not write code, and report the current state.
-6. [ ] If the candidate Spec is missing or incomplete: STOP and report to the user.
+## If Spec Issues Are Found During Implementation
 
-If all checks pass: proceed to "What This Step Does" below.
+If acceptance items are incomplete, incorrect, or unclear:
 
-Implement the code according to the acceptance items in the candidate Spec.
-If the Spec is found to be missing or incorrect during implementation, stop and ask the user.
+1. Stop implementation
+2. Report the issue to the user
+3. Guide the user to run `unit_check:{unit}` to fix the Spec through the specflow lifecycle
+4. After `unit_check` passes (`Next Command` returns to `unit_verify`), resume with `unit_impl:{unit}`
+
+## On-Demand References
+
+Agent may read these as needed during implementation:
+
+- `docs/specs/units/candidate/c_unit_{unit}.md` — acceptance items
+- `docs/specs/repository_mapping.md` — file path ownership
+- Bound shared rules — constraints
+- Dependent unit implementations — interface alignment
 
 ## Not Allowed
 
-- Modify Spec files (candidate or stable layer)
-- Modify lifecycle state
-- Implement behavior beyond the candidate Spec scope
-- Modify rule truth or global rules
+- Modify lifecycle state (`_status.md`)
+- Implement behavior beyond the unit's acceptance items
 
-## How to End
+## Completing Implementation
 
-After all acceptance items have been implemented, close the implementation phase through `command close --command unit_verify --outcome ready_to_verify --apply`.
-After success: `Next Command=unit_verify`, proceed to `unit_verify:{unit}`.
+There is no `command close` for `unit_impl:{unit}`.
+When implementation is complete, run `unit_verify:{unit}`.

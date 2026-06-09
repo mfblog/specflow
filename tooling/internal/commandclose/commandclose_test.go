@@ -39,7 +39,7 @@ func TestDetermineTransitionCoversStandardOutcomes(t *testing.T) {
 		{name: "unit_stable_verify controlled_repair_required", opts: Options{Command: "unit_stable_verify", ObjectType: "unit", Object: "demo", Outcome: "controlled_repair_required", CandidateIntent: "repair"}, current: unitStableStatus("unit_stable_verify"), present: true, wantStable: "yes", wantCandidate: "no", wantActiveLayer: "stable", wantNext: "unit_fork", wantValidation: "stable_verify", wantCleanupKind: cleanupNone},
 		{name: "unit_stable_verify controlled_change_required", opts: Options{Command: "unit_stable_verify", ObjectType: "unit", Object: "demo", Outcome: "controlled_change_required", CandidateIntent: "change"}, current: unitStableStatus("unit_stable_verify"), present: true, wantStable: "yes", wantCandidate: "no", wantActiveLayer: "stable", wantNext: "unit_fork", wantValidation: "stable_verify", wantCleanupKind: cleanupNone},
 		{name: "unit_fork candidate_created", opts: Options{Command: "unit_fork", ObjectType: "unit", Object: "demo", Outcome: "candidate_created"}, current: unitStableStatus("unit_fork"), present: true, wantStable: "yes", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupSuccess, wantCleanupMode: "unit_fork"},
-		{name: "unit_check pass", opts: Options{Command: "unit_check", ObjectType: "unit", Object: "demo", Outcome: "pass"}, current: unitCandidateStatus("unit_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_impl", wantValidation: "check", wantCleanupKind: cleanupNone},
+		{name: "unit_check pass", opts: Options{Command: "unit_check", ObjectType: "unit", Object: "demo", Outcome: "pass"}, current: unitCandidateStatus("unit_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_verify", wantValidation: "check", wantCleanupKind: cleanupNone},
 		{name: "unit_check blocked", opts: Options{Command: "unit_check", ObjectType: "unit", Object: "demo", Outcome: "blocked"}, current: unitCandidateStatus("unit_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupNone},
 		{name: "unit_check fix_required", opts: Options{Command: "unit_check", ObjectType: "unit", Object: "demo", Outcome: "fix_required"}, current: unitCandidateStatus("unit_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupNone},
 		{name: "unit_check checkpoint", opts: Options{Command: "unit_check", ObjectType: "unit", Object: "demo", Outcome: "checkpoint"}, current: unitCandidateStatus("unit_check"), present: true, wantStable: "no", wantCandidate: "yes", wantActiveLayer: "candidate", wantNext: "unit_check", wantCleanupKind: cleanupNone},
@@ -426,8 +426,8 @@ func TestCloseUnitCheckPassUsesCurrentEvidenceDespiteOldCheckWork(t *testing.T) 
 			if err != nil {
 				t.Fatalf("LookupObjectStatus: %v", err)
 			}
-			if status.NextCommand != "unit_impl" {
-				t.Fatalf("current valid check evidence must advance to unit_impl, got %+v", status)
+			if status.NextCommand != "unit_verify" {
+				t.Fatalf("current valid check evidence must advance to unit_verify, got %+v", status)
 			}
 		})
 	}

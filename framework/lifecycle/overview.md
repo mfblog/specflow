@@ -9,7 +9,7 @@ unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promo
 ```
 
 - `unit_check` is a required pre-verify quality gate that validates whether candidate truth is clear enough
-- `unit_impl` is the unit implementation phase, automatically triggered by `unit_check pass`
+- `unit_impl` is a non-command phase between check and verify — the agent implements the candidate truth
 - `unit_verify` verifies whether the implementation satisfies the candidate truth
 - `unit_promote` promotes the verified candidate truth to stable truth
 
@@ -30,7 +30,7 @@ Both exact command matching (`command:{unit}`) and natural language are supporte
 | `unit_promote:{unit}` | Candidate truth → stable truth |
 | `unit_stable_verify:{unit}` | Check implementation vs stable truth |
 
-`unit_impl` is an auto-advance state set by `unit_check pass`, not a user-entered command. `entry_routing.md` routes to `framework/lifecycle/unit_impl.md` when `Next Command=unit_impl`.
+`unit_impl:{unit}` is a trigger command — it provides implementation context to the agent without changing lifecycle state. It is valid when `Next Command=unit_verify`. After implementation, run `unit_verify:{unit}`. There is no `command close` for `unit_impl`.
 
 ## Command Execution Rules
 

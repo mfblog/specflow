@@ -35,7 +35,6 @@ var allowedNextCommands = map[string]bool{
 	"unit_fork":          true,
 	"unit_stable_verify": true,
 	"unit_check":         true,
-	"unit_impl":          true,
 	"unit_verify":        true,
 	"unit_promote":       true,
 }

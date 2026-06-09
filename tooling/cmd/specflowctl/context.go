@@ -34,7 +34,7 @@ func runContextCollect(args []string, stdout, stderr io.Writer) error {
 	fs.SetOutput(stderr)
 	repoRootPtr := fs.String("repo-root", ".", "repository root")
 	flowPtr := fs.String("flow", "", "context flow: lifecycle")
-	commandPtr := fs.String("command", "", "context command (e.g. unit_impl)")
+	commandPtr := fs.String("command", "", "context command (e.g. unit_verify)")
 	objectPtr := fs.String("object", "", "formal object name (e.g. auth)")
 	formatPtr := fs.String("format", string(context.FormatPack), "output format: pack | refs")
 	if err := fs.Parse(args); err != nil {
@@ -109,9 +109,9 @@ func writeContextCollectUsage(w io.Writer) {
 	fmt.Fprintln(w, "  specflowctl context collect --flow lifecycle --command COMMAND [--object OBJECT] [--format pack|refs] [--repo-root PATH]")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Flows:")
-	fmt.Fprintln(w, "  lifecycle      Unit lifecycle commands (unit_init, unit_new, unit_fork, unit_check, unit_impl, unit_verify, unit_promote, unit_stable_verify, unit_advance)")
+	fmt.Fprintln(w, "  lifecycle      Unit lifecycle commands (unit_init, unit_new, unit_fork, unit_check, unit_verify, unit_promote, unit_stable_verify, unit_advance)")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Examples:")
-	fmt.Fprintln(w, "  specflowctl context collect --flow lifecycle --command unit_impl --object auth")
+	fmt.Fprintln(w, "  specflowctl context collect --flow lifecycle --command unit_verify --object auth")
 	fmt.Fprintln(w, "  specflowctl context collect --flow lifecycle --command unit_verify --object auth --format refs")
 }

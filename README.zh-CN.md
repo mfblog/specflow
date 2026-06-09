@@ -270,7 +270,7 @@ unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promo
 - **verify** 对照 candidate 验证实现
 - **promote** 把通过验收的 candidate 升级为新的 stable
 
-`unit_plan` 不再是 SpecFlow 治理的命令——agent 框架在内部自行处理规划。`unit_impl` 是生命周期状态标签，由 `unit_check pass` close 自动设置，非用户命令。实现由 agent 内部处理。
+`unit_plan` 不再是 SpecFlow 治理的命令——agent 框架在内部自行处理规划。`unit_impl:{unit}` 是一个触发命令（trigger）——它提供实现上下文，不改变生命周期状态。实现过程由 agent 独立完成。
 
 全新 unit 从 `unit_new` 开始。已有 stable 真相的 unit 从 `unit_fork` 开始。
 
@@ -298,7 +298,7 @@ Unit 和 rule 可以自由组合：
 
 命令格式为 `{命令}:{unit}`，例如 `unit_check:payment`。
 
-`unit_check` 是必选的质量门，验证 candidate 真相清晰度和 acceptance item 格式合规性。`unit_plan` 由 agent 内部处理，不再是 SpecFlow 治理的命令。`unit_impl` 是生命周期状态标签，由 `unit_check pass` close 自动设置，非用户命令。SpecFlow 的核心门是 `unit_verify`，它直接对照 candidate truth 验证实现。
+`unit_check` 是必选的质量门，验证 candidate 真相清晰度和 acceptance item 格式合规性。`unit_plan` 由 agent 内部处理，不再是 SpecFlow 治理的命令。`unit_impl:{unit}` 是一个触发命令（trigger）——它提供实现上下文，不改变生命周期状态。SpecFlow 的核心门是 `unit_verify`，它直接对照 candidate truth 验证实现。
 
 ## 开发流程
 
