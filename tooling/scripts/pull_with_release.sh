@@ -304,10 +304,12 @@ if [[ -z "${remote_url}" ]]; then
   exit 1
 fi
 
+# Sync entry blocks BEFORE pulling, so in-memory script functions
+# are used before git pull can modify the script file on disk.
+sync_existing_entry_blocks
+
 echo "Pulling ${branch} from origin..."
 git pull --ff-only origin "${branch}"
-
-sync_existing_entry_blocks
 
 fingerprint="$("${REPO_ROOT}/tooling/scripts/tooling_fingerprint.sh")"
 short_fingerprint="${fingerprint:0:12}"

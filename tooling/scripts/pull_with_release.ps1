@@ -339,10 +339,12 @@ try {
         throw "Git remote 'origin' is missing."
     }
 
+    # Sync entry blocks BEFORE pulling, so in-memory script functions
+    # are used before git pull can modify the script file on disk.
+    Sync-ExistingEntryBlocks $repoRoot $projectRoot
+
     Write-Host "Pulling $branch from origin..."
     Invoke-CheckedNative "git" @("pull", "--ff-only", "origin", $branch)
-
-    Sync-ExistingEntryBlocks $repoRoot $projectRoot
 
     $fingerprintScript = Join-Path $repoRoot "tooling/scripts/tooling_fingerprint.ps1"
     $fingerprint = (& $fingerprintScript).Trim()
