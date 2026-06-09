@@ -507,7 +507,9 @@ func unitVerifyTransition(opts Options, current statusfile.ObjectStatus) transit
 		return withNextAndValidation(current, "unit_promote", "verify")
 	case "truth_fallback":
 		return fallback(current, "unit_check", "truth_layer", opts.Reason)
-	case "evidence_incomplete", "human_verify":
+	case "spec_issue":
+		return withNext(current, "unit_check")
+	case "evidence_incomplete", "human_verify", "impl_issue":
 		return withNext(current, "unit_verify")
 	default:
 		return transition{}

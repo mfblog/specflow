@@ -138,6 +138,7 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - close one standard command from explicit standardized outcome flags
    - default mode is dry-run; `--apply` is required before `_status.md` or process files are changed
    - this entry validates fixed state combinations and process gates, but it does not choose outcomes, judge evidence, or repair contradictory caller input
+   - the `unit_verify` command accepts `unit_impl` as a legal predecessor state: when `_status.md` records `Next Command=unit_impl`, `command close --command unit_verify` is allowed and advances the status row to `unit_verify`
 15. `snapshot rebuild`
    - rebuild current process snapshots from bound truth
 16. `snapshot validate-process`

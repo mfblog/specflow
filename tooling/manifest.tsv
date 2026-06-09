@@ -3,6 +3,7 @@ templates/GEMINI.md	GEMINI.md	framework
 templates/CLAUDE.md	CLAUDE.md	framework
 templates/docs/chart_syntax_compatibility.md	docs/chart_syntax_compatibility.md	project
 templates/docs/specs/_check_result/README.md	docs/specs/_check_result/README.md	framework
+templates/docs/specs/_governance_review/README.md	docs/specs/_governance_review/README.md	framework
 templates/docs/specs/_plans/README.md	docs/specs/_plans/README.md	framework
 templates/docs/specs/_plans/draft/README.md	docs/specs/_plans/draft/README.md	framework
 templates/docs/specs/_plans/active/README.md	docs/specs/_plans/active/README.md	framework

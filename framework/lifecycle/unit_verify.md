@@ -11,7 +11,17 @@
 - The unit's implementation and test files
 - `docs/specs/_check_result/unit/{unit}.md` (if present, for reference but not required)
 
-## What This Step Does
+## Pre-Execution Self-Check (MANDATORY)
+
+Before executing this step, you MUST verify:
+
+1. [ ] Read `docs/specs/_status.md` — confirm the target unit's `Next Command` is `unit_verify`.
+2. [ ] If `_status.md` is empty (no units registered): STOP, report that no units are registered, and suggest `unit_new` as the first step.
+3. [ ] Read `docs/specs/units/candidate/c_unit_{unit}.md` — confirm candidate truth and acceptance items are available.
+4. [ ] Confirm the unit's implementation and test files exist and are accessible.
+5. [ ] If any check fails: STOP, report what is missing, and do not proceed.
+
+If all checks pass: proceed to "What This Step Does" below.
 
 1. **Functional verification**: Verify each acceptance item is satisfied with inspectable evidence
 2. **Scope verification**: Verify the `affects` declarations (files, appendices, rules, dependencies) are correctly implemented
@@ -41,4 +51,5 @@
 | Result | Meaning | Next Step |
 |--------|---------|-----------|
 | `ready_to_promote` | Verification passed, review passed | Write `_verify_result`, proceed to `unit_promote` |
-| Other | Needs repair | Repair and re-verify |
+| `spec_issue` | Candidate Spec needs repair | Return to `unit_check:{unit}`, fix the Spec, and re-check |
+| `impl_issue` | Implementation needs repair | Fix code and rerun `unit_verify:{unit}` |

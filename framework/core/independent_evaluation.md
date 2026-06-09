@@ -264,7 +264,7 @@ These do not satisfy independent evaluation:
 
 The following advancing evidence requires the receipt:
 
-1. `docs/specs/_check_result/unit/{unit}.md` — required only when `unit_check` is run with an advancing `pass` outcome.
+1. `docs/specs/_check_result/unit/{unit}.md`
 2. `docs/specs/_verify_result/unit/{unit}.md`
 3. `docs/specs/_stable_verify_result/unit/{unit}.md`
 
