@@ -12,9 +12,9 @@ Usage: pull_with_release.ps1
 Pull the current SpecFlow branch from origin.
 After pulling, update existing project entry files' specFlow Addendum blocks
 from the current templates.
-Then make sure the current platform's specflowctl and specflow-reader binaries
-match the pulled tooling source fingerprint. Missing or stale binaries are
-downloaded from the matching GitHub Release.
+Then run update_tooling_binaries.ps1 to make sure the current platform's
+specflowctl and specflow-reader binaries match the pulled tooling source
+fingerprint.
 "@)
 }
 
@@ -173,94 +173,6 @@ function Sync-ExistingEntryBlocks {
     }
 }
 
-function Read-BinaryFingerprint {
-    param(
-        [string]$BinaryPath
-    )
-
-    if (-not (Test-Path -LiteralPath $BinaryPath -PathType Leaf)) {
-        return ""
-    }
-
-    try {
-        $output = & $BinaryPath "__print-build-fingerprint" 2>$null
-        if ($LASTEXITCODE -ne 0) {
-            return ""
-        }
-        return (($output -join "`n").Trim())
-    }
-    catch {
-        return ""
-    }
-}
-
-function Test-Checksums {
-    param(
-        [string]$Directory,
-        [string[]]$BinaryNames
-    )
-
-    if ($BinaryNames.Count -eq 0) {
-        return $false
-    }
-
-    $sumsPath = Join-Path $Directory "SHA256SUMS"
-    if (-not (Test-Path -LiteralPath $sumsPath -PathType Leaf)) {
-        return $false
-    }
-
-    $expected = @{}
-    foreach ($line in Get-Content -LiteralPath $sumsPath) {
-        $parts = $line -split "\s+", 2
-        if ($parts.Count -ne 2) {
-            continue
-        }
-        $name = $parts[1].Trim()
-        if ($BinaryNames -contains $name) {
-            $expected[$name] = $parts[0].Trim().ToLowerInvariant()
-        }
-    }
-
-    if ($expected.Count -ne $BinaryNames.Count) {
-        return $false
-    }
-
-    foreach ($name in $BinaryNames) {
-        $path = Join-Path $Directory $name
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-            return $false
-        }
-        $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant()
-        if ($actual -ne $expected[$name]) {
-            return $false
-        }
-    }
-
-    return $true
-}
-
-function Test-NeedsDownloadAll {
-    param(
-        [string]$ExpectedFingerprint,
-        [string]$BinDir,
-        [string[]]$AllBinaryNames
-    )
-
-    foreach ($name in $AllBinaryNames) {
-        $path = Join-Path $BinDir $name
-        $fp = Read-BinaryFingerprint $path
-        if ($fp -ne $ExpectedFingerprint) {
-            return $true
-        }
-    }
-
-    if (-not (Test-Checksums $BinDir $AllBinaryNames)) {
-        return $true
-    }
-
-    return $false
-}
-
 if ($Help) {
     Show-Usage
     exit 0
@@ -269,8 +181,6 @@ if ($Help) {
 $scriptDir = Split-Path -Parent $PSCommandPath
 $repoRoot = (Resolve-Path (Join-Path $scriptDir "../..")).Path
 $projectRoot = (Resolve-Path (Join-Path $repoRoot "..")).Path
-$binDir = Join-Path $repoRoot "tooling/bin"
-$downloadDir = $null
 
 try {
     Set-Location $repoRoot
@@ -297,60 +207,10 @@ try {
     Write-Host "Pulling $branch from origin..."
     Invoke-CheckedNative "git" @("pull", "--ff-only", "origin", $branch)
 
-    $fingerprintScript = Join-Path $repoRoot "tooling/scripts/tooling_fingerprint.ps1"
-    $fingerprint = (& $fingerprintScript).Trim()
-    $shortFingerprint = $fingerprint.Substring(0, 12)
-    $tag = "specflow-tooling-$shortFingerprint"
-    $allSuffixes = @("linux-amd64", "linux-arm64", "darwin-amd64", "darwin-arm64", "windows-amd64.exe", "windows-arm64.exe")
-    $allBinaryNames = @()
-    foreach ($suffix in $allSuffixes) {
-        $allBinaryNames += "specflowctl-$suffix"
-        $allBinaryNames += "specflow-reader-$suffix"
-    }
-
-    if (-not (Test-NeedsDownloadAll $fingerprint $binDir $allBinaryNames)) {
-        Write-Host "Local binaries already match $tag."
-        exit 0
-    }
-
-    & git ls-remote --exit-code --tags origin "refs/tags/$tag" *> $null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Release tag does not exist on origin: $tag. Run push_with_release.ps1 on main first, then run this pull script again."
-    }
-
-    $downloadDir = Join-Path ([System.IO.Path]::GetTempPath()) ("specflow-download-" + [System.Guid]::NewGuid().ToString("N"))
-    New-Item -ItemType Directory -Path $downloadDir | Out-Null
-    $base = "https://github.com/Bingordinary/SpecFlow/releases/download/$tag"
-
-    Write-Host "Downloading $tag binaries for all platforms..."
-    foreach ($name in $allBinaryNames) {
-        Invoke-WebRequest -Uri "$base/$name" -OutFile (Join-Path $downloadDir $name)
-    }
-    Invoke-WebRequest -Uri "$base/SHA256SUMS" -OutFile (Join-Path $downloadDir "SHA256SUMS")
-
-    if (-not (Test-Checksums $downloadDir $allBinaryNames)) {
-        throw "Downloaded files failed checksum verification."
-    }
-
-    New-Item -ItemType Directory -Path $binDir -Force | Out-Null
-    foreach ($name in $allBinaryNames) {
-        Move-Item -LiteralPath (Join-Path $downloadDir $name) -Destination (Join-Path $binDir $name) -Force
-    }
-    Move-Item -LiteralPath (Join-Path $downloadDir "SHA256SUMS") -Destination (Join-Path $binDir "SHA256SUMS") -Force
-
-    # chmod is only meaningful on Unix-like systems — skip on Windows
-    if (-not [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
-        foreach ($name in $allBinaryNames) {
-            if (-not $name.EndsWith(".exe")) {
-                Invoke-CheckedNative "chmod" @("+x", (Join-Path $binDir $name))
-            }
-        }
-    }
-
-    Write-Host "Installed all platform binaries and SHA256SUMS from $tag."
+    # Delegate binary update to the standalone per-platform script.
+    & (Join-Path $scriptDir "update_tooling_binaries.ps1")
 }
-finally {
-    if ($null -ne $downloadDir) {
-        Remove-Item -LiteralPath $downloadDir -Recurse -Force -ErrorAction SilentlyContinue
-    }
+catch {
+    Write-Error $_.Exception.Message
+    exit 1
 }
