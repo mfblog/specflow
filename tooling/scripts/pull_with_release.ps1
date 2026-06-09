@@ -338,9 +338,12 @@ try {
     }
     Move-Item -LiteralPath (Join-Path $downloadDir "SHA256SUMS") -Destination (Join-Path $binDir "SHA256SUMS") -Force
 
-    foreach ($name in $allBinaryNames) {
-        if (-not $name.EndsWith(".exe")) {
-            Invoke-CheckedNative "chmod" @("+x", (Join-Path $binDir $name))
+    # chmod is only meaningful on Unix-like systems — skip on Windows
+    if (-not [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
+        foreach ($name in $allBinaryNames) {
+            if (-not $name.EndsWith(".exe")) {
+                Invoke-CheckedNative "chmod" @("+x", (Join-Path $binDir $name))
+            }
         }
     }
 
