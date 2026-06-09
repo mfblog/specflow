@@ -11,7 +11,17 @@
 - Current implementation and test files
 - Existing `_stable_verify_result/unit/{unit}.md` (if an update is needed)
 
-## What This Step Does
+## Pre-Execution Self-Check (MANDATORY)
+
+Before executing this step, you MUST verify:
+
+1. [ ] Read `docs/specs/_status.md` — confirm the target unit's `Active Layer` is `stable` and `Next Command` allows `unit_stable_verify`.
+2. [ ] If `_status.md` is empty (no units registered): STOP, report that no units are registered, and suggest `unit_new` as the first step.
+3. [ ] Read `docs/specs/units/stable/s_unit_{unit}.md` — confirm stable-layer truth exists and is the current accepted truth.
+4. [ ] Confirm current implementation and test files are accessible.
+5. [ ] If any check fails: STOP, report what is missing, and do not proceed.
+
+If all checks pass: proceed to "What This Step Does" below.
 
 Check current implementation consistency with stable-layer truth.
 Output should be `aligned` (consistent), `controlled_repair_required` (repair needed), or `controlled_change_required` (change needed).

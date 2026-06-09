@@ -9,7 +9,17 @@
 - Current unit's candidate-layer appendix files
 - Stable-layer truth and rule files referenced by the current unit
 
-## What This Step Does
+## Pre-Execution Self-Check (MANDATORY)
+
+Before executing this step, you MUST verify:
+
+1. [ ] Read `docs/specs/_status.md` — confirm the target unit's `Next Command` is `unit_check`.
+2. [ ] If `_status.md` is empty (no units registered): STOP, report that no units are registered, and suggest `unit_new` as the first step.
+3. [ ] Read `docs/specs/units/candidate/c_unit_{unit}.md` — confirm it exists and has acceptance items.
+4. [ ] Confirm candidate-layer appendix files exist (if required).
+5. [ ] If any check fails: STOP, report what is missing, and do not proceed.
+
+If all checks pass: proceed to "What This Step Does" below.
 
 Check the following 7 questions. All must pass for a `pass` result:
 

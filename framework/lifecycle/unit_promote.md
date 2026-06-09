@@ -10,7 +10,17 @@
 - `docs/specs/units/stable/s_unit_{unit}.md`
 - Current unit's candidate-layer appendix files
 
-## What This Step Does
+## Pre-Execution Self-Check (MANDATORY)
+
+Before executing this step, you MUST verify:
+
+1. [ ] Read `docs/specs/_status.md` — confirm the target unit's `Next Command` is `unit_promote`.
+2. [ ] If `_status.md` is empty (no units registered): STOP, report that no units are registered, and suggest `unit_new` as the first step.
+3. [ ] Read `docs/specs/_verify_result/unit/{unit}.md` — confirm verification passed with `ready_to_promote`.
+4. [ ] Confirm both candidate-layer and stable-layer Spec files exist.
+5. [ ] If any check fails: STOP, report what is missing, and do not proceed.
+
+If all checks pass: proceed to "What This Step Does" below.
 
 1. Write candidate truth (main Spec + appendices) as stable-layer truth
 2. Update lifecycle state and refs

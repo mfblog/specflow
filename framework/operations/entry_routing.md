@@ -131,7 +131,7 @@ Requests that explicitly invoke `spec_flow_migrate` route to `framework/operatio
 
 Registered entry index files: `AGENTS.md`, `GEMINI.md`, `CLAUDE.md`.
 
-All registered entry index files must contain exactly one managed block (`<!-- SPECFLOW:BEGIN -->` to `<!-- SPECFLOW:END -->`). Content outside that block belongs to the host repository. All registered entry files must keep their managed blocks consistent.
+All registered entry index files must contain exactly one managed block (`==SPECFLOW:BEGIN==` to `==SPECFLOW:END==`). Content outside that block belongs to the host repository. All registered entry files must keep their managed blocks consistent.
 
 If managed blocks differ after edits, choose one file as source and run:
 ```text

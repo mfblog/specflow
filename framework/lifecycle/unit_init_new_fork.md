@@ -14,7 +14,17 @@ This file covers three entry commands: `unit_init:{unit}`, `unit_new:{unit}`, an
 - `docs/specs/repository_mapping.md` (if path ownership or registration must be confirmed)
 - `docs/specs/units/stable/s_unit_{unit}.md` + stable-layer appendices (unit_fork only)
 
-## Requirements Per Command
+## Pre-Execution Self-Check (MANDATORY)
+
+Before executing this step, you MUST verify:
+
+1. [ ] Read `docs/specs/_status.md` — confirm the target unit is in the expected state for this entry command.
+2. [ ] Read the required Input files listed above — confirm they exist and are readable.
+3. [ ] For `unit_fork`: confirm stable-layer unit truth exists at `docs/specs/units/stable/s_unit_{unit}.md`.
+4. [ ] If any check fails: STOP, report what is missing, and do not proceed.
+5. [ ] If the status table is empty: STOP, report that no units are registered, and suggest `unit_new` as the first step.
+
+If all checks pass: proceed to "Requirements Per Command" below.
 
 ### unit_init
 The existing accepted capability must be explicit enough to write stable truth without choosing new behavior, acceptance, or ownership.
