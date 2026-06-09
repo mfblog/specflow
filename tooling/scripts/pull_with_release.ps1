@@ -173,55 +173,6 @@ function Sync-ExistingEntryBlocks {
     }
 }
 
-function Get-OSArchitecture {
-    $runtimeInfo = [System.Runtime.InteropServices.RuntimeInformation]
-    $property = $runtimeInfo.GetProperty("OSArchitecture")
-    if ($null -ne $property) {
-        return [string]$property.GetValue($null, $null)
-    }
-
-    $arch = [System.Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITEW6432")
-    if ([string]::IsNullOrWhiteSpace($arch)) {
-        $arch = [System.Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
-    }
-    if (-not [string]::IsNullOrWhiteSpace($arch)) {
-        return $arch
-    }
-
-    throw "Unable to determine CPU architecture."
-}
-
-function Get-PlatformSuffix {
-    $os = ""
-    if ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
-        $os = "windows"
-    }
-    elseif ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Linux)) {
-        $os = "linux"
-    }
-    elseif ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::OSX)) {
-        $os = "darwin"
-    }
-    else {
-        throw "Unsupported operating system."
-    }
-
-    $osArchitecture = Get-OSArchitecture
-    $arch = switch ($osArchitecture.ToString().ToUpperInvariant()) {
-        "X64" { "amd64" }
-        "AMD64" { "amd64" }
-        "ARM64" { "arm64" }
-        default { throw "Unsupported CPU architecture: $osArchitecture" }
-    }
-
-    if ($os -eq "windows") {
-        "$os-$arch.exe"
-    }
-    else {
-        "$os-$arch"
-    }
-}
-
 function Read-BinaryFingerprint {
     param(
         [string]$BinaryPath
@@ -246,9 +197,12 @@ function Read-BinaryFingerprint {
 function Test-Checksums {
     param(
         [string]$Directory,
-        [string]$CtlName,
-        [string]$ReaderName
+        [string[]]$BinaryNames
     )
+
+    if ($BinaryNames.Count -eq 0) {
+        return $false
+    }
 
     $sumsPath = Join-Path $Directory "SHA256SUMS"
     if (-not (Test-Path -LiteralPath $sumsPath -PathType Leaf)) {
@@ -262,16 +216,16 @@ function Test-Checksums {
             continue
         }
         $name = $parts[1].Trim()
-        if ($name -eq $CtlName -or $name -eq $ReaderName) {
+        if ($BinaryNames -contains $name) {
             $expected[$name] = $parts[0].Trim().ToLowerInvariant()
         }
     }
 
-    if (-not $expected.ContainsKey($CtlName) -or -not $expected.ContainsKey($ReaderName)) {
+    if ($expected.Count -ne $BinaryNames.Count) {
         return $false
     }
 
-    foreach ($name in @($CtlName, $ReaderName)) {
+    foreach ($name in $BinaryNames) {
         $path = Join-Path $Directory $name
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
             return $false
@@ -285,25 +239,22 @@ function Test-Checksums {
     return $true
 }
 
-function Test-NeedsDownload {
+function Test-NeedsDownloadAll {
     param(
         [string]$ExpectedFingerprint,
-        [string]$CtlPath,
-        [string]$ReaderPath,
         [string]$BinDir,
-        [string]$CtlName,
-        [string]$ReaderName
+        [string[]]$AllBinaryNames
     )
 
-    $ctlFingerprint = Read-BinaryFingerprint $CtlPath
-    $readerFingerprint = Read-BinaryFingerprint $ReaderPath
-    if ($ctlFingerprint -ne $ExpectedFingerprint) {
-        return $true
+    foreach ($name in $AllBinaryNames) {
+        $path = Join-Path $BinDir $name
+        $fp = Read-BinaryFingerprint $path
+        if ($fp -ne $ExpectedFingerprint) {
+            return $true
+        }
     }
-    if ($readerFingerprint -ne $ExpectedFingerprint) {
-        return $true
-    }
-    if (-not (Test-Checksums $BinDir $CtlName $ReaderName)) {
+
+    if (-not (Test-Checksums $BinDir $AllBinaryNames)) {
         return $true
     }
 
@@ -350,13 +301,14 @@ try {
     $fingerprint = (& $fingerprintScript).Trim()
     $shortFingerprint = $fingerprint.Substring(0, 12)
     $tag = "specflow-tooling-$shortFingerprint"
-    $suffix = Get-PlatformSuffix
-    $ctlName = "specflowctl-$suffix"
-    $readerName = "specflow-reader-$suffix"
-    $ctlPath = Join-Path $binDir $ctlName
-    $readerPath = Join-Path $binDir $readerName
+    $allSuffixes = @("linux-amd64", "linux-arm64", "darwin-amd64", "darwin-arm64", "windows-amd64.exe", "windows-arm64.exe")
+    $allBinaryNames = @()
+    foreach ($suffix in $allSuffixes) {
+        $allBinaryNames += "specflowctl-$suffix"
+        $allBinaryNames += "specflow-reader-$suffix"
+    }
 
-    if (-not (Test-NeedsDownload $fingerprint $ctlPath $readerPath $binDir $ctlName $readerName)) {
+    if (-not (Test-NeedsDownloadAll $fingerprint $binDir $allBinaryNames)) {
         Write-Host "Local binaries already match $tag."
         exit 0
     }
@@ -370,25 +322,29 @@ try {
     New-Item -ItemType Directory -Path $downloadDir | Out-Null
     $base = "https://github.com/Bingordinary/SpecFlow/releases/download/$tag"
 
-    Write-Host "Downloading $tag binaries for $suffix..."
-    Invoke-WebRequest -Uri "$base/$ctlName" -OutFile (Join-Path $downloadDir $ctlName)
-    Invoke-WebRequest -Uri "$base/$readerName" -OutFile (Join-Path $downloadDir $readerName)
+    Write-Host "Downloading $tag binaries for all platforms..."
+    foreach ($name in $allBinaryNames) {
+        Invoke-WebRequest -Uri "$base/$name" -OutFile (Join-Path $downloadDir $name)
+    }
     Invoke-WebRequest -Uri "$base/SHA256SUMS" -OutFile (Join-Path $downloadDir "SHA256SUMS")
 
-    if (-not (Test-Checksums $downloadDir $ctlName $readerName)) {
+    if (-not (Test-Checksums $downloadDir $allBinaryNames)) {
         throw "Downloaded files failed checksum verification."
     }
 
     New-Item -ItemType Directory -Path $binDir -Force | Out-Null
-    Move-Item -LiteralPath (Join-Path $downloadDir $ctlName) -Destination $ctlPath -Force
-    Move-Item -LiteralPath (Join-Path $downloadDir $readerName) -Destination $readerPath -Force
+    foreach ($name in $allBinaryNames) {
+        Move-Item -LiteralPath (Join-Path $downloadDir $name) -Destination (Join-Path $binDir $name) -Force
+    }
     Move-Item -LiteralPath (Join-Path $downloadDir "SHA256SUMS") -Destination (Join-Path $binDir "SHA256SUMS") -Force
 
-    if (-not $suffix.EndsWith(".exe")) {
-        Invoke-CheckedNative "chmod" @("+x", $ctlPath, $readerPath)
+    foreach ($name in $allBinaryNames) {
+        if (-not $name.EndsWith(".exe")) {
+            Invoke-CheckedNative "chmod" @("+x", (Join-Path $binDir $name))
+        }
     }
 
-    Write-Host "Installed $ctlName, $readerName, and SHA256SUMS from $tag."
+    Write-Host "Installed all platform binaries and SHA256SUMS from $tag."
 }
 finally {
     if ($null -ne $downloadDir) {

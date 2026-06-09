@@ -227,14 +227,24 @@ read_binary_fingerprint() {
 
 verify_checksums() {
 	local dir="$1"
-	local ctl_name="$2"
-	local reader_name="$3"
+	shift
+	local -a names=("$@")
+	if [[ "$#" -eq 0 ]]; then
+		echo "Error: no binary names provided for checksum verification." >&2
+		return 1
+	fi
 	local current_sums status
 	current_sums="$(mktemp)"
-
-	awk -v ctl="${ctl_name}" -v reader="${reader_name}" '$2 == ctl || $2 == reader { print }' "${dir}/SHA256SUMS" >"${current_sums}"
-	if [[ "$(wc -l <"${current_sums}" | tr -d ' ')" != "2" ]]; then
-		echo "Error: SHA256SUMS does not contain both current platform binaries." >&2
+	local awk_expr=''
+	for name in "${names[@]}"; do
+		if [[ -n "${awk_expr}" ]]; then
+			awk_expr+=" || "
+		fi
+		awk_expr+='$2 == "'"${name}"'"'
+	done
+	awk "${awk_expr} { print }" "${dir}/SHA256SUMS" >"${current_sums}"
+	if [[ "$(wc -l <"${current_sums}" | tr -d ' ')" != "$#" ]]; then
+		echo "Error: SHA256SUMS contains $(wc -l <"${current_sums}" | tr -d ' ')/$# expected entries." >&2
 		rm -f "${current_sums}"
 		return 1
 	fi
@@ -267,22 +277,20 @@ verify_checksums() {
 	return "${status}"
 }
 
-needs_download() {
-  local expected_fingerprint="$1"
-  local ctl_binary="$2"
-  local reader_binary="$3"
-  local ctl_fingerprint reader_fingerprint
+needs_download_all() {
+	local expected_fingerprint="$1"
+	local fp
 
-  ctl_fingerprint="$(read_binary_fingerprint "${ctl_binary}" || true)"
-  reader_fingerprint="$(read_binary_fingerprint "${reader_binary}" || true)"
+	for name in "${ALL_BIN_NAMES[@]}"; do
+		fp="$(read_binary_fingerprint "${BIN_DIR}/${name}" || true)"
+		[[ "${fp}" == "${expected_fingerprint}" ]] || return 0
+	done
 
-  [[ "${ctl_fingerprint}" == "${expected_fingerprint}" ]] || return 0
-  [[ "${reader_fingerprint}" == "${expected_fingerprint}" ]] || return 0
-  [[ -f "${BIN_DIR}/SHA256SUMS" ]] || return 0
+	[[ -f "${BIN_DIR}/SHA256SUMS" ]] || return 0
 
-  verify_checksums "${BIN_DIR}" "$(basename "${ctl_binary}")" "$(basename "${reader_binary}")" >/dev/null || return 0
+	verify_checksums "${BIN_DIR}" "${ALL_BIN_NAMES[@]}" >/dev/null 2>&1 || return 0
 
-  return 1
+	return 1
 }
 
 cd "${REPO_ROOT}"
@@ -314,37 +322,40 @@ git pull --ff-only origin "${branch}"
 fingerprint="$("${REPO_ROOT}/tooling/scripts/tooling_fingerprint.sh")"
 short_fingerprint="${fingerprint:0:12}"
 tag="specflow-tooling-${short_fingerprint}"
-suffix="$(platform_suffix)"
-ctl_name="specflowctl-${suffix}"
-reader_name="specflow-reader-${suffix}"
-ctl_path="${BIN_DIR}/${ctl_name}"
-reader_path="${BIN_DIR}/${reader_name}"
+ALL_BIN_NAMES=()
+for suffix in "linux-amd64" "linux-arm64" "darwin-amd64" "darwin-arm64" "windows-amd64.exe" "windows-arm64.exe"; do
+	ALL_BIN_NAMES+=("specflowctl-${suffix}" "specflow-reader-${suffix}")
+done
 
-if ! needs_download "${fingerprint}" "${ctl_path}" "${reader_path}"; then
-  echo "Local binaries already match ${tag}."
-  exit 0
+if ! needs_download_all "${fingerprint}"; then
+	echo "Local binaries already match ${tag}."
+	exit 0
 fi
 
 if ! git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
-  echo "Error: release tag does not exist on origin: ${tag}" >&2
-  echo "Run push_with_release.sh on main first, then run this pull script again." >&2
-  exit 1
+	echo "Error: release tag does not exist on origin: ${tag}" >&2
+	echo "Run push_with_release.sh on main first, then run this pull script again." >&2
+	exit 1
 fi
 
 download_dir="$(mktemp -d)"
 base="https://github.com/Bingordinary/SpecFlow/releases/download/${tag}"
 
-echo "Downloading ${tag} binaries for ${suffix}..."
-curl -fL -o "${download_dir}/${ctl_name}" "${base}/${ctl_name}"
-curl -fL -o "${download_dir}/${reader_name}" "${base}/${reader_name}"
+echo "Downloading ${tag} binaries for all platforms..."
+for name in "${ALL_BIN_NAMES[@]}"; do
+	curl -fL -o "${download_dir}/${name}" "${base}/${name}"
+done
 curl -fL -o "${download_dir}/SHA256SUMS" "${base}/SHA256SUMS"
 
-verify_checksums "${download_dir}" "${ctl_name}" "${reader_name}"
+verify_checksums "${download_dir}" "${ALL_BIN_NAMES[@]}"
 
 mkdir -p "${BIN_DIR}"
-mv "${download_dir}/${ctl_name}" "${ctl_path}"
-mv "${download_dir}/${reader_name}" "${reader_path}"
+for name in "${ALL_BIN_NAMES[@]}"; do
+	mv "${download_dir}/${name}" "${BIN_DIR}/${name}"
+done
 mv "${download_dir}/SHA256SUMS" "${BIN_DIR}/SHA256SUMS"
-chmod +x "${ctl_path}" "${reader_path}"
+for name in "${ALL_BIN_NAMES[@]}"; do
+	chmod +x "${BIN_DIR}/${name}"
+done
 
-echo "Installed ${ctl_name}, ${reader_name}, and SHA256SUMS from ${tag}."
+echo "Installed all platform binaries and SHA256SUMS from ${tag}."
