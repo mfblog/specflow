@@ -3,7 +3,7 @@
 `unit_impl:{unit}` is a trigger command that enters the implementation phase.
 It provides implementation context and boundaries without changing lifecycle state.
 
-## Condition
+## Input
 
 Before triggering, confirm from `docs/specs/_status.md` that `Next Command` is `unit_verify`.
 
@@ -20,8 +20,12 @@ If acceptance items are incomplete, incorrect, or unclear:
 
 1. Stop implementation
 2. Report the issue to the user
-3. Guide the user to run `unit_check:{unit}` to fix the Spec through the specflow lifecycle
-4. After `unit_check` passes (`Next Command` returns to `unit_verify`), resume with `unit_impl:{unit}`
+3. Fix the candidate spec (`docs/specs/units/candidate/c_unit_{unit}.md`)
+4. Run `unit_check:{unit}` to re-validate the modified spec — this is accepted as a
+   re-validation during the implementation phase (see `unit_check.md` precondition
+   exception). `unit_check` re-runs its 7 quality checks against the modified spec.
+5. After `unit_check` passes (`Next Command` is still `unit_verify`), resume with
+   `unit_impl:{unit}`
 
 ## On-Demand References
 
@@ -37,7 +41,8 @@ Agent may read these as needed during implementation:
 - Modify lifecycle state (`_status.md`)
 - Implement behavior beyond the unit's acceptance items
 
-## Completing Implementation
+## How to End
 
-There is no `command close` for `unit_impl:{unit}`.
-When implementation is complete, run `unit_verify:{unit}`.
+`unit_impl:{unit}` is a trigger command that does not produce process evidence or change lifecycle state, so there is no `command close` or outcome table. The terminal condition is that implementation is complete and the candidate truth has been satisfied.
+
+**Terminal outcome:** When implementation is complete, run `unit_verify:{unit}`.

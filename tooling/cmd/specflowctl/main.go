@@ -1277,6 +1277,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  snapshot Rebuild or compare process snapshot fields")
 	fmt.Fprintln(w, "  status   Apply deterministic _status.md row writeback")
 	fmt.Fprintln(w, "  unit     Execute deterministic unit dependency reconciliation helpers")
+	fmt.Fprintln(w, "  validate Validate lifecycle write permissions for file paths")
 }
 
 func writeCommandUsage(w io.Writer) {
@@ -1293,7 +1294,7 @@ func writeEntryUsage(w io.Writer) {
 
 func writeEvaluationUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl evaluation request --object-type unit --object OBJECT --pack PACK [--process check|plan|verify|stable_verify] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl evaluation request --object-type unit --object OBJECT --pack PACK [--process check|verify|stable_verify] [--repo-root PATH]")
 }
 
 func writeRelationUsage(w io.Writer) {
@@ -1402,7 +1403,7 @@ func writeUnitUsage(w io.Writer) {
 func writeSnapshotUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl snapshot rebuild --object-type unit --object OBJECT [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl snapshot validate-process --object-type unit --object OBJECT --process check|plan|verify|stable_verify [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl snapshot validate-process --object-type unit --object OBJECT --process check|verify|stable_verify [--repo-root PATH]")
 }
 
 func writeStatusUsage(w io.Writer) {

@@ -10,7 +10,7 @@ It does not replace fingerprints. It prevents a text-level fingerprint change fr
 
 `text_drift` means only the normalized file text fingerprint changed. File refs, version refs, acceptance behavior fingerprint, acceptance item set, and dependency snapshots still match.
 
-`semantic_drift` means the formal acceptance behavior fingerprint changed while the acceptance item id, verification surface, and runnable set still match.
+`semantic_drift` means the formal acceptance behavior fingerprint changed while the acceptance item id, verification surface, and not_runnable_yet values still match.
 
 `acceptance_drift` means the acceptance item set changed.
 
@@ -35,7 +35,7 @@ Text drift reuse requires all of these:
 Before freshness review, generate the handoff request:
 
 ```text
-<tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack freshness_text_drift_reuse --process check|plan|verify|stable_verify
+<tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack freshness_text_drift_reuse --process check|verify|stable_verify
 ```
 
 The reviewer judges whether the text-only edit preserves the intended meaning of the existing evidence. Tooling only verifies the mechanical classification and receipt fields.

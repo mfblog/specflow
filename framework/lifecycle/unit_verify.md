@@ -9,7 +9,10 @@
 - Current unit's candidate-layer appendix files
 - Stable-layer truth and rule files referenced by the current unit
 - The unit's implementation and test files
-- `docs/specs/_check_result/unit/{unit}.md` (if present, for reference but not required)
+- `docs/specs/_check_result/unit/{unit}.md` — present in standard flow (unit_check → unit_impl → unit_verify); may be absent or stale in re-validation flow (unit_check re-validation path)
+- `framework/process_snapshot_contract.md` (for verify result file format and validation rules)
+- `framework/spec_writing_guide.md` (for unit Spec format and appendix format)
+- `docs/specs/repository_mapping.md` (for implementation file ownership discovery)
 
 ## Pre-Execution Self-Check (MANDATORY)
 
@@ -36,7 +39,7 @@ If all checks pass: proceed to "What This Step Does" below.
 
 ## Note
 
-- This step requires independent review — **self-approval is not allowed**. An independent reviewer must give `pass` for `ready_to_promote`
+- This step requires independent review — **self-approval is not allowed**. An independent reviewer must give `pass` for `ready_to_promote`. See `framework/operations/entry_routing.md` "Independent Review Stop" for report format and `framework/core/independent_evaluation.md` for reviewer pack selection.
 - If implementation issues are found during verification, they may be fixed and re-verified
 - If the candidate Spec itself is problematic, return to `unit_check` to fix the Spec
 
@@ -48,8 +51,15 @@ If all checks pass: proceed to "What This Step Does" below.
 
 ## How to End
 
-| Result | Meaning | Next Step |
-|--------|---------|-----------|
-| `ready_to_promote` | Verification passed, review passed | Write `_verify_result`, proceed to `unit_promote` |
-| `spec_issue` | Candidate Spec needs repair | Return to `unit_check:{unit}`, fix the Spec, and re-check |
-| `impl_issue` | Implementation needs repair | Fix code and rerun `unit_verify:{unit}` |
+| Result | Meaning | Next Step | Command Close Writeback |
+|--------|---------|-----------|------------------------|
+| `ready_to_promote` | Verification passed, review passed | Write `_verify_result` at `docs/specs/_verify_result/unit/{unit}.md`. Proceed to `unit_promote:{unit}` | command close sets `Next Command=unit_promote`. `unit_promote:{unit}` requires explicit user decision. |
+| `truth_fallback` | Candidate truth has drifted from stable baseline | Return to `unit_check:{unit}` with truth-layer fallback. See `framework/lifecycle/recovery.md` truth_layer for process evidence cleanup. | command close sets `Next Command=unit_check`. Apply truth repair first. |
+| `spec_issue` | Candidate Spec needs repair | Return to `unit_check:{unit}`, fix the Spec, and re-check | command close sets `Next Command=unit_check`. |
+| `evidence_incomplete` | Evidence insufficient for verification | Supplement evidence (`acceptance_item_evidence_matrix`) and rerun `unit_verify:{unit}` | command close keeps `Next Command=unit_verify`. |
+| `human_verify` | Human decision required before promotion | Ask the user and rerun `unit_verify:{unit}` after input | command close keeps `Next Command=unit_verify`. |
+| `impl_issue` | Implementation needs repair | Fix code and rerun `unit_verify:{unit}` | command close keeps `Next Command=unit_verify`. |
+
+For non-standard failures (process validation failure, tooling error, corrupted state), read `framework/lifecycle/recovery.md` and apply fallback cleanup per the failure layer.
+
+Tooling invocation: `specflowctl command close --command unit_verify --object-type unit --object <unit> --outcome <outcome> [--notes <notes>] [--apply]`

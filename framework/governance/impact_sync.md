@@ -40,7 +40,9 @@ Repository mapping consumers are derived from object, implementation path, and s
 
 ## Fallback Reason Classification
 
-Use the canonical fallback reason codes from `framework/lifecycle/recovery.md`:
+Use the canonical fallback reason codes from `framework/lifecycle/recovery.md`.
+`current`, `plan_drift`, and `implementation_deviation` are additional codes used for
+agent-internal routing decisions and are not defined in `recovery.md`:
 
 1. `current` - no process or implementation evidence is invalidated.
 2. `truth_drift` - candidate behavior, boundary, or acceptance truth must be rewritten or rechecked.
@@ -63,10 +65,10 @@ Use `framework/lifecycle/recovery.md` for the actual process-file deletion and n
 1. `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, and `truth_incomplete` return affected candidate units to `unit_check`.
 2. `gate_missing` returns affected candidate units to `unit_check`.
 3. `plan_drift` and `implementation_deviation` are handled agent-internally; no SpecFlow command reroute is needed.
-5. `evidence_incomplete` returns affected candidate units to `unit_verify`.
-6. `stable_verify_invalid` routes affected stable units to `unit_stable_verify`.
-7. Stable units invalidated by `binding_drift` or `rule_drift` route to `unit_stable_verify` without rewriting stable truth.
-8. Stable truth changes that require a new unit version route through `unit_fork:{unit}`.
+4. `evidence_incomplete` returns affected candidate units to `unit_verify`.
+5. `stable_verify_invalid` routes affected stable units to `unit_stable_verify`.
+6. Stable units invalidated by `binding_drift` or `rule_drift` route to `unit_stable_verify` without rewriting stable truth.
+7. Stable truth changes that require a new unit version route through `unit_fork:{unit}`.
 
 ## Stable Unit Release Handoff
 
@@ -78,8 +80,8 @@ When an already-existing stable unit version is published:
 
 ## Rule Sync Handoff
 
-Rule-governance flows hand affected consumers to `framework/governance/rules/rule_sync.md`.
-`rule_sync` must either prove every affected consumer is current or apply fallback routing through this file and `framework/lifecycle/recovery.md`.
+Rule-governance flows notify `framework/governance/rules/rule_sync.md` of changed rule refs.
+`rule_sync` computes affected consumers from rule refs and current-layer unit frontmatter, then applies fallback routing through this file and `framework/lifecycle/recovery.md`.
 
 ## Removed Scenario Lifecycle
 

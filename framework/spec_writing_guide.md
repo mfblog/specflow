@@ -135,6 +135,8 @@ acceptance_item_set:
 | `verification_method` | yes | How to verify (e.g. "Go test for demo behavior") |
 | `pass_condition` | yes | What constitutes a pass |
 | `not_runnable_yet` | yes | `yes` or `no` |
+| `not_runnable_yet_reason` | recommended | Reason the item is not yet runnable; required when `not_runnable_yet: yes` |
+| `target` | recommended | The behavior subject or protocol this item targets (e.g. API endpoint, module boundary, protocol name); used in `acceptance_behavior_fingerprint` calculation |
 | `evidence_requirements` | recommended | List of minimum evidence types needed (e.g. `automated_test_pass`, `integration_test_pass`, `old_code_deleted`, `no_remaining_refs`) |
 | `affects.files` | recommended | Implementation files that must be verified as part of this item's scope |
 | `affects.appendices` | recommended | Appendix names that must be checked |
@@ -165,9 +167,11 @@ Each unit appendix must:
 When a stable unit with appendix files is forked to candidate, every stable appendix `s_unit_{unit}_{name}.md` must have a corresponding candidate appendix `c_unit_{unit}_{name}.md`.
 The candidate may have additional candidate appendices.
 
+**Evidence appendix promotion restriction:** Evidence appendix files referenced by `evidence_appendix_ref` record observed behavior (traceability data) and are not durable behavior truth. They must not be promoted to stable truth as behavior-correctness claims during `unit_promote` (tooling removes all candidate appendix files during promotion cleanup, structurally preventing evidence appendix survival into the stable layer). The `evidence_appendix_ref` field is a candidate-only concept; stable units must not carry `evidence_appendix_ref` frontmatter. See `framework/lifecycle/unit_promote.md` for promotion write rules and `framework/candidate_intent.md` for evidence appendix semantics.
+
 ## 8. Process Snapshots
 
-Candidate check, plan, and verify process files must include:
+Candidate check and verify process files must include:
 
 1. `unit_appendix_snapshot`
 2. `unit_snapshot`

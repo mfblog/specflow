@@ -83,7 +83,24 @@ func Close(opts Options) (Result, error) {
 			return Result{}, fmt.Errorf("%s %q is not registered in docs/specs/_status.md", opts.ObjectType, opts.Object)
 		}
 		if before.NextCommand != opts.Command {
-			return Result{}, fmt.Errorf("status next command mismatch: actual=%s expected=%s", before.NextCommand, opts.Command)
+			// unit_check may close when Next Command is unit_verify — this
+			// handles spec re-validation during the implementation phase
+			// (Next Command=unit_verify, Notes=pending_impl). The state
+			// transition table already handles all outcomes correctly:
+			//   pass         → unit_verify (no net change)
+			//   fix_required → unit_check  (valid regression)
+			if opts.Command == "unit_check" && before.NextCommand == "unit_verify" {
+				if !strings.Contains(before.Notes, "pending_impl") {
+					return Result{}, fmt.Errorf("unit_check re-validation requires Notes=pending_impl: actual Notes=%q", before.Notes)
+				}
+			} else if opts.Command == "unit_stable_verify" && before.ActiveLayer == "stable" && before.NextCommand != "unit_promote" {
+				// unit_stable_verify may close for stable units regardless of
+				// Next Command, per status.md "Valid Next Commands" allows
+				// semantics — provided Next Command is not unit_promote.
+				// The transition table handles all outcomes correctly.
+			} else {
+				return Result{}, fmt.Errorf("status next command mismatch: actual=%s expected=%s", before.NextCommand, opts.Command)
+			}
 		}
 	}
 
@@ -480,7 +497,7 @@ func unitStableVerifyTransition(opts Options, current statusfile.ObjectStatus) t
 	case "aligned":
 		return withNextAndValidationDecision(current, "unit_fork", "stable_verify", opts.Outcome)
 	case "small_repair_required", "evidence_incomplete", "truth_rejudge_required":
-		return withNext(current, "unit_stable_verify")
+		return withNext(current, "unit_fork")
 	case "controlled_repair_required":
 		if opts.CandidateIntent != "repair" {
 			return transition{}

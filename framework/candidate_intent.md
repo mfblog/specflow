@@ -9,7 +9,9 @@
 | `change` | The candidate layer intends to change the stable layer's behavior, dependencies, rule binding, acceptance, or implementation expectations |
 | `repair` | The candidate layer preserves the stable layer's expected behavior, fixing missing/outdated/malformed/insufficient truth |
 
-`unit_fork` must write `candidate_intent`.
+`unit_fork` must write `candidate_intent`. When `evidence_appendix_ref` is not `none`, the evidence appendix file referenced by that field must be created before or during the `unit_fork` writeback (see `framework/spec_writing_guide.md` Section 7 for appendix format and ownership). The evidence appendix records observed implementation behavior as traceability evidence, not as durable behavior truth.
+
+`unit_new` does not write `candidate_intent` — it creates the first candidate truth with no stable-layer parent to relate to. Write `source_basis` per the Onboarding Source Decision in `framework/operations/entry_routing.md`; `candidate_intent` is not required for `unit_new`.
 
 ## Change Candidate
 

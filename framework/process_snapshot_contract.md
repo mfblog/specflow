@@ -34,7 +34,7 @@ Check and verify process YAML must identify the unit and command gate:
 object_type: unit
 object_ref: {unit}
 gate: unit_check|unit_verify
-decision: pass
+decision: {decision}  # unit_check advancing outcome is 'pass'; unit_verify advancing outcome is 'ready_to_promote'
 allow_next: true|false
 next_command: unit_verify|unit_promote|none
 truth_layer_ref: candidate
@@ -42,6 +42,7 @@ truth_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 truth_version_ref: c_unit_{unit}@x.y.z
 truth_fingerprint: {fingerprint}
 acceptance_behavior_fingerprint: {fingerprint}
+acceptance_item_set: [list of item ids]
 unit_appendix_snapshot: none | list
 unit_snapshot: none | list
 rule_snapshot: none | list
@@ -64,7 +65,7 @@ object_ref: {unit}
 gate: unit_stable_verify
 decision: aligned|controlled_repair_required|controlled_change_required|small_repair_required|evidence_incomplete|truth_rejudge_required
 allow_next: true|false
-next_command: unit_fork|unit_stable_verify
+next_command: unit_fork
 blocking_summary: none|{summary}
 coverage_summary: {summary}
 truth_layer_ref: stable
@@ -72,6 +73,11 @@ truth_file_ref: docs/specs/units/stable/s_unit_{unit}.md
 truth_version_ref: s_unit_{unit}@x.y.z
 truth_fingerprint: {fingerprint}
 acceptance_behavior_fingerprint: {fingerprint}
+acceptance_item_set: [list of item ids]
+acceptance_item_evidence_matrix: [item_status_entries]
+unit_appendix_snapshot: none | list
+unit_snapshot: none | list
+rule_snapshot: none | list
 repository_mapping_snapshot: present
 implementation_surface_refs: {refs}
 evidence_refs: {refs}
@@ -220,12 +226,14 @@ Process validation failure maps to these layers:
 
 The legal fallback commands are:
 
-1. `truth_layer` -> candidate truth repair or `unit_check` (optional)
-2. `gate_layer` -> candidate truth repair or `unit_check` (optional)
+1. `truth_layer` -> `unit_check`
+2. `gate_layer` -> `unit_check`
 3. `evidence_layer` -> `unit_verify`
 4. `stable_verify` validation failure -> `unit_stable_verify`
 
 `freshness_layer` is not a fallback layer. It means the process file may be reusable after independent freshness review, so tooling must not delete process files or advance `_status.md` from that result alone.
+
+See `framework/lifecycle/recovery.md` for the cleanup procedure after fallback classification.
 
 ## 5. Rejection
 
@@ -434,7 +442,7 @@ Refresh rules:
 4. if an item is `clear` and one of its input files is missing, mark that item `stale`
 5. update `last_updated_at`
 
-If truth drift, binding drift, fallback cleanup, unit fork, unit promote, rule release, or project-instance migration invalidates the target candidate's prior check state, the old `_check_work` file must be deleted or marked unusable by the owning cleanup path.
+If truth drift, binding drift, fallback cleanup, unit fork, unit promote, rule change or rule release, or project-instance migration invalidates the target candidate's prior check state, the old `_check_work` file must be deleted or marked unusable by the owning cleanup path.
 
 ### 10.5 Tooling Boundary
 
@@ -469,13 +477,13 @@ At minimum, validation must rebuild:
 6. `unit_snapshot` from current unit `unit_refs`
 7. `rule_snapshot` from stable global rules and current unit `rule_refs`
 8. `acceptance_item_set` from the current unit truth for check, verify, and stable verify files
-9. `acceptance_item_plan_coverage` against the current candidate acceptance item ids for active plan files
-10. `stable_candidate_diff_refs`, `implementation_gap_refs`, `planned_change_scope`, `package_constraint_review`, `package_constraint_refs`, `package_constraint_summary`, and `retirement_targets` shape, ids, target fields, package refs, and acceptance item refs for active plan files
+9. `acceptance_item_plan_coverage` against the current candidate acceptance item ids for active plan files (agent self-check — plan files are agent-internal artifacts; see lines 19-20 and 86-87)
+10. `stable_candidate_diff_refs`, `implementation_gap_refs`, `planned_change_scope`, `package_constraint_review`, `package_constraint_refs`, `package_constraint_summary`, and `retirement_targets` shape, ids, target fields, package refs, and acceptance item refs for active plan files (agent self-check — plan files are agent-internal artifacts; see lines 19-20 and 86-87)
 11. `active_plan_file_ref` and `active_plan_fingerprint` for candidate verify files
 12. `acceptance_item_evidence_matrix` status and evidence refs against the current acceptance item ids for verify and stable verify files
 13. `retirement_evidence_matrix` against the current active plan retirement target ids for candidate verify files
 14. `package_delta_verification` against the current active plan `planned_change_scope` ids for candidate verify files
-15. independent evaluation receipt fields for check, active plan, verify, and stable verify files
+15. independent evaluation receipt fields for check, verify, and stable verify files
 16. acceptance behavior fingerprint and conditional freshness reuse receipt fields when text drift is being reused
 
 Deterministic validation rule:
@@ -487,7 +495,7 @@ Deterministic validation rule:
 <tooling-root>/bin/specflowctl-<os>-<arch> snapshot validate-process --repo-root <repo-root> --object-type unit --object <unit> --process check|plan|verify|stable_verify
 ```
 
-3. `plan` validates only `docs/specs/_plans/active/{unit}.md`
+3. `plan` validates only `docs/specs/_plans/active/{unit}.md` (optional agent self-check — plan files are agent-internal artifacts, not lifecycle gate inputs)
 4. `docs/specs/_plans/draft/{unit}.md` is not a downstream-consumable handoff file
 5. `_check_work` is validated by `specflowctl process check-work-validate`, not by `snapshot validate-process`
 6. `stable_verify` validates only `docs/specs/_stable_verify_result/unit/{unit}.md`

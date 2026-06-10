@@ -8,7 +8,9 @@ When formal unit governance is needed, the standard lifecycle is:
 unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promote
 ```
 
-- `unit_check` is a required pre-verify quality gate that validates whether candidate truth is clear enough
+- `unit_check` is a quality gate that validates whether candidate truth is clear enough. It can be
+  re-run as a spec re-validation when candidate truth changes during the implementation phase
+  (`Next Command=unit_verify`, `Notes=pending_impl`) — see `unit_check.md` precondition exception.
 - `unit_impl` is a non-command phase between check and verify — the agent implements the candidate truth
 - `unit_verify` verifies whether the implementation satisfies the candidate truth
 - `unit_promote` promotes the verified candidate truth to stable truth
@@ -25,12 +27,12 @@ Both exact command matching (`command:{unit}`) and natural language are supporte
 | `unit_init:{unit}` | Existing capability → first stable truth |
 | `unit_new:{unit}` | Brand new → first candidate truth |
 | `unit_fork:{unit}` | Stable truth → candidate change round |
-| `unit_check:{unit}` | Candidate truth quality check |
+| `unit_check:{unit}` | Candidate truth quality check (re-runnable during implementation for spec re-validation) |
 | `unit_verify:{unit}` | Verify implementation vs candidate truth |
 | `unit_promote:{unit}` | Candidate truth → stable truth |
 | `unit_stable_verify:{unit}` | Check implementation vs stable truth |
 
-`unit_impl:{unit}` is a trigger command — it provides implementation context to the agent without changing lifecycle state. It is valid when `Next Command=unit_verify`. After implementation, run `unit_verify:{unit}`. There is no `command close` for `unit_impl`.
+`unit_impl:{unit}` is a trigger command — it provides implementation context to the agent without changing lifecycle state. It is valid when `Next Command=unit_verify`. After implementation, run `unit_verify:{unit}`. There is no `command close` for `unit_impl`. If spec issues are found during implementation, fix the spec and re-run `unit_check:{unit}` for re-validation (see `unit_check.md`).
 
 ## Command Execution Rules
 
@@ -64,6 +66,8 @@ Each lifecycle Context Card contains the following sections:
 2. **What This Step Does** — the goal and execution content of the current command
 3. **Not Allowed** — hard boundaries
 4. **How to End** — pass/fail/blocked results and the next step
+
+**Exception — `unit_impl`:** As a trigger command that does not change lifecycle state, produce process evidence, or execute a `command close`, `unit_impl` may adjust this layout: its Input section may be preceded by a Condition paragraph (pre-execution prerequisite), and its How to End section uses prose instead of an outcome table (there is only one terminal outcome with no command close). The four standard section labels remain the same for discoverability.
 
 `framework/...` paths in a Context Card are relative to the framework root:
 - Installed project: `framework/...` → `specflow/framework/...`

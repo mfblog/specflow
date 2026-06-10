@@ -24,7 +24,7 @@ The candidate verify pass snapshot records:
 7. independent evaluation receipt fields
 8. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
 
-When an acceptance item declares `affects` in its definition, the evidence matrix item should include `scope_verification` recording the verification result for each affected file, appendix, rule, and dependency. All scope items must pass for the acceptance item to be promotion-ready.
+When an acceptance item declares `affects` in its definition, the evidence matrix item must include `scope_verification` recording the verification result for each affected file, appendix, rule, and dependency. All scope items must pass for the acceptance item to be promotion-ready.
 
 When the agent created an internal plan and chooses to reference it, these optional fields may also appear:
 
@@ -37,7 +37,7 @@ When present, package delta evidence requires every item to use `result: pass` w
 
 Each executable acceptance item in `acceptance_item_evidence_matrix` must record `status: pass` and durable `evidence_refs` before promotion readiness can close.
 Items marked `not_runnable_yet: yes` in current truth must record `status: not_runnable_yet`.
-Generic test success, missing old strings, present new files, or present new fields are not sufficient by themselves for semantic replacement evidence.
+Generic test success, missing old strings, renamed files, or present new fields are not sufficient by themselves for semantic replacement evidence.
 
 These files are process evidence, not behavior truth.
 

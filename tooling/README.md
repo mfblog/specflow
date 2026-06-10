@@ -216,8 +216,9 @@ Rules:
 6. each `/api/snapshot` request rebuilds the displayed snapshot from disk before returning data.
 7. the server does not watch files and does not expose a server-sent event stream.
 8. `/api/source` may return source text only from allowed truth and support files under the requested repository root.
-9. the hidden build-fingerprint query command is reserved for freshness checks.
-10. the snapshot includes `candidate_relations`, which is rebuilt from the same read-only relation calculation used by `specflowctl relation`.
+9. `/api/source-diff` returns diff hunks between the candidate and stable versions of a Spec document. Request parameter: `path` (repo-relative path to the Spec file). Returns a list of hunks with added/removed lines. Implemented at `/tooling/internal/reader/server.go` and consumed by the front-end diff panel.
+10. the hidden build-fingerprint query command is reserved for freshness checks.
+11. the snapshot includes `candidate_relations`, which is rebuilt from the same read-only relation calculation used by `specflowctl relation`.
 
 Reader front-end rules:
 
@@ -419,7 +420,10 @@ Execution rules:
 
 1. without `--apply`, the command prints `status_before`, `status_after`, `input_validation_action`, `validation_action`, and `cleanup_action` without changing files
 2. with `--apply`, the command writes `_status.md` and executes the success or fallback cleanup required by the fixed transition table
-3. the current `_status.md` `Next Command` must equal `--command`, except for creation commands that register a missing object row
+3. the current `_status.md` `Next Command` must equal `--command`, except for:
+   - creation commands that register a missing object row
+   - `unit_check` when `Next Command` is `unit_verify` and `Notes` contains `pending_impl` (re-validation during implementation phase)
+   - `unit_stable_verify` when `Active Layer` is `stable` and `Next Command` is not `unit_promote` (per status.md allows semantics — stable verify is a check command, not a progression command)
 4. pass outcomes for check, plan, and verify gates validate the required process file before status progression
 5. controlled stable-verify outcomes require the matching `--candidate-intent`
 6. promotion recovery requires `--stable-before yes|no`

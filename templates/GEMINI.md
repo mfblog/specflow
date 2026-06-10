@@ -7,6 +7,11 @@ This repository uses specFlow to manage development work. specFlow maintains pro
 
 A request enters the specFlow flow only when it changes documented project truth, or when current documents are unclear. Not every code edit changes a spec document.
 
+### Key Terms
+
+- **Context Card** — The command-specific lifecycle file in `framework/lifecycle/` (e.g. `unit_check.md`) that tells the executor what files to read, what writes are allowed, and when the command must stop. Only one Context Card is active at a time.
+- **command close** — A deterministic tooling operation (`specflowctl command close`) that records the result of a completed lifecycle command, advances `Next Command` in `_status.md` according to fixed transition rules, and produces or cleans up process evidence files. The executor does not manually edit `_status.md`.
+
 ---
 
 ## ⚠️ HARD RULES — You MUST obey these before any action
@@ -32,7 +37,7 @@ You MUST NOT modify spec files, rule truth, lifecycle state, or repository mappi
 ### HARD RULE 4: Stop When Unclear
 
 You MUST stop and report status when any of these are true:
-- `_status.md` is empty (no units registered).
+- `_status.md` is empty (no units registered). Exception: if the user asks to create the first unit, route to `unit_new:{unit}` per `framework/operations/entry_routing.md` Onboarding Source Decision instead of stopping.
 - No Next Command is recorded for the target unit.
 - The path to a required framework file cannot be resolved.
 - The request spans multiple units and the correct lifecycle path is ambiguous.
@@ -91,6 +96,8 @@ unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promo
 | `unit_promote:{unit}` | Candidate truth → stable truth |
 | `unit_stable_verify:{unit}` | Check implementation vs stable truth |
 | `unit_advance:{unit}` | Read `framework/advance_policy.md` first |
+
+Read `framework/operations/entry_routing.md` before any other routing action — it is the sole entry point for both exact-command routing (to the matching Context Card) and natural-language routing.
 
 ### 6. Rule Locations
 

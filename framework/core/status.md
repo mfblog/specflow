@@ -11,8 +11,18 @@ The status table uses this header:
 ```
 
 - `Object Type` must be `unit`.
+- `Stable` and `Candidate` columns accept `yes` or `no`.
 - `Active Layer` is `stable` or `candidate`.
 - `Next Command` is the only legal lifecycle command to run next.
+
+Legal (Stable, Candidate, Active Layer) combinations:
+| Stable | Candidate | Active Layer | Meaning |
+|--------|-----------|-------------|---------|
+| `yes` | `no` | `stable` | Pure stable unit (no active candidate round) |
+| `no` | `yes` | `candidate` | New candidate unit (not derived from a stable unit) |
+| `yes` | `yes` | `candidate` | Candidate derived from a stable unit (via `unit_fork`) |
+
+All other combinations are illegal and must be rejected.
 
 ## Valid Next Commands
 
@@ -25,6 +35,8 @@ The active unit lifecycle commands are:
 5. `unit_verify`
 6. `unit_promote`
 7. `unit_stable_verify`
+
+For units with Active Layer=stable, `unit_stable_verify` may also be selected as a check command regardless of the recorded Next Command, provided that Next Command is not `unit_promote`. This is the "allows" semantics referenced by the unit_stable_verify Context Card precondition.
 
 ## Notes Field — Write Constraints
 

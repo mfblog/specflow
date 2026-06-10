@@ -1,9 +1,9 @@
 # Entry Routing
 
-This file is the only natural-language entry route into active SpecFlow owners.
+This file is the sole entry point into active SpecFlow lifecycle Context Cards, rule-governance files, repository-mapping files, and guidance skill files (collectively, "SpecFlow owners"). Its Exact Commands section maps exact command forms to their Context Cards; its Natural Language Routes section resolves requests that do not match an exact command form.
 `framework/...` refs are framework-root relative. Installed project entry files define the physical framework root; the specFlow source repository resolves them under local `framework/...`.
 
-Use this file after the installed entry addendum has identified the request as specFlow work and no exact command directly owns the whole request.
+Use this file after the installed project's entry file (the `CLAUDE.md`, `AGENTS.md`, or `GEMINI.md` installed at the project root — see "Entry File Registration" below) has identified the request as specFlow work.
 Requests limited to implementation-side work must satisfy the Implementation Classification section of this file before proposing or editing implementation-side files when no exact lifecycle Context Card is already active.
 Requests that already ask for formal truth creation or change, no formal truth, behavior, protocol, boundary, acceptance, rule, ownership, lifecycle, lifecycle state, Next Command, stable/candidate state, unit phase, repository mapping, guidance, skipping `_status.md` or owner checks, or a custom reconciliation, audit, alignment, or gap-review route through this file before implementation-change classification.
 Requests that may change field meaning, schema fields, output fields, fixture fields, contract-like log fields, or downstream compatibility route through this file unless the user explicitly limits the work to internal non-semantic implementation support.
@@ -39,13 +39,14 @@ unit_promote:{unit}
 unit_stable_verify:{unit}
 ```
 
+`unit_init:{unit}`, `unit_new:{unit}`, and `unit_fork:{unit}` share one Context Card at `framework/lifecycle/unit_init_new_fork.md`.
 `unit_impl:{unit}` is a trigger command. It does not change lifecycle state or advance `_status.md`. Valid only when `Next Command=unit_verify`. Routes to `framework/lifecycle/unit_impl.md`.
 
-`unit_plan:{unit}` is a removed command. If the user explicitly requests `unit_plan:{unit}`, report that it is no longer a SpecFlow-governed command and that the agent handles planning internally. Route to `unit_impl:{unit}` trigger or `unit_verify:{unit}` depending on current lifecycle state.
+`unit_plan:{unit}` is a removed command. If the user explicitly requests `unit_plan:{unit}`, report that it is no longer a SpecFlow-governed command and that the agent handles planning internally. Route to `unit_impl:{unit}` trigger when `Next Command=unit_verify`. For all other `Next Command` values, route to the Context Card matching the current `Next Command`, reporting that planning is handled internally during the implementation phase.
 
-After a lifecycle Context Card is selected, read only its Required Context. Enter On-Demand Expansions only when their trigger appears.
+After a lifecycle Context Card is selected, read only its Input section. Enter On-Demand References sections only when their trigger appears.
 
-If the request exactly matches a rule governance entry, read the matching rule file:
+If the request exactly matches a rule governance entry, read `framework/governance/rule_system.md` first, then the matching rule file:
 
 1. `rule_new` -> `framework/governance/rules/rule_new.md`
 2. `rule_extract` -> `framework/governance/rules/rule_extract.md`
@@ -82,13 +83,15 @@ Do not guess ownership from directory shape alone.
 Route to unit lifecycle when the request creates, changes, validates, plans, implements, verifies, promotes, or checks one independently governed engineering responsibility.
 The responsibility may be local or end-to-end. If the user describes a complete workflow result, model it as a unit whose responsibility is that complete result.
 
-For a natural-language unit lifecycle request, select one existing lifecycle command and its Context Card before any lifecycle write:
+For a natural-language unit lifecycle request, select one existing lifecycle command and its Context Card before any lifecycle write.
+Rules are evaluated top to bottom. When a later rule's specific conditions are met, it overrides the general principle in rule 2:
 
 1. If no formal unit row exists, read the Onboarding Source Decision section of this file. Select `unit_init:{unit}` only when an existing accepted capability already satisfies every direct first-stable onboarding condition. Select `unit_new:{unit}` when the request creates new candidate truth or when a historical capability cannot qualify for direct first-stable onboarding. If neither selection can be proven from current truth and the request, stop and report the missing decision or prerequisite.
 2. If a formal unit row exists, its recorded `Next Command` is the only legal lifecycle command. Select the matching existing command form and Context Card only when the requested work can legally be performed at that recorded next step. If the user asks for a later lifecycle result, report the recorded prerequisite step instead of skipping it.
 3. A stable unit request that changes formal unit truth selects `unit_fork:{unit}` only when the recorded `Next Command` is `unit_fork`; determine `candidate_intent` through `framework/candidate_intent.md` and any current valid stable-verify constraint required by the entry Context Card.
-4. A candidate truth repair selects `unit_check:{unit}` only when the recorded `Next Command` is `unit_check` and the repair stays inside that card's allowed writes. Other candidate progression selects only the Context Card matching the recorded `Next Command`.
-5. A request limited to implementation-side edits must first satisfy the implementation-only route below. It enters a lifecycle Context Card only when the Implementation Classification section of this file requires an existing lifecycle command as the next legal step.
+4. A request to check whether current implementation conforms to stable-layer truth selects `unit_stable_verify:{unit}` when the target unit's `Active Layer` is `stable`. Confirm `Next Command` is not `unit_promote` (see `framework/core/status.md` "Valid Next Commands" for `unit_stable_verify` check-command semantics).
+5. A candidate truth repair selects `unit_check:{unit}` only when the recorded `Next Command` is `unit_check` and the repair stays inside that card's allowed writes. Other candidate progression selects only the Context Card matching the recorded `Next Command`.
+6. A request limited to implementation-side edits must first satisfy the implementation-only route below. It enters a lifecycle Context Card only when the Implementation Classification section of this file requires an existing lifecycle command as the next legal step.
 
 After selecting a lifecycle command from natural language, read `framework/lifecycle/overview.md` and that command's matching Context Card. Do not invent a command alias, enter a generic unit lifecycle without an active Context Card, or ask the user to choose an internal command name.
 
@@ -133,6 +136,10 @@ Registered entry index files: `AGENTS.md`, `GEMINI.md`, `CLAUDE.md`.
 
 All registered entry index files must contain exactly one managed block (`==SPECFLOW:BEGIN==` to `==SPECFLOW:END==`). Content outside that block belongs to the host repository. All registered entry files must keep their managed blocks consistent.
 
+The managed block's governance rules take precedence over host content in the same entry file. If host content contradicts the managed block, the executor must follow the managed block and, if the contradiction is material, report it as a governance concern.
+
+**Exception — source_repo layout:** The specFlow source repository (`source_repo` layout) develops the framework itself and does not use specFlow governance for its own development. Its root entry files operate as host-content-only without a managed block. For `source_repo` layout only, the managed block requirement is waived. See `framework/lifecycle/overview.md` for `source_repo` / `installed_project` layout distinction.
+
 If managed blocks differ after edits, choose one file as source and run:
 ```text
 specflowctl entry sync --source <registered-entry-file>
@@ -170,7 +177,7 @@ A request touches formal behavior truth when it changes: unit goal/boundary, ext
 4. Existing stable + large repair → `unit_fork:{unit}` with `candidate_intent=repair`
 5. Existing candidate + truth change → write candidate truth first, then `unit_check:{unit}`
 6. Small `implementation_only` on stable → continue within stable truth, then `unit_stable_verify:{unit}`
-7. `implementation_only` on candidate → continue only when `Next Command=unit_verify` allows
+7. `implementation_only` on candidate → route to `unit_impl:{unit}` when `Next Command=unit_verify` allows
 
 ## Onboarding Source Decision
 

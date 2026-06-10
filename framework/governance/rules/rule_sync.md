@@ -94,6 +94,7 @@ If any deleted ref still exists as a Rule file or still has a current-layer unit
    - include every current-layer unit when a selected rule ref or rule id resolves to a stable global rule
    - include units that currently bind a changed exact rule ref
    - include units that currently bind a changed rule id when the change applies across that id's current relevant refs
+   - include candidate units whose process snapshots (check or verify result) contain a reference to a changed or removed rule ref, detected via stale-evidence reconciliation
    - include units explicitly retargeted by a same-round stable landing
    - do not include a sibling rule layer only because it has the same `rule_id`, except for the stable global rule all-unit path above
 7. Apply only the proven execution-local exceptions:
@@ -109,7 +110,16 @@ If any deleted ref still exists as a Rule file or still has a current-layer unit
 
 If repository truth is insufficient, return control to `rule_escape` without performing fallback cleanup. A caller that already mutated truth must follow its own post-mutation recovery rule or caller-owned blocked transition before rerouting. If the caller has no such post-mutation rule, it must stop before mutation instead of leaving mutated truth without an owner.
 
-## 6. Fallback Result
+## 6. Stop Conditions
+
+`rule_sync` terminates through one of the following conditions:
+
+| Condition | Description | Next Action |
+|-----------|-------------|-------------|
+| **No-impact close** | `deleted_rule_refs` is the only input and verification proves the ref is absent from `docs/specs/rules/**` and from all current-layer unit `rule_refs` (see Procedure step 5) | Close with `impact_sync` fallback not required. Report affected candidate units `none`, affected stable units `none`. |
+| **Insufficient repository truth** | Repository mapping truth is missing or conflicting, or current-layer unit truth cannot be read (see Procedure step 10) | Return control to `rule_escape`. The caller must follow its own post-mutation recovery rule or caller-owned blocked transition before rerouting. |
+
+## 7. Fallback Result
 
 Affected candidate units fall back according to the reason proven by `framework/governance/impact_sync.md`.
 
@@ -117,7 +127,35 @@ For rule truth or binding drift, the candidate unit falls back to `unit_check`.
 
 Affected stable units route to `unit_stable_verify`.
 
-## 7. Rejection
+## 8. Release-Version Auto-Fork
+
+When a rule version is released (via `specflowctl rule release-version`), stable units that bind the old rule ref and have `Next Command=unit_fork` are automatically forked to candidate with `candidate_intent=change`.
+
+### Auto-Fork Procedure
+
+1. Detect stable units that bind the old rule ref and have `Next Command=unit_fork`.
+2. Create a candidate copy with bumped patch version.
+3. Copy all stable appendices to candidate with frontmatter rewrites and Markdown document ref rewrites.
+4. Remove stale process artifacts from previous lifecycle rounds.
+5. Invoke command close with `unit_fork:candidate_created`.
+
+### Governance Rules
+
+1. Auto-fork applies only to stable units with `Next Command=unit_fork`. Units in other lifecycle states are not auto-forked.
+2. Stable appendices are copied — not moved — so stable truth remains intact for non-auto-forked consumers.
+3. The auto-forked candidate inherits the old rule ref's behavior truth; the unit specification is not rewritten.
+4. After auto-fork, the candidate unit follows the standard `unit_check` → `unit_verify` → `unit_promote` lifecycle.
+5. The `rule_sync` impact handoff runs after writeback, so downstream invalidation and fallback rules apply.
+
+### Tooling Entry
+
+```text
+specflowctl rule release-version --rule-id <id> --from-ref <old-ref> --to-ref <new-ref>
+```
+
+See `tooling/internal/rulesync/release.go` for implementation details.
+
+## 9. Rejection
 
 `rule_sync` must reject:
 
@@ -127,7 +165,7 @@ Affected stable units route to `unit_stable_verify`.
 4. `object-type=scenario`
 5. any attempt to use `bound_objects` as consumer truth
 
-## 8. Output Contract
+## 10. Output Contract
 
 The output must report:
 

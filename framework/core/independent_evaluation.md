@@ -12,7 +12,7 @@ specFlow does not create harness commands, reviewer sessions, tokens, or task sc
 Before an executor asks for independent evaluation of an advancing gate, the executor must generate a request file:
 
 ```text
-<tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack <reviewer_pack> [--process check|plan|verify|stable_verify]
+<tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack <reviewer_pack> [--process check|verify|stable_verify]
 ```
 
 The request file is written under:

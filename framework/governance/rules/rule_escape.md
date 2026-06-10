@@ -33,10 +33,10 @@ Before routing or checkpointing, read only the smallest durable truth needed for
 4. `framework/operations/entry_routing.md` (User-Facing Output section)
 5. `framework/lifecycle/recovery.md` when control returned after mutation
 6. `docs/specs/_status.md` when existing units are named or affected
-6. the current-layer unit main Specs needed to judge unit-local truth, binding, or writeback legality
-7. the relevant rule files
-8. `docs/specs/repository_mapping.md` when path ownership or rule object registration matters
-9. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
+7. the current-layer unit main Specs needed to judge unit-local truth, binding, or writeback legality
+8. the relevant rule files
+9. `docs/specs/repository_mapping.md` when path ownership or rule object registration matters
+10. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
