@@ -24,6 +24,8 @@ Before executing this step, you MUST verify:
 
 If all checks pass: proceed to "What This Step Does" below.
 
+## What This Step Does
+
 Check current implementation consistency with stable-layer truth.
 Output should be `aligned` (consistent), `controlled_repair_required` (repair needed), `controlled_change_required` (change needed), `small_repair_required` (small non-behavior repair), `truth_rejudge_required` (stable-layer truth re-evaluation needed), or `evidence_incomplete` (insufficient evidence). See the How to End table for advancing vs non-advancing outcomes.
 

@@ -30,6 +30,8 @@ Before executing this step, you MUST verify:
 
 If all checks pass: proceed to "What This Step Does" below.
 
+## What This Step Does
+
 Check the following questions. All must pass for a `pass` result:
 
 1. Is the unit's goal and responsibility scope clear?

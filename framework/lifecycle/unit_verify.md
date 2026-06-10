@@ -26,6 +26,8 @@ Before executing this step, you MUST verify:
 
 If all checks pass: proceed to "What This Step Does" below.
 
+## What This Step Does
+
 1. **Functional verification**: Verify each acceptance item is satisfied with inspectable evidence
 2. **Scope verification**: Verify the `affects` declarations (files, appendices, rules, dependencies) are correctly implemented
 3. **Retirement verification** (replacement scenario): Verify old code paths are fully removed with no remaining references

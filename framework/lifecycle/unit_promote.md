@@ -25,6 +25,8 @@ Before executing this step, you MUST verify:
 
 If all checks pass: proceed to "What This Step Does" below.
 
+## What This Step Does
+
 1. Write candidate truth (main Spec + non-evidence appendices) as stable-layer truth. Evidence appendix files (referenced by `evidence_appendix_ref`) must not be promoted to stable truth as behavior-correctness claims. Strip candidate-only frontmatter fields (`candidate_intent`, `evidence_appendix_ref`, `source_basis`, `repair_basis`, and any command-specific fields) when writing stable truth. Rewrite Markdown document references within the promoted spec body and promoted non-evidence appendices from candidate paths (`c_unit_*`) to stable paths (`s_unit_*`).
 2. Update lifecycle state and refs
 3. Clean up candidate-layer evidence files

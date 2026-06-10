@@ -28,6 +28,8 @@ Before executing this step, you MUST verify:
 
 If all checks pass: proceed to "Requirements Per Command" below.
 
+## What This Step Does
+
 ### unit_init
 The existing accepted capability must be explicit enough to write stable truth without choosing new behavior, acceptance, or ownership.
 If the status table is empty: STOP, report that no units are registered — `unit_init` requires an existing capability to onboard.

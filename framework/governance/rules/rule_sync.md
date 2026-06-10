@@ -116,6 +116,7 @@ If repository truth is insufficient, return control to `rule_escape` without per
 
 | Condition | Description | Next Action |
 |-----------|-------------|-------------|
+| **Normal completion** | Impact computed from the in-scope rule refs and current-layer unit truth (see Procedure steps 1–9). The affected unit set and resolved exceptions are packaged into `impact_sync` input. | Hand the fixed result to `framework/governance/impact_sync.md` for downstream unit fallback. |
 | **No-impact close** | `deleted_rule_refs` is the only input and verification proves the ref is absent from `docs/specs/rules/**` and from all current-layer unit `rule_refs` (see Procedure step 5) | Close with `impact_sync` fallback not required. Report affected candidate units `none`, affected stable units `none`. |
 | **Insufficient repository truth** | Repository mapping truth is missing or conflicting, or current-layer unit truth cannot be read (see Procedure step 10) | Return control to `rule_escape`. The caller must follow its own post-mutation recovery rule or caller-owned blocked transition before rerouting. |
 

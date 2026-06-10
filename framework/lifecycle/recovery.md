@@ -14,7 +14,7 @@ Layer classification maps a failure to the layer whose evidence is invalidated. 
 |---|---|---|---|
 | `truth_layer` | `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete` | check checklist, check result (if any), verify result | `unit_check` |
 | `gate_layer` | `gate_missing` | check checklist, check result (if any) | `unit_check` |
-| `evidence_layer` | `evidence_incomplete`, `stable_verify_invalid` | verify result or stable-verify result | `unit_verify` or `unit_stable_verify` |
+| `evidence_layer` | `evidence_incomplete`, `stable_verify_invalid` | verify result or stable verify result | `unit_verify` or `unit_stable_verify` |
 
 Only reason codes in this table are valid for fallback cleanup.
 Do not introduce alternate names for the same invalidated layer.
@@ -80,9 +80,9 @@ After a command or rule flow closes successfully:
 
 | Mode | Deleted | Preserved |
 |------|---------|-----------|
-| `unit_init` | Process artifacts (check_work, check result, plan, verify result, stable_verify result) for the target unit | Stable unit truth (main Spec + appendices), candidate unit truth, stable promotion summary |
+| `unit_init` | Process artifacts (check_work, check result, verify result, stable_verify result) and agent-internal artifacts (plan) for the target unit | Stable unit truth (main Spec + appendices), candidate unit truth, stable promotion summary |
 | `unit_new` | Process artifacts for the target unit | Stable unit truth, candidate unit truth, stable promotion summary |
-| `unit_fork` | Process artifacts (check_work, check result, plan, verify result, stable_verify result) for the target unit | Stable unit truth (main Spec + appendices) unchanged, candidate unit truth (main Spec + appendices) intact |
+| `unit_fork` | Process artifacts (check_work, check result, verify result, stable_verify result) and agent-internal artifacts (plan) for the target unit | Stable unit truth (main Spec + appendices) unchanged, candidate unit truth (main Spec + appendices) intact |
 | `unit_promote` | Candidate main Spec, candidate appendix files, process artifacts | Stable unit truth (main Spec + appendices) written by promotion, stable promotion summary at `docs/specs/_verify_result/stable/unit/{unit}.md` |
 
 The stable promotion summary is written by tooling (`command close --apply`) before cleanup begins, so it is preserved at a separate path that cleanup globs do not match. See `framework/process_snapshot_contract.md` Section 8 for the summary format and `tooling/internal/commandclose/commandclose.go` for implementation details.
