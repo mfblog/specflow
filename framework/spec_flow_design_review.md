@@ -12,7 +12,7 @@ It answers five questions:
 1. whether the main governance design solves real repository problems rather than self-created process problems
 2. whether the object boundaries, lifecycle order, and gate structure still fit real work shape
 3. whether the governance chain creates real downstream control instead of only adding formal steps
-4. whether the design remains operable for normal users and executors without excessive mental or operational burden
+4. whether the design remains operable for its governing executor type (LLM agents for lifecycle execution, humans for framework maintenance and governance decisions) without excessive or disproportional cost
 5. whether the repository may still claim that the current `specFlow` design is worth using as designed
 
 Plain exact `spec_flow_design_review` starts the full-scope design-baseline review.
@@ -20,7 +20,7 @@ It uses the run-state, baseline slice table, dynamic risk slice table, score sta
 
 This flow does not replace `spec_flow_review`.
 `spec_flow_review` answers whether the governance rule set still closes coherently.
-`spec_flow_design_review` answers whether that governance design is still reasonable and usable for humans.
+`spec_flow_design_review` answers whether that governance design is still reasonable and usable for its intended executor types (LLM agents as primary lifecycle executors, humans as governance maintainers and decision-makers).
 
 This flow does not review business truth by default.
 It reviews the design of the governance mechanism that governs business truth.
@@ -357,7 +357,7 @@ Every `spec_flow_design_review` must answer and score exactly these eight questi
 3. whether lifecycle steps are necessary and ordered for real progress
 4. whether each gate creates real downstream gain
 5. whether the mechanism rewards correct behavior instead of surface compliance
-6. whether the mechanism's mental load is sustainably manageable
+6. whether the mechanism's instruction design supports reliable executor orientation and following
 7. whether the operational cost matches the size of the work
 8. whether the overall control gained is worth the overall cost
 
@@ -382,15 +382,17 @@ Allowed score values are fixed:
 
 For Question 6, the score basis must explicitly evaluate:
 
+**Executor-type preamble:** The primary lifecycle executors are LLM agents. For LLM executors, "instruction design" cost is measured in: context-window consumption by governance instructions; self-containment (whether each phase carries complete instructions without requiring cross-phase memory); rule explicitness (whether rules are stated directly rather than implied); and stop-condition clarity (whether the executor can deterministically identify when to stop). Document length and chain-reading per se are negligible costs for LLMs. The real concerns are instruction ambiguity, missing rules that force the LLM to guess, and cross-file dependency chains that increase round-trips and risk inconsistency.
+
 a. whether Agent-facing instruction files (Context Cards, entry files) are self-contained or require chain-linked reading across multiple files to obtain essential phase instructions
 b. whether each phase delivers a self-contained instruction pack or assumes the executor inherits context and decisions from prior phases
 c. whether the design expects the executor to hold governance context across lifecycle phases versus reloading it fresh per phase
 
 For Question 7, the score basis must explicitly evaluate:
 
-a. whether the design uses the minimum file surface needed for each phase or requires the executor to read files that contain only meta-governance content not relevant to the current action
+a. whether the design uses the minimum file surface needed for each phase or requires the executor to read files that contain only meta-governance content not relevant to the current action. For LLM executors, file surface cost is primarily context-window consumption rather than reading effort. Unnecessary file inclusions dilute relevant instructions and reduce available context for code and user input, but reading a few extra paragraphs has negligible cost on its own.
 b. whether rules that could be tool-enforced are implemented in `specflowctl` or left as Agent-discipline-only
-c. whether the design has chain-reading requirements (read file A → A links to file B → B links to file C) for essential instructions
+c. whether the design has chain-reading requirements (read file A → A links to file B → B links to file C) for essential instructions. For LLM executors, the primary cost of chain-reading is not reading effort but: (1) each file hop adds a tool-calling round-trip, (2) cross-file instruction inconsistency is harder to detect, (3) interrupted chains (missing file, changed path) cause execution failures. Self-contained instruction packs avoid these costs entirely.
 
 Rule-weight classification is part of design judgment for Questions 6, 7, and 8.
 It does not create another review flow, another score group, or another output formula.
@@ -505,7 +507,7 @@ When reflecting this check into Questions 6, 7, and 8:
 2. Question 7 judges whether route specificity and diagnostic allowance scale the entry cost with work risk instead of forcing every request through the full governance chain or a hard stop.
 3. Question 8 judges whether the required startup reading buys repeatable execution control that is worth its cost.
 
-`routine_work_path_check` is mandatory when any of Questions 6, 7, or 8 is expected to score below `4` because of reading cost, rule weight, routine-work cost, full-chain path cost, mandatory read chains, heavy gate structure, or pre-action reading burden.
+`routine_work_path_check` is mandatory when any of Questions 6, 7, or 8 is expected to score below `4` because of instruction loading cost, rule weight, routine-work path cost, full-chain execution overhead, mandatory cross-file navigation, heavy gate structure, or pre-action instruction overhead that reduces available context for substantive work.
 
 When triggered, `routine_work_path_check` must review these representative paths before any `pass` or `pass-with-optimization` conclusion:
 
@@ -587,32 +589,32 @@ Question-specific scoring rules:
    - whether the design makes it easy to surface uncertainty instead of hiding it
    - whether the easiest way to pass the mechanism still aligns with real downstream quality
 6. Question 6 must judge:
-   - whether a normal user or executor can tell where they are
-   - whether they can tell the next step and why it is the next step
-   - whether the official documents, rather than author memory, carry the needed orientation
-   - whether entry documents explain the basic meaning of `specFlow` before relying on internal command or lifecycle terms
-   - whether the entry control chain lets an executor identify the current route, next owner, and stop point from official entry documents
-   - whether the in-scope rules force a normal user or executor to learn avoidable internal mechanism detail before they can understand current position, next action, and reason
-   - whether `judgment_guidance`, `example_or_wording`, and `duplicate_or_restatement` content is kept small enough that it does not hide the governing hard rules
-   - whether pre-action reading is limited to `action_before_hard_rule` material and does not hide the current next action behind rules that could safely be consumed on demand or checked after action
+   - whether the executor can determine the current phase and position from official documents alone, without relying on inherited context from prior phases
+   - whether the next step and the rationale for that step are directly derivable from the current phase's instruction pack
+   - whether the official documents, rather than external reasoning or assumptions, carry the needed orientation
+   - whether entry documents explain the basic meaning of `specFlow` and its core terms before relying on internal command or lifecycle concepts
+   - whether the entry control chain lets an executor identify the current route, next owner, and stop point from official entry documents alone
+   - whether in-scope rules contain avoidable internal mechanism detail that could be removed or relocated without reducing the governing rules' clarity — for LLM executors, superfluous text competes with relevant instructions for context window rather than causing "learning burden"
+   - whether `judgment_guidance`, `example_or_wording`, and `duplicate_or_restatement` content is kept small enough that it does not obscure the governing hard rules
+   - whether pre-action instruction loading is limited to `action_before_hard_rule` material, so that the executor's context window is occupied primarily by rules that prevent unsafe writes, truth drift, or missed verification — rules that could safely be consumed on demand or checked after action should not pre-occupy context during the action phase
 7. Question 7 must judge:
    - whether small changes have a smaller legal path than large changes
-   - whether routine work avoids full-chain over-processing
+   - whether routine work avoids full-chain over-processing (fewer gates, fewer tool-calling round-trips, less context-window consumption)
    - whether the mechanism's operational steps scale with actual work size
    - whether code-only or implementation-only work has a smaller legal path when written truth already constrains one safe implementation result
    - whether entry pre-action controls scale with work risk instead of sending every request through the same full-chain path
    - whether `hard_rule` requirements are limited to cases where durable truth, ownership, lifecycle, implementation permission, rule truth, system truth, or end-to-end verification risk actually requires them
    - whether a specialized structure is optional or conditional when the current work does not need that structure for safe closure
-   - whether routine work avoids mandatory full-chain pre-reading when an `on_demand_rule_lookup` or `post_action_check` path would preserve the same safety
+   - whether routine work avoids mandatory full-chain pre-execution loading when an `on_demand_rule_lookup` or `post_action_check` path would preserve the same safety — for LLM executors, "pre-reading" cost is primarily context-window consumption and round-trip latency, not reading fatigue
 8. Question 8 must judge:
    - whether the control gained is visible and repeatable
-   - whether the documentation, learning, and execution cost stay proportionate to that gain
+   - whether the documentation maintenance, executor instruction overhead, and lifecycle execution cost stay proportionate to that gain — for LLM executors, the relevant cost model includes context-window consumption by governance instructions, tool-calling round-trips per lifecycle phase, and the risk of cross-file instruction inconsistency; it does not include "learning curve" or "document length" as significant factors
    - whether the mechanism still looks worth maintaining over time
-   - whether entry reading cost prevents unsafe mutation without pushing legitimate code-only work into a truth-change or full-lifecycle path
-   - whether the entry control chain's reading cost produces repeatable control over authority resolution, pre-mutation permission, and drift reclassification
+   - whether entry instruction pre-loading (the cost of loading governance context before action) prevents unsafe mutation without pushing legitimate code-only work into a truth-change or full-lifecycle path
+   - whether the entry control chain's instruction cost produces repeatable control over authority resolution, pre-mutation permission, and drift reclassification
    - whether each heavy gate or required read produces a distinct control gain that is not already produced by a smaller rule or owner file
-   - whether each required pre-action read produces a distinct control gain that cannot be preserved by `on_demand_rule_lookup` or `post_action_check`
-   - whether the recommended repair for excess rule weight is the smallest correct one: keep as `action_before_hard_rule`, downgrade to `on_demand_rule_lookup`, convert to `post_action_check`, keep only as `example_or_wording`, merge or link as `duplicate_or_restatement`, or remove or narrow an `overweight_rule`
+   - whether each required pre-action instruction load produces a distinct control gain that cannot be preserved by `on_demand_rule_lookup` or `post_action_check`
+   - whether the recommended repair for excess rule instruction weight is the smallest correct one: keep as `action_before_hard_rule`, downgrade to `on_demand_rule_lookup`, convert to `post_action_check`, keep only as `example_or_wording`, merge or link as `duplicate_or_restatement`, or remove or narrow an `overweight_rule`
 
 When Question 6, 7, or 8 scores below `4`, the review must classify each cited weakness as one of:
 
