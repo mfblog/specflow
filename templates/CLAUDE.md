@@ -1,5 +1,5 @@
-## specFlow Governance
 ==SPECFLOW:BEGIN==
+## specFlow Governance
 
 ### What specFlow Is
 
