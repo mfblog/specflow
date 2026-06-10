@@ -2608,8 +2608,7 @@ function todoItems() {
       const nextCommand = String(object.next_command || "").trim();
       const type = todoTypeForObject(object, nextCommand);
       const sources = todoSourcesForObject(object, nextCommand);
-      // unit_impl is no longer a valid Next Command — kept as safety check
-      const commandText = nextCommand === "unit_impl" ? "" : `${nextCommand}:${object.id}`;
+      const commandText = `${nextCommand}:${object.id}`;
       return {
         id: `todo:${object.kind}:${object.id}`,
         type,
@@ -3180,8 +3179,6 @@ function reviewNextCommandText(item) {
   const command = String(item && item.nextCommand ? item.nextCommand : "").trim();
   const objectID = String(item && item.object && item.object.id ? item.object.id : "").trim();
   if (!command || !objectID) return "";
-  // unit_impl is a lifecycle state, not a user command — do not offer it as copyable text
-  if (command === "unit_impl") return "";
   return `${command}:${objectID}`;
 }
 
