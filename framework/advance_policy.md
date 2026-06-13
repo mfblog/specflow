@@ -76,7 +76,19 @@ The executor must stop when:
 7. a referenced stable unit is outdated and the dependent unit must be revalidated
 8. candidate relation preflight says the target is blocked by another current candidate, a candidate Rule, or a candidate progression cycle
 
-## 5. Completion
+## 5. Recovery Path
+
+After any stop in Section 4, the executor must:
+1. Report the blocking condition to the user in plain language, including the target unit and the specific stop condition that triggered.
+2. If process evidence was invalidated, apply `framework/lifecycle/recovery.md` before any reroute.
+3. Return to `framework/operations/entry_routing.md` unless the stop condition names an explicit resume owner or the user provides a direct next action.
+
+The stop-report must include:
+- the target unit and stop condition reason
+- what the user must resolve before advance can continue
+- where the executor resumes after resolution
+
+## 6. Completion
 
 Automatic advance is complete at the promotion-ready stop when the unit row records:
 

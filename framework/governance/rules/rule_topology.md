@@ -57,6 +57,8 @@ Before any write, read:
 10. `framework/lifecycle/unit_init_new_fork.md` when any affected stable unit would require binding writeback
 11. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the topology change may become a repository-wide default rule
 
+**Layout-aware path note:** Paths in this section are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+
 ## 4. Procedure
 
 1. Confirm that the request is a topology change or terminal-state decision, not simple rule authoring, extraction, binding, or sync.
@@ -79,7 +81,12 @@ Before any write, read:
 13. Do not write consumer lists or `bound_objects` into rule files.
 14. Update `docs/specs/repository_mapping.md` in the same round when the topology plan changes the rule object map.
 15. Run `rule_sync` after any rule-file write, unit `rule_refs` write, or rule object-map write.
-    - when the only remaining effect for a touched bound shared Rule is terminal deletion after Step 11 has already proven that no current-layer unit consumes the deleted exact rule ref, run the `rule_sync` terminal no-impact path with that exact deleted ref
+    Execution-local inputs for `rule_sync` (general topology-change case):
+    - `rule_refs`: all changed rule refs (split, merged, renamed, replaced, or newly created refs)
+    - `rule_ids`: all touched rule ids
+    - `units`: affected candidate unit set (units whose `rule_refs` or body explanation were rewritten)
+    - `deleted_rule_refs`: only when the effect is terminal deletion after Step 11 has already proven that no current-layer unit consumes the deleted exact rule ref
+    - when the only remaining effect for a touched bound shared Rule is terminal deletion, run the `rule_sync` terminal no-impact path with that exact `deleted_rule_ref`
     - that no-impact path may close only when affected candidate units are `none`, affected stable units are `none`, and no current-layer unit `rule_refs` still contains the deleted ref
     - if the deleted ref still has a current-layer consumer, the topology round must not claim no-impact closure; it must route through the normal affected-unit reconciliation or recover before rerouting
 

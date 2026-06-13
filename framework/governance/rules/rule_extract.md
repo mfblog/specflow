@@ -42,6 +42,8 @@ Before any write, read:
 
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
+**Layout-aware path note:** Paths in this section are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+
 ## 3. Procedure
 
 1. Confirm that the request is extraction of existing unit-local formal truth.
@@ -63,6 +65,11 @@ Bound shared rule consumer discovery must use only current-layer unit frontmatte
 14. If the resulting rule remains intentionally unbound, write intentional unbound-retention fields in the target rule; otherwise reject closure.
 15. Do not write consumer lists or `bound_objects` into any rule file.
 16. Run `rule_sync` after any rule-file write or unit `rule_refs` write.
+    Execution-local inputs for `rule_sync`:
+    - `rule_refs`: the new candidate rule refs and any refs changed by rewriting affected unit `rule_refs`
+    - `rule_ids`: the touched rule ids (newly created rule + any modified sibling rule ids)
+    - `units`: the writeback-required unit subset (units whose `rule_refs` were rewritten)
+    - `deleted_rule_refs`: none (extraction does not delete rules)
 
 If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `framework/lifecycle/recovery.md` before returning to `framework/operations/entry_routing.md`.
 

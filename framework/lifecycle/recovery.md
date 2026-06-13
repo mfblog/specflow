@@ -14,7 +14,7 @@ Layer classification maps a failure to the layer whose evidence is invalidated. 
 |---|---|---|---|
 | `truth_layer` | `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete` | check checklist, check result (if any), verify result | `unit_check` |
 | `gate_layer` | `gate_missing` | check checklist, check result (if any) | `unit_check` |
-| `evidence_layer` | `evidence_incomplete`, `stable_verify_invalid` | verify result or stable verify result | `unit_verify` or `unit_stable_verify` |
+| `evidence_layer` | `evidence_incomplete`, `stable_verify_invalid` | verify result or stable verify result | `unit_verify` if `evidence_incomplete`; `unit_stable_verify` if `stable_verify_invalid` |
 
 Only reason codes in this table are valid for fallback cleanup.
 Do not introduce alternate names for the same invalidated layer.
@@ -31,6 +31,8 @@ When candidate truth changes, bound rule references change, repository mapping c
 4. rerun impact sync when the change may affect other units.
 
 If a candidate main Spec changes after `unit_check`, the check result (if any) may need revalidation. Verify evidence may still be valid if the spec change does not affect acceptance items or verification scope.
+
+When `unit_verify` reports `spec_issue` (candidate Spec needs repair without implementation change — see `framework/lifecycle/unit_verify.md` How to End), only the spec requires repair. The verify evidence remains valid for the unchanged acceptance items. Do not delete verify evidence. Apply only `gate_layer` cleanup (check-work and check-result), then set next command to `unit_check`.
 
 ## Stable Unit Recovery
 
@@ -56,6 +58,8 @@ If promotion has already mutated stable truth but closure is incomplete:
 
 Rule-governance flows must capture a recovery baseline before the first file mutation.
 The baseline must include the files that would need to be restored or revalidated if the flow cannot close.
+
+The baseline is an execution-local checklist (not checked into repository truth) listing: (1) file paths of every rule file about to be mutated, (2) a SHA-256 fingerprint of each file before mutation, (3) the current `_status.md` row for any affected unit. It is not consumed by any lifecycle gate.
 
 If repository truth becomes insufficient before mutation, stop and route through `framework/governance/rules/rule_escape.md`.
 

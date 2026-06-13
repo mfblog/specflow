@@ -65,7 +65,7 @@ object_ref: {unit}
 gate: unit_stable_verify
 decision: aligned|controlled_repair_required|controlled_change_required|small_repair_required|evidence_incomplete|truth_rejudge_required
 allow_next: true|false
-next_command: unit_fork
+next_command: unit_fork | unit_stable_verify  # unit_fork for advancing decisions (aligned, controlled_repair_required, controlled_change_required); unit_stable_verify for non-advancing decisions (small_repair_required, evidence_incomplete, truth_rejudge_required)
 blocking_summary: none|{summary}
 coverage_summary: {summary}
 truth_layer_ref: stable
@@ -182,7 +182,7 @@ freshness_review_input_refs: freshness_text_drift_reuse;{request_file};{durable_
 freshness_review_findings: none
 ```
 
-`acceptance_behavior_fingerprint` is the normalized SHA-256 of the full formal acceptance item behavior fields: `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `pass_condition`, `not_runnable_yet`, and `not_runnable_yet_reason`.
+`acceptance_behavior_fingerprint` is the normalized SHA-256 of the full formal acceptance item behavior fields: `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `pass_condition`, `not_runnable_yet`, and `not_runnable_yet_reason`. When a recommended field (such as `target`) is absent from an acceptance item, the normalized hash MUST use an empty string as its value.
 Advancing check (when run), verify, and stable verify evidence must record it.
 Evidence without this field uses the old snapshot schema and is not current valid advancing evidence until it is migrated or recreated.
 It must not be treated as accepted `text_drift` reuse.
@@ -336,14 +336,15 @@ Each stable verify result must record:
 
 1. `object_type`, `object_ref`, `gate`, `decision`, `allow_next`, and `next_command`
 2. `blocking_summary` and `coverage_summary`
-3. stable truth ref, version ref, and fingerprint
-4. `repository_mapping_snapshot`
-5. `unit_appendix_snapshot`, `unit_snapshot`, and `rule_snapshot`
-6. `acceptance_item_set`
-7. `acceptance_item_evidence_matrix`
-8. `implementation_surface_refs`
-9. `evidence_refs`
-10. independent evaluation receipt fields
+3. `acceptance_behavior_fingerprint`
+4. stable truth ref, version ref, and fingerprint
+5. `repository_mapping_snapshot`
+6. `unit_appendix_snapshot`, `unit_snapshot`, and `rule_snapshot`
+7. `acceptance_item_set`
+8. `acceptance_item_evidence_matrix`
+9. `implementation_surface_refs`
+10. `evidence_refs`
+11. independent evaluation receipt fields
 
 For `decision: aligned`, every executable acceptance item must have evidence status `pass`.
 Items marked `not_runnable_yet: yes` in stable truth must use evidence status `not_runnable_yet`.

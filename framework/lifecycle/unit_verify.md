@@ -22,7 +22,8 @@ Before executing this step, you MUST verify:
 2. [ ] If `_status.md` is empty (no units registered): STOP, report that no units are registered, and suggest `unit_new` as the first step.
 3. [ ] Read `docs/specs/units/candidate/c_unit_{unit}.md` — confirm candidate truth and acceptance items are available.
 4. [ ] Confirm the unit's implementation and test files exist and are accessible.
-5. [ ] If any check fails: STOP, report what is missing, and do not proceed.
+5. [ ] Compare the current candidate spec fingerprint against `truth_fingerprint` stored in `docs/specs/_check_result/unit/{unit}.md` (see `framework/process_snapshot_contract.md` Section 6 for fingerprint calculation). If the fingerprint changed after the last `unit_check` pass, STOP: the spec was modified without re-validation. Route through `unit_check:{unit}` for re-validation first. If `_check_result/unit/{unit}.md` does not exist (absent in re-validation flow), treat as spec-modified — the candidate truth has never passed check in this session; route through `unit_check:{unit}` first.
+6. [ ] If any check fails: STOP, report what is missing, and do not proceed.
 
 If all checks pass: proceed to "What This Step Does" below.
 

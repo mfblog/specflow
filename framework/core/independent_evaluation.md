@@ -15,6 +15,8 @@ Before an executor asks for independent evaluation of an advancing gate, the exe
 <tooling-root>/bin/specflowctl-<os>-<arch> evaluation request --repo-root <repo-root> --object-type unit --object <unit> --pack <reviewer_pack> [--process check|verify|stable_verify]
 ```
 
+`<tooling-root>` resolves to `tooling/` in `source_repo` layout and `specflow/tooling/` in `installed_project` layout. See `framework/tooling_execution_policy.md` Section 2 for the complete layout resolution rules.
+
 The request file is written under:
 
 ```text

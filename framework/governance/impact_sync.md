@@ -28,6 +28,8 @@ Do not infer consumers from implementation directories alone.
 
 ## Consumer Discovery
 
+When `impact_sync` is called from `rule_sync` via the Rule Sync Handoff path (see below), it must accept the pre-computed affected-unit set as authoritative. It must not re-derive consumers from `rule_refs` in that case, because `rule_sync` already computed the affected set from the execution-local inputs that the caller proved. Independent consumer re-derivation is required only when `impact_sync` is triggered directly by a non-rule change (repository mapping update, stable unit version change, or governance-flow fallback).
+
 Rule consumers are derived from current-layer unit frontmatter:
 
 1. `g_rule_` files apply to every current-layer unit unless the global rule itself defines an explicit exception.
@@ -82,6 +84,24 @@ When an already-existing stable unit version is published:
 
 Rule-governance flows notify `framework/governance/rules/rule_sync.md` of changed rule refs.
 `rule_sync` computes affected consumers from rule refs and current-layer unit frontmatter, then applies fallback routing through this file and `framework/lifecycle/recovery.md`.
+
+## Stop Conditions
+
+`impact_sync` terminates through one of the following conditions:
+
+| Condition | Description | Next Action |
+|-----------|-------------|-------------|
+| **Normal completion** | Fallback routing applied to all affected units. All consumer discovery, freshness classification, and fallback routing steps are complete. | Return control to the caller (`rule_sync`, or direct governance trigger). |
+| **No affected units** | Consumer discovery found zero affected units. | Close with no further action. Report `affected_units: none`. |
+
+## Output Contract
+
+After impact_sync completes, it produces:
+
+1. `affected_candidate_units` — list of candidate units and their applied fallback reason codes
+2. `affected_stable_units` — list of stable units and their applied fallback reason codes
+3. `next_command_updates` — per-unit Next Command changes applied through `framework/lifecycle/recovery.md`
+4. `rule_escape_escalations` — any units that required `framework/governance/rules/rule_escape.md` escalation
 
 ## Removed Scenario Lifecycle
 

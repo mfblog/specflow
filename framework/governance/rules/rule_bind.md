@@ -43,6 +43,8 @@ Before any write, read:
 
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
+**Layout-aware path note:** Paths in this section are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+
 ## 3. Procedure
 
 1. Confirm that the target unit truly depends on the target rule truth.
@@ -61,6 +63,11 @@ Bound shared rule consumer discovery must use only current-layer unit frontmatte
 11. Remove unbound-retention fields from any touched bound shared rule that still has formal current consumers after the binding change.
 12. Do not write consumer lists or `bound_objects` into touched rule files.
 13. Run `rule_sync` after any unit `rule_refs` write or touched rule-file write.
+    Execution-local inputs for `rule_sync`:
+    - `rule_refs`: the exact refs added, removed, or retargeted in this bind round
+    - `rule_ids`: the touched rule ids
+    - `units`: the target unit plus any unit whose binding was read to prove the consumer set
+    - `deleted_rule_refs`: the removed rule refs only when terminal deletion is proven by current repository truth
 14. Ensure target unit candidate process state falls back after the candidate main Spec changes. If the `rule_sync` handoff does not include that target unit, use the candidate fallback rules from `framework/governance/impact_sync.md` and `framework/lifecycle/recovery.md`.
 
 If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `framework/lifecycle/recovery.md` before returning to `framework/operations/entry_routing.md`.

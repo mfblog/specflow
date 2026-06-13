@@ -90,7 +90,7 @@ The `Notes` field may carry a lifecycle phase value to indicate the unit's curre
 
 - `pending_impl` — unit_check has passed; implementation has not started or is in progress. `Next Command` is `unit_verify`.
 
-This value is informational only. It does not affect routing or `command close` validation.
+This value is used by tooling for (a) re-validation context card state classification (differentiating `StateCandidatePending` from `StateCandidateVerify`) and (b) `unit_check` re-validation gate enforcement during the implementation phase. It is not a routing token for `Next Command` selection.
 
 ## Update Rules
 

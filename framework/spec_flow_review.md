@@ -213,6 +213,48 @@ Governance rules are enforced by tooling (`specflowctl`) rather than by agent-op
 Agent-operability review must cover execution clarity, content economy, formal rule voice, and self-containment under Section 2.12 — whether Agent-facing instruction files deliver essential phase instructions inline rather than through chain-linked reading.
 A pass claim for an in-scope governance file must not ignore an applicable agent-operability failure.
 
+### 2.8.1 Card Output Verification
+
+> **Scope:** This section applies to `spec_flow_review:full` (deep audit) only. Scoped review does not perform full card generation and verification.
+
+The `specflowctl context card` command generates a per-object context card that serves as the primary agent-facing execution guide. A governance mechanism that depends on card content for agent operability must verify that the generated cards are correct and self-contained for every reachable state.
+
+The reviewer must set up a representative test project (see `framework/governance/card_review_setup.md`) under `_governance_review/` (gitignored), rebuild `specflowctl` from the current source (reusing a stale binary invalidates the review), then generate and verify cards for every reachable state.
+
+For unit cards, every state must be verified: `stable_idle`, `stable_verify`, `candidate_check`, `candidate_pending_impl`, `candidate_verify`, `candidate_promote`, `unregistered`. For rule cards: `stable_bound`, `stable_global`, `candidate_bound`, `candidate_global`, `candidate_new_bound`, `candidate_new_global`, `rule_unregistered`.
+
+The following properties must hold on every generated card:
+
+1. **Content self-containment** — the GUIDANCE section must contain the complete lifecycle procedure from the corresponding `framework/lifecycle/unit_*.md` file (with `{unit}` replaced). The card must not require the agent to chain-read additional files to understand the current state and next action. The GUIDANCE text must never be hardcoded in Go — it must be read from the lifecycle file at runtime.
+2. **Heading hierarchy** — headings from the lifecycle file must be demoted by at least one level (`#` → `##`, `##` → `###`) so they nest under `## GUIDANCE` without creating competing top-level sections. Inlined file content in Core Truth must use code blocks so internal headings do not affect the document structure.
+3. **Inline vs reference balance** — only `_status.md` and `repository_mapping.md` may be inlined in Core Truth as full content. All other files (specs, rules, appendices, framework documents) must be listed as paths in the References section. The card must not exceed ~200 lines for a typical unit.
+4. **Placeholder resolution** — no raw `{unit}` or other template markers may remain unresolved in the output. Every `{unit}` reference in the lifecycle file must be replaced with the actual unit name.
+5. **No noise entries** — the card must not show `(missing)` for files that are optional for the current state (e.g., stable spec for a new candidate unit without a stable baseline). Optional files that do not exist must be silently omitted.
+6. **Section completeness** — all of STATUS, GUIDANCE, Core Truth, References, WRITES, READS, BLOCKED, CLOSE must be present.
+7. **State classification** — the STATUS section must match the object's actual `_status.md` row. `Stable=yes Candidate=no Active=stable Next=unit_fork` must produce `stable_idle`.
+8. **Guidance correctness** — the GUIDANCE section must use the lifecycle file that matches the current state (stable_idle → `unit_init_new_fork.md`, candidate_check → `unit_check.md`, etc.).
+
+If any of these properties fails for any in-scope object, the mechanism must not pass the review until the defect is fixed. The reviewer must not substitute a sample-based check for per-object verification.
+
+This standard applies to both unit cards and rule cards. For rule cards, additionally verify:
+9. **Impact completeness** — the IMPACTS section must list every unit that references the rule in its `rule_refs` (for bound rules) or every current-layer unit (for global rules). Missing or extra entries are defects.
+10. **Consumer count correctness** — the correct number of affected units must be shown, matching the IMPACTS table row count.
+
+### 2.8.2 Evaluation Request Verification
+
+> **Scope:** This section applies to `spec_flow_review:full` (deep audit) only.
+
+The `specflowctl evaluation request` command generates a reviewer handoff file. A governance mechanism that depends on evaluation requests must verify that every reviewer pack produces a correct, minimal request.
+
+The reviewer must generate requests for every pack (`unit_check_pass`, `unit_verify_ready_to_promote`, `unit_stable_verify_advancing`, `freshness_text_drift_reuse`) and verify:
+
+1. **Content sourcing** — `Evaluation Questions`, `Allowed Inputs`, and `Forbidden Inputs` must be parsed from `framework/core/independent_evaluation.md` at runtime, not hardcoded in Go.
+2. **Subject as path only** — the Review Subject section must list artifact paths only; full file contents must not be inlined in the request.
+3. **Standards as path only** — framework standard files must be listed as paths, not inlined; Evaluation Questions carry the actionable criteria.
+4. **No stale placeholders** — `{unit}` must be replaced with the actual unit name in Allowed/Forbidden Inputs.
+5. **Section completeness** — all of Request, Reviewer Role, Review Goal, Allowed Inputs, Forbidden Inputs, Review Subject, Review Evidence Refs, Evaluation Questions, Reviewer Output, Executor Receipt, and Trigger Instruction must be present.
+6. **No Review Standard Refs section** — the Review Standard Refs section must not appear; standard files are listed in Review Subject instead.
+
 ### 2.9 Tooling Boundary
 
 Governance tooling may execute only mechanical work already decided by governance rules, prior human judgment, or explicit caller parameters.
@@ -357,7 +399,7 @@ The default scope includes:
 1. framework governance rules
    - `<framework-root>/*.md`
    - `<framework-root>/core/*.md`
-   - `<framework-root>/governance/*.md`
+   - `<framework-root>/governance/**/*.md` (recursive, includes subdirectories such as `rules/`)
    - `<framework-root>/operations/*.md`
 2. command rules
    - active command contracts: `<framework-root>/lifecycle/*.md`

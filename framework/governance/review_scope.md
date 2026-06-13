@@ -52,6 +52,7 @@ Severity and blocking may appear in a status line after the story.
 Evidence and trace details should appear after the reader can already understand the problem.
 
 Severity uses `framework/severity_policy.md`.
+The `severity` and `blocking` fields in every scoped finding together satisfy the Section 6 baseline from `framework/severity_policy.md` (background, what happened, impact, recommended fix, why minimal fix, blocking). The story format covers background, what happened, and impact; the explicit fields cover severity, blocking, evidence, and recommended fix.
 Severity describes harm level; it does not replace explicit blocking status.
 `P0` and `P1` are normally blocking.
 `P2` and `P3` are normally non-blocking unless the finding explains why the current scope must stop.

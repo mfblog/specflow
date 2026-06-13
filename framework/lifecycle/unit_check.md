@@ -10,7 +10,7 @@
 - Stable-layer truth and rule files referenced by the current unit
 - `framework/process_snapshot_contract.md` (for check result file format and validation rules)
 - `framework/spec_writing_guide.md` (for unit Spec format and source field format)
-- `docs/specs/_check_result/unit/{unit}.md` (for re-validation fingerprint comparison)
+- `docs/specs/_check_result/unit/{unit}.md` — present in re-validation flow; absent in standard flow (first check)
 
 ## Pre-Execution Self-Check (MANDATORY)
 
@@ -42,6 +42,7 @@ Check the following questions. All must pass for a `pass` result:
 6. If `candidate_intent: change` + `source_basis: replacement`, is there at least one `verification_type: inspectable` item with `evidence_requirements` including `old_code_deleted` and `no_remaining_refs`?
 7. Are all `affects` scopes correct (must not be empty without reason)?
 8. If `evidence_appendix_ref` is not `none`, does the referenced appendix file exist with valid frontmatter and correct `unit`/`layer` values?
+9. If `source_basis` is `existing_implementation` or `mixed`, does `evidence_appendix_ref` reference an existing evidence appendix file with valid frontmatter and correct unit/layer values? (This closes the `source_basis`–to–evidence-appendix consistency check: a claim of existing-implementation source status must be backed by a real, valid evidence appendix.)
 
 ## Not Allowed
 

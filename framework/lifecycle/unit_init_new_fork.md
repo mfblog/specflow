@@ -16,12 +16,16 @@ This file covers three entry commands: `unit_init:{unit}`, `unit_new:{unit}`, an
 - `framework/spec_writing_guide.md` (for unit Spec format, source field format, and appendix format)
 - `framework/candidate_intent.md` (for candidate_intent determination rules)
 - `framework/process_snapshot_contract.md` (for process evidence file format if applicable)
+- `framework/operations/entry_routing.md` (for Onboarding Source Decision — `unit_new` uses this to determine `source_basis` and whether `unit_init` applies)
 
 ## Pre-Execution Self-Check (MANDATORY)
 
 Before executing this step, you MUST verify:
 
-1. [ ] Read `docs/specs/_status.md` — confirm the target unit is in the expected state for this entry command.
+1. [ ] Read `docs/specs/_status.md` — confirm the target unit is in the expected state for the entry command:
+     - `unit_new`: confirm the target unit does NOT yet have a row in `docs/specs/_status.md`
+     - `unit_init`: confirm the status table is NOT empty and the target unit is not yet registered
+     - `unit_fork`: confirm the target unit has a stable row and `Next Command` is `unit_fork`
 2. [ ] Read the required Input files listed above — confirm they exist and are readable.
 3. [ ] For `unit_fork`: confirm stable-layer unit truth exists at `docs/specs/units/stable/s_unit_{unit}.md`.
 4. [ ] If any check fails: STOP, report what is missing, and do not proceed.

@@ -13,6 +13,7 @@ Before triggering, confirm from `docs/specs/_status.md` that `Next Command` is `
 - Agent implements independently based on candidate truth
 - Conversational iteration during implementation is normal
 - The agent is free to determine how to implement
+- After creating or modifying implementation files, update `docs/specs/repository_mapping.md` with the implementation paths and set `registration_state=landed`
 
 ## If Spec Issues Are Found During Implementation
 
@@ -40,6 +41,7 @@ Agent may read these as needed during implementation:
 
 - Modify lifecycle state (`_status.md`)
 - Implement behavior beyond the unit's acceptance items
+- Modify candidate spec (`docs/specs/units/candidate/c_unit_{unit}.md`) or appendix files without running `unit_check:{unit}` for re-validation
 
 ## How to End
 

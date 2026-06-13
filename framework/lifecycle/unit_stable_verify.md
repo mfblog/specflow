@@ -49,9 +49,9 @@ Output should be `aligned` (consistent), `controlled_repair_required` (repair ne
 | `aligned` | Implementation matches stable truth | `unit_fork` | command close keeps `Next Command=unit_fork`. Write `_stable_verify_result` at `docs/specs/_stable_verify_result/unit/{unit}.md`. |
 | `controlled_repair_required` | Repair needed | Write `_stable_verify_result` at `docs/specs/_stable_verify_result/unit/{unit}.md`. `unit_fork` with repair intent | command close keeps `Next Command=unit_fork`. |
 | `controlled_change_required` | Change needed | Write `_stable_verify_result` at `docs/specs/_stable_verify_result/unit/{unit}.md`. `unit_fork` with change intent | command close keeps `Next Command=unit_fork`. |
-| `small_repair_required` | Small repair needed, no behavior truth change | Perform the non-behavior repair on implementation files. Then `unit_stable_verify` (re-verify) | command close keeps `Next Command=unit_fork`. `unit_stable_verify` may be re-entered per `framework/core/status.md` "Valid Next Commands" allows semantics. |
-| `truth_rejudge_required` | Stable-layer truth needs re-evaluation | If truth text is valid: supplement interpretation evidence and re-verify. If truth text must change: `unit_fork` with repair intent | command close keeps `Next Command=unit_fork` (no change until durable action is taken). |
-| `evidence_incomplete` | Evidence insufficient | Supplement evidence and re-verify | command close keeps `Next Command=unit_fork`. |
+| `small_repair_required` | Small repair needed, no behavior truth change | Perform the non-behavior repair on implementation files. Then `unit_stable_verify` (re-verify) | command close sets `Next Command=unit_stable_verify` for continued verification. |
+| `truth_rejudge_required` | Stable-layer truth needs re-evaluation | If truth text is valid: supplement interpretation evidence and re-verify. If truth text must change: `unit_fork` with repair intent | command close sets `Next Command=unit_stable_verify` for continued verification. |
+| `evidence_incomplete` | Evidence insufficient | Supplement evidence and re-verify | command close sets `Next Command=unit_stable_verify` for continued verification. |
 
 Close through `command close`.
 Tooling invocation: `specflowctl command close --command unit_stable_verify --object-type unit --object <unit> --outcome <outcome> [--notes <notes>] [--apply]`

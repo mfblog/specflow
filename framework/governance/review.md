@@ -26,6 +26,8 @@ Plain exact `spec_flow_design_review` routes through this file first, then direc
 
 When the entry is exact `spec_flow_review:full`, `spec_flow_review` delegates to `framework/spec_flow_review.md`.
 
+If the entry expression does not match any recognized review entry (`spec_flow_review`, `spec_flow_review:full`, `spec_flow_design_review`), stop and report that the entry is unrecognized. Do not silently fall through to a default or guess the caller's intent.
+
 ## Review Layout
 
 Deep-audit review tooling is layout-aware.
@@ -44,6 +46,8 @@ Supported layouts:
    - project-instance compatibility reviews template bootstrap compatibility and does not require real `docs/specs/` instance files
 
 `specflowctl review ... --layout auto` detects the layout. Callers may pass `--layout installed` or `--layout source` to force one layout.
+
+If `--layout auto` detects both `installed_project` and `source_repo` markers, the review must stop and require an explicit `--layout installed` or `--layout source` argument. Auto-detection must not silently choose one layout.
 
 Review layout applies to exact `spec_flow_review:full` mechanism deep audit and every `spec_flow_design_review`.
 It does not widen ordinary `spec_flow_review` scoped review.

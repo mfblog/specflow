@@ -50,3 +50,5 @@ This is a mechanical operation that does not involve new behavior judgment.
 | `verify_invalid`* | Verify result became invalid between close and apply | Handled by tooling fallback machinery. Sub-types: `truth`, `binding`, `baseline`, `rule`, `gate`, `evidence`. See `recovery.md` for per-type recovery. |
 
 \* `verify_invalid_*` outcomes are handled by the tooling fallback machinery and do not require agent action beyond following recovery.md.
+
+Tooling invocation: `specflowctl command close --command unit_promote --object-type unit --object <unit> --outcome promoted --apply`

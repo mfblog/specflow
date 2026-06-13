@@ -87,7 +87,7 @@ The allowed action families are:
 9. sync
    - align managed content or metadata when the source, target, and writeback contract are already explicit
 10. render
-   - expose a read-only local view derived from already-written truth files without creating, editing, or promoting truth
+    - expose a read-only local view derived from already-written truth files without creating, editing, or promoting truth
 11. work-state maintenance
    - create, validate, refresh, or touch review slice work-state carriers when the adopting owner defines the exact path, fields, statuses, and stale rules under `framework/slice_work_state_protocol.md`
    - create, validate, refresh, or touch the optional `unit_check` checklist when `process_snapshot_contract.md` defines the exact path, fields, statuses, and stale rules

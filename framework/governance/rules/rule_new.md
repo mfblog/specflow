@@ -42,6 +42,8 @@ Before any write, read:
 
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
+**Layout-aware path note:** Paths in this section are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+
 ## 3. Rule Identity
 
 The rule id must use the rule's real scope:
@@ -72,6 +74,10 @@ When a stable sibling already exists, the candidate file must carry the exact in
 10. Do not write consumer lists or `bound_objects` into the rule file.
 11. Update `docs/specs/repository_mapping.md` in the same round when the rule object map changed.
 12. Run `rule_sync` after any rule-file write or rule object-map write.
+    Execution-local inputs for `rule_sync`:
+    - `rule_refs`: the exact candidate ref that was written
+    - `rule_ids`: the target rule id of the newly created or updated rule
+    - `units`: none by default (no binding changes in this flow); pass explicitly only when a writeback-required unit was touched
 
 If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `framework/lifecycle/recovery.md` before returning to `framework/operations/entry_routing.md`.
 
