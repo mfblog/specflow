@@ -190,11 +190,16 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - check whether one current candidate unit is in the ready set
    - print the same relation fields narrowed to the requested object and fail when the target is blocked
 31. `context collect`
-   - collect the required context pack for a lifecycle command
-   - `context collect --flow lifecycle --command <cmd> --object <obj>` collects the minimum durable truth inputs needed before entering the named lifecycle Context Card
-32. `validate write`
-   - validate write permission for a file path under the current lifecycle phase
-   - `validate write --path <path> --phase <phase> [--unit <unit>]` checks whether the executor may write the given path under the active lifecycle constraints recorded in `_status.md`
+    - collect the required context pack for a lifecycle command
+    - `context collect --flow lifecycle --command <cmd> --object <obj>` collects the minimum durable truth inputs needed before entering the named lifecycle Context Card
+32. `context card`
+    - generate a per-object context card from current status and truth files
+    - `context card --object-type unit|rule --object <name> [--repo-root <path>]`
+    - produces a per-state or per-rule card with STATUS, GUIDANCE, WRITES, READS, BLOCKED, and CLOSE sections
+    - this is a render action: read-only, does not modify any project file, does not advance lifecycle state
+33. `validate write`
+    - validate write permission for a file path under the current lifecycle phase
+    - `validate write --path <path> --phase <phase> [--unit <unit>]` checks whether the executor may write the given path under the active lifecycle constraints recorded in `_status.md`
 
 ## Reader Command Surface
 
@@ -501,3 +506,4 @@ The minimal stale-binary recovery and inspection surface remains:
 2. `doctor`
 3. `help`
 4. the internal build-fingerprint query command
+5. `context` subcommands `collect` and `card` — these are read-only render actions that do not modify project files or advance lifecycle state

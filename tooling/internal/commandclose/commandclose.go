@@ -497,7 +497,7 @@ func unitStableVerifyTransition(opts Options, current statusfile.ObjectStatus) t
 	case "aligned":
 		return withNextAndValidationDecision(current, "unit_fork", "stable_verify", opts.Outcome)
 	case "small_repair_required", "evidence_incomplete", "truth_rejudge_required":
-		return withNext(current, "unit_fork")
+		return withNext(current, "unit_stable_verify")
 	case "controlled_repair_required":
 		if opts.CandidateIntent != "repair" {
 			return transition{}

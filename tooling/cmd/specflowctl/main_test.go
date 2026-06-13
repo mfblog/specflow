@@ -570,8 +570,13 @@ func TestEvaluationRequestCreatesFreshnessTextDriftHandoffCLI(t *testing.T) {
 		"\nevaluation_mode: independent\n",
 		"\nreview_input_refs: freshness_text_drift_reuse",
 	} {
-		if strings.Contains(string(requestContent), forbidden) {
-			t.Fatalf("freshness request must not contain ordinary receipt field %q:\n%s", forbidden, string(requestContent))
+		// Check only the request template section (before inlined file contents)
+		requestTemplate := string(requestContent)
+		if idx := strings.Index(requestTemplate, "## Review File Contents"); idx >= 0 {
+			requestTemplate = requestTemplate[:idx]
+		}
+		if strings.Contains(requestTemplate, forbidden) {
+			t.Fatalf("freshness request must not contain ordinary receipt field %q:\n%s", forbidden, requestTemplate)
 		}
 	}
 }
@@ -1141,6 +1146,37 @@ func createCLISnapshotRepoWithStatus(t *testing.T, unitNextCommand string) strin
 	t.Helper()
 	repoRoot := t.TempDir()
 	writeCLITestFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "specflow/framework/core/independent_evaluation.md"), "\n## Reviewer Packs\n\n### `unit_check_pass`\n\nReview Standard Refs:\n\n"+
+		"1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.\n"+
+		"2. `framework/lifecycle/unit_check.md` - whether candidate truth is clear enough for downstream work.\n\n"+
+		"Allowed Inputs:\n\n1. user goal or exact `unit_check:{unit}` target.\n"+
+		"2. candidate unit truth, candidate appendices owned by the unit, stable truth, and rules.\n"+
+		"3. `_check_result/unit/{unit}.md`.\n4. `framework/lifecycle/unit_check.md` check questions.\n\n"+
+		"Forbidden Inputs:\n\n1. implementation files unless repository mapping is part of the boundary question.\n"+
+		"2. executor rationale not present in durable truth or `_check_result`.\n\n"+
+		"Evaluation Questions:\n\n1. Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for downstream work?\n\n"+
+		"### `unit_verify_ready_to_promote`\n\nReview Standard Refs:\n\n"+
+		"1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.\n"+
+		"2. `framework/lifecycle/unit_verify.md` - whether verification evidence is sufficient for promotion readiness.\n\n"+
+		"Allowed Inputs:\n\n1. user goal or exact `unit_verify:{unit}` target.\n2. candidate unit truth and valid verify result.\n3. `_verify_result/unit/{unit}.md`.\n\n"+
+		"Forbidden Inputs:\n\n1. unrecorded executor claims that tests passed.\n2. implementation changes not represented by evidence refs.\n\n"+
+		"Evaluation Questions:\n\n1. Is promotion readiness supported by the verify evidence?\n\n"+
+		"### `unit_stable_verify_advancing`\n\nReview Standard Refs:\n\n"+
+		"1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.\n"+
+		"2. `framework/lifecycle/unit_stable_verify.md` - whether stable implementation alignment evidence is sufficient.\n\n"+
+		"Allowed Inputs:\n\n1. user goal or exact `unit_stable_verify:{unit}` target.\n2. stable unit truth and stable verify result.\n\n"+
+		"Forbidden Inputs:\n\n1. candidate-layer truth unless referenced by the stable verify result.\n2. executor claims about implementation correctness without evidence refs.\n\n"+
+		"Evaluation Questions:\n\n1. Does the stable verify evidence support the claimed alignment?\n\n"+
+		"### `freshness_text_drift_reuse`\n\nReview Standard Refs:\n\n"+
+		"1. `framework/core/independent_evaluation.md` - reviewer isolation, legal reviewer outputs, freshness receipt rules, and anti-patterns.\n"+
+		"2. `framework/core/freshness.md` - whether text drift may safely reuse existing process evidence.\n\n"+
+		"Allowed Inputs:\n\n1. current truth or spec file.\n2. prior process evidence being reused.\n"+
+		"3. deterministic freshness classification showing `text_drift`.\n"+
+		"4. acceptance behavior fingerprint comparison and current fingerprint reported by tooling.\n\n"+
+		"Forbidden Inputs:\n\n1. reuse claims when deterministic validation reports `semantic_drift`, `acceptance_drift`, `dependency_drift`, `schema_drift`, or `unknown_drift`.\n"+
+		"2. executor assertions that the text change is harmless without current file refs.\n\n"+
+		"Evaluation Questions:\n\n1. Is the change only wording, formatting, or clarification that preserves the acceptance behavior already reviewed?\n"+
+		"2. Does the prior evidence still answer the same gate question?\n3. Is recreating evidence unnecessary for semantic safety?\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), ""+
 		"# Spec Status\n\n"+
 		"## Formal Objects\n\n"+

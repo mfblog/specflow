@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/context"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/contextcard"
 )
 
 func runContext(args []string, stdout, stderr io.Writer) error {
@@ -20,6 +21,8 @@ func runContext(args []string, stdout, stderr io.Writer) error {
 	switch args[0] {
 	case "collect":
 		return runContextCollect(args[1:], stdout, stderr)
+	case "card":
+		return runContextCard(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		writeContextUsage(stdout)
 		return nil
@@ -99,9 +102,54 @@ func runContextCollect(args []string, stdout, stderr io.Writer) error {
 	return nil
 }
 
+func runContextCard(args []string, stdout, stderr io.Writer) error {
+	fs := flag.NewFlagSet("context card", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	repoRootPtr := fs.String("repo-root", ".", "repository root")
+	typePtr := fs.String("object-type", "", "object type: unit | rule")
+	objectPtr := fs.String("object", "", "object name (e.g. auth for unit, rule_001 for rule)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	objectType := strings.TrimSpace(*typePtr)
+	objectName := strings.TrimSpace(*objectPtr)
+
+	if objectType == "" || objectName == "" {
+		fmt.Fprintln(stderr, "Usage:")
+		fmt.Fprintln(stderr, "  specflowctl context card --object-type unit|rule --object NAME [--repo-root PATH]")
+		return errors.New("--object-type and --object are required")
+	}
+
+	absRoot, err := filepath.Abs(*repoRootPtr)
+	if err != nil {
+		return fmt.Errorf("resolve repo root: %w", err)
+	}
+
+	switch objectType {
+	case "unit":
+		card, err := contextcard.UnitCard(absRoot, objectName)
+		if err != nil {
+			return fmt.Errorf("generate unit card: %w", err)
+		}
+		_, err = fmt.Fprintln(stdout, card)
+		return err
+	case "rule":
+		card, err := contextcard.RuleCard(absRoot, objectName)
+		if err != nil {
+			return fmt.Errorf("generate rule card: %w", err)
+		}
+		_, err = fmt.Fprintln(stdout, card)
+		return err
+	default:
+		return fmt.Errorf("unsupported type %q; use unit or rule", objectType)
+	}
+}
+
 func writeContextUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl context collect --flow lifecycle --command COMMAND [--object OBJECT] [--format pack|refs] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl context card --object-type unit|rule --object NAME [--repo-root PATH]")
 }
 
 func writeContextCollectUsage(w io.Writer) {

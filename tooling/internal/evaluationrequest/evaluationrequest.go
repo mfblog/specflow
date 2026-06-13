@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 )
 
@@ -59,7 +60,7 @@ type reviewStandardRef struct {
 }
 
 type reviewRefs struct {
-	FileRefs     []string
+	SubjectRefs  []string
 	EvidenceRefs []string
 }
 
@@ -120,7 +121,7 @@ func Create(options Options) (Result, error) {
 		ProcessFile:        processFile,
 		TriggerInstruction: trigger,
 		ReviewInputRefs:    inputRefs,
-		ReviewFileRefs:     refs.FileRefs,
+		ReviewFileRefs:     refs.SubjectRefs,
 		ReviewEvidenceRefs: refs.EvidenceRefs,
 		Validation:         validation,
 	}, nil
@@ -147,7 +148,11 @@ func normalizeOptions(options Options) (Options, packConfig, error) {
 	if invalidPathPart(normalized.Object) {
 		return Options{}, packConfig{}, fmt.Errorf("object %q is not a valid path segment", normalized.Object)
 	}
-	config, ok := configsByPack()[normalized.Pack]
+	configs, err := configsByPack(normalized.RepoRoot)
+	if err != nil {
+		return Options{}, packConfig{}, fmt.Errorf("load pack configs: %w", err)
+	}
+	config, ok := configs[normalized.Pack]
 	if !ok {
 		return Options{}, packConfig{}, fmt.Errorf("unsupported independent evaluation pack %q", normalized.Pack)
 	}
@@ -165,142 +170,212 @@ func normalizeOptions(options Options) (Options, packConfig, error) {
 	return normalized, config, nil
 }
 
-func configsByPack() map[string]packConfig {
-	return map[string]packConfig{
-		PackUnitCheckPass: {
-			Pack:         PackUnitCheckPass,
-			ProcessKind:  "check",
-			LifecycleRef: "framework/lifecycle/unit_check.md",
-			ReviewTitle:  "Unit Check Pass Review",
-			ReviewGoal:   "Decide whether candidate unit truth is clear enough for downstream work.",
-			ReviewStandardRefs: []reviewStandardRef{
-				{
-					Ref:       "framework/core/independent_evaluation.md",
-					Authority: "reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
-				},
-				{
-					Ref:       "framework/lifecycle/unit_check.md",
-					Authority: "whether candidate truth is clear enough for downstream work.",
-				},
-			},
-			AllowedInputs: []string{
-				"user goal or exact `unit_check:{unit}` target.",
-				"candidate unit truth, candidate appendices owned by the unit, stable truth, and rules.",
-				"`_check_result/unit/{unit}.md`.",
-				"`framework/lifecycle/unit_check.md` check questions.",
-			},
-			ForbiddenInputs: []string{
-				"implementation files unless repository mapping is part of the boundary question.",
-				"executor rationale not present in durable truth or `_check_result`.",
-			},
-			EvaluationQuestions: []string{
-				"Is the unit goal, responsibility, boundary, dependency truth, and rule binding explicit enough for downstream work?",
-				"Is the full unit package, including main Spec, owned appendices, unit dependencies, and applicable rules, clear and consistent enough for downstream work?",
-				"Are acceptance items testable without inventing behavior?",
-				"Does the check result match the candidate truth and evidence refs?",
-			},
-		},
-		PackUnitVerifyReadyToPromote: {
-			Pack:         PackUnitVerifyReadyToPromote,
-			ProcessKind:  "verify",
-			LifecycleRef: "framework/lifecycle/unit_verify.md",
-			ReviewTitle:  "Unit Verify Ready-To-Promote Review",
-			ReviewGoal:   "Decide whether candidate verification is ready for promotion.",
-			ReviewStandardRefs: []reviewStandardRef{
-				{
-					Ref:       "framework/core/independent_evaluation.md",
-					Authority: "reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
-				},
-				{
-					Ref:       "framework/lifecycle/unit_verify.md",
-					Authority: "whether verification evidence is sufficient for promotion readiness.",
-				},
-			},
-			AllowedInputs: []string{
-				"user goal or exact `unit_verify:{unit}` target.",
-				"candidate unit truth and valid verify result.",
-			},
-			ForbiddenInputs: []string{
-				"unrecorded executor claims that tests passed.",
-				"implementation changes not represented by evidence refs.",
-				"promotion judgment not grounded in verify evidence.",
-			},
-			EvaluationQuestions: []string{
-				"Does the verify result cover every executable acceptance item?",
-				"Does each executable acceptance item have inspectable evidence refs that prove the candidate behavior through the declared verification surface?",
-				"Does the verify result reject weak evidence as sufficient by itself, including generic test success, absent old strings, present new files, or present new fields?",
-				"For primary protocol, default page, primary presentation, API, or artifact-generation changes, does the evidence inspect real generated artifacts, API return values, DOM/screenshots, rendered text, CLI output, or tests proving the mainline path uses the candidate protocol?",
-				"Does the verify result prove every retirement target (if any) with pass and mainline_dependency not_required evidence?",
-				"Is the candidate ready for promotion without hiding unresolved gaps?",
-			},
-		},
-		PackUnitStableVerifyAdvancing: {
-			Pack:         PackUnitStableVerifyAdvancing,
-			ProcessKind:  "stable_verify",
-			LifecycleRef: "framework/lifecycle/unit_stable_verify.md",
-			ReviewTitle:  "Stable Verify Advancing Review",
-			ReviewGoal:   "Decide whether the stable verify result supports the stored advancing decision.",
-			ReviewStandardRefs: []reviewStandardRef{
-				{
-					Ref:       "framework/core/independent_evaluation.md",
-					Authority: "reviewer isolation, legal reviewer outputs, receipt rules, and anti-patterns.",
-				},
-				{
-					Ref:       "framework/lifecycle/unit_stable_verify.md",
-					Authority: "whether stable alignment or the controlled next step is supported.",
-				},
-			},
-			AllowedInputs: []string{
-				"exact `unit_stable_verify:{unit}` target.",
-				"stable unit truth, stable appendices owned by the unit, rules, and repository mapping snapshot.",
-				"stable verify result under review.",
-				"implementation surface refs and evidence refs needed to inspect stable alignment.",
-				"decision criteria from `framework/lifecycle/unit_stable_verify.md`.",
-			},
-			ForbiddenInputs: []string{
-				"candidate truth unless the stable verify result explicitly cites it as historical context.",
-				"proposed repairs or changes not captured in the stable verify result.",
-				"executor preference for aligned, controlled repair, or controlled change outcomes.",
-			},
-			EvaluationQuestions: []string{
-				"Does current implementation align with stable truth, or does the stored decision correctly identify the controlled next step?",
-				"Does the evidence matrix cover every current stable acceptance item?",
-				"Are implementation surface refs and evidence refs sufficient for the stored decision?",
-			},
-		},
-		PackFreshnessTextDriftReuse: {
-			Pack:            PackFreshnessTextDriftReuse,
-			RequiresProcess: true,
-			ReviewTitle:     "Freshness Text-Drift Reuse Review",
-			ReviewGoal:      "Decide whether text-only drift can reuse existing process evidence.",
-			ReviewStandardRefs: []reviewStandardRef{
-				{
-					Ref:       "framework/core/independent_evaluation.md",
-					Authority: "reviewer isolation, legal reviewer outputs, freshness receipt rules, and anti-patterns.",
-				},
-				{
-					Ref:       "framework/core/freshness.md",
-					Authority: "whether text drift may safely reuse existing process evidence.",
-				},
-			},
-			AllowedInputs: []string{
-				"current truth or spec file.",
-				"prior process evidence being reused.",
-				"deterministic freshness classification showing `text_drift`.",
-				"acceptance behavior fingerprint comparison and current fingerprint reported by tooling.",
-			},
-			ForbiddenInputs: []string{
-				"reuse claims when deterministic validation reports `semantic_drift`, `acceptance_drift`, `dependency_drift`, `schema_drift`, or `unknown_drift`.",
-				"executor assertions that the text change is harmless without current file refs.",
-				"unrelated changes outside the file and process evidence under review.",
-			},
-			EvaluationQuestions: []string{
-				"Is the change only wording, formatting, or clarification that preserves the acceptance behavior already reviewed?",
-				"Does the prior evidence still answer the same gate question?",
-				"Is recreating evidence unnecessary for semantic safety?",
-			},
-		},
+func configsByPack(repoRoot string) (map[string]packConfig, error) {
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return nil, fmt.Errorf("resolve layout for independent_evaluation.md: %w", err)
 	}
+	path := filepath.Join(repoRoot, filepath.FromSlash(layout.FrameworkRoot), filepath.FromSlash("core/independent_evaluation.md"))
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read independent_evaluation.md: %w", err)
+	}
+	content := strings.ReplaceAll(string(data), "\r\n", "\n")
+
+	// Find the Reviewer Packs section
+	idx := strings.Index(content, "\n## Reviewer Packs\n")
+	if idx < 0 {
+		return nil, fmt.Errorf("independent_evaluation.md: missing ## Reviewer Packs section")
+	}
+	// Stop at next ## section after Reviewer Packs
+	body := content[idx+len("\n## Reviewer Packs\n"):]
+	if end := strings.Index(body, "\n## "); end > 0 {
+		body = body[:end]
+	}
+
+	packs := parsePackSections(body)
+	result := make(map[string]packConfig, len(packs))
+	for packName := range packs {
+		meta := packMetaByID[packName]
+		if meta.Pack == "" {
+			continue
+		}
+		meta.AllowedInputs = packs[packName].AllowedInputs
+		meta.ForbiddenInputs = packs[packName].ForbiddenInputs
+		meta.EvaluationQuestions = packs[packName].EvaluationQuestions
+		meta.ReviewStandardRefs = packs[packName].ReviewStandardRefs
+		meta.LifecycleRef = findLifecycleRef(meta.ReviewStandardRefs)
+		result[packName] = meta.toPackConfig()
+	}
+	return result, nil
+}
+
+type packMeta struct {
+	Pack            string
+	ProcessKind     string
+	RequiresProcess bool
+	ReviewTitle     string
+	ReviewGoal      string
+	LifecycleRef    string
+	AllowedInputs   []string
+	ForbiddenInputs []string
+	EvaluationQuestions []string
+	ReviewStandardRefs  []reviewStandardRef
+}
+
+func (m packMeta) toPackConfig() packConfig {
+	return packConfig{
+		Pack:                m.Pack,
+		ProcessKind:         m.ProcessKind,
+		RequiresProcess:     m.RequiresProcess,
+		LifecycleRef:        m.LifecycleRef,
+		ReviewTitle:         m.ReviewTitle,
+		ReviewGoal:          m.ReviewGoal,
+		ReviewStandardRefs:  m.ReviewStandardRefs,
+		AllowedInputs:       m.AllowedInputs,
+		ForbiddenInputs:     m.ForbiddenInputs,
+		EvaluationQuestions: m.EvaluationQuestions,
+	}
+}
+
+var packMetaByID = map[string]packMeta{
+	PackUnitCheckPass: {
+		Pack: PackUnitCheckPass, ProcessKind: "check",
+		ReviewTitle: "Unit Check Pass Review",
+		ReviewGoal:  "Decide whether candidate unit truth is clear enough for downstream work.",
+	},
+	PackUnitVerifyReadyToPromote: {
+		Pack: PackUnitVerifyReadyToPromote, ProcessKind: "verify",
+		ReviewTitle: "Unit Verify Ready-To-Promote Review",
+		ReviewGoal:  "Decide whether candidate verification is ready for promotion.",
+	},
+	PackUnitStableVerifyAdvancing: {
+		Pack: PackUnitStableVerifyAdvancing, ProcessKind: "stable_verify",
+		ReviewTitle: "Stable Verify Advancing Review",
+		ReviewGoal:  "Decide whether the stable verify result supports the stored advancing decision.",
+	},
+	PackFreshnessTextDriftReuse: {
+		Pack: PackFreshnessTextDriftReuse, RequiresProcess: true,
+		ReviewTitle: "Freshness Text-Drift Reuse Review",
+		ReviewGoal:  "Decide whether text-only drift can reuse existing process evidence.",
+	},
+}
+
+func parsePackSections(body string) map[string]packMeta {
+	sections := splitPackSections(body)
+	result := make(map[string]packMeta, len(sections))
+	for name, content := range sections {
+		meta := packMetaByID[name]
+		meta.AllowedInputs = parseListSection(content, "Allowed Inputs")
+		meta.ForbiddenInputs = parseListSection(content, "Forbidden Inputs")
+		meta.EvaluationQuestions = parseListSection(content, "Evaluation Questions")
+		meta.ReviewStandardRefs = parseStandardRefs(content)
+		meta.LifecycleRef = findLifecycleRef(meta.ReviewStandardRefs)
+		result[name] = meta
+	}
+	return result
+}
+
+func splitPackSections(body string) map[string]string {
+	result := make(map[string]string)
+	parts := strings.Split(body, "\n### `")
+	for _, part := range parts[1:] {
+		if idx := strings.Index(part, "`\n"); idx > 0 {
+			name := part[:idx]
+			content := part[idx+2:]
+			result[name] = content
+		}
+	}
+	return result
+}
+
+func parseListSection(content, heading string) []string {
+	idx := strings.Index(content, heading+":")
+	if idx < 0 {
+		return nil
+	}
+	start := idx + len(heading) + 1
+	// Skip blank lines after heading
+	for start < len(content) && content[start] == '\n' {
+		start++
+	}
+	// Collect lines until next section heading (ends with ":") or end of content
+	end := start
+	lines := strings.Split(content[start:], "\n")
+	var items []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			if len(items) > 0 {
+				// Empty line after items = end of this section
+				break
+			}
+			continue
+		}
+		// Check if this is a new section heading
+		if strings.HasSuffix(line, ":") && !strings.HasPrefix(line, "**") && !strings.HasPrefix(strings.TrimPrefix(line, "1. "), "") {
+			// This is a bit tricky - section headings end with ":"
+			// But items can also contain ":" in their text
+			break
+		}
+		// Strip numbered prefix
+		if dot := strings.Index(line, ". "); dot > 0 {
+			text := strings.TrimSpace(line[dot+2:])
+			if text != "" && !strings.HasPrefix(text, "```") {
+				items = append(items, text)
+			}
+		} else if strings.HasPrefix(line, "**") {
+			// Sub-section label, skip
+			continue
+		} else {
+			// Could be a continuation line
+			if len(items) > 0 {
+				items[len(items)-1] += " " + line
+			}
+		}
+	}
+	_ = end
+	return items
+}
+
+func parseStandardRefs(content string) []reviewStandardRef {
+	idx := strings.Index(content, "Review Standard Refs:")
+	if idx < 0 {
+		return nil
+	}
+	section := content[idx+len("Review Standard Refs:"):]
+	end := strings.Index(section, "\n\n")
+	if end > 0 {
+		section = section[:end]
+	}
+	var refs []reviewStandardRef
+	for _, line := range strings.Split(section, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		i := strings.Index(line, ". ")
+		if i < 0 {
+			continue
+		}
+		rest := strings.TrimSpace(line[i+2:])
+		// Split at " - " to get ref and authority
+		if j := strings.Index(rest, " - "); j > 0 {
+			ref := strings.Trim(strings.TrimSpace(rest[:j]), "`")
+			authority := strings.TrimSuffix(strings.TrimSpace(rest[j+3:]), ".")
+			refs = append(refs, reviewStandardRef{Ref: ref, Authority: authority})
+		}
+	}
+	return refs
+}
+
+func findLifecycleRef(refs []reviewStandardRef) string {
+	for _, r := range refs {
+		if strings.HasPrefix(r.Ref, "framework/lifecycle/") {
+			return r.Ref
+		}
+	}
+	return ""
 }
 
 func requestFilePath(objectType, object, pack string) string {
@@ -309,25 +384,29 @@ func requestFilePath(objectType, object, pack string) string {
 
 func collectReviewRefs(options Options, config packConfig, processFile string, validation snapshot.ValidationResult, processData snapshot.ProcessSnapshotData) reviewRefs {
 	expected := validation.Expected
-	fileRefs := []string{
-		processFile,
-	}
-	if config.LifecycleRef != "" {
-		fileRefs = append(fileRefs, config.LifecycleRef)
-	}
-	fileRefs = appendExistingSpecRefs(fileRefs, options.RepoRoot, options.ObjectType, options.Object, expected.TruthLayerRef)
-	fileRefs = appendSnapshotRefs(fileRefs, expected)
+	subjectRefs := []string{processFile}
 	evidenceRefs := []string{}
+
+	if config.LifecycleRef != "" {
+		subjectRefs = append(subjectRefs, config.LifecycleRef)
+	}
+	for _, sr := range config.ReviewStandardRefs {
+		if sr.Ref != config.LifecycleRef {
+			subjectRefs = append(subjectRefs, sr.Ref)
+		}
+	}
+	subjectRefs = appendExistingSpecRefs(subjectRefs, options.RepoRoot, options.ObjectType, options.Object, expected.TruthLayerRef)
+	subjectRefs = appendSnapshotRefs(subjectRefs, expected)
 
 	switch config.Pack {
 	case PackUnitVerifyReadyToPromote:
 		checkPath := filepath.Join(options.RepoRoot, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
 		if _, err := os.Stat(checkPath); err == nil {
-			fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
+			subjectRefs = append(subjectRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
 		}
 		planPath := filepath.Join(options.RepoRoot, snapshot.ActivePlanFilePath(options.Object))
 		if _, err := os.Stat(planPath); err == nil {
-			fileRefs = append(fileRefs, snapshot.ActivePlanFilePath(options.Object))
+			subjectRefs = append(subjectRefs, snapshot.ActivePlanFilePath(options.Object))
 		}
 		evidenceRefs = appendScalarRefs(evidenceRefs, processData, "evidence_refs")
 		for _, entry := range processData.AcceptanceEvidence {
@@ -340,32 +419,35 @@ func collectReviewRefs(options Options, config packConfig, processFile string, v
 			evidenceRefs = appendSplitRefs(evidenceRefs, entry.EvidenceRefs)
 		}
 	case PackUnitStableVerifyAdvancing:
-		fileRefs = append(fileRefs, "docs/specs/repository_mapping.md")
+		subjectRefs = append(subjectRefs, "docs/specs/repository_mapping.md")
 		evidenceRefs = appendScalarRefs(evidenceRefs, processData, "implementation_surface_refs", "evidence_refs")
 		for _, entry := range processData.AcceptanceEvidence {
 			evidenceRefs = appendSplitRefs(evidenceRefs, entry.EvidenceRefs)
 		}
 	case PackFreshnessTextDriftReuse:
-		fileRefs = append(fileRefs, "framework/core/freshness.md")
+		subjectRefs = append(subjectRefs, "framework/core/freshness.md")
 		switch options.ProcessKind {
 		case "plan":
-			fileRefs = append(fileRefs, snapshot.ActivePlanFilePath(options.Object))
+			subjectRefs = append(subjectRefs, snapshot.ActivePlanFilePath(options.Object))
 		case "check":
-			fileRefs = append(fileRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
+			subjectRefs = append(subjectRefs, snapshot.CheckResultFilePath(options.ObjectType, options.Object))
 		case "verify":
-			fileRefs = append(fileRefs, snapshot.VerifyResultFilePath(options.ObjectType, options.Object))
+			subjectRefs = append(subjectRefs, snapshot.VerifyResultFilePath(options.ObjectType, options.Object))
 		case "stable_verify":
-			fileRefs = append(fileRefs, snapshot.StableVerifyResultFilePath(options.ObjectType, options.Object))
+			subjectRefs = append(subjectRefs, snapshot.StableVerifyResultFilePath(options.ObjectType, options.Object))
 		}
 	}
 	return reviewRefs{
-		FileRefs:     sortedUnique(fileRefs),
+		SubjectRefs:  sortedUnique(subjectRefs),
 		EvidenceRefs: sortedUnique(evidenceRefs),
 	}
 }
 
 func (refs reviewRefs) Combined() []string {
-	return sortedUnique(append(append([]string{}, refs.FileRefs...), refs.EvidenceRefs...))
+	var all []string
+	all = append(all, refs.SubjectRefs...)
+	all = append(all, refs.EvidenceRefs...)
+	return sortedUnique(all)
 }
 
 func appendExistingSpecRefs(refs []string, repoRoot, objectType, object, activeLayer string) []string {
@@ -444,20 +526,19 @@ func renderRequest(options Options, config packConfig, processFile, requestFile 
 	writeField(&b, "request_file", requestFile)
 	writeField(&b, "created_at", options.Now.UTC().Format("2006-01-02T15:04:05Z"))
 	b.WriteString("\n## Reviewer Role\n\n")
-	b.WriteString("You are the independent reviewer for this request. Do not modify repository files. Read only the files listed in Review File Refs, Review Evidence Refs, and Evaluation Questions below.\n\n")
+	b.WriteString("You are the independent reviewer for this request. Do not modify repository files.\n")
+	b.WriteString("Review Subject lists all files you may need to examine (paths only). ")
+	b.WriteString("Evaluation Questions are the authoritative review criteria.\n\n")
 	b.WriteString("Use Evaluation Questions as the authoritative review criteria.\n\n")
-	b.WriteString("Use Review Evidence Refs only to judge whether the recorded evidence is sufficient and traceable; do not treat every evidence ref as a readable file.\n\n")
 	b.WriteString("## Review Goal\n\n")
 	b.WriteString(config.ReviewGoal)
-	b.WriteString("\n\n## Review Standard Refs\n\n")
-	b.WriteString("These refs show the original source of the review criteria. The actual criteria are embedded in Evaluation Questions below.\n\n")
-	writeStandardRefs(&b, config.ReviewStandardRefs)
+	b.WriteString("\n\n")
 	b.WriteString("\n## Allowed Inputs\n\n")
-	writeBullets(&b, config.AllowedInputs)
+	writeBullets(&b, replacePlaceholder(config.AllowedInputs, options.Object))
 	b.WriteString("\n## Forbidden Inputs\n\n")
-	writeBullets(&b, config.ForbiddenInputs)
-	b.WriteString("\n## Review File Refs\n\n")
-	writeRefList(&b, refs.FileRefs)
+	writeBullets(&b, replacePlaceholder(config.ForbiddenInputs, options.Object))
+	b.WriteString("\n## Review Subject (artifact under review)\n\n")
+	writeRefList(&b, refs.SubjectRefs)
 	b.WriteString("\n## Review Evidence Refs\n\n")
 	writeRefList(&b, refs.EvidenceRefs)
 	b.WriteString("\n## Evaluation Questions\n\n")
@@ -521,6 +602,15 @@ func writeRefList(b *strings.Builder, refs []string) {
 		b.WriteString(ref)
 		b.WriteString("\n")
 	}
+}
+
+
+func replacePlaceholder(items []string, object string) []string {
+	var result []string
+	for _, item := range items {
+		result = append(result, strings.ReplaceAll(item, "{unit}", object))
+	}
+	return result
 }
 
 func renderIndependentEvaluationReceipt(b *strings.Builder, pack, requestFile string, inputRefs []string) {

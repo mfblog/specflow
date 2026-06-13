@@ -160,7 +160,8 @@ func TestEntryManagedBlocksDefineActionGuide(t *testing.T) {
 			"### 2. Layers",
 			"### 3. State Files",
 			"### 4. Development Flow",
-			"### 5. Command Index",
+			"### 5. How to Start",
+			"### Commands Reference",
 			"### 6. Rule Locations",
 			"specFlow maintains project documents",
 			"unit_new / unit_fork",
@@ -1205,7 +1206,7 @@ func TestProcessSnapshotContractStoresOnlyAdvancingCheckAndVerifyEvidence(t *tes
 		t.Fatalf("process_snapshot_contract.md must not authorize non-pass check or verify evidence")
 	}
 	for _, phrase := range []string{
-		"decision: pass",
+		"decision: {decision}",
 		"allow_next: true",
 		"`_check_result` and candidate `_verify_result` are consumable evidence only for advancing pass gates.",
 		"Non-advancing command outcomes such as `blocked` or `fix_required` must not be stored as these process snapshots.",

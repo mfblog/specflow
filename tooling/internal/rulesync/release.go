@@ -254,7 +254,6 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 			"candidate_intent":      "change",
 			"layer":                 "candidate",
 			"version":               nextVersion,
-			"source_basis":          "new_design",
 			"evidence_appendix_ref": "none",
 		}
 		updated, err := rulerefs.RewriteObjectFrontmatter(candidateRef, string(contentBytes), frontmatterUpdates, nextRefs)
