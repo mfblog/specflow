@@ -84,7 +84,30 @@ unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promo
 - Lifecycle state advances only through legal `command close`. Do not manually edit `_status.md`.
 - For stable alignment checks: `unit_stable_verify`.
 
-### 5. Command Index
+### 5. How to Start
+
+**Step 1 — Generate your context card**
+If the request names a unit, run:
+```text
+specflowctl context card --object-type unit --object <name>
+```
+If the request involves a rule, use `--object-type rule`.
+The card shows the unit's current state and actionable GUIDANCE.
+
+**Step 2 — Follow the card**
+Execute the steps in the card's GUIDANCE section. It covers pre-checks, execution, close syntax, and outcome routing. The card is self-contained for standard lifecycle steps.
+
+**Step 3 — When the card is not enough**
+If the card shows the unit is **unregistered**, or the GUIDANCE does not cover your situation:
+Read `framework/operations/entry_routing.md` for:
+- Onboarding new units (source decision)
+- Natural-language routing
+- Implementation classification
+- Independent review format
+
+**If `specflowctl` is unavailable**, fall back to Step 3 directly: read `framework/operations/entry_routing.md` and the matching lifecycle Context Card in `framework/lifecycle/` to determine the correct action.
+
+### Commands Reference
 
 | Command | Purpose |
 |---------|---------|
@@ -96,8 +119,6 @@ unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promo
 | `unit_promote:{unit}` | Candidate truth → stable truth |
 | `unit_stable_verify:{unit}` | Check implementation vs stable truth |
 | `unit_advance:{unit}` | Read `framework/advance_policy.md` first |
-
-Read `framework/operations/entry_routing.md` before any other routing action — it is the sole entry point for both exact-command routing (to the matching Context Card) and natural-language routing.
 
 ### 6. Rule Locations
 

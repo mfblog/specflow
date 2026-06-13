@@ -22,7 +22,7 @@ Rules:
 4. The reviewer returns only `pass`, `blocked`, or `needs_human_decision`.
 5. The executor records the independent evaluation receipt in the owning process evidence after a `pass` result.
 6. Ordinary `review_input_refs`, and freshness `freshness_review_input_refs`, must include the reviewer pack name, request file path, and durable input refs supplied to the reviewer.
-7. Request files distinguish `Review Standard Refs`, `Review File Refs`, and `Review Evidence Refs`.
-8. `Review Standard Refs` are the authoritative criteria for the reviewer decision.
-9. `Review File Refs` are readable files supplied for the review.
+7. Request files distinguish `Review Subject` (artifact paths only), `Review Evidence Refs`, and `Evaluation Questions`.
+8. `Review Subject` lists artifact file paths only — full file contents are not inlined. The reviewer reads the listed files themselves.
+9. `Evaluation Questions` carry the authoritative review criteria; the `Review Standard Refs` section is not rendered separately.
 10. `Review Evidence Refs` are used only to judge whether recorded evidence is sufficient and traceable; they are not necessarily readable files.

@@ -17,6 +17,10 @@ An agent-internal active plan may record:
 - `planned_change_scope` — delta scopes as `pcs.<slug>` items
 - `retirement_targets` — old paths, wrappers, or dependencies to retire
 - `package_constraint_review` — how the delta respects package constraints
+- `package_constraint_refs` — specific package constraint entries
+- `package_constraint_summary` — aggregated constraint analysis result
+- `stable_candidate_diff_refs` — stable-to-candidate truth diff markers
+- `implementation_gap_refs` — gaps between planned and existing implementation
 - `implementation_tasks` — closeable execution slices
 
 These fields are recommendations, not requirements. Agents may structure plans however their framework prefers.
