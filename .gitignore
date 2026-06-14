@@ -9,6 +9,7 @@ GEMINI.md
 /docs/
 .tmp/
 .claude/
+reference/
 _governance_review/cards/
 _governance_review/requests/
 _governance_review/specflowctl
