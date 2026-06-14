@@ -211,6 +211,9 @@ A narrowed review must include entry behavior, routing, commands, project-instan
 Governance rules are enforced by tooling (`specflowctl`) rather than by agent-operability documents.
 
 Agent-operability review must cover execution clarity, content economy, formal rule voice, and self-containment under Section 2.12 — whether Agent-facing instruction files deliver essential phase instructions inline rather than through chain-linked reading.
+
+**Context Card design principle.** Every generated context card must inline execution authority (WRITES, READS, BLOCKED), lifecycle boundary (STATUS — current state, layer, next command), and close guidance (GUIDANCE — pre-checks through outcome routing and close syntax); it may index business truth files that the agent must read for implementation or verification. Only `_status.md` and `repository_mapping.md` are inlined in Core Truth; all other truth files (specs, rules, appendices, framework documents) are listed as reference paths. The properties in this section operationalize this principle.
+
 A pass claim for an in-scope governance file must not ignore an applicable agent-operability failure.
 
 ### 2.8.1 Card Output Verification
