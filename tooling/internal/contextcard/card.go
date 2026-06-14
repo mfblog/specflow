@@ -236,11 +236,8 @@ func RuleCard(repoRoot, ruleID string) (string, error) {
 	// Collect affected units
 	affected := findAffectedUnits(repoRoot, ruleID, scope)
 
-	// Collect rule spec files to inline
-	essential := collectRuleFiles(repoRoot, ruleID, state, stableExists, candidateExists, stablePath, candidatePath)
-
-	// Collect reference files
-	reference := collectRuleRefs(state)
+	// Collect rule spec and reference files
+	essential, reference := collectRuleFiles(repoRoot, ruleID, state, stableExists, candidateExists)
 
 	// Load rule_system.md content for section extraction in guidance/blocked
 	ruleSystemPath := filepath.Join(repoRoot, filepath.FromSlash("framework/governance/rule_system.md"))
@@ -424,53 +421,39 @@ func unitFileInputRules(state UnitState) *cardInputRules {
 // file collection — rule
 // ============================================================================
 
-func collectRuleFiles(repoRoot, ruleID string, state RuleState, stableExists, candidateExists bool, stablePath, candidatePath string) []context.FileItem {
-	var rules []context.InputRule
-	switch {
-	case stableExists:
-		rules = append(rules, context.InputRule{PathTemplate: filepath.ToSlash(stablePath)[len(filepath.ToSlash(repoRoot)):], Essential: true})
-		fallthrough
-	case candidateExists:
-		rules = append(rules, context.InputRule{PathTemplate: filepath.ToSlash(candidatePath)[len(filepath.ToSlash(repoRoot)):], Essential: true})
+func ruleFileInputRules(state RuleState, stableExists, candidateExists bool) *cardInputRules {
+	rules := &cardInputRules{
+		essential: nil,
+		reference: []context.InputRule{
+			{PathTemplate: "framework/governance/rule_system.md", Essential: false},
+		},
 	}
-	// Also collect referent framework files
-	rules = append(rules,
-		context.InputRule{PathTemplate: "framework/governance/rule_system.md", Essential: true},
-	)
-	items := context.ResolveInputRules(repoRoot, ruleID, rules)
-	// Only return the ones that exist
-	var result []context.FileItem
-	for _, item := range items {
-		if item.Exists {
-			result = append(result, item)
-		}
+	if stableExists {
+		rules.reference = append(rules.reference,
+			context.InputRule{PathTemplate: "docs/specs/rules/stable/s_{object}.md", Essential: false},
+		)
 	}
-	return result
-}
-
-func collectRuleRefs(state RuleState) []context.FileItem {
-	refs := []context.InputRule{
-		{PathTemplate: "framework/governance/rule_system.md", Essential: false},
+	if candidateExists {
+		rules.reference = append(rules.reference,
+			context.InputRule{PathTemplate: "docs/specs/rules/candidate/c_{object}.md", Essential: false},
+		)
 	}
 	switch state {
 	case RuleStableBound, RuleCandidateBound, RuleCandidateNewBound, RuleCandidateGlobal, RuleCandidateNewGlobal, RuleStableGlobal:
-		refs = append(refs,
+		rules.reference = append(rules.reference,
 			context.InputRule{PathTemplate: "framework/governance/rules/rule_new.md", Essential: false},
 			context.InputRule{PathTemplate: "framework/governance/rules/rule_sync.md", Essential: false},
 		)
-	case RuleUnregistered:
-		refs = append(refs,
-			context.InputRule{PathTemplate: "framework/governance/rule_system.md", Essential: false},
-		)
 	}
-	items := context.ResolveInputRules("", "", refs)
-	var result []context.FileItem
-	for _, item := range items {
-		if item.Exists {
-			result = append(result, item)
-		}
+	return rules
+}
+
+func collectRuleFiles(repoRoot, ruleID string, state RuleState, stableExists, candidateExists bool) (essential, reference []context.FileItem) {
+	rules := ruleFileInputRules(state, stableExists, candidateExists)
+	if rules == nil {
+		return nil, nil
 	}
-	return result
+	return resolveEssentialAndRef(repoRoot, ruleID, rules.essential, rules.reference)
 }
 
 // ============================================================================
@@ -1021,7 +1004,7 @@ func writeRuleGuidance(buf *strings.Builder, state RuleState, ruleID, scope stri
 		}
 		buf.WriteString("To modify: create a candidate version through the rule governance process.\n")
 		buf.WriteString("After changes, run `rule_sync` to coordinate affected units.\n")
-		buf.WriteString("See governance flows in Core Truth above.\n\n")
+		buf.WriteString("See governance flows in `framework/governance/rule_system.md` (References).\n\n")
 	case RuleStableBound:
 		buf.WriteString("Stable bound rule — applies only to units that list it in `rule_refs`.\n")
 		if scopeSection != "" {
@@ -1031,7 +1014,7 @@ func writeRuleGuidance(buf *strings.Builder, state RuleState, ruleID, scope stri
 		}
 		buf.WriteString("To modify: create a candidate version through the rule governance process.\n")
 		buf.WriteString("After changes, run `rule_sync` to coordinate consumers.\n")
-		buf.WriteString("See governance flows in Core Truth above.\n\n")
+		buf.WriteString("See governance flows in `framework/governance/rule_system.md` (References).\n\n")
 	case RuleCandidateGlobal, RuleCandidateNewGlobal:
 		buf.WriteString("Active candidate round. The candidate version proposes changes to the stable rule.\n")
 		buf.WriteString("After promotion, all current-layer units are affected.\n\n")
@@ -1040,7 +1023,7 @@ func writeRuleGuidance(buf *strings.Builder, state RuleState, ruleID, scope stri
 		buf.WriteString("After finalizing, run `rule_sync` to coordinate consumers.\n\n")
 	case RuleUnregistered:
 		buf.WriteString("This rule is not registered.\n")
-		buf.WriteString("To create it, follow the governance flows in Core Truth above (`rule_system.md` → Governance Flows).\n")
+		buf.WriteString("To create it, follow the governance flows in `framework/governance/rule_system.md` (References → Governance Flows).\n")
 		buf.WriteString("Start with `rule_new` at `framework/governance/rules/rule_new.md`.\n\n")
 	}
 }
@@ -1079,7 +1062,7 @@ func writeRuleClose(buf *strings.Builder, state RuleState, ruleID, ruleSystemCon
 	case RuleStableGlobal, RuleStableBound:
 		if hasGovFlows {
 			buf.WriteString("Rule operations close through their own governance flows")
-			buf.WriteString(" (see Governance Flows in Core Truth).\n")
+			buf.WriteString(" (see Governance Flows in `framework/governance/rule_system.md`, References).\n")
 			buf.WriteString("Not via unit command close.\n\n")
 		} else {
 			buf.WriteString("Rule governance flows close through their own procedures. Not via unit command close.\n\n")
@@ -1087,7 +1070,7 @@ func writeRuleClose(buf *strings.Builder, state RuleState, ruleID, ruleSystemCon
 	case RuleCandidateGlobal, RuleCandidateBound, RuleCandidateNewGlobal, RuleCandidateNewBound:
 		buf.WriteString("Rule operations close through their own governance flows")
 		if hasGovFlows {
-			buf.WriteString(" (see Governance Flows in Core Truth).\n")
+			buf.WriteString(" (see Governance Flows in `framework/governance/rule_system.md`, References).\n")
 		} else {
 			buf.WriteString(".\n")
 		}
