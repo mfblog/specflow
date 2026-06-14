@@ -255,6 +255,30 @@ The reviewer must generate requests for every pack (`unit_check_pass`, `unit_ver
 5. **Section completeness** — all of Request, Reviewer Role, Review Goal, Allowed Inputs, Forbidden Inputs, Review Subject, Review Evidence Refs, Evaluation Questions, Reviewer Output, Executor Receipt, and Trigger Instruction must be present.
 6. **No Review Standard Refs section** — the Review Standard Refs section must not appear; standard files are listed in Review Subject instead.
 
+### 2.8.3 Agent Runtime Entry Path Review
+
+The agent runtime entry point is `templates/*.md` for `source_repo` layout and the project-root registered entry file (`AGENTS.md`, `CLAUDE.md`, or `GEMINI.md`) for `installed_project` layout. This file is the first governance content an executor reads at startup. Its navigation logic determines whether the executor reaches the correct route, command, or stop condition. A review that does not trace the entry path from this root file cannot claim that agent operability has been verified.
+
+The review must verify the agent runtime entry path for every in-scope governance surface. Scoped review must apply these checks to the extent that the narrowed scope includes entry files and routing policy.
+
+Required checks:
+
+1. **Entry-to-routing path alignment** — the navigation steps in the entry file (typically "Step 1 → Step 2 → Step 3" or equivalent) must produce the same first-owner selection, route, and command as `operations/entry_routing.md` would produce for the same request type. The entry file must not describe a navigation sequence that diverges from `operations/entry_routing.md` without an explicit override rule. If the entry file and `operations/entry_routing.md` assign different first owners for the same request category, that is a contract-drift finding under Section 2.6.
+
+2. **Fallback path determinism** — when the entry file provides fallback instructions for unavailable tooling, missing context cards, or unresolved state (e.g., "If `specflowctl` is unavailable, fall back to Step 3"), the fallback path must produce a deterministic next owner, explicit route, or clear stop condition. A fallback that routes the executor to a file whose entry instructions then route back to the original fallback trigger is a dead-loop finding under Section 2.4.
+
+3. **Step-defined responsibility boundary** — each step in the entry file's navigation sequence must name a concrete next action, target file, or stop condition. Steps that rely on executor intuition, general term meaning, or prior conversation to decide the next action are agent-operability failures under this section.
+
+4. **Context Card Priority non-circularity** — when `operations/entry_routing.md` declares that the context card takes priority over that file, and the entry file's first step generates a context card, the review must verify that every card state produces either actionable GUIDANCE or an explicit instruction to read `operations/entry_routing.md`. The path "generate card → card says `unregistered` → read `operations/entry_routing.md` → `operations/entry_routing.md` says card takes priority" must not create a circular dependency where no file provides the next legal action. The review must walk at least the `unregistered` card state to verify non-circularity.
+
+5. **Natural-language routing reachability** — when the entry file's fallback step routes to `operations/entry_routing.md` for natural-language requests, the review must verify that a request arriving at `operations/entry_routing.md` through that entry-file path can still reach every legal lifecycle command, rule-governance flow, framework governance entry, and guidance skill that is in scope. The entry file must not filter or narrow the routing surface exposed by `operations/entry_routing.md` without documenting that narrowing as an intentional design decision.
+
+6. **Unavailable-tooling path independence** — when `specflowctl` is unavailable and the entry file directs the executor to read the matching lifecycle Context Card directly, the review must verify that the executor can select the correct Context Card without a context card. This requires at minimum that `_status.md` is readable and the route (exact command or natural-language-derived command) can resolve to one specific lifecycle Context Card under Section 2.2 (Logical Closure). If the path requires a context card that is not available, the review must report an agent-operability finding.
+
+7. **Stop-condition transport** — any stop condition defined in `operations/entry_routing.md` (Hard Stops section) that is restated, implied, or weakened in the entry file must have the same meaning, trigger boundary, and effect in both locations. A stop condition in the entry file that allows the executor to proceed past a condition that `operations/entry_routing.md` requires to stop is a contract-drift finding under Section 2.6. A stop condition in `operations/entry_routing.md` that is missing from the entry file and affects the executor's startup behavior must be reported as an agent-operability finding unless the entry file explicitly delegates to `operations/entry_routing.md` for that stop class.
+
+The reviewer must report, for every in-scope governance surface, which entry file was used as the runtime root, which checks from this subsection were applied, and whether each check passed or produced a finding. A pass claim for agent operability must not ignore an unreviewed or unresolved runtime entry path.
+
 ### 2.9 Tooling Boundary
 
 Governance tooling may execute only mechanical work already decided by governance rules, prior human judgment, or explicit caller parameters.
@@ -549,11 +573,13 @@ Local slices review one owner area for internal closure, side effects, contract 
    - must not judge unit, rule, or evidence-appendix business truth correctness
 8. `entry_and_project_extension`
    - reviews `operations/entry_routing.md` (Entry File Registration section), registered entry files, and template entry files
+   - verifies entry file navigation logic correctness under Section 2.8.3, including Step-sequence alignment with routing policy and fallback path completeness
 9. `tooling_execution`
    - reviews `tooling_execution_policy.md`, `slice_work_state_protocol.md`, `<tooling-root>/README.md`, in-scope tooling source files, and runtime reader web files
    - verifies tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness, reader runtime coverage, and document/source/runtime agreement
 10. `agent_operability_local`
    - reviews entry files, routing policy files, `advance_policy.md`, `core/independent_evaluation.md`, `core/freshness.md`, `lifecycle/overview.md`, lifecycle Context Cards, `candidate_intent.md`, rule-governance files, guidance skill files, review policy files, Spec writing policy files, and process-state contract files in the current review scope
+   - verifies entry files as the root agent execution entry under Section 2.8.3, including entry-to-routing navigation alignment, fallback path determinism, stop-condition transport between entry files and routing policy, and that entry file routing instructions do not contradict `operations/entry_routing.md`
    - verifies that local slice conclusions, including candidate intent policy, entry-file consumption, tooling-root command refs, and review entry behavior, did not rely on prior conversation, ordinary term meanings, hidden layout assumptions, or avoidable repeated reading
 
 ### 4.2 Cross-Convergence Baseline Slices
@@ -584,8 +610,9 @@ Cross-convergence slices review whether locally correct rules still compose into
 9. `project_instance_to_framework_convergence`
    - verifies the project-instance compatibility check and `spec_flow_migrate` compose with routing, lifecycle, process-state, repository-mapping, shared-binding, entry-file, and tooling rules without judging business truth content
 10. `agent_operability_path_walk`
-   - walks representative execution paths across routing, advance, command, shared, process-state, entry, and tooling rules
-   - verifies a new executor can proceed from request to next legal action without hidden context
+   - walks representative execution paths starting from the agent runtime entry file (`templates/*.md` for `source_repo` or project-root registered entry file for `installed_project`), through routing, advance, command, shared, process-state, entry, and tooling rules
+   - verifies a new executor can proceed from the entry file's first step to the correct first owner, route, command, and next legal action without hidden context, prior `specFlow` memory, or circular navigation between the entry file and `operations/entry_routing.md`
+   - entry-to-routing alignment under Section 2.8.3, fallback path completeness, and stop-condition transport must be explicitly reported for every walked path
 
 The final result must not issue `pass` until every required local baseline slice, every required cross-convergence baseline slice, and every dynamic slice is closed as `passed` or `skipped_not_in_scope`.
 
