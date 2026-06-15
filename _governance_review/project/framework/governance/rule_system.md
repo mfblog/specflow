@@ -6,7 +6,7 @@ This file is the governance entry for rule work. Exact rule-governance entries r
 
 ## Rule Scopes
 
-1. Global rules (`g_rule_`) apply to every current-layer unit.
+1. Stable global rules (`g_rule_`) apply to every current-layer unit. Candidate global rules are not enforced against current-layer units until promoted to stable.
 2. Bound rules (`b_rule_`) apply only to units that reference them through `rule_refs`.
 
 Consumer lists are derived from unit frontmatter. Rule files must not store consumer lists.

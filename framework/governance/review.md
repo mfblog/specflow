@@ -16,6 +16,8 @@ There is no narrowed or scoped `spec_flow_design_review` mode.
 
 ## Entries
 
+0. If the entry expression does not match an exact review form but clearly describes governance review, mechanism audit, or framework correctness intent, treat it as `spec_flow_review` and default to `scoped_review`. If the intent is ambiguous between review and design review, also default to `scoped_review`.
+
 1. `spec_flow_review` checks mechanism correctness.
 2. `spec_flow_design_review` checks design quality and agent operability.
 
@@ -46,6 +48,16 @@ Supported layouts:
    - project-instance compatibility reviews template bootstrap compatibility and does not require real `docs/specs/` instance files
 
 `specflowctl review ... --layout auto` detects the layout. Callers may pass `--layout installed` or `--layout source` to force one layout.
+
+### Layout-Aware Path Resolution
+
+Files in `framework/` reference paths that resolve differently depending on layout.
+`docs/specs/` paths are project-instance files present only in `installed_project` layout;
+in `source_repo` layout they do not exist and must be treated as informational references
+(agents must check path existence before reading and skip non-existent paths with a documented note).
+Lifecycle and rule files at `framework/lifecycle/` and `framework/governance/rules/` may include
+layout-aware notes on specific Required Reads entries; this section is the centralized authority
+for how those path references should be resolved.
 
 If `--layout auto` detects both `installed_project` and `source_repo` markers, the review must stop and require an explicit `--layout installed` or `--layout source` argument. Auto-detection must not silently choose one layout.
 

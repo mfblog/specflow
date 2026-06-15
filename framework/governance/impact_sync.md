@@ -28,7 +28,7 @@ Do not infer consumers from implementation directories alone.
 
 ## Consumer Discovery
 
-When `impact_sync` is called from `rule_sync` via the Rule Sync Handoff path (see below), it must accept the pre-computed affected-unit set as authoritative. It must not re-derive consumers from `rule_refs` in that case, because `rule_sync` already computed the affected set from the execution-local inputs that the caller proved. Independent consumer re-derivation is required only when `impact_sync` is triggered directly by a non-rule change (repository mapping update, stable unit version change, or governance-flow fallback).
+When `impact_sync` is called from `rule_sync` via the Rule Sync Handoff path (see below), it must accept the pre-computed affected-unit set as authoritative. The handoff input fields are: `invalidating_rule_refs` (rule refs whose truth changed), `affected_candidate_units` (candidate-layer unit names with invalidated evidence), `affected_stable_units` (stable-layer unit names with invalidated evidence), and `stable_landing_exceptions` (stable units that are landing targets and excluded from invalidation). `impact_sync` must not re-derive consumers from `rule_refs` in that case, because `rule_sync` already computed the affected set from the execution-local inputs that the caller proved. Independent consumer re-derivation is required only when `impact_sync` is triggered directly by a non-rule change (repository mapping update, stable unit version change, or governance-flow fallback).
 
 Rule consumers are derived from current-layer unit frontmatter:
 
@@ -43,10 +43,10 @@ Repository mapping consumers are derived from object, implementation path, and s
 ## Fallback Reason Classification
 
 Use the canonical fallback reason codes from `framework/lifecycle/recovery.md`.
-`current`, `plan_drift`, and `implementation_deviation` are additional codes used for
+`no_drift_observed`, `plan_drift`, and `implementation_deviation` are additional codes used for
 agent-internal routing decisions and are not defined in `recovery.md`:
 
-1. `current` - no process or implementation evidence is invalidated.
+1. `no_drift_observed` - no process or implementation evidence is invalidated.
 2. `truth_drift` - candidate behavior, boundary, or acceptance truth must be rewritten or rechecked.
 3. `binding_drift` - a current unit or rule binding no longer matches current truth.
 4. `baseline_drift` - a captured dependency or baseline no longer matches current truth.
@@ -57,6 +57,7 @@ agent-internal routing decisions and are not defined in `recovery.md`:
 9. `implementation_deviation` - implementation no longer satisfies current truth.
 10. `evidence_incomplete` - candidate verification evidence is missing or invalid.
 11. `stable_verify_invalid` - stable verification evidence is missing or invalid.
+12. `spec_issue` - the candidate Spec requires repair. Routed as `gate_layer` per `framework/lifecycle/recovery.md`.
 
 When classification is uncertain, use the earliest proven invalidated layer and its canonical reason code.
 
@@ -101,7 +102,6 @@ After impact_sync completes, it produces:
 1. `affected_candidate_units` — list of candidate units and their applied fallback reason codes
 2. `affected_stable_units` — list of stable units and their applied fallback reason codes
 3. `next_command_updates` — per-unit Next Command changes applied through `framework/lifecycle/recovery.md`
-4. `rule_escape_escalations` — any units that required `framework/governance/rules/rule_escape.md` escalation
 
 ## Removed Scenario Lifecycle
 

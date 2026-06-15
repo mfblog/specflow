@@ -48,9 +48,10 @@ Confirm the target unit does not yet have a row in `docs/specs/_status.md` — `
 - If a valid stable verify result exists:
   - `controlled_repair_required` → write `repair`
   - `controlled_change_required` → write `change`
+  - `truth_text_change_required` → write `repair`
   - `aligned` → no specific intent required
 - Every stable-layer appendix must have a corresponding same-named candidate-layer appendix
-- Rewrite Markdown document references within the candidate main Spec body from stable appendix paths (`s_unit_*`) to candidate appendix paths (`c_unit_*`), ensuring the candidate body references its own appendix copies
+- Rewrite Markdown document references within the candidate main Spec body AND within every copied candidate appendix file from stable appendix paths (`s_unit_*`) to candidate appendix paths (`c_unit_*`), ensuring the candidate body and appendix files reference the correct candidate-layer paths
 - If the status table is empty: STOP, report that no units are registered, and suggest `unit_new` as the first step
 
 ## Not Allowed
@@ -61,7 +62,7 @@ Confirm the target unit does not yet have a row in `docs/specs/_status.md` — `
 - Modify other units' truth
 - Modify stable-layer truth during `unit_new` / `unit_fork`
 - Modify candidate-layer truth during `unit_init`
-- Introduce behavior, acceptance, ownership, or rules not yet decided in the Required Context
+- Introduce behavior, acceptance, ownership, or rules not yet decided in the Required Context (the set of accepted formal truth files, lifecycle state, and binding constraints — `_status.md`, stable unit truth, rules, and `repository_mapping.md` — that define the current decision boundary for the target unit)
 
 ## Note
 
@@ -71,9 +72,9 @@ Confirm the target unit does not yet have a row in `docs/specs/_status.md` — `
 
 | Command | Success Result | Write Target | Next Step |
 |---------|---------------|-------------|-----------|
-| `unit_init` | `stable_created` | Write stable unit Spec at `docs/specs/units/stable/s_unit_{unit}.md` per `framework/spec_writing_guide.md` format | `unit_fork` |
-| `unit_new` | `candidate_created` | Write candidate unit Spec at `docs/specs/units/candidate/c_unit_{unit}.md`. Write `source_basis` per `framework/operations/entry_routing.md` Onboarding Source Decision. `candidate_intent` is not required for `unit_new`. | `unit_check` |
-| `unit_fork` | `candidate_created` | Write candidate unit Spec at `docs/specs/units/candidate/c_unit_{unit}.md` with stable baseline and candidate appendices | `unit_check` |
+| `unit_init` | `stable_created` | Write stable unit Spec at `docs/specs/units/stable/s_unit_{unit}.md` per `framework/spec_writing_guide.md` format. Add or update `docs/specs/repository_mapping.md` with a row: `kind=unit`, `registration_state=landed`, `implementation_paths` per existing implementation, `spec_files` referencing the stable Spec. | `unit_fork` |
+| `unit_new` | `candidate_created` | Write candidate unit Spec at `docs/specs/units/candidate/c_unit_{unit}.md`. Write `source_basis` — one of `new_design`, `existing_implementation`, `mixed`, or `replacement` — determined by whether behavior is sourced from a new design or an existing implementation (see `framework/operations/entry_routing.md` Onboarding Source Decision for per-value mapping). Add or update `docs/specs/repository_mapping.md` with a row: `kind=unit`, `registration_state=planned` when `source_basis` is `new_design` (no implementation paths exist); `registration_state=landed` when `source_basis` is `existing_implementation`, `mixed`, or `replacement` (implementation paths exist at registration time). `spec_files` referencing the candidate Spec. `candidate_intent` is not required for `unit_new`. | `unit_check` |
+| `unit_fork` | `candidate_created` | Write candidate unit Spec at `docs/specs/units/candidate/c_unit_{unit}.md` with stable baseline and candidate appendices. Ensure the unit's `docs/specs/repository_mapping.md` row exists. If it doesn't, add it with `registration_state=planned`. Update `spec_files` to reference the candidate Spec. | `unit_check` |
 
 Close through `command close`. Before closing, ensure all writes are complete and no unresolved rule-governance or ownership issues remain.
-General tooling invocation: `specflowctl command close --command unit_init|unit_new|unit_fork --object-type unit --object <unit> --outcome <outcome>`
+General tooling invocation: `specflowctl command close --command unit_init|unit_new|unit_fork --object-type unit --object {unit} --outcome {outcome}`

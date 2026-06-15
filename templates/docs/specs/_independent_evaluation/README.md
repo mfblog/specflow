@@ -25,4 +25,4 @@ Rules:
 7. Request files distinguish `Review Subject` (artifact paths only), `Review Evidence Refs`, and `Evaluation Questions`.
 8. `Review Subject` lists artifact file paths only — full file contents are not inlined. The reviewer reads the listed files themselves.
 9. `Evaluation Questions` carry the authoritative review criteria; the `Review Standard Refs` section is not rendered separately.
-10. `Review Evidence Refs` are used only to judge whether recorded evidence is sufficient and traceable; they are not necessarily readable files.
+10. `Review Evidence Refs` are file paths or durable references that the reviewer inspects to judge whether recorded evidence is sufficient and traceable.

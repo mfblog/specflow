@@ -35,6 +35,8 @@ Output fields:
 6. `findings`
 7. `conclusion`
 
+If the output does not explicitly report all seven output fields, the review is not complete.
+
 Every real finding in a scoped review must be written as a short repairable story before trace details.
 The story must let a new maintainer understand the execution path, expected rule behavior, actual gap, possible wrong next step, and smallest correct repair.
 

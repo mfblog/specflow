@@ -34,15 +34,20 @@ Check and verify process YAML must identify the unit and command gate:
 object_type: unit
 object_ref: {unit}
 gate: unit_check|unit_verify
-decision: {decision}  # unit_check advancing outcome is 'pass'; unit_verify advancing outcome is 'ready_to_promote'
+decision: pass  # always 'pass' for advancing check and verify evidence. The --outcome close-command parameter (e.g. 'ready_to_promote') is distinct from this field.
+blocking_summary: none|{summary}
+coverage_summary: {summary}
 allow_next: true|false
-next_command: unit_verify|unit_promote|none
+next_command: unit_check|unit_verify|unit_promote|none
 truth_layer_ref: candidate
 truth_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 truth_version_ref: c_unit_{unit}@x.y.z
 truth_fingerprint: {fingerprint}
 acceptance_behavior_fingerprint: {fingerprint}
-acceptance_item_set: [list of item ids]
+acceptance_item_set: # list of acceptance items; each item has these sub-fields
+  - id: <acceptance_item_id>
+    verification_surface: <surface>
+    not_runnable_yet: true | false
 unit_appendix_snapshot: none | list
 unit_snapshot: none | list
 rule_snapshot: none | list
@@ -54,6 +59,35 @@ review_findings: none
 human_decision_refs: none | list
 ```
 
+#### next_command semantics
+
+`next_command` records the next command in the lifecycle sequence after the decision is accepted.
+
+For check results (`gate: unit_check`), `next_command` records the current gate
+(`unit_check`) that produced this snapshot. It matches the unit's NextCommand
+in `_status.md` before the close transition is applied. When `command close`
+writes the pass transition, the status row updates to `unit_verify`.
+
+For verify results (`gate: unit_verify`), `next_command` records the promotion
+target (`unit_promote`).
+
+For stable verify results (`gate: unit_stable_verify`), see the stable verify
+section above.
+
+#### allow_next semantics
+
+`allow_next` controls whether `command close` may advance the unit to the
+`next_command` recorded in this snapshot. When `true`, the decision permits
+lifecycle progression. When `false`, the snapshot records a non-advancing
+state and `command close` must not advance beyond the current command.
+
+For check and verify results, advancing evidence uses `allow_next: true`.
+For stable verify results, `allow_next` is determined by the decision value
+— advancing decisions (`aligned`, `controlled_repair_required`,
+`controlled_change_required`, `truth_text_change_required`) use `true`;
+non-advancing decisions (`small_repair_required`, `evidence_incomplete`,
+`truth_rejudge_required`) use `false`.
+
 `_check_result` and candidate `_verify_result` are consumable evidence only for advancing pass gates.
 Non-advancing command outcomes such as `blocked` or `fix_required` must not be stored as these process snapshots.
 
@@ -63,9 +97,9 @@ Stable verify process YAML must identify stable truth and the current implementa
 object_type: unit
 object_ref: {unit}
 gate: unit_stable_verify
-decision: aligned|controlled_repair_required|controlled_change_required|small_repair_required|evidence_incomplete|truth_rejudge_required
+decision: aligned|controlled_repair_required|controlled_change_required|small_repair_required|evidence_incomplete|truth_rejudge_required|truth_text_change_required
 allow_next: true|false
-next_command: unit_fork | unit_stable_verify  # unit_fork for advancing decisions (aligned, controlled_repair_required, controlled_change_required); unit_stable_verify for non-advancing decisions (small_repair_required, evidence_incomplete, truth_rejudge_required)
+next_command: unit_fork | unit_stable_verify  # unit_fork for advancing decisions (aligned, controlled_repair_required, controlled_change_required, truth_text_change_required); unit_stable_verify for non-advancing decisions (small_repair_required, evidence_incomplete, truth_rejudge_required)
 blocking_summary: none|{summary}
 coverage_summary: {summary}
 truth_layer_ref: stable
@@ -73,7 +107,10 @@ truth_file_ref: docs/specs/units/stable/s_unit_{unit}.md
 truth_version_ref: s_unit_{unit}@x.y.z
 truth_fingerprint: {fingerprint}
 acceptance_behavior_fingerprint: {fingerprint}
-acceptance_item_set: [list of item ids]
+acceptance_item_set: # list of acceptance items; each item has these sub-fields
+  - id: <acceptance_item_id>
+    verification_surface: <surface>
+    not_runnable_yet: true | false
 acceptance_item_evidence_matrix: [item_status_entries]
 unit_appendix_snapshot: none | list
 unit_snapshot: none | list
@@ -182,7 +219,7 @@ freshness_review_input_refs: freshness_text_drift_reuse;{request_file};{durable_
 freshness_review_findings: none
 ```
 
-`acceptance_behavior_fingerprint` is the normalized SHA-256 of the full formal acceptance item behavior fields: `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `pass_condition`, `not_runnable_yet`, and `not_runnable_yet_reason`. When a recommended field (such as `target`) is absent from an acceptance item, the normalized hash MUST use an empty string as its value.
+`acceptance_behavior_fingerprint` is the normalized SHA-256 of the full formal acceptance item behavior fields (see Section 6a for the complete serialization format): `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `pass_condition`, `not_runnable_yet`, and `not_runnable_yet_reason`. When a recommended field (such as `target`) is absent from an acceptance item, the normalized hash MUST use an empty string as its value.
 Advancing check (when run), verify, and stable verify evidence must record it.
 Evidence without this field uses the old snapshot schema and is not current valid advancing evidence until it is migrated or recreated.
 It must not be treated as accepted `text_drift` reuse.
@@ -264,6 +301,34 @@ This same fingerprint contract applies to:
 5. `rule_snapshot` item fingerprints
 6. `stable_truth_fingerprint`
 7. `acceptance_behavior_fingerprint`
+
+### 6a. acceptance_behavior_fingerprint Serialization
+
+The acceptance behavior fingerprint is computed by serializing the sorted
+acceptance item set and then applying the Section 7 normalization + SHA-256
+algorithm.
+
+Serialization steps:
+
+1. Sort the acceptance items by `id` (ascending), then `verification_surface`
+   (ascending), then `not_runnable_yet` (ascending).
+2. Serialize each item as a single line with fields joined by the ASCII unit
+   separator byte (`0x1F`):
+   `id={value}` + `\x1f` + `target={value}` + `\x1f` + `verification_surface={value}`
+   + `\x1f` + `implementation_surface={value}` + `\x1f` + `verification_method={value}`
+   + `\x1f` + `pass_condition={value}` + `\x1f` + `not_runnable_yet={value}` + `\x1f`
+   + `not_runnable_yet_reason={value}`
+3. If a recommended field (such as `target`) is absent from an acceptance
+   item, the serialized value is an empty string (e.g., `target=`).
+4. Join all item lines with `\n`.
+5. Apply Section 7 normalization to the joined text: convert CRLF to LF,
+   ensure exactly one trailing LF.
+6. Compute SHA-256 of the UTF-8 encoded normalized text.
+7. Render the hash as lowercase hexadecimal.
+
+The `specflowctl snapshot compute-fingerprint --field acceptance_behavior_fingerprint`
+command prints this fingerprint plus serialization metadata for diagnostic
+comparison.
 
 ## 7. Text Normalization Rules
 
@@ -349,7 +414,7 @@ Each stable verify result must record:
 For `decision: aligned`, every executable acceptance item must have evidence status `pass`.
 Items marked `not_runnable_yet: yes` in stable truth must use evidence status `not_runnable_yet`.
 
-`controlled_repair_required` and `controlled_change_required` may advance to `unit_fork` only when the matching stable verify result validates and the command close outcome matches the stored `decision`.
+`aligned`, `controlled_repair_required`, `controlled_change_required`, and `truth_text_change_required` may advance to `unit_fork` only when the matching stable verify result validates and the command close outcome matches the stored `decision`.
 
 ## 10. Unit Check Checklist
 
@@ -478,13 +543,19 @@ At minimum, validation must rebuild:
 6. `unit_snapshot` from current unit `unit_refs`
 7. `rule_snapshot` from stable global rules and current unit `rule_refs`
 8. `acceptance_item_set` from the current unit truth for check, verify, and stable verify files
-9. `acceptance_item_plan_coverage` against the current candidate acceptance item ids for active plan files (agent self-check — plan files are agent-internal artifacts; see lines 19-20 and 86-87)
-10. `stable_candidate_diff_refs`, `implementation_gap_refs`, `planned_change_scope`, `package_constraint_review`, `package_constraint_refs`, `package_constraint_summary`, and `retirement_targets` shape, ids, target fields, package refs, and acceptance item refs for active plan files (agent self-check — plan files are agent-internal artifacts; see lines 19-20 and 86-87)
+9. `acceptance_item_plan_coverage` against the current candidate acceptance item ids for active plan files (agent self-check — plan files are agent-internal artifacts; see Section 1 (lines 19-20))
+10. `stable_candidate_diff_refs`, `implementation_gap_refs`, `planned_change_scope`, `package_constraint_review`, `package_constraint_refs`, `package_constraint_summary`, and `retirement_targets` shape, ids, target fields, package refs, and acceptance item refs for active plan files (agent self-check — plan files are agent-internal artifacts; see Section 1 (lines 19-20))
 11. `active_plan_file_ref` and `active_plan_fingerprint` for candidate verify files
 12. `acceptance_item_evidence_matrix` status and evidence refs against the current acceptance item ids for verify and stable verify files
 13. `retirement_evidence_matrix` against the current active plan retirement target ids for candidate verify files
 14. `package_delta_verification` against the current active plan `planned_change_scope` ids for candidate verify files
 15. independent evaluation receipt fields for check, verify, and stable verify files
+
+    Note: For the two-phase write-before-review flow (writing the verify result
+    without receipt fields, then adding receipt fields after independent review
+    returns `pass`), see `framework/core/independent_evaluation.md` "Handoff
+    Requests" section. Tooling accepts pre-receipt process files for mechanical
+    readiness validation before the independent review receipt is written.
 16. acceptance behavior fingerprint and conditional freshness reuse receipt fields when text drift is being reused
 
 Deterministic validation rule:

@@ -4,6 +4,10 @@
 
 It is used only after natural-language routing has already decided that the requested truth belongs in a rule file rather than inside one unit.
 
+### Entry Condition
+
+If invoked via the exact command `rule_new` without prior conversational context establishing the rule topic, stop and ask the user: what rule truth do they want to create, and whether it should be a global rule (`g_rule_`) or bound shared rule (`b_rule_`). Do not proceed until the rule topic is clear.
+
 ## 1. Scope
 
 `rule_new` may:
@@ -42,6 +46,8 @@ Before any write, read:
 
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
+**Layout-aware path note:** Paths in this section are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+
 ## 3. Rule Identity
 
 The rule id must use the rule's real scope:
@@ -63,7 +69,7 @@ When a stable sibling already exists, the candidate file must carry the exact in
 4. Choose the smallest stable rule boundary. One rule file must carry one coherent shared constraint.
 5. If the target bound shared rule already has a stable sibling, derive the current consumer set from current-layer unit `rule_refs` and choose exactly one valid `promotion_owner_unit`.
 6. Before the first file mutation, capture the recovery baseline required by `framework/lifecycle/recovery.md`.
-7. Create or update the candidate rule file.
+7. Create or update the candidate rule file at `docs/specs/rules/candidate/c_{rule_id}.md` (using the `rule_id` from section 3, e.g., `c_g_rule_example.md` for global rules, `c_b_rule_example.md` for bound rules).
 8. If the bound shared rule has no formal current consumers after this write, keep it only when the file explicitly records intentional unbound retention with:
    - `unbound_retention: intentional`
    - `unbound_retention_reason: <why this rule is intentionally independent now>`
@@ -72,6 +78,10 @@ When a stable sibling already exists, the candidate file must carry the exact in
 10. Do not write consumer lists or `bound_objects` into the rule file.
 11. Update `docs/specs/repository_mapping.md` in the same round when the rule object map changed.
 12. Run `rule_sync` after any rule-file write or rule object-map write.
+    Execution-local inputs for `rule_sync`:
+    - `rule_refs`: the exact candidate ref that was written
+    - `rule_ids`: the target rule id of the newly created or updated rule
+    - `units`: none by default (no binding changes in this flow); pass explicitly only when a writeback-required unit was touched
 
 If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `framework/lifecycle/recovery.md` before returning to `framework/operations/entry_routing.md`.
 

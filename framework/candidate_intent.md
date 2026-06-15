@@ -9,9 +9,9 @@
 | `change` | The candidate layer intends to change the stable layer's behavior, dependencies, rule binding, acceptance, or implementation expectations |
 | `repair` | The candidate layer preserves the stable layer's expected behavior, fixing missing/outdated/malformed/insufficient truth |
 
-`unit_fork` must write `candidate_intent`. When `evidence_appendix_ref` is not `none`, the evidence appendix file referenced by that field must be created before or during the `unit_fork` writeback (see `framework/spec_writing_guide.md` Section 7 for appendix format and ownership). The evidence appendix records observed implementation behavior as traceability evidence, not as durable behavior truth.
+`unit_fork` must write `candidate_intent`. When `evidence_appendix_ref` is not `none`, the evidence appendix file referenced by that field must be created before or during the `unit_fork` writeback (see `framework/spec_writing_guide.md` Section 7 for appendix format and ownership). The agent executing `unit_fork` MUST observe the actual current implementation — inspecting interfaces, data formats, behaviors, and side effects — and record those observations in the evidence appendix file. The evidence appendix records observed implementation behavior as traceability evidence, not as durable behavior truth. It must not be generated from spec intent or second-hand description alone.
 
-`unit_new` does not write `candidate_intent` — it creates the first candidate truth with no stable-layer parent to relate to. Write `source_basis` per the Onboarding Source Decision in `framework/operations/entry_routing.md`; `candidate_intent` is not required for `unit_new`.
+`unit_new` does not write `candidate_intent` — it creates the first candidate truth with no stable-layer parent to relate to. Write `source_basis` per the Onboarding Source Decision in `framework/operations/entry_routing.md`; `candidate_intent` is not required for `unit_new`. Allowed values for `source_basis` in the `unit_new` context: `new_design | existing_implementation | mixed | replacement` (same as change candidate). When `source_basis` is `existing_implementation` or `mixed`, the candidate Spec MUST include `evidence_appendix_ref` pointing to a valid evidence appendix file recording observed implementation behavior (same rule as change candidate). The agent executing `unit_new` MUST inspect the actual implementation files and record observed behavior in the evidence appendix; it must not fabricate or infer the appendix content from spec documentation.
 
 ## Change Candidate
 
@@ -31,7 +31,7 @@ evidence_appendix_ref: none | <candidate appendix path>
 ### Command Behavior
 
 - **unit_fork**: Derive from current stable-layer main Spec, write `candidate_intent=change`, record behavior differences from stable layer
-- **unit_check**: Verify behavior differences are explicit, boundaries are clear, acceptance items are directly verifiable, and source fields are consistent
+- **unit_check**: Verify behavior differences are explicit, boundaries are clear, acceptance items are directly verifiable, and source fields are consistent. Verify that `evidence_appendix_ref` references exist and their content is semantically consistent with the declared `source_basis`.
 - **unit_verify**: Verify the implementation satisfies the candidate truth
 - **unit_promote**: `candidate_intent` metadata is not written to the stable layer after promotion
 
@@ -54,7 +54,7 @@ evidence_appendix_ref: none
 ### Command Behavior
 
 - **unit_fork**: Derive from stable-layer main Spec, version uses the next PATCH
-- **unit_check**: Must verify the repair candidate does not change stable behavior truth. Violations (modifying protocol/fields/ownership/state machine semantics) must require `fix_required` and recommend switching to `change`
+- **unit_check**: Must verify the repair candidate does not change stable behavior truth. Violations (modifying protocol/fields/ownership/state machine semantics) must require `fix_required` and recommend switching to `change`. Verify that `Repair Scope` fields match the repair basis and that `evidence_appendix_ref=none` is consistent with `source_basis=new_design`.
 - **unit_verify**: Must prove the implementation satisfies the repair basis and acceptance items. New behavior or relaxed pass conditions must not be treated as repair success
 - **unit_promote**: Stable version is the PATCH version of the repair basis; candidate-specific fields are not written to the stable layer
 

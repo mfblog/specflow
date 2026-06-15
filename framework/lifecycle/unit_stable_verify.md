@@ -27,11 +27,11 @@ If all checks pass: proceed to "What This Step Does" below.
 ## What This Step Does
 
 Check current implementation consistency with stable-layer truth.
-Output should be `aligned` (consistent), `controlled_repair_required` (repair needed), `controlled_change_required` (change needed), `small_repair_required` (small non-behavior repair), `truth_rejudge_required` (stable-layer truth re-evaluation needed), or `evidence_incomplete` (insufficient evidence). See the How to End table for advancing vs non-advancing outcomes.
+Output should be `aligned` (consistent), `controlled_repair_required` (repair needed), `controlled_change_required` (change needed), `small_repair_required` (small non-behavior repair), `truth_rejudge_required` (stable-layer truth re-evaluation needed), `truth_text_change_required` (stable-layer truth text must change), or `evidence_incomplete` (insufficient evidence). See the How to End table for advancing vs non-advancing outcomes.
 
 ## Note
 
-- This step requires independent review, not self-approval (see `framework/operations/entry_routing.md` "Independent Review Stop" for report format and `framework/core/independent_evaluation.md` for reviewer pack selection)
+- This step requires independent review, not self-approval. Use the `unit_stable_verify_advancing` reviewer pack from `framework/core/independent_evaluation.md`. When reporting a review stop, document: (1) the generated evaluation request file path, (2) the trigger instruction from `specflowctl evaluation request`, (3) that the reviewer must not modify repository files, (4) that execution resumes after the reviewer returns `pass`, `blocked`, or `needs_human_decision`.
 - Stable verification does not create candidate truth itself. If a change is needed, the result triggers a subsequent `unit_fork`
 - For `aligned`, every acceptance item must have `pass` evidence
 
@@ -50,7 +50,8 @@ Output should be `aligned` (consistent), `controlled_repair_required` (repair ne
 | `controlled_repair_required` | Repair needed | Write `_stable_verify_result` at `docs/specs/_stable_verify_result/unit/{unit}.md`. `unit_fork` with repair intent | command close keeps `Next Command=unit_fork`. |
 | `controlled_change_required` | Change needed | Write `_stable_verify_result` at `docs/specs/_stable_verify_result/unit/{unit}.md`. `unit_fork` with change intent | command close keeps `Next Command=unit_fork`. |
 | `small_repair_required` | Small repair needed, no behavior truth change | Perform the non-behavior repair on implementation files. Then `unit_stable_verify` (re-verify) | command close sets `Next Command=unit_stable_verify` for continued verification. |
-| `truth_rejudge_required` | Stable-layer truth needs re-evaluation | If truth text is valid: supplement interpretation evidence and re-verify. If truth text must change: `unit_fork` with repair intent | command close sets `Next Command=unit_stable_verify` for continued verification. |
+| `truth_rejudge_required` | Stable-layer truth needs re-evaluation | If truth text is valid: supplement interpretation evidence and re-verify | command close sets `Next Command=unit_stable_verify` for continued verification. |
+| `truth_text_change_required` | Stable-layer truth text must change | Write `_stable_verify_result` at `docs/specs/_stable_verify_result/unit/{unit}.md`. `unit_fork` with repair intent | command close sets `Next Command=unit_fork`. |
 | `evidence_incomplete` | Evidence insufficient | Supplement evidence and re-verify | command close sets `Next Command=unit_stable_verify` for continued verification. |
 
 Close through `command close`.

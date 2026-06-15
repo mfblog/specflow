@@ -142,6 +142,8 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - rebuild current process snapshots from bound truth
 16. `snapshot validate-process`
    - compare one process file against rebuilt current truth
+16b. `snapshot compute-fingerprint`
+   - compute fingerprints (truth_fingerprint, acceptance_behavior_fingerprint, file_fingerprint) for a unit or rule object
 17. `process cleanup-fallback`
    - execute deterministic layered fallback cleanup for one unit
 18. `process cleanup-success`
@@ -183,6 +185,8 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - candidate current-layer units are rewritten directly, unsafe current-round check checklist, check, plan, and verify process files are removed when present, and the unit is routed to `unit_check`
    - stable current-layer units are not rewritten; stale stable-verify evidence is removed when present and the unit is routed to `unit_stable_verify`
    - when no current-layer unit still uses the old stable unit ref, the command reports a no-op result
+28b. `unit check-appendix-coverage`
+   - check that every stable appendix has a candidate counterpart for a forked unit
 29. `relation candidates`
    - compute the current candidate advancement relation graph from explicit refs
    - print `relation_result`, `ready_candidates`, `blocked_candidates`, `candidate_cycles`, and `diagnostics`

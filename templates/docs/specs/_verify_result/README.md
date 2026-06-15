@@ -17,12 +17,14 @@ The candidate verify pass snapshot records:
 
 1. current unit truth ref, fingerprint, and acceptance behavior fingerprint
 2. accepted acceptance item set
-3. acceptance item evidence matrix with per-item `evidence_refs` and optional `scope_verification`
-4. `unit_appendix_snapshot`
-5. `unit_snapshot`
-6. `rule_snapshot`
-7. independent evaluation receipt fields
-8. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
+3. `blocking_summary` — summary of any issues that prevent promotion (or `none` when clear)
+4. `coverage_summary` — summary of what was verified and the coverage scope
+5. acceptance item evidence matrix with per-item `evidence_refs` and optional `scope_verification`
+6. `unit_appendix_snapshot`
+7. `unit_snapshot`
+8. `rule_snapshot`
+9. independent evaluation receipt fields
+10. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
 
 When an acceptance item declares `affects` in its definition, the evidence matrix item must include `scope_verification` recording the verification result for each affected file, appendix, rule, and dependency. All scope items must pass for the acceptance item to be promotion-ready.
 

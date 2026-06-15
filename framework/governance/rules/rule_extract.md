@@ -4,6 +4,10 @@
 
 It is used only when the shared constraint already exists in current unit truth and must stop being duplicated inside unit bodies.
 
+### Entry Condition
+
+This flow is only valid when a shared constraint already exists within one or more unit bodies and needs to be extracted into an independent rule file. It is not for creating new rule truth — use `rule_new` for that.
+
 ## 1. Scope
 
 `rule_extract` may:
@@ -32,13 +36,14 @@ Before any write, read:
 3. `framework/lifecycle/overview.md`
 4. `framework/lifecycle/recovery.md`
 5. `framework/governance/rules/rule_sync.md`
-6. `docs/specs/_status.md`
-7. every named source unit's current-layer main Spec
-8. every current-layer unit main Spec needed to determine whether that unit already carries, duplicates, or consumes the target truth
-9. every relevant existing rule file that may overlap the target truth
-10. `docs/specs/repository_mapping.md` when a new rule id is created or the rule object map may change
-11. `framework/lifecycle/unit_init_new_fork.md` when any writeback-required unit is currently stable
-12. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
+6. `framework/governance/impact_sync.md`
+7. `docs/specs/_status.md`
+8. every named source unit's current-layer main Spec
+9. every current-layer unit main Spec needed to determine whether that unit already carries, duplicates, or consumes the target truth
+10. every relevant existing rule file that may overlap the target truth
+11. `docs/specs/repository_mapping.md` when a new rule id is created or the rule object map may change
+12. `framework/lifecycle/unit_init_new_fork.md` when any writeback-required unit is currently stable
+13. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
@@ -62,7 +67,7 @@ Bound shared rule consumer discovery must use only current-layer unit frontmatte
 11. Rewrite each source candidate unit so the extracted truth no longer remains as duplicated unit-local formal truth.
 12. Rewrite each affected candidate unit's `rule_refs` and body explanation required by the extraction result.
 13. Remove unbound-retention fields from the target rule when the resulting current-layer unit `rule_refs` graph has bound shared rule consumers.
-14. If the resulting rule remains intentionally unbound, write intentional unbound-retention fields in the target rule; otherwise reject closure.
+14. If the resulting rule remains intentionally unbound, write intentional unbound-retention fields in the target rule (including `unbound_retention_owner: rule_extract`); otherwise reject closure.
 15. Do not write consumer lists or `bound_objects` into any rule file.
 16. Run `rule_sync` after any rule-file write or unit `rule_refs` write.
     Execution-local inputs for `rule_sync`:

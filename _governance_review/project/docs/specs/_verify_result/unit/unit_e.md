@@ -28,13 +28,15 @@ rule_snapshot:
     file_ref: docs/specs/rules/stable/s_g_rule_default.md
     version_ref: s_g_rule_default@1.0.0
     fingerprint: 25c810eb452db55c0b748641feedeec5dc792340a663e37bc4aa17f2bf9b90db
+  - rule_id: security
+    layer: stable
+    file_ref: docs/specs/rules/stable/s_g_rule_security.md
+    version_ref: s_g_rule_security@1.0.0
+    fingerprint: 9ab0cf4309dc92952ba5dc45c27b1f01167822bcff828b93ce0919788d2da234
 acceptance_item_evidence_matrix:
   - id: unit_e.core
     status: pass
     evidence_refs: go test ./...
 retirement_evidence_matrix: none
-package_delta_verification:
-  - planned_change_scope_id: pcs.core
-    result: pass
-    evidence_refs: go test ./...
+package_delta_verification: none
 ```

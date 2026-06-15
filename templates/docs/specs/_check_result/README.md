@@ -17,11 +17,13 @@ The snapshot records:
 
 1. current unit truth ref, fingerprint, and acceptance behavior fingerprint
 2. accepted acceptance item set
-3. `unit_appendix_snapshot`
-4. `unit_snapshot`
-5. `rule_snapshot`
-6. independent evaluation receipt fields
-7. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
+3. `blocking_summary` — summary of any issues that prevent immediate progression (or `none` when clear)
+4. `coverage_summary` — summary of what was checked and the coverage scope
+5. `unit_appendix_snapshot`
+6. `unit_snapshot`
+7. `rule_snapshot`
+8. independent evaluation receipt fields
+9. conditional freshness reuse receipt fields when accepted `text_drift` keeps evidence reusable
 
 These files are process evidence, not behavior truth.
 

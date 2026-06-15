@@ -6,7 +6,7 @@ This file is the governance entry for rule work. Exact rule-governance entries r
 
 ## Rule Scopes
 
-1. Global rules (`g_rule_`) apply to every current-layer unit.
+1. Stable global rules (`g_rule_`) apply to every current-layer unit. Candidate global rules are not enforced against current-layer units until promoted to stable.
 2. Bound rules (`b_rule_`) apply only to units that reference them through `rule_refs`.
 
 Consumer lists are derived from unit frontmatter. Rule files must not store consumer lists.
@@ -24,7 +24,15 @@ Rule-governance flows may delegate to `framework/governance/impact_sync.md` (thr
 
 ## Routing
 
-Use `framework/operations/entry_routing.md` for natural-language rule requests.
 For an exact rule-governance entry, read this file and the matching flow file above.
 
-If repository truth is insufficient to pick or finish a rule flow, route to `rule_escape`.
+For natural-language rule requests, select the first applicable flow from the table below. Read the matching flow file. If repository truth is insufficient to pick or finish a rule flow, route to `rule_escape`.
+
+| Natural-language intent | Flow file |
+|---|---|
+| Create a new rule, define a new shared constraint, add a reusable prohibition | `framework/governance/rules/rule_new.md` |
+| Extract a rule from existing unit truth, formalize a locally-repeated constraint | `framework/governance/rules/rule_extract.md` |
+| Change rule bindings, add or remove a unit's rule reference, rebind consumers | `framework/governance/rules/rule_bind.md` |
+| Rename, merge, split, replace, or retire a rule | `framework/governance/rules/rule_topology.md` |
+| Release a rule version, sync rule changes to affected units, validate downstream impact | `framework/governance/rules/rule_sync.md` |
+| Unclear which rule flow to use, multi-step rule changes, rule-change recovery | `framework/governance/rules/rule_escape.md` |

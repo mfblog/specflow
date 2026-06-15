@@ -13,6 +13,7 @@ Before triggering, confirm from `docs/specs/_status.md` that `Next Command` is `
 - Agent implements independently based on candidate truth
 - Conversational iteration during implementation is normal
 - The agent is free to determine how to implement
+- After creating or modifying implementation files, update `docs/specs/repository_mapping.md` with the implementation paths and set `registration_state=landed`
 
 ## If Spec Issues Are Found During Implementation
 
@@ -23,7 +24,7 @@ If acceptance items are incomplete, incorrect, or unclear:
 3. Fix the candidate spec (`docs/specs/units/candidate/c_unit_{unit}.md`)
 4. Run `unit_check:{unit}` to re-validate the modified spec — this is accepted as a
    re-validation during the implementation phase (see `unit_check.md` precondition
-   exception). `unit_check` re-runs its 7 quality checks against the modified spec.
+   exception). `unit_check` re-runs the quality checks defined in `unit_check.md` against the modified spec.
 5. After `unit_check` passes (`Next Command` is still `unit_verify`), resume with
    `unit_impl:{unit}`
 
@@ -40,6 +41,7 @@ Agent may read these as needed during implementation:
 
 - Modify lifecycle state (`_status.md`)
 - Implement behavior beyond the unit's acceptance items
+- Modify candidate spec (`docs/specs/units/candidate/c_unit_{unit}.md`) or appendix files without running `unit_check:{unit}` for re-validation
 
 ## How to End
 

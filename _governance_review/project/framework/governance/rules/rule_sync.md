@@ -4,6 +4,10 @@
 
 It is the rule-specific impact discovery layer. Once the affected unit set is fixed, generic fallback and cleanup are handed to `impact_sync`.
 
+### Entry Condition
+
+This flow must be run after any rule truth or rule binding mutation. It computes the set of affected units and determines whether downstream process evidence is invalidated. It is not a lifecycle command — it is invoked automatically by rule-governance flows.
+
 ## 1. Scope
 
 `rule_sync` may:
@@ -36,6 +40,8 @@ Before impact is computed, read:
 6. `docs/specs/_status.md`
 7. every in-scope rule file
 8. every current-layer unit main Spec needed to rebuild the bound-rule consumer graph from `rule_refs`
+
+**Layout-aware path note:** Paths in this section are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
 
 If the caller changed rule truth, unit bindings, or the rule object map, that writeback must already be present before `rule_sync` computes impact.
 
@@ -101,11 +107,16 @@ If any deleted ref still exists as a Rule file or still has a current-layer unit
    - stable landing self-exemption for the exact `current_stable_landing_unit` and exact `stable_landing_rule_refs`
    - explicit candidate fallback for validated `retargeted_units`
 8. Convert the final result into `impact_sync` input:
-   - final invalidating rule refs
-   - final affected candidate units
-   - final affected stable units
-   - final stable-landing exceptions
+   - `invalidating_rule_refs`: the exact rule refs whose change or removal triggers fallback
+   - `affected_candidate_units`: the candidate units whose evidence must be invalidated
+   - `affected_stable_units`: the stable units whose evidence must be invalidated
+   - `stable_landing_exceptions`: any units exempted by stable-landing self-exemption
+   These fields map directly to `impact_sync.md` Consumer Discovery entry points. The
+   pre-computed set is authoritative; `impact_sync` must not re-derive consumers from
+   `rule_refs` when called from `rule_sync`.
 9. Hand the fixed result to `impact_sync`.
+   The receiving contract is `impact_sync.md` Section "Rule Sync Handoff". The affected-unit
+   set and invalidating rule refs are the authoritative consumer list for this round.
 10. When using tooling, run `specflowctl rule sync-impact` with the exact `--rule-refs`, `--rule-ids`, or `--deleted-rule-refs` and any already-proven exception flags.
 
 If repository truth is insufficient, return control to `rule_escape` without performing fallback cleanup. A caller that already mutated truth must follow its own post-mutation recovery rule or caller-owned blocked transition before rerouting. If the caller has no such post-mutation rule, it must stop before mutation instead of leaving mutated truth without an owner.
@@ -116,8 +127,9 @@ If repository truth is insufficient, return control to `rule_escape` without per
 
 | Condition | Description | Next Action |
 |-----------|-------------|-------------|
-| **Normal completion** | Impact computed from the in-scope rule refs and current-layer unit truth (see Procedure steps 1–9). The affected unit set and resolved exceptions are packaged into `impact_sync` input. | Hand the fixed result to `framework/governance/impact_sync.md` for downstream unit fallback. |
+| **Normal completion** | Impact computed from the in-scope rule refs and current-layer unit truth (see Procedure steps 1–9). The affected unit set and resolved exceptions are packaged into `impact_sync` input. | Hand the fixed result to `framework/governance/impact_sync.md` for downstream unit fallback and **wait for completion**. Impact sync applies fallback routing and returns control. The affected-unit set and exception results are authoritative for this round. |
 | **No-impact close** | `deleted_rule_refs` is the only input and verification proves the ref is absent from `docs/specs/rules/**` and from all current-layer unit `rule_refs` (see Procedure step 5) | Close with `impact_sync` fallback not required. Report affected candidate units `none`, affected stable units `none`. |
+| **Stale-evidence reconciliation complete** | Process snapshots (check or verify result) for flagged candidate units were found to contain a reference to a changed or removed rule ref (see Procedure step 6 fourth bullet). These units are added to the affected-unit set. | Hand the stale-evidence-flagged units to the affected-unit set for `impact_sync` fallback. The owning caller must include the flagged units in any post-`rule_sync` repair or recovery procedure. |
 | **Insufficient repository truth** | Repository mapping truth is missing or conflicting, or current-layer unit truth cannot be read (see Procedure step 10) | Return control to `rule_escape`. The caller must follow its own post-mutation recovery rule or caller-owned blocked transition before rerouting. |
 
 ## 7. Fallback Result
@@ -142,9 +154,10 @@ When a rule version is released (via `specflowctl rule release-version`), stable
 
 ### Governance Rules
 
-1. Auto-fork applies only to stable units with `Next Command=unit_fork`. Units in other lifecycle states are not auto-forked.
+1. Auto-fork applies only to stable units with `Next Command=unit_fork`. If any stable consumer of the old rule ref is in a different lifecycle state, the release-version operation fails with an error listing the non-compliant units. Resolve these units' lifecycle state before retrying. (See `tooling/internal/rulesync/release.go` for the tooling constraint.)
 2. Stable appendices are copied — not moved — so stable truth remains intact for non-auto-forked consumers.
 3. The auto-forked candidate inherits the old rule ref's behavior truth; the unit specification is not rewritten.
+3b. **Intent conflict guard** — `release-version` writes `candidate_intent=change` on the auto-forked candidate. If the stable verify result for the target unit records a decision requiring `candidate_intent=repair` (e.g., `controlled_repair_required`), the release-version operation must fail and report the conflict. The unit must be resolved before release-version can proceed. (See `tooling/internal/rulesync/release.go` `StableVerifyCandidateIntentRequirement` for the tooling constraint.)
 4. After auto-fork, the candidate unit follows the standard `unit_check` → `unit_verify` → `unit_promote` lifecycle.
 5. The `rule_sync` impact handoff runs after writeback, so downstream invalidation and fallback rules apply.
 

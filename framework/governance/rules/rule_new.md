@@ -4,6 +4,10 @@
 
 It is used only after natural-language routing has already decided that the requested truth belongs in a rule file rather than inside one unit.
 
+### Entry Condition
+
+If invoked via the exact command `rule_new` without prior conversational context establishing the rule topic, stop and ask the user: what rule truth do they want to create, and whether it should be a global rule (`g_rule_`) or bound shared rule (`b_rule_`). Do not proceed until the rule topic is clear.
+
 ## 1. Scope
 
 `rule_new` may:
@@ -34,11 +38,12 @@ Before any write, read:
 3. `framework/lifecycle/overview.md`
 4. `framework/lifecycle/recovery.md`
 5. `framework/governance/rules/rule_sync.md`
-6. `docs/specs/_status.md`
-7. every current-layer unit main Spec needed to check whether the target truth already exists as unit-local truth or is already bound through `rule_refs`
-8. every existing rule file that names or overlaps the requested rule truth
-9. `docs/specs/repository_mapping.md` when a new rule id is created or the rule object map may change
-10. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
+6. `framework/governance/impact_sync.md`
+7. `docs/specs/_status.md`
+8. every current-layer unit main Spec needed to check whether the target truth already exists as unit-local truth or is already bound through `rule_refs`
+9. every existing rule file that names or overlaps the requested rule truth
+10. `docs/specs/repository_mapping.md` when a new rule id is created or the rule object map may change
+11. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
@@ -65,7 +70,7 @@ When a stable sibling already exists, the candidate file must carry the exact in
 4. Choose the smallest stable rule boundary. One rule file must carry one coherent shared constraint.
 5. If the target bound shared rule already has a stable sibling, derive the current consumer set from current-layer unit `rule_refs` and choose exactly one valid `promotion_owner_unit`.
 6. Before the first file mutation, capture the recovery baseline required by `framework/lifecycle/recovery.md`.
-7. Create or update the candidate rule file.
+7. Create or update the candidate rule file at `docs/specs/rules/candidate/c_{rule_id}.md` (using the `rule_id` from section 3, e.g., `c_g_rule_example.md` for global rules, `c_b_rule_example.md` for bound rules).
 8. If the bound shared rule has no formal current consumers after this write, keep it only when the file explicitly records intentional unbound retention with:
    - `unbound_retention: intentional`
    - `unbound_retention_reason: <why this rule is intentionally independent now>`

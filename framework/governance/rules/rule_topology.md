@@ -4,6 +4,10 @@
 
 It is used when the rule structure itself must change, such as splitting, merging, replacing, retiring, or intentionally keeping an unbound rule.
 
+### Entry Condition
+
+This flow is valid only when the relationship between existing rule files and their unit consumers must change structurally (split, merge, replace, retire, or intentionally unbound). It is not for creating a new rule or binding a unit to an existing rule — use `rule_new` or `rule_bind` respectively.
+
 ## 1. Scope
 
 `rule_topology` may:
@@ -76,7 +80,7 @@ Before any write, read:
 8. When a new candidate rule is created for a brand-new rule object, write `rule_version: 0.1.0`.
 9. When a candidate rule has a stable sibling, write or validate exactly one valid `promotion_owner_unit`.
 10. Rewrite every affected candidate unit `rule_refs` and body explanation required by the topology plan.
-11. For every touched bound shared rule file with no formal current consumers after writeback, either delete it or write intentional unbound-retention fields in the same round.
+11. For every touched bound shared rule file with no formal current consumers after writeback, either delete it or write intentional unbound-retention fields (including `unbound_retention_owner: rule_topology`) in the same round.
 12. For every touched bound shared rule file with formal current consumers after writeback, remove or stop carrying unbound-retention fields.
 13. Do not write consumer lists or `bound_objects` into rule files.
 14. Update `docs/specs/repository_mapping.md` in the same round when the topology plan changes the rule object map.

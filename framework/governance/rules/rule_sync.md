@@ -4,6 +4,10 @@
 
 It is the rule-specific impact discovery layer. Once the affected unit set is fixed, generic fallback and cleanup are handed to `impact_sync`.
 
+### Entry Condition
+
+This flow must be run after any rule truth or rule binding mutation. It computes the set of affected units and determines whether downstream process evidence is invalidated. It is not a lifecycle command — it is invoked automatically by rule-governance flows.
+
 ## 1. Scope
 
 `rule_sync` may:
@@ -153,6 +157,7 @@ When a rule version is released (via `specflowctl rule release-version`), stable
 1. Auto-fork applies only to stable units with `Next Command=unit_fork`. If any stable consumer of the old rule ref is in a different lifecycle state, the release-version operation fails with an error listing the non-compliant units. Resolve these units' lifecycle state before retrying. (See `tooling/internal/rulesync/release.go` for the tooling constraint.)
 2. Stable appendices are copied — not moved — so stable truth remains intact for non-auto-forked consumers.
 3. The auto-forked candidate inherits the old rule ref's behavior truth; the unit specification is not rewritten.
+3b. **Intent conflict guard** — `release-version` writes `candidate_intent=change` on the auto-forked candidate. If the stable verify result for the target unit records a decision requiring `candidate_intent=repair` (e.g., `controlled_repair_required`), the release-version operation must fail and report the conflict. The unit must be resolved before release-version can proceed. (See `tooling/internal/rulesync/release.go` `StableVerifyCandidateIntentRequirement` for the tooling constraint.)
 4. After auto-fork, the candidate unit follows the standard `unit_check` → `unit_verify` → `unit_promote` lifecycle.
 5. The `rule_sync` impact handoff runs after writeback, so downstream invalidation and fallback rules apply.
 

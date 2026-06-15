@@ -4,6 +4,10 @@
 
 It is used when a rule-governance request is ambiguous, combines multiple rule actions, or returns from another rule flow because current repository truth was not sufficient to close safely.
 
+### Entry Condition
+
+This flow is valid only when a rule-governance request cannot proceed safely: it is ambiguous, combines multiple distinct rule actions, or a prior rule flow returned because repository truth was insufficient to close. It is the last-resort escalation path within rule governance.
+
 ## 1. Scope
 
 `rule_escape` may:

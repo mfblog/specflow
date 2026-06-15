@@ -24,7 +24,7 @@ If acceptance items are incomplete, incorrect, or unclear:
 3. Fix the candidate spec (`docs/specs/units/candidate/c_unit_{unit}.md`)
 4. Run `unit_check:{unit}` to re-validate the modified spec — this is accepted as a
    re-validation during the implementation phase (see `unit_check.md` precondition
-   exception). `unit_check` re-runs its 7 quality checks against the modified spec.
+   exception). `unit_check` re-runs the quality checks defined in `unit_check.md` against the modified spec.
 5. After `unit_check` passes (`Next Command` is still `unit_verify`), resume with
    `unit_impl:{unit}`
 

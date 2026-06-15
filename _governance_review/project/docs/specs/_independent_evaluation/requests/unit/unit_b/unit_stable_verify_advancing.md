@@ -9,7 +9,7 @@
 - `process_kind`: `stable_verify`
 - `process_file`: `docs/specs/_stable_verify_result/unit/unit_b.md`
 - `request_file`: `docs/specs/_independent_evaluation/requests/unit/unit_b/unit_stable_verify_advancing.md`
-- `created_at`: `2026-06-13T18:03:24Z`
+- `created_at`: `2026-06-15T08:24:14Z`
 
 ## Reviewer Role
 
@@ -56,6 +56,7 @@ Decide whether the stable verify result supports the stored advancing decision.
 - Does current implementation align with stable truth, or does the stored decision correctly identify the controlled next step?
 - Does the evidence matrix cover every current stable acceptance item?
 - Are implementation surface refs and evidence refs sufficient for the stored decision?
+- If the decision is `truth_text_change_required`, does the evidence prove that the stable truth text must change and cannot be resolved through re-interpretation of the existing text?
 
 ## Reviewer Output
 

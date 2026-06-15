@@ -45,7 +45,7 @@ This is a mechanical operation that does not involve new behavior judgment.
 
 | Result | Meaning | Next Step |
 |--------|---------|-----------|
-| `promoted` | Promotion succeeded | `command close --command unit_promote --object-type unit --object <unit> --outcome promoted --apply`. After success: `Active Layer=stable`, `Next Command=unit_fork`, candidate-layer evidence is cleaned up. Tooling writes the stable promotion summary at `docs/specs/_verify_result/stable/unit/{unit}.md` per `framework/process_snapshot_contract.md` Section 8 format. |
+| `promoted` | Promotion succeeded | `command close --command unit_promote --object-type unit --object <unit> --outcome promoted --apply`. After success: `Active Layer=stable`, `Next Command=unit_fork`, candidate-layer evidence is cleaned up. After cleanup, run `framework/governance/impact_sync.md` to check downstream impact: impact_sync identifies units that consume this stable version, detects drift (truth_drift, binding_drift, etc.), and routes affected units to `unit_check` (candidate), `unit_stable_verify` (stable), or marks them as `no_drift_observed`. See `framework/governance/impact_sync.md` for the full procedure. Tooling writes the stable promotion summary at `docs/specs/_verify_result/stable/unit/{unit}.md` per `framework/process_snapshot_contract.md` Section 8 format. |
 | `promotion_recovered` | Promotion partially mutated stable truth | Restore candidate state and apply recovery rules from `framework/lifecycle/recovery.md`. |
 | `verify_invalid`* | Verify result became invalid between close and apply | Handled by tooling fallback machinery. Sub-types: `truth`, `binding`, `baseline`, `rule`, `gate`, `evidence`. See `recovery.md` for per-type recovery. |
 

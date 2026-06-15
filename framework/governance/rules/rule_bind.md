@@ -4,6 +4,10 @@
 
 The binding is real only when the unit frontmatter contains the exact rule ref and the unit body explains how that rule is consumed.
 
+### Entry Condition
+
+This flow is valid only when a rule already exists (either global or bound shared) and a candidate unit needs to declare a dependency on it via `rule_refs`. It is not for creating or modifying rule truth.
+
 ## 1. Scope
 
 `rule_bind` may:
@@ -58,7 +62,7 @@ Bound shared rule consumer discovery must use only current-layer unit frontmatte
 9. If a touched candidate rule has a stable sibling, validate that exactly one `promotion_owner_unit` remains correct after this binding change. If that cannot be proven from current truth, stop and return to `rule_escape`.
 10. If removing or retargeting the previous ref would leave a touched bound shared rule with no formal current consumers, do not leave its terminal state implicit:
     - delete it only when cleanup is already proven legal by current repository truth
-    - otherwise write intentional unbound-retention fields when current truth proves the rule should remain independently authored
+    - otherwise write intentional unbound-retention fields (including `unbound_retention_owner: rule_bind`) when current truth proves the rule should remain independently authored
     - otherwise stop and return to `rule_escape` so the terminal-state decision can route to `rule_topology`
 11. Remove unbound-retention fields from any touched bound shared rule that still has formal current consumers after the binding change.
 12. Do not write consumer lists or `bound_objects` into touched rule files.

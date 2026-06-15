@@ -554,7 +554,7 @@ Local slices review one owner area for internal closure, side effects, contract 
    - verifies default-scope collection, excluded project-instance truth, installed project entry files, source repository entry example files, and unassigned file handling
    - includes the deterministic scope produced by `review collect-default-scope --flow spec_flow_review`
 2. `review_entry_policy`
-   - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `governance/review.md`, `governance/review_scope.md`, `severity_policy.md`, and `operations/entry_routing.md` (User-Facing Output section)
+   - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `governance/review.md`, `governance/review_scope.md`, `severity_policy.md`, and `operations/entry_routing.md` (Exact Commands and Framework Governance sections)
    - verifies review entry meaning, output contracts, finding contracts, and stop behavior
 3. `routing_and_lifecycle_policy`
    - reviews `operations/entry_routing.md`, `advance_policy.md`, `core/adoption_modes.md`, `core/independent_evaluation.md`, `core/freshness.md`, `lifecycle/overview.md`, `operations/migration.md`, `candidate_intent.md`, `lifecycle/*.md`, and `guidance/*/SKILL.md`

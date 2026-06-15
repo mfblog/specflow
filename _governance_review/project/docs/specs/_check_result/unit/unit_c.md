@@ -12,7 +12,7 @@ coverage_summary: current candidate
 truth_layer_ref: candidate
 truth_file_ref: docs/specs/units/candidate/c_unit_unit_c.md
 truth_version_ref: c_unit_unit_c@0.1.0
-truth_fingerprint: 3e16630089e3977ae6a459ea8128ee70d3757ca05cfa1d6ff0d885601f634ec7
+truth_fingerprint: 0cd8cf41a9a34797ea21a5225e99bbf76add05f849214a996c0e1cab4bf2382b
 acceptance_behavior_fingerprint: 5443deec8c3d3046bbecf4f35c5be611a8a39f73393c4a6b2be739222241e9ca
 acceptance_item_set:
   - id: unit_c.core
@@ -38,6 +38,11 @@ rule_snapshot:
     file_ref: docs/specs/rules/stable/s_b_rule_policy.md
     version_ref: s_b_rule_policy@1.0.0
     fingerprint: 22a621d0751bade2389ab54cb184fe070d06c1edd709a07ee1ce3c8969d27031
+  - rule_id: security
+    layer: stable
+    file_ref: docs/specs/rules/stable/s_g_rule_security.md
+    version_ref: s_g_rule_security@1.0.0
+    fingerprint: 9ab0cf4309dc92952ba5dc45c27b1f01167822bcff828b93ce0919788d2da234
 evaluation_mode: independent
 reviewer_result: pass
 reviewer_context: minimal_context

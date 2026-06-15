@@ -8,22 +8,41 @@ It applies to unit lifecycle work, rule-governance work that already mutated fil
 
 ## Unit Fallback Targets
 
+> **Note:** This table covers both candidate and stable unit evidence. The `evidence_layer` row routes candidate evidence to `unit_verify` and stable verify evidence to `unit_stable_verify` — see the per-row routing for the correct restart command. Stable-layer truth changes follow the separate rules in [Stable Unit Recovery](#stable-unit-recovery) below.
+
 Layer classification maps a failure to the layer whose evidence is invalidated. See `framework/process_snapshot_contract.md` Section 4 (Fallback Layers) for the classification rules: truth mismatch → `truth_layer`, check schema or gate evidence mismatch → `gate_layer`, verify evidence mismatch → `evidence_layer`.
 
 | Failure Layer | Reason Codes | Deletes | Next Command |
 |---|---|---|---|
-| `truth_layer` | `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete` | check checklist, check result (if any), verify result | `unit_check` |
-| `gate_layer` | `gate_missing` | check checklist, check result (if any) | `unit_check` |
-| `evidence_layer` | `evidence_incomplete`, `stable_verify_invalid` | verify result or stable verify result | `unit_verify` if `evidence_incomplete`; `unit_stable_verify` if `stable_verify_invalid` |
+| `truth_layer` | `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete` | check_work, check result (if any), verify result | `unit_check` |
+| `gate_layer` | `gate_missing`, `spec_issue` | check_work, check result (if any) | `unit_check` |
+| `evidence_layer` | `evidence_incomplete` (candidate-layer only), `stable_verify_invalid` | verify result or stable verify result | `unit_verify` if `evidence_incomplete`; `unit_stable_verify` if `stable_verify_invalid` |
 
 Only reason codes in this table are valid for fallback cleanup.
 Do not introduce alternate names for the same invalidated layer.
 Use the earliest layer that is invalidated by current repository truth.
 Do not delete upstream process files that still validate and are still supported by current truth.
 
+### Freshness Review Required
+
+When impact sync reports `freshness_review_required`, the process snapshot is stale (fingerprint mismatch) but truth has not drifted. This is not a fallback layer — no evidence cleanup is required. The agent must re-read the current truth files to verify the snapshot's claims against the latest content, then:
+1. If truth content has changed since the snapshot was recorded: re-classify under the appropriate fallback layer (`truth_layer`).
+2. If only timestamp or fingerprint metadata is stale: re-verify against current truth and update the snapshot with a `freshness_receipt` (see `framework/process_snapshot_contract.md` Section 4).
+3. If the snapshot cannot be verified: delete the stale process evidence and rerun the originating command.
+
+### truth_layer Recovery Procedure
+
+When the failure is classified as `truth_layer` and the cause is `truth_drift` (candidate truth has diverged from the stable baseline — see `framework/lifecycle/unit_verify.md` `truth_fallback` outcome), apply the following procedure:
+
+1. **Correct candidate truth** — Before deleting any evidence, restore `docs/specs/units/candidate/c_unit_{unit}.md` to alignment with the stable Spec at `docs/specs/units/stable/s_unit_{unit}.md`. Remove content that contradicts the stable baseline and restore any content that was incorrectly omitted. If the divergence was intentional (a legitimate scope addition), preserve the intentional changes — the subsequent `unit_check` re-validation will determine their validity.
+2. **Delete invalid evidence** — Remove process artifacts per the `truth_layer` row in the fallback table above (check_work, check result, verify result).
+3. **Reset lifecycle state** — Set Next Command to `unit_check` per the fallback table.
+4. **Re-validate** — Run `unit_check:{unit}` on the corrected candidate truth.
+5. **Regenerate context card** — After re-validation passes, regenerate the context card via `specflowctl context card --object-type unit --object {unit}`. The pre-recovery context card carries GUIDANCE from the invalidated state and must not be reused without regeneration.
+
 ## Candidate Recovery
 
-When candidate truth changes, bound rule references change, repository mapping changes the unit boundary, or a global rule changes the candidate's constraints:
+When candidate truth changes, bound rule references change, repository mapping changes the unit boundary (maps to `truth_layer`, reason: `baseline_drift`), or a global rule changes the candidate's constraints:
 
 1. delete downstream evidence that was derived from the prior truth.
 2. set the candidate unit's next command to the earliest required command from the fallback target table.
@@ -32,7 +51,7 @@ When candidate truth changes, bound rule references change, repository mapping c
 
 If a candidate main Spec changes after `unit_check`, the check result (if any) may need revalidation. Verify evidence may still be valid if the spec change does not affect acceptance items or verification scope.
 
-When `unit_verify` reports `spec_issue` (candidate Spec needs repair without implementation change — see `framework/lifecycle/unit_verify.md` How to End), only the spec requires repair. The verify evidence remains valid for the unchanged acceptance items. Do not delete verify evidence. Apply only `gate_layer` cleanup (check-work and check-result), then set next command to `unit_check`.
+When `unit_verify` reports `spec_issue` (candidate Spec needs repair without implementation change — see `framework/lifecycle/unit_verify.md` How to End), only the spec requires repair. The verify evidence remains valid for the unchanged acceptance items. Do not delete verify evidence. Set next command to `unit_check`. The next `unit_check` round overwrites any prior check_work and check_result, so no explicit gate_layer file deletion is required.
 
 ## Stable Unit Recovery
 
@@ -84,10 +103,8 @@ After a command or rule flow closes successfully:
 
 | Mode | Deleted | Preserved |
 |------|---------|-----------|
-| `unit_init` | Process artifacts (check_work, check result, verify result, stable_verify result) and agent-internal artifacts (plan) for the target unit | Stable unit truth (main Spec + appendices), candidate unit truth, stable promotion summary |
-| `unit_new` | Process artifacts for the target unit | Stable unit truth, candidate unit truth, stable promotion summary |
 | `unit_fork` | Process artifacts (check_work, check result, verify result, stable_verify result) and agent-internal artifacts (plan) for the target unit | Stable unit truth (main Spec + appendices) unchanged, candidate unit truth (main Spec + appendices) intact |
-| `unit_promote` | Candidate main Spec, candidate appendix files, process artifacts | Stable unit truth (main Spec + appendices) written by promotion, stable promotion summary at `docs/specs/_verify_result/stable/unit/{unit}.md` |
+| `unit_promote` | Candidate main Spec, candidate appendix files, process artifacts | Stable main Spec written by promotion; stable appendix files (copied from candidate before cleanup). Candidate appendix files (including evidence appendices) are deleted during cleanup regardless of content. Promotion summary at `docs/specs/_verify_result/stable/unit/{unit}.md` |
 
 The stable promotion summary is written by tooling (`command close --apply`) before cleanup begins, so it is preserved at a separate path that cleanup globs do not match. See `framework/process_snapshot_contract.md` Section 8 for the summary format and `tooling/internal/commandclose/commandclose.go` for implementation details.
 

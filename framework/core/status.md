@@ -90,6 +90,8 @@ The `Notes` field may carry a lifecycle phase value to indicate the unit's curre
 
 - `pending_impl` — unit_check has passed; implementation has not started or is in progress. `Next Command` is `unit_verify`.
 
+**Constraints requirement for `pending_impl`:** When `Notes` contains `pending_impl`, a `constraints:` prefix SHOULD be set to define write-permission boundaries for the implementation phase. Without constraints, implementation-phase agents have unbounded write access, which risks unintended modifications to spec files, status, or other governed content. The tooling does not enforce this requirement mechanically, but lifecycle reviews and governance audits MUST flag the absence of constraints on `pending_impl` units as a governance gap.
+
 This value is used by tooling for (a) re-validation context card state classification (differentiating `StateCandidatePending` from `StateCandidateVerify`) and (b) `unit_check` re-validation gate enforcement during the implementation phase. It is not a routing token for `Next Command` selection.
 
 ## Update Rules

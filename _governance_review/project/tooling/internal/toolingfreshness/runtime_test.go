@@ -1,0 +1,65 @@
+package toolingfreshness
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestCheckProcessFailsClosedWhenBuildFingerprintIsMissing(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeToolingRepo(t, repoRoot)
+
+	original := BuildFingerprint
+	BuildFingerprint = ""
+	t.Cleanup(func() {
+		BuildFingerprint = original
+	})
+
+	err := CheckProcess([]string{"review", "collect-default-scope", "--repo-root", repoRoot}, repoRoot)
+	if err == nil {
+		t.Fatalf("expected missing embedded fingerprint error")
+	}
+	if !strings.Contains(err.Error(), "missing embedded build fingerprint") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(err.Error(), "cd ") || !strings.Contains(err.Error(), "go run ./cmd/specflowctl build-release") {
+		t.Fatalf("error should include executable build-release recovery command, got: %v", err)
+	}
+}
+
+func TestCheckProcessStillBypassesDoctorWhenBuildFingerprintIsMissing(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeToolingRepo(t, repoRoot)
+
+	original := BuildFingerprint
+	BuildFingerprint = ""
+	t.Cleanup(func() {
+		BuildFingerprint = original
+	})
+
+	if err := CheckProcess([]string{"doctor", "--repo-root", repoRoot}, repoRoot); err != nil {
+		t.Fatalf("doctor should bypass freshness gate, got %v", err)
+	}
+}
+
+func TestCheckProcessFailsClosedForSourceRepoWhenBuildFingerprintIsMissing(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeSourceToolingRepo(t, repoRoot)
+
+	original := BuildFingerprint
+	BuildFingerprint = ""
+	t.Cleanup(func() {
+		BuildFingerprint = original
+	})
+
+	err := CheckProcess([]string{"review", "collect-default-scope", "--repo-root", repoRoot}, repoRoot)
+	if err == nil {
+		t.Fatalf("expected missing embedded fingerprint error")
+	}
+	if !strings.Contains(err.Error(), "missing embedded build fingerprint") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(err.Error(), "tooling") || strings.Contains(err.Error(), "specflow/tooling") {
+		t.Fatalf("source-repo recovery command should use tooling root, got: %v", err)
+	}
+}
