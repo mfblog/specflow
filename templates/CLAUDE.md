@@ -10,7 +10,7 @@ This repository uses specFlow to manage development work. specFlow maintains pro
 
 - **unit** — One independently governed engineering responsibility. May be a feature, module, service, or end-to-end result.
 - **rule** — A reusable shared constraint that multiple units may need to follow.
-- **Context Card** — A lifecycle file in `framework/lifecycle/` (e.g. `unit_check.md`) that serves as reference material for the current governance step. The primary agent-facing instruction comes from `specflowctl next`.
+- **Context Card** — A lifecycle file in `specflow/framework/lifecycle/` (e.g. `unit_check.md`) that serves as reference material for the current governance step. The primary agent-facing instruction comes from `specflowctl next`.
 - **command close** — A deterministic tooling operation (`specflowctl command close`) that records the result of a completed lifecycle command, advances `Next Command` in `_status.md` according to fixed transition rules, and produces or cleans up process evidence files. The executor does not manually edit `_status.md`.
 
 **Spec Types**
@@ -32,6 +32,9 @@ This repository uses specFlow to manage development work. specFlow maintains pro
 - `docs/specs/_status.md` — Each unit's current layer and the only legal next lifecycle command.
 - `docs/specs/repository_mapping.md` — Ownership between units, spec files, and implementation paths.
 
+**specflowctl Location**
+`specflow/tooling/bin/specflowctl-<os>-<arch>` — replace `<os>` and `<arch>` with your platform (e.g. `linux-amd64`, `darwin-arm64`, `windows-amd64.exe`)
+
 ---
 
 ### 2. Classify Your Entry
@@ -40,16 +43,16 @@ All specFlow operations fall into one of these categories.
 Determine which applies _before_ proceeding to the unit-based flow.
 
 **Pre-formal-truth guidance — proceed to Section 2a.**
-If the request is about shaping a design before formal truth is ready (framing a vague idea, cutting scope, choosing between solution directions, reviewing a discussion-stage design, or turning an approved conclusion into formal truth), read `framework/guidance/using-specflow-guidance/SKILL.md` first. Guidance must be resolved before entering any lifecycle or governance routing.
+If the request is about shaping a design before formal truth is ready (framing a vague idea, cutting scope, choosing between solution directions, reviewing a discussion-stage design, or turning an approved conclusion into formal truth), read `specflow/framework/guidance/using-specflow-guidance/SKILL.md` first. Guidance must be resolved before entering any lifecycle or governance routing.
 
 **Framework governance operations (not unit operations):**
-- `spec_flow_review` — scoped review (changed files only). Route to `framework/governance/review.md`.
-- `spec_flow_review:full` — full-scope governance-baseline deep audit. Route to `framework/governance/review.md`.
-- `spec_flow_design_review` — full-scope design-baseline review (no scoped mode). Route to `framework/governance/review.md`.
-- Rule governance entries: any `rule_*` command — read `framework/governance/rule_system.md` first, then the matching rule file.
-- Migration entry: `spec_flow_migrate` — route to `framework/operations/migration.md`.
+- `spec_flow_review` — scoped review (changed files only). Route to `specflow/framework/governance/review.md`.
+- `spec_flow_review:full` — full-scope governance-baseline deep audit. Route to `specflow/framework/governance/review.md`.
+- `spec_flow_design_review` — full-scope design-baseline review (no scoped mode). Route to `specflow/framework/governance/review.md`.
+- Rule governance entries: any `rule_*` command — read `specflow/framework/governance/rule_system.md` first, then the matching rule file.
+- Migration entry: `spec_flow_migrate` — route to `specflow/framework/operations/migration.md`.
 
-For all framework governance entries, skip `--unit` and route directly to the file listed above. Keyword-table routing (expressions containing "mechanism audit", "design review", etc.) is defined in `framework/governance/review.md` Entries section.
+For all framework governance entries, skip `--unit` and route directly to the file listed above. Keyword-table routing (expressions containing "mechanism audit", "design review", etc.) is defined in `specflow/framework/governance/review.md` Entries section.
 
 **Unit lifecycle operations — proceed to Section 3.**
 
@@ -65,7 +68,7 @@ If the request qualifies as guidance work — shaping a design before formal tru
 4. reviewing a discussion-stage design before writing it into candidate truth
 5. turning an approved discussion conclusion into formal truth
 
-Read `framework/guidance/using-specflow-guidance/SKILL.md`. Guidance must not replace an exact command, advance lifecycle state, or authorize implementation-side edits. If a guidance conclusion affects behavior truth, re-enter `framework/operations/entry_routing.md` with the clarified request.
+Read `specflow/framework/guidance/using-specflow-guidance/SKILL.md`. Guidance must not replace an exact command, advance lifecycle state, or authorize implementation-side edits. If a guidance conclusion affects behavior truth, re-enter `specflow/framework/operations/entry_routing.md` with the clarified request.
 
 ---
 
@@ -88,9 +91,9 @@ Execute the TASK. When done, run the COMPLETION command.
 
 **If the directive is insufficient**, run:
   specflowctl next --unit <name> --explain
-for full lifecycle context. If still unclear, read `framework/operations/entry_routing.md`.
+for full lifecycle context. If still unclear, read `specflow/framework/operations/entry_routing.md`.
 
-**If `specflowctl` is unavailable**, read `framework/lifecycle/overview.md`, `framework/operations/entry_routing.md`, and the matching lifecycle Context Card in `framework/lifecycle/`. If command close is needed and specflowctl is unavailable, follow the Manual Command Close procedure in the active Context Card's "How to End" section.
+**If `specflowctl` is unavailable**, read `specflow/framework/lifecycle/overview.md`, `specflow/framework/operations/entry_routing.md`, and the matching lifecycle Context Card in `specflow/framework/lifecycle/`. If command close is needed and specflowctl is unavailable, follow the Manual Command Close procedure in the active Context Card's "How to End" section.
 
 ---
 
@@ -100,7 +103,7 @@ These rules override your default helpful-assistant behavior. They are not sugge
 
 **HARD RULE 1: Get Your Directive First (MANDATORY)**
 You MUST run `specflowctl next --unit <name>` before writing, modifying, or proposing any code. The tool reads the current lifecycle state so you don't have to read `_status.md` directly.
-**Exception:** If the unit does not exist in `_status.md` and `specflowctl next` returns an error or empty directive, skip Hard Rule 1 for this round. Instead, read `framework/operations/entry_routing.md` Natural Language Routes to determine the correct entry action (Onboarding Source Decision for new units), read `framework/lifecycle/overview.md`, then proceed to the matching lifecycle Context Card.
+**Exception:** If the unit does not exist in `_status.md` and `specflowctl next` returns an error or empty directive, skip Hard Rule 1 for this round. Instead, read `specflow/framework/operations/entry_routing.md` Natural Language Routes to determine the correct entry action (Onboarding Source Decision for new units), read `specflow/framework/lifecycle/overview.md`, then proceed to the matching lifecycle Context Card.
 
 **HARD RULE 2: No Implementation Without Directive Authority**
 You MUST NOT modify implementation code unless `specflowctl next` output lists the target files in WRITES or the active Context Card's Allowed Writes section authorizes the write. If both show "(none)", you must not write implementation code.
@@ -110,7 +113,7 @@ You MUST NOT modify spec files, rule truth, lifecycle state, or repository mappi
 
 **HARD RULE 4: Stop When Unclear**
 You MUST stop and report status when any of these are true:
-- `_status.md` is empty (no units registered). Read `framework/operations/entry_routing.md` Natural Language Routes for onboarding new units. **Exception:** If the Hard Rule 1 exception condition is met (new unit creation or non-unit operation), follow that exception path instead of stopping.
+- `_status.md` is empty (no units registered). Read `specflow/framework/operations/entry_routing.md` Natural Language Routes for onboarding new units. **Exception:** If the Hard Rule 1 exception condition is met (new unit creation or non-unit operation), follow that exception path instead of stopping.
 - No Next Command is recorded for the target unit.
 - The path to a required framework file cannot be resolved.
 - The request spans multiple units and the correct lifecycle path is ambiguous.
@@ -122,15 +125,6 @@ You MUST stop and report status when any of these are true:
 - A rule or repository mapping change is required first.
 - The request uses removed scenario lifecycle concepts (`scenario_*`, `scenario_advance:{id}`, or `object-type=scenario`).
 Before stopping, run `specflowctl next --explain` for full context.
-
-**HARD RULE 5: Path Resolution**
-`framework/...` paths:
-- **Source repo** (this is the specFlow repository itself): `framework/...` → `./framework/...`
-- **Installed project** (specflow is in a subdirectory): `framework/...` → `specflow/framework/...`
-
-`docs/specs/...` paths are ALWAYS repository-root relative (`./docs/specs/...`).
-
-If the resolved file does not exist: STOP and report the missing path.
 
 ---
 
@@ -173,7 +167,7 @@ unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promo
 | `rule_sync` | Compute downstream unit impact after rule changes |
 | `rule_escape` | Stop unsafe rule work and route to smallest legal action |
 
-See `framework/governance/rule_system.md` for routing.
+See `specflow/framework/governance/rule_system.md` for routing.
 
 **Framework Governance Commands**
 
@@ -184,15 +178,13 @@ See `framework/governance/rule_system.md` for routing.
 | `spec_flow_design_review` | Full-scope design-baseline review |
 | `spec_flow_migrate` | Project-instance format migration |
 
-See `framework/governance/review.md` for review routing. See `framework/operations/migration.md` for migration.
+See `specflow/framework/governance/review.md` for review routing. See `specflow/framework/operations/migration.md` for migration.
 
 **Rule Locations**
 
-Detailed routing, lifecycle, implementation-change, migration, governance review, rule-governance, repository mapping, guidance, and sync rules: `framework/`.
+Detailed routing, lifecycle, implementation-change, migration, governance review, rule-governance, repository mapping, guidance, and sync rules: `specflow/framework/`.
 
 Project truth inputs: `docs/specs/`.
-
-Framework-root relative paths: `framework/...` → `./framework/...` (source) or `specflow/framework/...` (installed).
 ==SPECFLOW:END==
 
 ## Host Instructions
