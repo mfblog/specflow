@@ -169,6 +169,8 @@ const TRANSLATIONS = {
       copyAdvanceEntry: "复制自动推进入口",
       alternativeEntry: "返工检查",
       alternativeTitle: "若实现中发现 Spec 有问题，先修正 Spec 再运行 unit_check 重新校验",
+      implEntry: "继续实现",
+      implTitle: "进入实现阶段，按要求实现功能",
       intent: "模式",
       materials: "可查看材料",
       references: "参考材料",
@@ -578,6 +580,8 @@ const TRANSLATIONS = {
       copyAdvanceEntry: "Copy auto-advance entry",
       alternativeEntry: "Re-check spec",
       alternativeTitle: "If spec issues found during implementation, fix spec then run unit_check for re-validation",
+      implEntry: "Continue implementation",
+      implTitle: "Enter implementation phase and implement according to the spec",
       intent: "Mode",
       materials: "Readable material",
       references: "Reference material",
@@ -1973,13 +1977,18 @@ function renderLifecycleCard(object) {
 
 function lifecycleView(object, nextCommandOverride) {
   const command = String(nextCommandOverride || object.next_command || "").trim();
+  const notes = String(object.notes || "").trim();
+  let effectiveCommand = command;
+  if (command === "unit_verify" && notes.indexOf("pending_impl") >= 0) {
+    effectiveCommand = "unit_impl";
+  }
   const complete = isNextRoundEntry(object, command);
-  const steps = lifecycleRoundSteps(object, command);
-  let currentIndex = steps.findIndex((step) => step.command === command);
+  const steps = lifecycleRoundSteps(object, effectiveCommand);
+  let currentIndex = steps.findIndex((step) => step.command === effectiveCommand);
   if (complete) {
     currentIndex = steps.length;
-  } else if (currentIndex < 0 && command) {
-    steps.push(lifecycleStep(command));
+  } else if (currentIndex < 0 && effectiveCommand) {
+    steps.push(lifecycleStep(effectiveCommand));
     currentIndex = steps.length - 1;
   } else if (currentIndex < 0) {
     currentIndex = 0;
@@ -1987,7 +1996,7 @@ function lifecycleView(object, nextCommandOverride) {
   const progress = complete ? 100 : steps.length > 1 ? Math.round((currentIndex / (steps.length - 1)) * 100) : 0;
   return {
     steps,
-    currentCommand: complete ? "" : command,
+    currentCommand: complete ? "" : effectiveCommand,
     currentIndex,
     progress,
     complete,
@@ -2542,6 +2551,7 @@ function renderTodoCard(item) {
             <span>${escapeHTML(t("todo.nextEntry"))}</span>
           </button>` : ""}
           ${renderAdvanceCommandButton(item, "todo-copy-command advance-entry")}
+          ${renderPendingImplImplButton(item)}
           ${renderPendingImplAltButton(item)}
         </div>
       </div>
@@ -2622,6 +2632,7 @@ function todoItems() {
         nextCommand,
         commandText,
         alternativeCommandText: pendingImplAltCommand(object, nextCommand),
+        implCommandText: pendingImplImplCommand(object, nextCommand),
         advanceCommandText: advanceEntryCommandForObject(object, nextCommand),
         relation: candidateRelationForObject(object),
         sources,
@@ -2657,6 +2668,7 @@ function todoTypeForCommand(command) {
 
 function todoTypeForObject(object, command) {
   if (command === "unit_fork" && nextIntent(object) === "repair") return "repairFork";
+  if (command === "unit_verify" && (String(object.notes || "").indexOf("pending_impl") >= 0)) return "implementation";
   return todoTypeForCommand(command);
 }
 
@@ -2798,6 +2810,25 @@ function renderPendingImplAltButton(item) {
   return `
     <button class="todo-copy-command pending-impl-alt" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(t("todo.alternativeTitle"))}">
       <span>${escapeHTML(t("todo.alternativeEntry"))}</span>
+    </button>
+  `;
+}
+
+function pendingImplImplCommand(object, nextCommand) {
+  const notes = String(object && object.notes ? object.notes : "").trim();
+  const command = String(nextCommand || "").trim();
+  if (command === "unit_verify" && notes.indexOf("pending_impl") >= 0) {
+    return `unit_impl:${object.id}`;
+  }
+  return "";
+}
+
+function renderPendingImplImplButton(item) {
+  const command = String(item && item.implCommandText ? item.implCommandText : "").trim();
+  if (!command) return "";
+  return `
+    <button class="todo-copy-command pending-impl-entry" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(t("todo.implTitle"))}">
+      <span>${escapeHTML(t("todo.implEntry"))}</span>
     </button>
   `;
 }
@@ -3666,6 +3697,7 @@ function renderTodoDetail(item) {
           <span>${escapeHTML(t("review.nextCommand"))}</span>
         </button>` : ""}
         ${renderAdvanceCommandButton(item, "review-next-command advance-entry")}
+        ${renderPendingImplImplButton(item)}
         ${renderPendingImplAltButton(item)}
       </div>
     </section>
