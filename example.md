@@ -20,3 +20,11 @@ For `spec_flow_design_review`:
 1. Read `framework/governance/review.md`.
 2. Read `framework/spec_flow_design_review.md`.
 3. Run the default full-scope design-baseline review. Do not narrow it to `scoped_review`.
+
+
+## Atom System
+
+When modifying shared governance content, prefer editing atom source files
+(`framework/_atoms/`) over individual target files. After changing an atom,
+run `./framework/_atoms/generate.sh` to propagate changes, then
+`./framework/_atoms/verify.sh` to confirm consistency.

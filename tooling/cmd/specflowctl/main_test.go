@@ -105,44 +105,6 @@ func TestProcessCheckWorkCLI(t *testing.T) {
 		t.Fatalf("expected touched output, got %s", stdout.String())
 	}
 }
-func TestUnitReleaseVersionCLI(t *testing.T) {
-	repoRoot := createCLITestRepo(t)
-	writeCLIStatusRows(t, repoRoot, ""+
-		"| `unit` | `assistant` | `yes` | `no` | `stable` | `unit_fork` | test |\n"+
-		"| `unit` | `agent` | `yes` | `no` | `stable` | `unit_fork` | test |\n")
-	writeCLIUnitReleaseSpec(t, repoRoot, "stable", "assistant", "0.9.0", nil)
-	writeCLIUnitReleaseSpec(t, repoRoot, "stable", "agent", "0.1.0", []string{"s_unit_assistant@0.8.0"})
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/agent.md"), "# stable verify\n")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	if err := runUnit([]string{"release-version", "--unit", "assistant", "--from-ref", "s_unit_assistant@0.8.0", "--to-ref", "s_unit_assistant@0.9.0", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
-		t.Fatalf("unit release-version failed: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
-	}
-	output := stdout.String()
-	if !strings.Contains(output, "Released unit version: assistant from s_unit_assistant@0.8.0 to s_unit_assistant@0.9.0") {
-		t.Fatalf("expected release output, got %s", output)
-	}
-	if !strings.Contains(output, "Stable current-layer units rerouted") {
-		t.Fatalf("expected stable reroute heading, got %s", output)
-	}
-	if !strings.Contains(output, "- unit:agent") {
-		t.Fatalf("expected rerouted unit output, got %s", output)
-	}
-	content := mustReadCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_agent.md"))
-	if !strings.Contains(content, "  - s_unit_assistant@0.8.0") || strings.Contains(content, "  - s_unit_assistant@0.9.0") {
-		t.Fatalf("stable unit_refs must not be rewritten, got %s", content)
-	}
-	assertCLITestFileNotExists(t, filepath.Join(repoRoot, "docs/specs/_stable_verify_result/unit/agent.md"))
-}
-func TestUnitReleaseVersionCLIRequiresInputs(t *testing.T) {
-	repoRoot := createCLITestRepo(t)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	err := runUnit([]string{"release-version", "--unit", "assistant", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err == nil || !strings.Contains(err.Error(), "unit, from-ref, and to-ref are required") {
-		t.Fatalf("expected required input error, got err=%v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
-	}
-}
 func TestRuleSyncImpactDeletedRuleRefsCLI(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_check` | test |\n")
@@ -558,9 +520,9 @@ func TestEvaluationRequestCreatesFreshnessTextDriftHandoffCLI(t *testing.T) {
 		"freshness_impact: text_drift",
 		"evidence_reuse: accepted",
 		"freshness_review_mode: independent",
-		"freshness_reviewer_result: pass",
+		"freshness_reviewer_result: {{FRESHNESS_REVIEWER_RESULT}}",
 		"freshness_review_input_refs: freshness_text_drift_reuse;docs/specs/_independent_evaluation/requests/unit/demo/freshness_text_drift_reuse.md",
-		"freshness_review_findings: none",
+		"freshness_review_findings: {{FRESHNESS_REVIEW_FINDINGS}}",
 	} {
 		if !strings.Contains(string(requestContent), phrase) {
 			t.Fatalf("freshness request missing %q:\n%s", phrase, string(requestContent))
@@ -914,7 +876,6 @@ func createCLITestRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
 	frameworkFiles := []string{
-		"advance_policy.md",
 		"spec_flow_review.md",
 		"spec_flow_design_review.md",
 		"agent_operability_standard.md",
@@ -987,9 +948,6 @@ func createCLITestRepo(t *testing.T) string {
 		"specflow/templates/docs/specs/_status.md",
 		"specflow/templates/docs/specs/_check_work/README.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
-		"specflow/templates/docs/specs/_plans/README.md",
-		"specflow/templates/docs/specs/_plans/draft/README.md",
-		"specflow/templates/docs/specs/_plans/active/README.md",
 		"specflow/templates/docs/specs/_verify_result/README.md",
 		"specflow/templates/docs/specs/_stable_verify_result/README.md",
 		"specflow/templates/docs/specs/_governance_review/README.md",
@@ -1025,7 +983,6 @@ func createCLISourceReviewRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
 	for _, name := range []string{
-		"advance_policy.md",
 		"spec_flow_review.md",
 		"spec_flow_design_review.md",
 		"agent_operability_standard.md",
@@ -1085,9 +1042,6 @@ func createCLISourceReviewRepo(t *testing.T) string {
 		"templates/docs/specs/_status.md",
 		"templates/docs/specs/_check_work/README.md",
 		"templates/docs/specs/_check_result/README.md",
-		"templates/docs/specs/_plans/README.md",
-		"templates/docs/specs/_plans/draft/README.md",
-		"templates/docs/specs/_plans/active/README.md",
 		"templates/docs/specs/_verify_result/README.md",
 		"templates/docs/specs/_stable_verify_result/README.md",
 		"templates/docs/specs/_governance_review/README.md",
@@ -1140,6 +1094,8 @@ func currentCLIToolingScriptFiles() []string {
 		"specflow/tooling/scripts/push_with_release.sh",
 		"specflow/tooling/scripts/tooling_fingerprint.ps1",
 		"specflow/tooling/scripts/tooling_fingerprint.sh",
+		"specflow/tooling/scripts/update_tooling_binaries.ps1",
+		"specflow/tooling/scripts/update_tooling_binaries.sh",
 	}
 }
 func createCLISnapshotRepoWithStatus(t *testing.T, unitNextCommand string) string {
@@ -1254,7 +1210,7 @@ func writeCLIUnitCheckProcess(t *testing.T, repoRoot string, snap snapshot.Snaps
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_check",
+		"next_command: unit_verify",
 		"blocking_summary: none",
 		"coverage_summary: demo",
 		"truth_layer_ref: " + snap.TruthLayerRef,
@@ -1419,35 +1375,6 @@ func writeCLIStableVerifyProcess(t *testing.T, repoRoot string, snap snapshot.Sn
 		"review_findings: none",
 		"human_decision_refs: none",
 	}, "\n")+"\n```\n")
-}
-func writeCLIUnitReleaseSpec(t *testing.T, repoRoot, layer, unit, version string, unitRefs []string) {
-	t.Helper()
-	dir := "stable"
-	prefix := "s_unit_"
-	if layer == "candidate" {
-		dir = "candidate"
-		prefix = "c_unit_"
-	}
-	unitRefsBlock := "unit_refs: none"
-	if len(unitRefs) > 0 {
-		lines := []string{"unit_refs:"}
-		for _, ref := range unitRefs {
-			lines = append(lines, "  - "+ref)
-		}
-		unitRefsBlock = strings.Join(lines, "\n")
-	}
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units", dir, prefix+unit+".md"), strings.Join([]string{
-		"---",
-		"id: " + unit,
-		"layer: " + layer,
-		"version: " + version,
-		unitRefsBlock,
-		"rule_refs: none",
-		"---",
-		"",
-		"# " + unit,
-		"",
-	}, "\n"))
 }
 func mustReadCLITestFile(t *testing.T, path string) string {
 	t.Helper()

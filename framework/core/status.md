@@ -57,7 +57,7 @@ constraints:phase=<phase> deny=<glob> [allow=<glob>];phase=<phase> deny=<glob> [
 - `allow`: file glob pattern that the executor may write in this phase (optional)
 
 Multiple constraint groups may be separated by `;`.
-When both `deny` and `allow` are specified within the same group, `deny` takes precedence.
+When both `deny` and `allow` are specified within the same group, `allow` patterns define exceptions to `deny` patterns. If a path matches both a `deny` pattern and an `allow` pattern, the path is permitted — `allow` carves an exception from the `deny` scope.
 
 Example (single-line Notes value):
 
@@ -90,12 +90,28 @@ The `Notes` field may carry a lifecycle phase value to indicate the unit's curre
 
 - `pending_impl` — unit_check has passed; implementation has not started or is in progress. `Next Command` is `unit_verify`.
 
-**Constraints requirement for `pending_impl`:** When `Notes` contains `pending_impl`, a `constraints:` prefix SHOULD be set to define write-permission boundaries for the implementation phase. Without constraints, implementation-phase agents have unbounded write access, which risks unintended modifications to spec files, status, or other governed content. The tooling does not enforce this requirement mechanically, but lifecycle reviews and governance audits MUST flag the absence of constraints on `pending_impl` units as a governance gap.
+**Constraints requirement for `pending_impl`:** When `Notes` contains `pending_impl`, a `constraints:` prefix MUST be set to define write-permission boundaries for the implementation phase. Without constraints, implementation-phase agents have unbounded write access, which risks unintended modifications to spec files, status, or other governed content. The tooling enforces this requirement mechanically: when no constraints are defined for the `pending_impl` phase, `specflowctl validate write` denies writes to `docs/specs/**` and `framework/**` by default. Lifecycle reviews and governance audits MUST flag the absence of constraints on `pending_impl` units as a governance gap.
 
-This value is used by tooling for (a) re-validation context card state classification (differentiating `StateCandidatePending` from `StateCandidateVerify`) and (b) `unit_check` re-validation gate enforcement during the implementation phase. It is not a routing token for `Next Command` selection.
+### Constraints Derivation
+
+When a command close caller sets `Notes=pending_impl`, it MUST also set a `constraints:` prefix. The constraints values are derived from the unit's `implementation_paths` in `docs/specs/repository_mapping.md` Object Registry.
+
+The command close caller MUST:
+1. Read the target unit's `implementation_paths` from the repository_mapping.md Object Registry.
+2. Build the constraint string using this template:
+   ```
+   constraints:phase=pending_impl deny=docs/specs/** deny=framework/** allow=<implementation_paths> allow=docs/specs/repository_mapping.md
+   ```
+3. Include the constraint string in the `--notes` parameter of the `specflowctl command close` invocation.
+
+When `implementation_paths` is empty, use the default tooling behavior (`deny=docs/specs/** deny=framework/** allow=docs/specs/repository_mapping.md`) — `allow=docs/specs/repository_mapping.md` is always included to support implementation path registration per `framework/lifecycle/unit_impl.md` Allowed Writes, even when no implementation paths are registered yet. With no implementation-path allow patterns, the executor may write to implementation directories (`src/**`, `tests/**`) per the Context Card's Allowed Writes; registering implementation paths in `repository_mapping.md` is the agent's first implementation action.
+
+After recovery that clears `Notes` (truth_layer or gate_layer fallback), constraints are removed along with `Notes`. The next `unit_check` pass outcome writer MUST re-derive constraints from current `repository_mapping.md` when setting `Notes=pending_impl`.
+
+This value is used by tooling for (a) re-validation directive state classification (differentiating `StateCandidatePending` from `StateCandidateVerify`) and (b) `unit_check` re-validation gate enforcement during the implementation phase. It is not a routing token for `Next Command` selection.
 
 ## Update Rules
 
 Lifecycle advancement is valid only when `specflowctl command close` succeeds. Manual edits to `_status.md` are not substitutes for command close.
 
-Truth and gate fallback return to candidate truth repair. Candidate verify evidence fallback returns to `unit_verify`. Stable verify evidence fallback returns to `unit_stable_verify`.
+Truth and gate fallback return to `unit_check`. Candidate verify evidence fallback returns to `unit_verify`. Stable verify evidence fallback returns to `unit_stable_verify`.

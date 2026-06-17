@@ -79,7 +79,53 @@ func Run(repoRoot, command, objectType, object string) Result {
 		result.Diagnostics = append(result.Diagnostics, process.Diagnostics...)
 		break
 	}
+
+	// Re-validation check: when unit_verify is entered during the implementation
+	// phase (Next Command=unit_verify, Notes=pending_impl), detect whether the
+	// candidate spec was modified after the last unit_check pass. If the spec
+	// fingerprint changed, re-validation via unit_check is required first.
+	if result.MayContinue && result.Command == "unit_verify" && strings.Contains(status.Notes, "pending_impl") {
+		specPath := filepath.Join(repoRoot, fmt.Sprintf("docs/specs/units/candidate/c_unit_%s.md", result.Object))
+		checkResultPath := filepath.Join(repoRoot, fmt.Sprintf("docs/specs/_check_result/unit/%s.md", result.Object))
+
+		// Read the stored truth_fingerprint from _check_result
+		checkResultData, err := os.ReadFile(checkResultPath)
+		if err == nil {
+			storedFingerprint := extractTruthFingerprint(string(checkResultData))
+			specData, err := os.ReadFile(specPath)
+			currentFingerprint := ""
+			if err == nil {
+				currentFingerprint = snapshot.ComputeFileFingerprint(string(specData))
+			}
+			if storedFingerprint != "" && currentFingerprint != "" && currentFingerprint != storedFingerprint {
+				result.MayContinue = false
+				result.FailureLayer = "gate_layer"
+				result.RecommendedNextCommand = "unit_check"
+				result.Diagnostics = append(result.Diagnostics,
+					fmt.Sprintf("spec modified after unit_check pass: stored truth_fingerprint=%s, current=%s; re-validation required via unit_check:%s",
+						storedFingerprint, currentFingerprint, result.Object))
+			}
+		}
+		// If _check_result is absent during re-validation, treat as spec-not-yet-validated
+		// (the standard flow has _check_result; its absence in implementation phase is
+		// unexpected but unit_check.md permits proceeding with re-validation).
+	}
+
 	return result
+}
+
+// extractTruthFingerprint parses truth_fingerprint from a _check_result YAML file.
+func extractTruthFingerprint(yaml string) string {
+	lines := strings.Split(strings.ReplaceAll(yaml, "\r\n", "\n"), "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "truth_fingerprint:") {
+			value := strings.TrimSpace(strings.TrimPrefix(trimmed, "truth_fingerprint:"))
+			value = strings.Trim(value, "\"'` ")
+			return value
+		}
+	}
+	return ""
 }
 
 func ProcessKinds(objectType, command string) ([]string, error) {

@@ -53,15 +53,18 @@ Before any write, read:
 2. `framework/candidate_intent.md`
 3. `framework/lifecycle/overview.md`
 4. `framework/lifecycle/recovery.md`
-5. `framework/governance/rules/rule_sync.md`
-6. `docs/specs/_status.md`
-7. `docs/specs/repository_mapping.md`
-8. every touched rule file that may be split, merged, renamed, replaced, retired, or intentionally kept
-9. every current-layer unit main Spec needed to derive the full current bound shared rule graph for touched rules, or every current-layer `_status.md` unit row when a touched rule is a stable global rule
-10. `framework/lifecycle/unit_init_new_fork.md` when any affected stable unit would require binding writeback
-11. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the topology change may become a repository-wide default rule
+5. `framework/governance/impact_sync.md`
+6. `framework/governance/rules/rule_sync.md`
+7. `docs/specs/_status.md`
+8. `docs/specs/repository_mapping.md`
+9. every touched rule file that may be split, merged, renamed, replaced, retired, or intentionally kept
+10. every current-layer unit main Spec needed to derive the full current bound shared rule graph for touched rules, or every current-layer `_status.md` unit row when a touched rule is a stable global rule
+11. `framework/lifecycle/unit_init_new_fork.md` when any affected stable unit would require binding writeback
+12. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the topology change may become a repository-wide default rule
 
-**Layout-aware path note:** Paths in this section are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+==ATOM_BEGIN:rule_layout_note==
+**Layout-aware path note:** Paths in this file are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+==ATOM_END:rule_layout_note==
 
 ## 4. Procedure
 

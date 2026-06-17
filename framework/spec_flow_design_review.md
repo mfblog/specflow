@@ -53,7 +53,6 @@ That default scope includes:
    - `governance/review.md`
    - `governance/review_scope.md`
    - `lifecycle/overview.md`
-   - `advance_policy.md`
    - `operations/entry_routing.md`
    - `operations/migration.md`
    - `core/repository_mapping.md`
@@ -70,9 +69,6 @@ That default scope includes:
    - `<template-root>/docs/specs/_status.md`
    - `<template-root>/docs/specs/_check_work/README.md`
    - `<template-root>/docs/specs/_check_result/README.md`
-   - `<template-root>/docs/specs/_plans/README.md`
-   - `<template-root>/docs/specs/_plans/draft/README.md`
-   - `<template-root>/docs/specs/_plans/active/README.md`
    - `<template-root>/docs/specs/_verify_result/README.md`
    - `<template-root>/docs/specs/_stable_verify_result/README.md`
    - `<template-root>/docs/specs/_governance_review/README.md`
@@ -111,7 +107,6 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `governance/review.md`
    - `governance/review_scope.md`
    - `lifecycle/overview.md`
-   - `advance_policy.md`
    - `operations/entry_routing.md`
    - `operations/migration.md`
    - `core/repository_mapping.md`
@@ -133,9 +128,6 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `<template-root>/docs/specs/_status.md`
    - `<template-root>/docs/specs/_check_work/README.md`
    - `<template-root>/docs/specs/_check_result/README.md`
-   - `<template-root>/docs/specs/_plans/README.md`
-   - `<template-root>/docs/specs/_plans/draft/README.md`
-   - `<template-root>/docs/specs/_plans/active/README.md`
    - `<template-root>/docs/specs/_verify_result/README.md`
    - `<template-root>/docs/specs/_stable_verify_result/README.md`
    - `<template-root>/docs/specs/_independent_evaluation/README.md`
@@ -597,13 +589,6 @@ Question-specific scoring rules:
    - whether in-scope rules contain avoidable internal mechanism detail that could be removed or relocated without reducing the governing rules' clarity — for LLM executors, superfluous text competes with relevant instructions for context window rather than causing "learning burden"
    - whether `judgment_guidance`, `example_or_wording`, and `duplicate_or_restatement` content is kept small enough that it does not obscure the governing hard rules
     - whether pre-action instruction loading is limited to `action_before_hard_rule` material, so that the executor's context window is occupied primarily by rules that prevent unsafe writes, truth drift, or missed verification — rules that could safely be consumed on demand or checked after action should not pre-occupy context during the action phase
-     - **card output verification** — every generated context card must inline execution authority, lifecycle boundary, and close guidance; it may index business truth files as reference paths. This is the governing design principle for context cards. The reviewer must set up a representative test project (see `framework/governance/card_review_setup.md`) under `_governance_review/` (gitignored), then run `specflowctl context card --object-type unit --object <name>` and `specflowctl context card --object-type rule --object <name>` for every reachable state, and verify that every generated card satisfies:
-       - content self-containment — no chain-reading required; guidance comes from lifecycle files, not hardcoded in Go
-       - heading hierarchy — demoted correctly under `## GUIDANCE`
-       - inline vs reference balance — only `_status.md` + `repository_mapping.md` inlined
-       - section completeness — all required sections present
-       - state-appropriate guidance — correct lifecycle file selected for each state
-     - a design that cannot produce a correct self-contained card for every reachable state fails the self-containment criterion of Question 6
 7. Question 7 must judge:
    - whether small changes have a smaller legal path than large changes
    - whether routine work avoids full-chain over-processing (fewer gates, fewer tool-calling round-trips, less context-window consumption)

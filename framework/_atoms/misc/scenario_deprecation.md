@@ -1,0 +1,1 @@
+Scenario lifecycle support (`scenario_*`, `scenario_advance:{id}`, `object-type=scenario`) has been removed. Requests using removed concepts must stop. Do not route them through lifecycle commands or attempt to recover old scenario state.

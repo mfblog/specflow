@@ -273,7 +273,6 @@ func CollectDefaultSpecFlowDesignScopeForLayout(repoRoot, requestedLayout string
 		scope.FrameworkPath("governance/review.md"),
 		scope.FrameworkPath("governance/review_scope.md"),
 		scope.FrameworkPath("governance/rule_system.md"),
-		scope.FrameworkPath("advance_policy.md"),
 		scope.FrameworkPath("core/object_model.md"),
 		scope.FrameworkPath("core/status.md"),
 		scope.FrameworkPath("core/repository_mapping.md"),
@@ -328,7 +327,6 @@ func (scope SpecFlowScope) ToolingPath(relPath string) string {
 
 func collectAgentOperabilityFiles(scope SpecFlowScope, projectEntryFiles, sourceRepoEntryExampleFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, candidateIntentFiles, guidanceSkillFiles, sharedGovernanceFiles, processStateContractFiles, toolingContractFiles []string) []string {
 	files := []string{
-		scope.FrameworkPath("advance_policy.md"),
 		scope.FrameworkPath("core/adoption_modes.md"),
 		scope.FrameworkPath("core/freshness.md"),
 		scope.FrameworkPath("core/independent_evaluation.md"),
@@ -491,9 +489,6 @@ func templateProcessStateFiles(scope SpecFlowScope) []string {
 		scope.TemplatePath("docs/specs/_status.md"),
 		scope.TemplatePath("docs/specs/_check_work/README.md"),
 		scope.TemplatePath("docs/specs/_check_result/README.md"),
-		scope.TemplatePath("docs/specs/_plans/README.md"),
-		scope.TemplatePath("docs/specs/_plans/draft/README.md"),
-		scope.TemplatePath("docs/specs/_plans/active/README.md"),
 		scope.TemplatePath("docs/specs/_verify_result/README.md"),
 		scope.TemplatePath("docs/specs/_stable_verify_result/README.md"),
 		scope.TemplatePath("docs/specs/_governance_review/README.md"),
@@ -525,6 +520,37 @@ func sourceRepoEntryExampleFiles(layout string) []string {
 		return nil
 	}
 	return []string{"example.md"}
+}
+
+// ValidateEntryFileGovernance reads a registered entry file and checks whether its
+// managed block contains routing instructions that contradict framework governance rules.
+// Returns a diagnostic message if a contradiction is found, or empty string if clean.
+func ValidateEntryFileGovernance(repoRoot, filePath string) string {
+	data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(filePath)))
+	if err != nil {
+		return fmt.Sprintf("cannot read entry file %s: %v", filePath, err)
+	}
+	content := string(data)
+
+	// Check for managed block
+	beginIdx := strings.Index(content, "==SPECFLOW:BEGIN==")
+	endIdx := strings.Index(content, "==SPECFLOW:END==")
+	if beginIdx == -1 || endIdx == -1 || endIdx <= beginIdx {
+		return "" // no managed block — source_repo exception applies
+	}
+
+	managedBlock := content[beginIdx : endIdx+len("==SPECFLOW:END==")]
+
+	// Check for routing contradictions: managed block must not redirect
+	// spec_flow_review or spec_flow_design_review away from framework/governance/review.md
+	if strings.Contains(managedBlock, "spec_flow_review") || strings.Contains(managedBlock, "spec_flow_design_review") {
+		if strings.Contains(managedBlock, "framework/governance/review.md") {
+			return "" // correctly routes to review.md
+		}
+		return fmt.Sprintf("entry file %s managed block references governance review entries but does not route to framework/governance/review.md", filePath)
+	}
+
+	return ""
 }
 
 func globRelative(repoRoot, pattern string) ([]string, error) {

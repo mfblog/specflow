@@ -11,7 +11,7 @@
 
 `unit_fork` must write `candidate_intent`. When `evidence_appendix_ref` is not `none`, the evidence appendix file referenced by that field must be created before or during the `unit_fork` writeback (see `framework/spec_writing_guide.md` Section 7 for appendix format and ownership). The agent executing `unit_fork` MUST observe the actual current implementation — inspecting interfaces, data formats, behaviors, and side effects — and record those observations in the evidence appendix file. The evidence appendix records observed implementation behavior as traceability evidence, not as durable behavior truth. It must not be generated from spec intent or second-hand description alone.
 
-`unit_new` does not write `candidate_intent` — it creates the first candidate truth with no stable-layer parent to relate to. Write `source_basis` per the Onboarding Source Decision in `framework/operations/entry_routing.md`; `candidate_intent` is not required for `unit_new`. Allowed values for `source_basis` in the `unit_new` context: `new_design | existing_implementation | mixed | replacement` (same as change candidate). When `source_basis` is `existing_implementation` or `mixed`, the candidate Spec MUST include `evidence_appendix_ref` pointing to a valid evidence appendix file recording observed implementation behavior (same rule as change candidate). The agent executing `unit_new` MUST inspect the actual implementation files and record observed behavior in the evidence appendix; it must not fabricate or infer the appendix content from spec documentation.
+`unit_new` does not write `candidate_intent` — it creates the first candidate truth with no stable-layer parent to relate to. Write `source_basis` per the Onboarding Source Decision in `framework/operations/entry_routing.md`; `candidate_intent` is not required for `unit_new`. When `source_basis` is `existing_implementation` or `mixed`, the candidate Spec MUST include `evidence_appendix_ref` pointing to a valid evidence appendix file recording observed implementation behavior (same rule as change candidate). The agent executing `unit_new` MUST inspect the actual implementation files and record observed behavior in the evidence appendix; it must not fabricate or infer the appendix content from spec documentation.
 
 ## Change Candidate
 
@@ -19,7 +19,7 @@
 
 ```yaml
 candidate_intent: change
-source_basis: new_design | existing_implementation | mixed | replacement
+source_basis: see Onboarding Source Decision in framework/operations/entry_routing.md
 evidence_appendix_ref: none | <candidate appendix path>
 ```
 

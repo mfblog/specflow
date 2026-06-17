@@ -8,14 +8,14 @@ It applies to unit lifecycle work, rule-governance work that already mutated fil
 
 ## Unit Fallback Targets
 
-> **Note:** This table covers both candidate and stable unit evidence. The `evidence_layer` row routes candidate evidence to `unit_verify` and stable verify evidence to `unit_stable_verify` — see the per-row routing for the correct restart command. Stable-layer truth changes follow the separate rules in [Stable Unit Recovery](#stable-unit-recovery) below.
+> **Note:** This table covers both candidate and stable unit evidence. The `evidence_layer` row routes candidate evidence to `unit_verify` and stable verify evidence to `unit_stable_verify` — see the per-row routing for the correct restart command. `binding_drift` and `rule_drift` in the `truth_layer` row apply to candidate units only; stable units with those reason codes are routed per `framework/governance/impact_sync.md` Fallback Routing item 6 (to `unit_stable_verify`). Stable-layer truth changes follow the separate rules in [Stable Unit Recovery](#stable-unit-recovery) below.
 
 Layer classification maps a failure to the layer whose evidence is invalidated. See `framework/process_snapshot_contract.md` Section 4 (Fallback Layers) for the classification rules: truth mismatch → `truth_layer`, check schema or gate evidence mismatch → `gate_layer`, verify evidence mismatch → `evidence_layer`.
 
 | Failure Layer | Reason Codes | Deletes | Next Command |
 |---|---|---|---|
-| `truth_layer` | `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, `truth_incomplete` | check_work, check result (if any), verify result | `unit_check` |
-| `gate_layer` | `gate_missing`, `spec_issue` | check_work, check result (if any) | `unit_check` |
+| `truth_layer` | `truth_drift`, `binding_drift` (candidate only), `baseline_drift`, `rule_drift` (candidate only), `truth_incomplete` | check_work, check result (if any), verify result | `unit_check` (clears `Notes`) |
+| `gate_layer` | `gate_missing`, `spec_issue` | check_work, check result (if any) | `unit_check` (clears `Notes`) |
 | `evidence_layer` | `evidence_incomplete` (candidate-layer only), `stable_verify_invalid` | verify result or stable verify result | `unit_verify` if `evidence_incomplete`; `unit_stable_verify` if `stable_verify_invalid` |
 
 Only reason codes in this table are valid for fallback cleanup.
@@ -25,20 +25,28 @@ Do not delete upstream process files that still validate and are still supported
 
 ### Freshness Review Required
 
-When impact sync reports `freshness_review_required`, the process snapshot is stale (fingerprint mismatch) but truth has not drifted. This is not a fallback layer — no evidence cleanup is required. The agent must re-read the current truth files to verify the snapshot's claims against the latest content, then:
+When impact sync reports `freshness_review_required`, run the deterministic freshness classification first:
+
+```text
+<tooling-root>/bin/specflowctl-<os>-<arch> snapshot validate-process --object-type unit --object <unit> --process check|verify|stable_verify
+```
+
+The tooling output classifies the freshness state and returns the resolved branch. If tooling is unavailable, the process snapshot is stale (fingerprint mismatch) but truth has not drifted. This is not a fallback layer — no evidence cleanup is required. The agent must re-read the current truth files to verify the snapshot's claims against the latest content, then:
 1. If truth content has changed since the snapshot was recorded: re-classify under the appropriate fallback layer (`truth_layer`).
-2. If only timestamp or fingerprint metadata is stale: re-verify against current truth and update the snapshot with a `freshness_receipt` (see `framework/process_snapshot_contract.md` Section 4).
+2. If only timestamp or fingerprint metadata is stale: generate an independent evaluation request with pack `freshness_text_drift_reuse` per `framework/core/freshness.md` section Evidence Reuse and `framework/core/independent_evaluation.md` Handoff Requests. After the reviewer returns `pass`, write the freshness_receipt with `freshness_review_mode: independent` (see `framework/process_snapshot_contract.md` Section 2 — Freshness reuse fields). Do not self-certify `freshness_review_mode: independent`.
 3. If the snapshot cannot be verified: delete the stale process evidence and rerun the originating command.
 
-### truth_layer Recovery Procedure
+### truth_drift Recovery Procedure
 
 When the failure is classified as `truth_layer` and the cause is `truth_drift` (candidate truth has diverged from the stable baseline — see `framework/lifecycle/unit_verify.md` `truth_fallback` outcome), apply the following procedure:
 
-1. **Correct candidate truth** — Before deleting any evidence, restore `docs/specs/units/candidate/c_unit_{unit}.md` to alignment with the stable Spec at `docs/specs/units/stable/s_unit_{unit}.md`. Remove content that contradicts the stable baseline and restore any content that was incorrectly omitted. If the divergence was intentional (a legitimate scope addition), preserve the intentional changes — the subsequent `unit_check` re-validation will determine their validity.
+1. **Correct candidate truth** — Before deleting any evidence, restore `docs/specs/units/candidate/c_unit_{unit}.md` to alignment with the stable Spec at `docs/specs/units/stable/s_unit_{unit}.md`. Remove content that contradicts the stable baseline and restore any content that was incorrectly omitted. If the divergence was intentional (a legitimate scope addition), preserve the intentional changes — the subsequent `unit_check` re-validation will determine their validity. (See `framework/candidate_intent.md` for the distinction between change candidates — which intentionally diverge from the stable layer — and repair candidates — which must not.)
 2. **Delete invalid evidence** — Remove process artifacts per the `truth_layer` row in the fallback table above (check_work, check result, verify result).
-3. **Reset lifecycle state** — Set Next Command to `unit_check` per the fallback table.
+3. **Reset lifecycle state** — Run `command close` with outcome `truth_fallback` —
+   this sets `Next Command=unit_check` and clears `Notes` per the fallback table.
+   (See `unit_verify.md` How to End `truth_fallback` outcome.)
 4. **Re-validate** — Run `unit_check:{unit}` on the corrected candidate truth.
-5. **Regenerate context card** — After re-validation passes, regenerate the context card via `specflowctl context card --object-type unit --object {unit}`. The pre-recovery context card carries GUIDANCE from the invalidated state and must not be reused without regeneration.
+5. **Get post-recovery directive** — After re-validation passes, run `specflowctl next --unit {unit}` to obtain the deterministic directive for the next governance step. The directive tells you TASK, READS, WRITES, BLOCKED, and COMPLETION.
 
 ## Candidate Recovery
 
@@ -51,7 +59,7 @@ When candidate truth changes, bound rule references change, repository mapping c
 
 If a candidate main Spec changes after `unit_check`, the check result (if any) may need revalidation. Verify evidence may still be valid if the spec change does not affect acceptance items or verification scope.
 
-When `unit_verify` reports `spec_issue` (candidate Spec needs repair without implementation change — see `framework/lifecycle/unit_verify.md` How to End), only the spec requires repair. The verify evidence remains valid for the unchanged acceptance items. Do not delete verify evidence. Set next command to `unit_check`. The next `unit_check` round overwrites any prior check_work and check_result, so no explicit gate_layer file deletion is required.
+When `unit_verify` reports `spec_issue` (candidate Spec needs repair without implementation change — see `framework/lifecycle/unit_verify.md` How to End), only the spec requires repair. The verify evidence remains valid for the unchanged acceptance items. Do not delete verify evidence. Set next command to `unit_check`. Delete check_work and check_result per the `gate_layer` row in the fallback table above — they contain evidence against a now-invalid spec. The subsequent `unit_check` round will regenerate them against the repaired spec.
 
 ## Stable Unit Recovery
 

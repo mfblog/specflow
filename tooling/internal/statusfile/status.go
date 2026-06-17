@@ -325,5 +325,26 @@ func validateObjectStatus(status ObjectStatus) error {
 	if !allowedNextCommands[strings.TrimSpace(status.NextCommand)] {
 		return fmt.Errorf("next command %q is not a supported status value", status.NextCommand)
 	}
+
+	// Validate cross-field (Stable, Candidate, Active Layer) combinations.
+	// Only 3 combinations are legal per status.md:
+	//   (yes, no, stable)   — Pure stable unit
+	//   (no, yes, candidate) — New candidate unit
+	//   (yes, yes, candidate) — Candidate derived from stable via fork
+	stable := strings.ToLower(strings.TrimSpace(status.Stable))
+	candidate := strings.ToLower(strings.TrimSpace(status.Candidate))
+	active := strings.ToLower(strings.TrimSpace(status.ActiveLayer))
+	switch {
+	case stable == "yes" && candidate == "no" && active == "stable":
+		// legal
+	case stable == "no" && candidate == "yes" && active == "candidate":
+		// legal
+	case stable == "yes" && candidate == "yes" && active == "candidate":
+		// legal
+	default:
+		return fmt.Errorf("illegal (Stable, Candidate, Active Layer) combination: (%s, %s, %s); only 3 combinations are legal: (yes, no, stable), (no, yes, candidate), (yes, yes, candidate)",
+			status.Stable, status.Candidate, status.ActiveLayer)
+	}
+
 	return nil
 }

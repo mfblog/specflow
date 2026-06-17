@@ -136,6 +136,7 @@ rule_version: 0.2.0
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_check_result/unit/trace.md"), "check")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_plans/active/trace.md"), "plan")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_verify_result/unit/trace.md"), "verify")
+	writeRepositoryMappingFile(t, repoRoot, "0.1.0")
 
 	result, err := ReleaseVersion(repoRoot, ReleaseVersionOptions{
 		RuleID:  "shared_demo",
@@ -201,6 +202,17 @@ rule_version: 0.2.0
 	}
 	if !strings.Contains(string(agentStable), "  - s_b_rule_demo@0.1.0") {
 		t.Fatalf("stable truth should remain untouched:\n%s", string(agentStable))
+	}
+	mapping, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/repository_mapping.md"))
+	if err != nil {
+		t.Fatalf("read repository mapping: %v", err)
+	}
+	mappingText := string(mapping)
+	if !strings.Contains(mappingText, "c_unit_agent.md") {
+		t.Fatalf("repository_mapping.md spec_files was not updated for agent:\n%s", mappingText)
+	}
+	if strings.Contains(mappingText, "s_unit_agent.md") {
+		t.Fatalf("repository_mapping.md should no longer reference stable spec path for agent:\n%s", mappingText)
 	}
 	for _, relPath := range []string{
 		"docs/specs/_check_result/unit/trace.md",

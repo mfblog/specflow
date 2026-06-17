@@ -44,7 +44,9 @@ Before routing or checkpointing, read only the smallest durable truth needed for
 
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
-**Layout-aware path note:** Paths in this section are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+==ATOM_BEGIN:rule_layout_note==
+**Layout-aware path note:** Paths in this file are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+==ATOM_END:rule_layout_note==
 
 ## 3. Routing Decisions
 
@@ -71,10 +73,10 @@ If more than one rule flow is required, `rule_escape` may produce an execution-l
    - `step_order`
    - `current_step`
    - `remaining_steps`
-   - `closure_rule`
+   - `closure_rule`: after all remaining steps complete, report completion and return to caller flow
    - `durability=execution_local`
    - `resume_rule=rerun_entry_routing_from_current_truth_if_interrupted`
-7. Route only the first legal step after emitting that contract.
+7. Route only the first legal step after emitting that contract. After each step in the contract completes, return to `rule_escape` to continue with the next step. When all steps are complete, apply the `closure_rule`.
 8. If the order is not stable, raise a checkpoint instead of guessing.
 9. If the boundary between unit-local truth and rule truth is unclear, raise a checkpoint instead of writing truth.
 10. If the request crosses out of rule governance, return to the owning unit lifecycle or repository mapping route.
@@ -98,6 +100,10 @@ The stop report must follow `framework/operations/entry_routing.md` (User-Facing
 5. the resume entry after the answer or action
 
 For a `prerequisite_action` that requires `unit_fork:{unit}` before rule-governance writeback, the stop report must name every stable unit that needs a candidate fork. After every required fork completes, rerun `rule_escape` from current repository truth for the original rule-governance request.
+
+For a `clarification` checkpoint, after the user provides the requested clarification, rerun `rule_escape` from current repository truth for the original rule-governance request.
+
+For a `decision` checkpoint, after the user makes the requested decision, rerun `rule_escape` from current repository truth for the original rule-governance request.
 
 ## 6. Stop Conditions
 

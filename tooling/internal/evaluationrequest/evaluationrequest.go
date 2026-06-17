@@ -609,31 +609,36 @@ func replacePlaceholder(items []string, object string) []string {
 
 func renderIndependentEvaluationReceipt(b *strings.Builder, pack, requestFile string, inputRefs []string) {
 	b.WriteString("```yaml\n")
+	b.WriteString("# TOOLING NOTE: The fields below are template defaults. The executor MUST replace\n")
+	b.WriteString("# reviewer_result and review_findings with the actual independent reviewer outcome.\n")
+	b.WriteString("# These placeholder values must not be copied verbatim into process evidence.\n")
 	b.WriteString("evaluation_mode: independent\n")
-	b.WriteString("reviewer_result: pass\n")
+	b.WriteString("reviewer_result: {{REVIEWER_RESULT}}\n")
 	b.WriteString("reviewer_context: minimal_context\n")
 	b.WriteString("review_input_refs: ")
 	writeReceiptRefs(b, pack, requestFile, inputRefs)
 	b.WriteString("\n")
-	b.WriteString("review_findings: none\n")
+	b.WriteString("review_findings: {{REVIEW_FINDINGS}}\n")
 	b.WriteString("human_decision_refs: none\n")
 	b.WriteString("```\n\n")
 }
 
 func renderFreshnessReceipt(b *strings.Builder, pack, requestFile string, inputRefs []string, currentFingerprint string) {
 	b.WriteString("```yaml\n")
+	b.WriteString("# TOOLING NOTE: The executor MUST replace freshness_reviewer_result and\n")
+	b.WriteString("# freshness_review_findings with the actual independent reviewer outcome.\n")
 	b.WriteString("freshness_impact: text_drift\n")
 	b.WriteString("evidence_reuse: accepted\n")
 	b.WriteString("freshness_current_fingerprint: ")
 	b.WriteString(currentFingerprint)
 	b.WriteString("\n")
 	b.WriteString("freshness_review_mode: independent\n")
-	b.WriteString("freshness_reviewer_result: pass\n")
+	b.WriteString("freshness_reviewer_result: {{FRESHNESS_REVIEWER_RESULT}}\n")
 	b.WriteString("freshness_reviewer_context: minimal_context\n")
 	b.WriteString("freshness_review_input_refs: ")
 	writeReceiptRefs(b, pack, requestFile, inputRefs)
 	b.WriteString("\n")
-	b.WriteString("freshness_review_findings: none\n")
+	b.WriteString("freshness_review_findings: {{FRESHNESS_REVIEW_FINDINGS}}\n")
 	b.WriteString("```\n\n")
 }
 

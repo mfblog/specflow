@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandclose"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/repositorymapping"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulebinding"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
@@ -254,6 +255,7 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 			"layer":                 "candidate",
 			"version":               nextVersion,
 			"evidence_appendix_ref": "none",
+			"source_basis":          "new_design",
 		}
 		updated, err := rulerefs.RewriteObjectFrontmatter(candidateRef, string(contentBytes), frontmatterUpdates, nextRefs)
 		if err != nil {
@@ -307,6 +309,9 @@ func ReleaseVersion(repoRoot string, options ReleaseVersionOptions) (ReleaseVers
 		}
 		if err := os.WriteFile(candidateAbs, []byte(plan.content), 0o644); err != nil {
 			return ReleaseVersionResult{}, fmt.Errorf("write %s: %w", plan.candidateFileRef, err)
+		}
+		if err := repositorymapping.UpdateSpecFilesForFork(repoRoot, plan.status.Object); err != nil {
+			return ReleaseVersionResult{}, fmt.Errorf("update repository mapping for %s: %w", plan.status.Object, err)
 		}
 		if err := removeAppendixRefs(repoRoot, plan.appendixRemoved); err != nil {
 			return ReleaseVersionResult{}, err

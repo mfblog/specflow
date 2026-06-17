@@ -69,6 +69,27 @@ The tooling validates that the candidate process artifact is mechanically ready 
 For freshness reuse, request generation is allowed only when deterministic validation reports `text_drift` with `evidence_reuse: pending_review`.
 This tooling check does not prove reviewer isolation and does not judge whether the reviewer made a good semantic decision.
 
+### Recording Review Results
+
+When the independent review result returns (`pass`, `blocked`, or `needs_human_decision`), the executor must write the result to a durable result file **before** updating the process evidence. This ensures a new executor arriving at a checkpoint-resume state can determine the review outcome from file state alone, without requiring conversation history.
+
+Result file path:
+
+```text
+docs/specs/_independent_evaluation/results/unit/{unit}/{reviewer_pack}.md
+```
+
+Required fields:
+
+- `reviewer_result`: one of `pass`, `blocked`, `needs_human_decision`
+- `reviewer_context`: reviewer's summary or rationale
+- `review_input_refs`: the durable input refs supplied to the reviewer (same value recorded in the receipt's `review_input_refs`)
+- `recorded_at`: UTC ISO 8601 timestamp when the result was written
+
+The executor writes this file immediately after receiving the review result, then proceeds to update the process evidence with receipt fields. The result file is deleted when the process evidence cleanup runs (e.g., after `command close` with a non-pass outcome, or as part of recovery cleanup per `framework/lifecycle/recovery.md`).
+
+This file is lifecycle evidence and may be consumed by `command close` validation.
+
 ## Roles
 
 Executor may write specs, plans, implementation, and process evidence when the active Context Card allows those writes.
@@ -336,7 +357,8 @@ These do not satisfy independent evaluation:
 
 ## Required Gates
 
-The following advancing evidence requires the receipt:
+The following process evidence requires the independent evaluation receipt,
+regardless of whether the decision is advancing or non-advancing:
 
 1. `docs/specs/_check_result/unit/{unit}.md`
 2. `docs/specs/_verify_result/unit/{unit}.md`

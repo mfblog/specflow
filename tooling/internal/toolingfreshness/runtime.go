@@ -77,23 +77,9 @@ func ShouldBypass(args []string) bool {
 		return true
 	}
 
-	// Only specific read-only context subcommands bypass freshness.
-	// Other context subcommands must not bypass because they may modify
-	// project files or advance lifecycle state.
-	if args[0] == "context" {
-		if len(args) < 2 {
-			return true // bare "context" with no subcommand shows help
-		}
-		switch args[1] {
-		case "collect", "card":
-			return true
-		default:
-			return false
-		}
-	}
 
 	switch args[0] {
-	case "-h", "--help", "help", "build-release", "doctor", HiddenBuildFingerprintCommand:
+	case "-h", "--help", "help", "build-release", "doctor", "next", HiddenBuildFingerprintCommand:
 		return true
 	default:
 		return false

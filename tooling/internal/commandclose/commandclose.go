@@ -587,6 +587,13 @@ func promoteInvalidTransition(opts Options, current statusfile.ObjectStatus, obj
 func withNext(current statusfile.ObjectStatus, next string) transition {
 	after := current
 	after.NextCommand = next
+	// Clear Notes when transitioning to unit_check. The pending_impl value
+	// is only meaningful with Next Command=unit_verify; leaving stale
+	// Notes causes tooling to misclassify StateCandidateCheck as
+	// StateCandidatePending (see next/state.go ClassifyUnitState).
+	if next == "unit_check" {
+		after.Notes = ""
+	}
 	return transition{Status: after, CleanupKind: cleanupNone}
 }
 
@@ -605,6 +612,13 @@ func withNextAndValidationDecision(current statusfile.ObjectStatus, next, proces
 func fallback(current statusfile.ObjectStatus, next, layer, reason string) transition {
 	after := current
 	after.NextCommand = next
+	// Clear Notes during fallback — pending_impl only has meaning with
+	// Next Command=unit_verify. Fallback transitions always move to
+	// unit_check or unit_verify/unit_stable_verify, never to unit_verify
+	// with pending_impl.
+	if next == "unit_check" {
+		after.Notes = ""
+	}
 	return transition{Status: after, CleanupKind: cleanupFallback, FailureLayer: layer, Reason: reason}
 }
 

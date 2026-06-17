@@ -95,36 +95,6 @@ func TestLifecycleToolingCommandsUseToolingRoot(t *testing.T) {
 }
 
 
-func TestImpactSyncDefinesStableUnitReleaseHandoff(t *testing.T) {
-	repoRoot := findRepoRoot(t)
-	impactSync := readDocContractFile(t, repoRoot, "framework/governance/impact_sync.md")
-	for _, phrase := range []string{
-		"Current candidate consumers may be mechanically retargeted",
-		"Current stable consumers must not have stable truth rewritten by release-version tooling",
-		"Remove stale `unit_stable_verify` evidence",
-		"routes through `unit_fork:{unit}` and the owning unit lifecycle",
-	} {
-		if !strings.Contains(impactSync, phrase) {
-			t.Fatalf("impact_sync.md missing stable unit release handoff phrase %q", phrase)
-		}
-	}
-
-	toolingReadme := readDocContractFile(t, repoRoot, "tooling/README.md")
-	unitRelease := sectionBetween(t, toolingReadme, "28. `unit release-version`", "29. `relation candidates`", "tooling/README.md")
-	if strings.Contains(unitRelease, "stable current-layer units are rewritten directly") {
-		t.Fatalf("tooling README must not authorize direct stable truth rewrite for unit release-version")
-	}
-	for _, phrase := range []string{
-		"candidate current-layer units are rewritten directly",
-		"stable current-layer units are not rewritten",
-		"stale stable-verify evidence is removed",
-		"routed to `unit_stable_verify`",
-	} {
-		if !strings.Contains(unitRelease, phrase) {
-			t.Fatalf("tooling README unit release-version section missing phrase %q", phrase)
-		}
-	}
-}
 
 func TestUnitPromoteRequiresStablePromotionSummaryBeforeCleanup(t *testing.T) {
 	repoRoot := findRepoRoot(t)
@@ -155,16 +125,21 @@ func TestEntryManagedBlocksDefineActionGuide(t *testing.T) {
 	for _, relPath := range []string{"templates/AGENTS.md", "templates/CLAUDE.md", "templates/GEMINI.md"} {
 		block := managedSpecFlowBlock(t, readDocContractFile(t, repoRoot, relPath), relPath)
 		for _, phrase := range []string{
-			"### What specFlow Is",
-			"### 1. Spec Types",
-			"### 2. Layers",
-			"### 3. State Files",
-			"### 4. Development Flow",
-			"### 5. How to Start",
-			"### Commands Reference",
-			"### 6. Rule Locations",
+			"Get Your Directive",
+			"specflowctl next --unit <name>",
+			"TASK",
+			"READS",
+			"WRITES",
+			"BLOCKED",
+			"COMPLETION",
+			"Get Your Directive First (MANDATORY)",
+			"No Implementation Without Directive Authority",
+			"No Truth Drift",
+			"Stop When Unclear",
+			"Path Resolution",
 			"specFlow maintains project documents",
 			"unit_new / unit_fork",
+			"command close",
 		} {
 			if !strings.Contains(block, phrase) {
 				t.Fatalf("%s managed block missing %q", relPath, phrase)
@@ -302,19 +277,6 @@ func TestLayoutSensitiveContractsUseResolvedRoots(t *testing.T) {
 	}
 }
 
-func TestUnitAdvanceRoutesThroughAdvancePolicy(t *testing.T) {
-	repoRoot := findRepoRoot(t)
-	for _, relPath := range []string{"templates/AGENTS.md", "templates/CLAUDE.md", "templates/GEMINI.md"} {
-		block := managedSpecFlowBlock(t, readDocContractFile(t, repoRoot, relPath), relPath)
-		if !strings.Contains(block, "advance_policy.md") {
-			t.Fatalf("%s managed block must route unit_advance through advance_policy.md", relPath)
-		}
-	}
-	routing := readDocContractFile(t, repoRoot, "framework/operations/entry_routing.md")
-	if !strings.Contains(routing, "advance_policy.md") {
-		t.Fatalf("entry_routing.md must route unit_advance through advance_policy.md")
-	}
-}
 
 func TestNaturalLanguageUnitRoutingSelectsLifecycleContextCard(t *testing.T) {
 	repoRoot := findRepoRoot(t)
@@ -391,8 +353,6 @@ func TestEntryManagedBlocksStayLightweight(t *testing.T) {
 		block := managedSpecFlowBlock(t, readDocContractFile(t, repoRoot, relPath), relPath)
 		for _, forbidden := range []string{
 			"recovery",
-			"rule_topology",
-			"rule topology",
 		} {
 			if strings.Contains(strings.ToLower(block), forbidden) {
 				t.Fatalf("%s managed block should not default-reference %q", relPath, forbidden)
@@ -743,7 +703,7 @@ func TestGovernanceReviewDefaultsToScopedReview(t *testing.T) {
 		"Plain exact `spec_flow_review` routes through this file first and remains scoped.",
 		"Plain exact `spec_flow_design_review` routes through this file first, then directly delegates to `framework/spec_flow_design_review.md`.",
 		"The only full-scope mechanism review entry is exact `spec_flow_review:full`.",
-		"When the entry is exact `spec_flow_review:full`, `spec_flow_review` delegates to `framework/spec_flow_review.md`.",
+		"When the entry is exact `spec_flow_review:full`, `framework/spec_flow_review.md` is the deep-audit owner.",
 		"`framework/spec_flow_review.md` is the mechanism deep-audit owner",
 		"`framework/spec_flow_design_review.md` is the ordinary owner for every `spec_flow_design_review`.",
 	} {
@@ -1206,7 +1166,7 @@ func TestProcessSnapshotContractStoresOnlyAdvancingCheckAndVerifyEvidence(t *tes
 		t.Fatalf("process_snapshot_contract.md must not authorize non-pass check or verify evidence")
 	}
 	for _, phrase := range []string{
-		"decision: {decision}",
+		"decision: pass",
 		"allow_next: true",
 		"`_check_result` and candidate `_verify_result` are consumable evidence only for advancing pass gates.",
 		"Non-advancing command outcomes such as `blocked` or `fix_required` must not be stored as these process snapshots.",
@@ -1277,6 +1237,24 @@ func readDocContractFile(t *testing.T, repoRoot, relPath string) string {
 		t.Fatalf("read %s: %v", relPath, err)
 	}
 	return string(content)
+}
+
+func TestNextDirectiveLifecycleFilesExist(t *testing.T) {
+	repoRoot := findRepoRoot(t)
+	// Must match the stateToLifecycleFile mapping in tooling/internal/next/directive.go.
+	for _, file := range []string{
+		"framework/lifecycle/unit_init_new_fork.md",
+		"framework/lifecycle/unit_stable_verify.md",
+		"framework/lifecycle/unit_check.md",
+		"framework/lifecycle/unit_impl.md",
+		"framework/lifecycle/unit_verify.md",
+		"framework/lifecycle/unit_promote.md",
+	} {
+		path := filepath.Join(repoRoot, filepath.FromSlash(file))
+		if !fileExists(path) {
+			t.Fatalf("next directive lifecycle file %s does not exist", file)
+		}
+	}
 }
 
 func managedSpecFlowBlock(t *testing.T, content, relPath string) string {

@@ -2,6 +2,8 @@
 
 This directory stores process files for explicit full-scope mechanism reviews and every `spec_flow_design_review`.
 
+This file adopts the Slice Work-State Protocol (`framework/slice_work_state_protocol.md`). Terms like baseline slice, dynamic slice, stale, and slice set are defined there.
+
 Rules:
 
 1. Files under `_governance_review/` are process files.

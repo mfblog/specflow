@@ -2770,26 +2770,12 @@ function candidateRelationForObject(object) {
   };
 }
 
-function advanceEntryCommandForObject(object, nextCommand) {
-  const kind = String(object && object.kind ? object.kind : "").trim();
-  const objectID = String(object && object.id ? object.id : "").trim();
-  const command = String(nextCommand || "").trim();
-  if (!kind || !objectID || !command) return "";
-  if (kind === "unit" && ["unit_check", "unit_verify"].includes(command)) {
-    return `unit_advance:${objectID}`;
-  }
+function advanceEntryCommandForObject(_object, _nextCommand) {
   return "";
 }
 
-function renderAdvanceCommandButton(item, className) {
-  const command = String(item && item.advanceCommandText ? item.advanceCommandText : "").trim();
-  if (item && item.relation && item.relation.blocksAdvance) return "";
-  if (!command) return "";
-  return `
-    <button class="${escapeAttr(className)}" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(`${t("todo.advanceEntry")}: ${command}`)}">
-      <span>${escapeHTML(t("todo.advanceEntry"))}</span>
-    </button>
-  `;
+function renderAdvanceCommandButton(_item, _className) {
+  return "";
 }
 
 /**

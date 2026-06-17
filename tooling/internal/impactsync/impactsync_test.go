@@ -507,7 +507,7 @@ func renderImpactCheckProcessSnapshot(snap snapshot.Snapshot) string {
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_check",
+		"next_command: unit_verify",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: " + snap.TruthLayerRef,

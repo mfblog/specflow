@@ -16,7 +16,13 @@ There is no narrowed or scoped `spec_flow_design_review` mode.
 
 ## Entries
 
-0. If the entry expression does not match an exact review form but clearly describes governance review, mechanism audit, or framework correctness intent, treat it as `spec_flow_review` and default to `scoped_review`. If the intent is ambiguous between review and design review, also default to `scoped_review`.
+The exact review forms are `spec_flow_review`, `spec_flow_review:full`, and `spec_flow_design_review`. These are referenced by the keyword table below.
+
+0. If the entry expression does not match an exact review form, match against this keyword table in order:
+   - If the expression contains "mechanism audit" or "framework correctness" → treat as `spec_flow_review`, default `scoped_review`.
+   - If the expression contains "governance review" or "governance audit" → treat as `spec_flow_review`, default `scoped_review`.
+   - If the expression contains "design review" or "design audit" or "design quality" → treat as `spec_flow_design_review`.
+   - If none match → stop per Section "Unrecognized Entry".
 
 1. `spec_flow_review` checks mechanism correctness.
 2. `spec_flow_design_review` checks design quality and agent operability.
@@ -26,9 +32,13 @@ The only full-scope mechanism review entry is exact `spec_flow_review:full`.
 
 Plain exact `spec_flow_design_review` routes through this file first, then directly delegates to `framework/spec_flow_design_review.md`.
 
-When the entry is exact `spec_flow_review:full`, `spec_flow_review` delegates to `framework/spec_flow_review.md`.
+When the entry is exact `spec_flow_review:full`, `framework/spec_flow_review.md` is the deep-audit owner.
 
 If the entry expression does not match any recognized review entry (`spec_flow_review`, `spec_flow_review:full`, `spec_flow_design_review`), stop and report that the entry is unrecognized. Do not silently fall through to a default or guess the caller's intent.
+
+### Unrecognized Entry
+
+The paragraph above is the Unrecognized Entry stop condition.
 
 ## Review Layout
 
@@ -58,6 +68,14 @@ in `source_repo` layout they do not exist and must be treated as informational r
 Lifecycle and rule files at `framework/lifecycle/` and `framework/governance/rules/` may include
 layout-aware notes on specific Required Reads entries; this section is the centralized authority
 for how those path references should be resolved.
+
+Project entry files (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`) contain managed blocks
+(defined in `framework/operations/entry_routing.md` Entry File Registration section)
+that must not contradict framework governance rules on routing, review scope, or lifecycle
+progression. Use `specflowctl entry check` to verify managed-block consistency across
+all registered entry files. When a managed block contradicts framework governance rules,
+the framework rule takes precedence and the executor must report the contradiction as a
+governance concern.
 
 If `--layout auto` detects both `installed_project` and `source_repo` markers, the review must stop and require an explicit `--layout installed` or `--layout source` argument. Auto-detection must not silently choose one layout.
 

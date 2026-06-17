@@ -12,12 +12,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/managedblock"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
-)
-
-const (
-	managedBegin = "==SPECFLOW:BEGIN=="
-	managedEnd   = "==SPECFLOW:END=="
 )
 
 var entryFileRegistrationLine = regexp.MustCompile("`([^`]+)`")
@@ -54,7 +50,7 @@ func inspect(repoRoot string, inferChanged bool) (Inspection, error) {
 		if err != nil {
 			return Inspection{}, fmt.Errorf("read %s: %w", relPath, err)
 		}
-		block, err := extractManagedBlock(string(content))
+		block, err := managedblock.Extract(string(content))
 		if err != nil {
 			return Inspection{}, fmt.Errorf("%s: %w", relPath, err)
 		}
@@ -114,7 +110,7 @@ func Sync(repoRoot, source string) (SyncResult, error) {
 	if err != nil {
 		return SyncResult{}, fmt.Errorf("read %s: %w", source, err)
 	}
-	sourceBlock, err := extractManagedBlock(string(sourceContent))
+	sourceBlock, err := managedblock.Extract(string(sourceContent))
 	if err != nil {
 		return SyncResult{}, fmt.Errorf("%s: %w", source, err)
 	}
@@ -129,14 +125,14 @@ func Sync(repoRoot, source string) (SyncResult, error) {
 		if err != nil {
 			return result, fmt.Errorf("read %s: %w", relPath, err)
 		}
-		targetBlock, err := extractManagedBlock(string(targetContent))
+		targetBlock, err := managedblock.Extract(string(targetContent))
 		if err != nil {
 			return result, fmt.Errorf("%s: %w", relPath, err)
 		}
 		if sourceBlock == targetBlock {
 			continue
 		}
-		updated, err := replaceManagedBlock(string(targetContent), sourceBlock)
+		updated, err := managedblock.Replace(string(targetContent), sourceBlock)
 		if err != nil {
 			return result, fmt.Errorf("%s: %w", relPath, err)
 		}
@@ -205,58 +201,6 @@ func normalizeSource(layout specflowlayout.Layout, source string) string {
 		return specflowlayout.Relative(layout.TemplateRoot, source)
 	}
 	return source
-}
-
-func extractManagedBlock(content string) (string, error) {
-	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
-	beginIdx := -1
-	endIdx := -1
-	for idx, line := range lines {
-		if line == managedBegin {
-			if beginIdx != -1 {
-				return "", fmt.Errorf("managed block begin marker must appear exactly once")
-			}
-			beginIdx = idx
-		}
-		if line == managedEnd {
-			if endIdx != -1 {
-				return "", fmt.Errorf("managed block end marker must appear exactly once")
-			}
-			endIdx = idx
-		}
-	}
-	if beginIdx == -1 || endIdx == -1 || beginIdx >= endIdx {
-		return "", fmt.Errorf("managed block markers are missing or out of order")
-	}
-	return strings.Join(lines[beginIdx:endIdx+1], "\n"), nil
-}
-
-func replaceManagedBlock(content, replacement string) (string, error) {
-	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
-	beginIdx := -1
-	endIdx := -1
-	for idx, line := range lines {
-		if line == managedBegin {
-			if beginIdx != -1 {
-				return "", fmt.Errorf("managed block begin marker must appear exactly once")
-			}
-			beginIdx = idx
-		}
-		if line == managedEnd {
-			if endIdx != -1 {
-				return "", fmt.Errorf("managed block end marker must appear exactly once")
-			}
-			endIdx = idx
-		}
-	}
-	if beginIdx == -1 || endIdx == -1 || beginIdx >= endIdx {
-		return "", fmt.Errorf("managed block markers are missing or out of order")
-	}
-	replacementLines := strings.Split(strings.ReplaceAll(replacement, "\r\n", "\n"), "\n")
-	updated := append([]string{}, lines[:beginIdx]...)
-	updated = append(updated, replacementLines...)
-	updated = append(updated, lines[endIdx+1:]...)
-	return strings.Join(updated, "\n"), nil
 }
 
 func inferCurrentRoundChanged(repoRoot string, registeredFiles []string) ([]string, error) {

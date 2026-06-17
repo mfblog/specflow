@@ -160,7 +160,7 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
 22. `process check-work-touch`
 	- refresh only `last_updated_at` for a valid `unit_check` checklist file
 	- the `process check-work-*` commands do not adopt `slice_work_state_protocol.md`; they only maintain an optional unit-check checklist
-23. `status set-unit`
+23. `status set-unit` (deprecated — use `status set-object` instead)
    - write one deterministic `unit` row in `_status.md` as a low-level status tool
 24. `status set-object`
    - write one unified object row in `_status.md` as a low-level status tool
@@ -180,12 +180,7 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
    - stale same-object candidate appendices are removed before the auto-fork writes current candidate appendices
    - stable unit forks write `candidate_intent=change`; a current effective stable-verify `controlled_repair_required` result fails closed before mutation, while `controlled_change_required` allows the change fork
    - stable auto-fork status routing and process cleanup reuse the `unit_fork` command close contract
-28. `unit release-version`
-   - publish an already-existing stable unit version by retargeting current-layer `unit_refs` from `--from-ref` to `--to-ref`
-   - candidate current-layer units are rewritten directly, unsafe current-round check checklist, check, plan, and verify process files are removed when present, and the unit is routed to `unit_check`
-   - stable current-layer units are not rewritten; stale stable-verify evidence is removed when present and the unit is routed to `unit_stable_verify`
-   - when no current-layer unit still uses the old stable unit ref, the command reports a no-op result
-28b. `unit check-appendix-coverage`
+28. `unit check-appendix-coverage`
    - check that every stable appendix has a candidate counterpart for a forked unit
 29. `relation candidates`
    - compute the current candidate advancement relation graph from explicit refs
@@ -193,17 +188,17 @@ It must not edit files, advance lifecycle state, or store semantic conclusions o
 30. `relation candidate-preflight`
    - check whether one current candidate unit is in the ready set
    - print the same relation fields narrowed to the requested object and fail when the target is blocked
-31. `context collect`
-    - collect the required context pack for a lifecycle command
-    - `context collect --flow lifecycle --command <cmd> --object <obj>` collects the minimum durable truth inputs needed before entering the named lifecycle Context Card
-32. `context card`
-    - generate a per-object context card from current status and truth files
-    - `context card --object-type unit|rule --object <name> [--repo-root <path>]`
-    - produces a per-state or per-rule card with STATUS, GUIDANCE, WRITES, READS, BLOCKED, and CLOSE sections
+31. `next`
+    - get the deterministic directive for the current governance step
+    - `next --unit <name> [--explain] [--repo-root <path>]`
+    - reads `_status.md`, classifies the unit's lifecycle state, and returns TASK, READS, WRITES, BLOCKED, and COMPLETION
+    - `--explain` additionally inlines the matching lifecycle Context Card content
     - this is a render action: read-only, does not modify any project file, does not advance lifecycle state
-33. `validate write`
+32. `validate write`
     - validate write permission for a file path under the current lifecycle phase
     - `validate write --path <path> --phase <phase> [--unit <unit>]` checks whether the executor may write the given path under the active lifecycle constraints recorded in `_status.md`
+33. `validate candidate-frontmatter --unit UNIT`
+    - validate candidate unit frontmatter consistency (candidate_intent, source_basis, evidence_appendix_ref, repair_basis rules)
 
 ## Reader Command Surface
 
@@ -326,7 +321,7 @@ Rules:
 
 1. lifecycle commands that consume process files should run this before treating a gate, active plan, or verify result as usable
 2. a failed preflight is not cleanup by itself; cleanup remains owned by lifecycle recovery and `process cleanup-fallback`
-3. `unit_promote` validates both the active plan and verify evidence so retirement target drift cannot be hidden between verification and promotion
+3. `unit_promote` validates verify evidence by default; retirement targets and planned-change-scope data within the verify result are cross-referenced against the active plan file during snapshot validation, but plan data is not validated as an independent process step
 4. manual hashes, shell checksums, editor display, and temporary scripts may diagnose a mismatch but must not replace this entry
 
 ## Relation Commands
@@ -351,7 +346,7 @@ Rules:
 2. the commands never judge candidate completeness, evidence quality, or promotion readiness
 3. `candidate-preflight` must fail when the requested candidate is blocked by another current candidate unit, a candidate Rule, or a candidate progression cycle
 4. the reader todo panel may use the same result to group candidates as ready, blocked, or cycle
-5. the reader todo panel must show `unit_advance:{unit}` only for ready candidates whose recorded next command is `unit_check` or `unit_verify`; promotion-ready candidates must show the explicit `unit_promote:{unit}` command instead
+5. (removed — `unit_advance` has been removed from the governance mechanism; the todo panel may show the explicit next command from `_status.md` instead)
 
 ## Tooling Input Set
 
@@ -486,7 +481,6 @@ Examples:
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule sync-impact --rule-refs c_b_rule_runtime_model@0.3.0,s_b_rule_runtime_model@0.3.0 --stable-landing-unit skill --stable-landing-rule-refs s_b_rule_runtime_model@0.3.0 --retargeted-units agent
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule consumers --rule-ref s_b_rule_runtime_model@0.4.0
 ./specflow/tooling/bin/specflowctl-linux-amd64 rule release-version --rule-id b_rule_runtime_model --from-ref s_b_rule_runtime_model@0.3.0 --to-ref s_b_rule_runtime_model@0.4.0
-./specflow/tooling/bin/specflowctl-linux-amd64 unit release-version --unit assistant --from-ref s_unit_assistant@0.8.0 --to-ref s_unit_assistant@0.9.0
 ```
 
 ## Freshness Rule
@@ -510,4 +504,4 @@ The minimal stale-binary recovery and inspection surface remains:
 2. `doctor`
 3. `help`
 4. the internal build-fingerprint query command
-5. `context` subcommands `collect` and `card` — these are read-only render actions that do not modify project files or advance lifecycle state
+5. `next` — these are read-only render actions that do not modify project files or advance lifecycle state

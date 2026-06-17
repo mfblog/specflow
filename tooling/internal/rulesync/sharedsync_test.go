@@ -1706,6 +1706,13 @@ func writeRepositoryMappingFile(t *testing.T, repoRoot, version string) {
 		"",
 		"# Repository Mapping",
 		"",
+		"## 2. Object Registry",
+		"",
+		"| kind | id | registration_state | implementation_paths | spec_files | responsibility |",
+		"|---|---|---|---|---|---|",
+		"| unit | agent | planned | none | `docs/specs/units/stable/s_unit_agent.md` | Agent unit |",
+		"| unit | trace | landed | src/**,tests/** | `docs/specs/units/candidate/c_unit_trace.md` | Trace unit |",
+		"",
 	}, "\n"))
 }
 
@@ -1861,7 +1868,7 @@ func renderModuleProcessSnapshotForTest(t *testing.T, repoRoot, processKind, mod
 		"gate: " + map[string]string{"check": "unit_check", "verify": "unit_verify"}[processKind],
 		"decision: pass",
 		"allow_next: true",
-		"next_command: " + map[string]string{"check": "unit_check", "verify": "unit_promote"}[processKind],
+		"next_command: " + map[string]string{"check": "unit_verify", "verify": "unit_promote"}[processKind],
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: candidate",

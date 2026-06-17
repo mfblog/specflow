@@ -502,6 +502,8 @@ func stableVerifyCandidateIntentRequirementFromData(processData ProcessSnapshotD
 	switch decision {
 	case "controlled_repair_required":
 		return StableVerifyIntentRequirement{Decision: decision, RequiredIntent: "repair", Required: true}
+	case "truth_text_change_required":
+		return StableVerifyIntentRequirement{Decision: decision, RequiredIntent: "repair", Required: true}
 	case "controlled_change_required":
 		return StableVerifyIntentRequirement{Decision: decision, RequiredIntent: "change", Required: true}
 	default:
@@ -867,9 +869,9 @@ func isIndependentEvaluationReceiptField(field string) bool {
 // expectedProcessRouting returns (expectedGate, expectedNextCommand) for a
 // given object type and process kind.
 //
-// For check results: both gate and next_command are "unit_check". The check
-// result records the current gate (matching _status.md's NextCommand before
-// the close transition is applied).
+// For check results: gate is "unit_check" (the gate that produced this result)
+// and next_command is "unit_verify" (the advancement target — matching
+// process_snapshot_contract.md Section 2's advancement-target convention).
 //
 // For verify results: gate is "unit_verify" and next_command is "unit_promote".
 // The verify result records the promotion target.
@@ -880,7 +882,7 @@ func expectedProcessRouting(objectType, processKind string) (string, string, err
 	case "unit":
 		switch processKind {
 		case "check":
-			return "unit_check", "unit_check", nil
+			return "unit_check", "unit_verify", nil
 		case "verify":
 			return "unit_verify", "unit_promote", nil
 		}

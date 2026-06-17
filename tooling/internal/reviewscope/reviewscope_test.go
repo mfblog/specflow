@@ -58,7 +58,6 @@ func TestCollectDefaultSpecFlowScopeDoesNotRequireProjectStandardsRegistry(t *te
 		t.Fatalf("deleted agent operability standard must stay outside agent operability scope, got %+v", scope.AgentOperabilityFiles)
 	}
 	for _, input := range []string{
-		"specflow/framework/advance_policy.md",
 		"specflow/framework/core/adoption_modes.md",
 		"specflow/framework/core/freshness.md",
 		"specflow/framework/core/independent_evaluation.md",
@@ -425,7 +424,6 @@ func writeLayeredFrameworkFiles(t *testing.T, repoRoot string) {
 		t.Fatalf("mkdir tooling marker: %v", err)
 	}
 	for _, relPath := range []string{
-		"specflow/framework/advance_policy.md",
 		"specflow/framework/core/adoption_modes.md",
 		"specflow/framework/core/freshness.md",
 		"specflow/framework/core/independent_evaluation.md",
@@ -467,7 +465,6 @@ func writeLayeredFrameworkFiles(t *testing.T, repoRoot string) {
 func writeSourceScopeRepo(t *testing.T, repoRoot string) {
 	t.Helper()
 	for _, relPath := range []string{
-		"framework/advance_policy.md",
 		"framework/core/adoption_modes.md",
 		"framework/core/freshness.md",
 		"framework/core/independent_evaluation.md",
@@ -547,6 +544,8 @@ func writeSourceScopeRepo(t *testing.T, repoRoot string) {
 		"tooling/scripts/push_with_release.sh",
 		"tooling/scripts/tooling_fingerprint.ps1",
 		"tooling/scripts/tooling_fingerprint.sh",
+		"tooling/scripts/update_tooling_binaries.ps1",
+		"tooling/scripts/update_tooling_binaries.sh",
 	} {
 		mustWrite(t, filepath.Join(repoRoot, relPath), "# script\n")
 	}
@@ -603,6 +602,8 @@ func currentToolingScriptFiles() []string {
 		"specflow/tooling/scripts/push_with_release.sh",
 		"specflow/tooling/scripts/tooling_fingerprint.ps1",
 		"specflow/tooling/scripts/tooling_fingerprint.sh",
+		"specflow/tooling/scripts/update_tooling_binaries.ps1",
+		"specflow/tooling/scripts/update_tooling_binaries.sh",
 	}
 }
 

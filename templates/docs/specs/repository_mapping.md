@@ -46,3 +46,4 @@ Process support paths include:
 5. `docs/specs/_verify_result/**`
 6. `docs/specs/_stable_verify_result/**`
 7. `docs/specs/_governance_review/**`
+8. `docs/specs/_independent_evaluation/**`

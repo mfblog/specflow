@@ -54,7 +54,12 @@ rule_refs:
   - s_b_rule_example@1.0.0
 ```
 
-Candidate unit Specs must also record the candidate source fields required by the active unit command, such as `candidate_intent`, `source_basis`, `repair_basis`, and `evidence_appendix_ref` when that command requires them.
+Candidate unit Specs must also record the candidate source fields required by the active unit command, such as `source_basis`, `repair_basis`, and `evidence_appendix_ref`, and — for `change` or `repair` candidates — `candidate_intent`. (`unit_new` does not write `candidate_intent`; see `framework/candidate_intent.md`.) For the complete candidate frontmatter schema including all candidate-specific YAML fields, see `framework/candidate_intent.md`.
+
+> **Cross-layer reference prohibition:** Stable units must not reference
+> candidate-layer appendix paths as current behavior truth. Candidate units
+> must not reference stable-layer appendix paths as current behavior truth.
+> See Section 7 (Appendix Files) item 4 for the full rule.
 
 ## 3. Unit Dependencies
 
@@ -96,6 +101,8 @@ rule_version: x.y.z
 ```
 
 `promotion_owner_unit` may be present when one unit owns the promotion decision.
+
+`unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` may be present when a bound shared rule has no formal current consumers (see `framework/governance/rules/rule_new.md` Procedure step 8). These fields are used during rule creation and must be removed when formal consumers exist.
 
 ## 6. Acceptance Criteria
 
@@ -163,8 +170,23 @@ Each unit appendix must:
 1. use the current path shape for its layer and unit id
 2. declare `unit: {unit}` in frontmatter
 3. declare `layer: stable|candidate` in frontmatter
+4. **Cross-layer reference prohibition:** Stable units must not reference
+   candidate-layer appendix paths (`c_unit_*`) as current behavior truth.
+   Candidate units must not reference stable-layer appendix paths
+   (`s_unit_*`) as current behavior truth. The fork/promote path rewriting
+   rules handle cross-layer references correctly during standard flow —
+   stable-to-candidate fork rewrites `s_unit_*` to `c_unit_*`, and promote
+   deletes all candidate appendix files. Manual edits must not create
+   cross-layer references. A stable unit that points to a `c_unit_*` path,
+   or a candidate unit that points to an `s_unit_*` path without going
+   through the fork/promote path rewriting, is invalid and must be rejected
+   during `unit_check`.
 
 When a stable unit with appendix files is forked to candidate, every stable appendix `s_unit_{unit}_{name}.md` must have a corresponding candidate appendix `c_unit_{unit}_{name}.md`.
+
+All appendix files must use the `/appendix/` subdirectory under the layer directory:
+- Candidate: `docs/specs/units/candidate/appendix/c_unit_{unit}_{name}.md`
+- Stable: `docs/specs/units/stable/appendix/s_unit_{unit}_{name}.md`
 The candidate may have additional candidate appendices.
 
 **Evidence appendix promotion restriction:** Evidence appendix files referenced by `evidence_appendix_ref` record observed behavior (traceability data) and are not durable behavior truth. They must not be promoted to stable truth as behavior-correctness claims during `unit_promote` (tooling removes all candidate appendix files during promotion cleanup, structurally preventing evidence appendix survival into the stable layer). The `evidence_appendix_ref` field is a candidate-only concept; stable units must not carry `evidence_appendix_ref` frontmatter. See `framework/lifecycle/unit_promote.md` for promotion write rules and `framework/candidate_intent.md` for evidence appendix semantics.
@@ -250,7 +272,7 @@ Edge meanings:
 Cycle rules:
 1. stable-dependency-only cycles: diagnostic only, does not block
 2. any cycle containing candidate progression edges: blocks all candidates in that cycle
-3. blocked candidates must not receive `unit_check pass` or be entered by `unit_advance`
+3. blocked candidates must not receive `unit_check pass`
 
 ## 12. Rule Scope Resolution
 

@@ -38,7 +38,7 @@ decision: pass  # always 'pass' for advancing check and verify evidence. The --o
 blocking_summary: none|{summary}
 coverage_summary: {summary}
 allow_next: true|false
-next_command: unit_check|unit_verify|unit_promote|none
+next_command: unit_verify|unit_promote|none
 truth_layer_ref: candidate
 truth_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 truth_version_ref: c_unit_{unit}@x.y.z
@@ -61,18 +61,34 @@ human_decision_refs: none | list
 
 #### next_command semantics
 
-`next_command` records the next command in the lifecycle sequence after the decision is accepted.
+`next_command` records the target gate in the lifecycle sequence that this
+snapshot supports advancing to. The `allow_next` field controls whether
+`command close` may apply that advancement.
 
-For check results (`gate: unit_check`), `next_command` records the current gate
-(`unit_check`) that produced this snapshot. It matches the unit's NextCommand
-in `_status.md` before the close transition is applied. When `command close`
-writes the pass transition, the status row updates to `unit_verify`.
+The semantics differ by gate type:
 
-For verify results (`gate: unit_verify`), `next_command` records the promotion
-target (`unit_promote`).
+1. **Check results (`gate: unit_check`):** `next_command` records the
+   advancement target (`unit_verify`). When `command close` writes the pass
+   transition (with `allow_next: true`), the status row advances to
+   `unit_verify`. The recorded value is the **post-transition** target;
+   the `allow_next` field determines whether advancement is permitted.
 
-For stable verify results (`gate: unit_stable_verify`), see the stable verify
-section above.
+   > **Note:** The previous convention stored the pre-transition gate
+   > (`unit_check`) as `next_command`. That convention makes check-result
+   > snapshots dependent on lifecycle-sequence knowledge — `command close`
+   > must know that `unit_check` advances to `unit_verify` rather than
+   > reading the target directly from the snapshot. The current convention
+   > (advancement target) is self-describing and mirrors the verify-result
+   > convention. Tooling should prefer the advancement-target convention.
+
+2. **Verify results (`gate: unit_verify`):** `next_command` records the
+   promotion target (`unit_promote`). When `command close` writes the
+   ready-to-promote transition, the status row advances to `unit_promote`.
+
+3. **Stable verify results (`gate: unit_stable_verify`):** `next_command`
+   records the target gate for advancing decisions (`unit_fork`) and the
+   current gate for non-advancing decisions (`unit_stable_verify`). See
+   the stable verify section above for the full decision-to-next mapping.
 
 #### allow_next semantics
 
@@ -111,6 +127,7 @@ acceptance_item_set: # list of acceptance items; each item has these sub-fields
   - id: <acceptance_item_id>
     verification_surface: <surface>
     not_runnable_yet: true | false
+recommended_candidate_intent: none | repair | change  # optional; set by advancing decisions to suggest the unit_fork candidate_intent
 acceptance_item_evidence_matrix: [item_status_entries]
 unit_appendix_snapshot: none | list
 unit_snapshot: none | list
@@ -192,7 +209,7 @@ package_delta_verification:
     evidence_refs: {refs}
 ```
 
-Advancing check (when run), verify, and stable verify files must include the independent evaluation receipt.
+Check (when run), verify, and stable verify files must include the independent evaluation receipt.
 Tooling validates the receipt fields mechanically; it does not prove reviewer session isolation and does not judge whether the reviewer made a good semantic decision.
 Independent evaluation request files under `docs/specs/_independent_evaluation/requests/**` are handoff instructions only.
 They are not process snapshots, are not lifecycle evidence, and are not consumed by `command close`.
@@ -311,7 +328,9 @@ algorithm.
 Serialization steps:
 
 1. Sort the acceptance items by `id` (ascending), then `verification_surface`
-   (ascending), then `not_runnable_yet` (ascending).
+   (ascending), then `not_runnable_yet` (ascending). If a sort-key field
+   is absent from an acceptance item, use the same empty-string default
+   specified in step 3 for comparison during sorting.
 2. Serialize each item as a single line with fields joined by the ASCII unit
    separator byte (`0x1F`):
    `id={value}` + `\x1f` + `target={value}` + `\x1f` + `verification_surface={value}`
@@ -508,7 +527,7 @@ Refresh rules:
 4. if an item is `clear` and one of its input files is missing, mark that item `stale`
 5. update `last_updated_at`
 
-If truth drift, binding drift, fallback cleanup, unit fork, unit promote, rule change or rule release, or project-instance migration invalidates the target candidate's prior check state, the old `_check_work` file must be deleted or marked unusable by the owning cleanup path.
+If truth drift, binding drift, fallback cleanup, unit fork, unit promote, rule change or rule release, project-instance migration, or a `fix_required` / `blocked` `unit_check` outcome invalidates the target candidate's prior check state, the old `_check_work` file must be deleted or marked unusable by the owning cleanup path.
 
 ### 10.5 Tooling Boundary
 

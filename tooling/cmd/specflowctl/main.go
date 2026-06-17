@@ -27,7 +27,6 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitappendix"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitrelease"
 )
 
 func main() {
@@ -55,8 +54,6 @@ func run(args []string, stdout, stderr io.Writer) error {
 	case toolingfreshness.HiddenBuildFingerprintCommand:
 		fmt.Fprintln(stdout, toolingfreshness.PrintBuildFingerprint())
 		return nil
-	case "context":
-		return runContext(args[1:], stdout, stderr)
 	case "init":
 		return runInit(args[1:], stdout, stderr)
 	case "doctor":
@@ -69,6 +66,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runEntry(args[1:], stdout, stderr)
 	case "evaluation":
 		return runEvaluation(args[1:], stdout, stderr)
+	case "next":
+		return runNext(args[1:], stdout, stderr)
 	case "relation":
 		return runRelation(args[1:], stdout, stderr)
 	case "repository-mapping":
@@ -939,34 +938,6 @@ func runUnit(args []string, stdout, stderr io.Writer) error {
 	}
 
 	switch args[0] {
-	case "release-version":
-		fs := flag.NewFlagSet("unit release-version", flag.ContinueOnError)
-		fs.SetOutput(stderr)
-		repoRoot := fs.String("repo-root", ".", "repository root")
-		unit := fs.String("unit", "", "unit name")
-		fromRef := fs.String("from-ref", "", "old stable unit version ref")
-		toRef := fs.String("to-ref", "", "new stable unit version ref")
-		if err := fs.Parse(args[1:]); err != nil {
-			return err
-		}
-		result, err := unitrelease.ReleaseVersion(mustAbs(*repoRoot), unitrelease.Options{
-			Unit:    *unit,
-			FromRef: *fromRef,
-			ToRef:   *toRef,
-		})
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(stdout, "Released unit version: %s from %s to %s\n", result.Unit, result.FromRef, result.ToRef)
-		if result.Noop {
-			fmt.Fprintln(stdout, "No current-layer unit_refs used the old ref.")
-		}
-		writeList(stdout, "Candidate current-layer units updated", result.CandidateUpdated)
-		writeList(stdout, "Stable current-layer units rerouted", result.StableRerouted)
-		writeList(stdout, "Main specs updated", result.MainSpecsUpdated)
-		writeList(stdout, "Status rows updated", result.StatusUpdated)
-		writeList(stdout, "Process files removed", result.ProcessFilesRemoved)
-		return nil
 	case "check-appendix-coverage":
 		fs := flag.NewFlagSet("unit check-appendix-coverage", flag.ContinueOnError)
 		fs.SetOutput(stderr)
@@ -1306,6 +1277,7 @@ func runStatus(args []string, stdout, stderr io.Writer) error {
 		fmt.Fprintf(stdout, "Notes: %s\n", noneIfEmpty(strings.TrimSpace(*notes)))
 		return nil
 	case "set-unit":
+		fmt.Fprintln(stderr, "WARNING: `status set-unit` is deprecated. Use `status set-object --type unit --object UNIT` instead.")
 		fs := flag.NewFlagSet("status set-unit", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
@@ -1369,10 +1341,10 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  init     Install specFlow files from manifest")
 	fmt.Fprintln(w, "  doctor   Check installed specFlow structure")
 	fmt.Fprintln(w, "  build-release Build platform binaries into <tooling-root>/bin")
-	fmt.Fprintln(w, "  context  Collect and assemble agent context packs")
 	fmt.Fprintln(w, "  command  Run standard-command mechanical preflight checks and close commands")
 	fmt.Fprintln(w, "  entry    Check or sync registered entry-file managed blocks")
 	fmt.Fprintln(w, "  evaluation Generate independent evaluation request handoff files")
+	fmt.Fprintln(w, "  next       Get directive for current governance step")
 	fmt.Fprintln(w, "  relation Compute candidate relation order and preflight readiness")
 	fmt.Fprintln(w, "  repository-mapping Validate docs/specs/repository_mapping.md")
 	fmt.Fprintln(w, "  review   Collect governance review scope or maintain run-state files")
@@ -1501,7 +1473,6 @@ func writeRuleUsage(w io.Writer) {
 
 func writeUnitUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl unit release-version --unit assistant --from-ref s_unit_assistant@0.8.0 --to-ref s_unit_assistant@0.9.0 [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl unit check-appendix-coverage --object OBJECT [--object-type unit] [--repo-root PATH]")
 }
 

@@ -43,6 +43,13 @@ Agent may read these as needed during implementation:
 - Implement behavior beyond the unit's acceptance items
 - Modify candidate spec (`docs/specs/units/candidate/c_unit_{unit}.md`) or appendix files without running `unit_check:{unit}` for re-validation
 
+## Allowed Writes
+
+- `src/**` — implementation files
+- `tests/**` — test files
+- Configs, fixtures, prompts, and other implementation-side files required by the unit's acceptance items
+- `docs/specs/repository_mapping.md` — implementation path registration and `registration_state=landed` update
+
 ## How to End
 
 `unit_impl:{unit}` is a trigger command that does not produce process evidence or change lifecycle state, so there is no `command close` or outcome table. The terminal condition is that implementation is complete and the candidate truth has been satisfied.

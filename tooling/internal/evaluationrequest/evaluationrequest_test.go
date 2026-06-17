@@ -52,10 +52,10 @@ func TestCreateFreshnessTextDriftRequestRendersFreshnessReceipt(t *testing.T) {
 		"evidence_reuse: accepted",
 		"freshness_current_fingerprint: " + result.Validation.Expected.SpecFingerprint,
 		"freshness_review_mode: independent",
-		"freshness_reviewer_result: pass",
+		"freshness_reviewer_result: {{FRESHNESS_REVIEWER_RESULT}}",
 		"freshness_reviewer_context: minimal_context",
 		"freshness_review_input_refs: freshness_text_drift_reuse;" + result.RequestFile,
-		"freshness_review_findings: none",
+		"freshness_review_findings: {{FRESHNESS_REVIEW_FINDINGS}}",
 	} {
 		if !strings.Contains(request, phrase) {
 			t.Fatalf("freshness request missing %q:\n%s", phrase, request)
@@ -614,7 +614,7 @@ func writeCheckProcessWithoutReceipt(t *testing.T, repoRoot string, expected sna
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_check",
+		"next_command: unit_verify",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: " + expected.TruthLayerRef,
@@ -638,7 +638,7 @@ func writeCheckProcess(t *testing.T, repoRoot string, expected snapshot.Snapshot
 		"gate: unit_check",
 		"decision: pass",
 		"allow_next: true",
-		"next_command: unit_check",
+		"next_command: unit_verify",
 		"blocking_summary: none",
 		"coverage_summary: current candidate",
 		"truth_layer_ref: " + expected.TruthLayerRef,

@@ -47,7 +47,9 @@ Before any write, read:
 
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
 
-**Layout-aware path note:** Paths in this section are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+==ATOM_BEGIN:rule_layout_note==
+**Layout-aware path note:** Paths in this file are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+==ATOM_END:rule_layout_note==
 
 ## 3. Rule Identity
 
@@ -81,7 +83,12 @@ When a stable sibling already exists, the candidate file must carry the exact in
 12. Run `rule_sync` after any rule-file write or rule object-map write.
     Execution-local inputs for `rule_sync`:
     - `rule_refs`: the exact candidate ref that was written
-    - `rule_ids`: the target rule id of the newly created or updated rule
+    - `rule_ids`: the target rule id of the newly created or updated rule.
+      Omit when opening a candidate round for a rule object that already has
+      a stable-layer file (Scope item 3) and the stable-layer truth is not
+      modified by this round — passing `rule_ids` in that case would trigger
+      `rule_sync` step 6 all-unit invalidation even though stable truth
+      did not change.
     - `units`: none by default (no binding changes in this flow); pass explicitly only when a writeback-required unit was touched
 
 If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `framework/lifecycle/recovery.md` before returning to `framework/operations/entry_routing.md`.

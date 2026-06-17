@@ -52,9 +52,6 @@ func TestInitCreatesValidRunState(t *testing.T) {
 	if !containsString(routingSlice.InputFiles, "specflow/framework/operations/migration.md") {
 		t.Fatalf("expected migration policy in routing slice, got %+v", routingSlice.InputFiles)
 	}
-	if !containsString(routingSlice.InputFiles, "specflow/framework/advance_policy.md") {
-		t.Fatalf("expected advance policy in routing slice, got %+v", routingSlice.InputFiles)
-	}
 
 	for _, input := range []string{
 		"specflow/framework/core/independent_evaluation.md",
@@ -1318,7 +1315,6 @@ func createReviewRunRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
 	frameworkFiles := []string{
-		"advance_policy.md",
 		"spec_flow_review.md",
 		"spec_flow_design_review.md",
 		"agent_operability_standard.md",
@@ -1350,7 +1346,6 @@ func createReviewRunRepo(t *testing.T) string {
 		"specflow/framework/lifecycle/overview.md",
 		"specflow/framework/lifecycle/unit_init_new_fork.md",
 		"specflow/framework/lifecycle/unit_check.md",
-		"specflow/framework/lifecycle/unit_plan.md",
 		"specflow/framework/lifecycle/unit_impl.md",
 		"specflow/framework/lifecycle/unit_verify.md",
 		"specflow/framework/lifecycle/unit_promote.md",
@@ -1392,9 +1387,6 @@ func createReviewRunRepo(t *testing.T) string {
 		"specflow/templates/docs/specs/_status.md",
 		"specflow/templates/docs/specs/_check_work/README.md",
 		"specflow/templates/docs/specs/_check_result/README.md",
-		"specflow/templates/docs/specs/_plans/README.md",
-		"specflow/templates/docs/specs/_plans/draft/README.md",
-		"specflow/templates/docs/specs/_plans/active/README.md",
 		"specflow/templates/docs/specs/_verify_result/README.md",
 		"specflow/templates/docs/specs/_stable_verify_result/README.md",
 		"specflow/templates/docs/specs/_governance_review/README.md",
@@ -1434,7 +1426,6 @@ func createSourceReviewRunRepo(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()
 	frameworkFiles := []string{
-		"advance_policy.md",
 		"spec_flow_review.md",
 		"spec_flow_design_review.md",
 		"agent_operability_standard.md",
@@ -1466,7 +1457,6 @@ func createSourceReviewRunRepo(t *testing.T) string {
 		"framework/lifecycle/overview.md",
 		"framework/lifecycle/unit_init_new_fork.md",
 		"framework/lifecycle/unit_check.md",
-		"framework/lifecycle/unit_plan.md",
 		"framework/lifecycle/unit_impl.md",
 		"framework/lifecycle/unit_verify.md",
 		"framework/lifecycle/unit_promote.md",
@@ -1496,9 +1486,6 @@ func createSourceReviewRunRepo(t *testing.T) string {
 		"templates/docs/specs/_status.md",
 		"templates/docs/specs/_check_work/README.md",
 		"templates/docs/specs/_check_result/README.md",
-		"templates/docs/specs/_plans/README.md",
-		"templates/docs/specs/_plans/draft/README.md",
-		"templates/docs/specs/_plans/active/README.md",
 		"templates/docs/specs/_verify_result/README.md",
 		"templates/docs/specs/_stable_verify_result/README.md",
 		"templates/docs/specs/_governance_review/README.md",

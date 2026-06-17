@@ -790,7 +790,6 @@ func specFlowReviewBaselineDefinitions() []sliceDefinition {
 			ReviewQuestion: "Do routing and lifecycle policies send each request to the correct governed next step.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
-					scope.FrameworkPath("advance_policy.md"),
 					scope.FrameworkPath("core/adoption_modes.md"),
 					scope.FrameworkPath("core/freshness.md"),
 					scope.FrameworkPath("core/independent_evaluation.md"),

@@ -1,0 +1,14 @@
+# Format: atom_id | source_file | target_files (comma-separated, paths relative to repo root)
+# Lines starting with # are comments. Blank lines are ignored.
+
+close_fallback | lifecycle/close_fallback.md | framework/lifecycle/unit_init_new_fork.md,framework/lifecycle/unit_check.md,framework/lifecycle/unit_verify.md,framework/lifecycle/unit_promote.md,framework/lifecycle/unit_stable_verify.md
+
+shared_guards | lifecycle/shared_guards.md | framework/lifecycle/unit_check.md,framework/lifecycle/unit_verify.md,framework/lifecycle/unit_promote.md,framework/lifecycle/unit_stable_verify.md
+
+rule_layout_note | misc/layout_note.md | framework/governance/rules/rule_new.md,framework/governance/rules/rule_extract.md,framework/governance/rules/rule_bind.md,framework/governance/rules/rule_topology.md,framework/governance/rules/rule_sync.md,framework/governance/rules/rule_escape.md
+
+# Future atoms (content is identical but embedded in different surrounding context —
+# needs parameterization or per-file wrapper support):
+# scenario_list: 5-item guidance scenario list (5 files: entry_routing, 3 templates, 1 SKILL)
+# lifecycle_commands: lifecycle command ref table (4 files: overview, 3 templates)
+# scenario_deprecation: scenario stop message (3 files — content varies slightly)

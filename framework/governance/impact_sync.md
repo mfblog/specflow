@@ -46,7 +46,7 @@ Use the canonical fallback reason codes from `framework/lifecycle/recovery.md`.
 `no_drift_observed`, `plan_drift`, and `implementation_deviation` are additional codes used for
 agent-internal routing decisions and are not defined in `recovery.md`:
 
-1. `no_drift_observed` - no process or implementation evidence is invalidated.
+1. `no_drift_observed` — pre-trigger classification for the caller, not an output code of `impact_sync` itself. If the caller determines no evidence is invalidated, it may skip invoking `impact_sync`. `impact_sync` never assigns this code.
 2. `truth_drift` - candidate behavior, boundary, or acceptance truth must be rewritten or rechecked.
 3. `binding_drift` - a current unit or rule binding no longer matches current truth.
 4. `baseline_drift` - a captured dependency or baseline no longer matches current truth.
@@ -102,6 +102,7 @@ After impact_sync completes, it produces:
 1. `affected_candidate_units` — list of candidate units and their applied fallback reason codes
 2. `affected_stable_units` — list of stable units and their applied fallback reason codes
 3. `next_command_updates` — per-unit Next Command changes applied through `framework/lifecycle/recovery.md`
+4. `freshness_review_required` — when set to `true`, at least one affected unit has process evidence whose freshness state (text_drift without confirmed fallback layer) requires the caller to run deterministic freshness classification before fallback cleanup. When set to `false` or absent from the output, no freshness review is needed.
 
 ## Removed Scenario Lifecycle
 

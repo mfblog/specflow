@@ -26,6 +26,24 @@ type Result struct {
 	Path    string
 }
 
+// defaultPendingImplDenyPatterns are the default deny write patterns applied
+// when no constraints are defined for the pending_impl/unit_impl implementation phase.
+// These prevent implementation-phase agents from modifying spec, status, or framework files.
+var defaultPendingImplDenyPatterns = []string{"docs/specs/**", "framework/**"}
+
+// DefaultPendingImplDenyPatterns returns the default deny patterns for the implementation phase.
+func DefaultPendingImplDenyPatterns() []string {
+	result := make([]string, len(defaultPendingImplDenyPatterns))
+	copy(result, defaultPendingImplDenyPatterns)
+	return result
+}
+
+// MatchGlobPattern checks if a path matches a glob-like pattern.
+// Exported for use by the CLI layer.
+func MatchGlobPattern(pattern, path string) bool {
+	return patternMatch(pattern, path)
+}
+
 // ValidateWrite checks whether a file write at a given lifecycle phase is allowed.
 func ValidateWrite(phase string, path string, constraints Constraints) Result {
 	// Normalize path: clean and use forward slashes
@@ -46,8 +64,22 @@ func ValidateWrite(phase string, path string, constraints Constraints) Result {
 		}
 	}
 
-	// Check allowed rules: if no allowed rules are defined, allow all
+	// Check allowed rules: if no allowed rules are defined, apply defaults
 	if len(constraints.AllowedWrites) == 0 {
+		// During implementation phase (pending_impl / unit_impl), apply default deny
+		// patterns for docs/specs/** and framework/** to prevent accidental spec/truth writes.
+		if phase == "pending_impl" || phase == "unit_impl" {
+			for _, denyPattern := range defaultPendingImplDenyPatterns {
+				if patternMatch(denyPattern, normalizedPath) {
+					return Result{
+						Allowed: false,
+						Reason:  fmt.Sprintf("no allowed_writes constraints defined for phase %q; path %q matches default implementation-phase deny pattern %q", phase, path, denyPattern),
+						Phase:   phase,
+						Path:    path,
+					}
+				}
+			}
+		}
 		return Result{
 			Allowed: true,
 			Reason:  "no allowed_writes constraints defined; write permitted by default",
