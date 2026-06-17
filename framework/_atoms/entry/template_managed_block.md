@@ -1,4 +1,3 @@
-==ATOM_BEGIN:entry_template==
 ==SPECFLOW:BEGIN==
 
 ### 1. Key Terms and References
@@ -192,10 +191,3 @@ Detailed routing, lifecycle, implementation-change, migration, governance review
 
 Project truth inputs: `docs/specs/`.
 ==SPECFLOW:END==
-==ATOM_END:entry_template==
-
-## Host Instructions
-
-Content outside the managed block below belongs to the host repository.
-
-Keep repository-specific rules outside the managed block. `specFlow` tooling may update only the managed block.

@@ -1,3 +1,4 @@
+==ATOM_BEGIN:entry_template==
 ==SPECFLOW:BEGIN==
 
 ### 1. Key Terms and References
@@ -34,6 +35,10 @@ This repository uses specFlow to manage development work. specFlow maintains pro
 
 **specflowctl Location**
 `specflow/tooling/bin/specflowctl-<os>-<arch>` — replace `<os>` and `<arch>` with your platform (e.g. `linux-amd64`, `darwin-arm64`, `windows-amd64.exe`)
+
+Use the full path when running specflowctl. Determine your OS and architecture,
+construct the path, then invoke the binary:
+  ./specflow/tooling/bin/specflowctl-<os>-<arch> <command>
 
 ---
 
@@ -78,7 +83,8 @@ This is your first action on every unit-related project request.
 
 If the user named a unit, use that name. If no unit is named, read `docs/specs/_status.md` first to discover active units. If still ambiguous, stop and ask.
 
-Run `specflowctl next --unit <name>`.
+Locate the specflowctl binary (see Section 1) and run:
+  ./specflow/tooling/bin/specflowctl-<os>-<arch> next --unit <name>
 
 Its output tells you:
 - **TASK** — what to do in this step
@@ -90,7 +96,7 @@ Its output tells you:
 Execute the TASK. When done, run the COMPLETION command.
 
 **If the directive is insufficient**, run:
-  specflowctl next --unit <name> --explain
+  ./specflow/tooling/bin/specflowctl-<os>-<arch> next --unit <name> --explain
 for full lifecycle context. If still unclear, read `specflow/framework/operations/entry_routing.md`.
 
 **If `specflowctl` is unavailable**, read `specflow/framework/lifecycle/overview.md`, `specflow/framework/operations/entry_routing.md`, and the matching lifecycle Context Card in `specflow/framework/lifecycle/`. If command close is needed and specflowctl is unavailable, follow the Manual Command Close procedure in the active Context Card's "How to End" section.
@@ -102,7 +108,7 @@ for full lifecycle context. If still unclear, read `specflow/framework/operation
 These rules override your default helpful-assistant behavior. They are not suggestions.
 
 **HARD RULE 1: Get Your Directive First (MANDATORY)**
-You MUST run `specflowctl next --unit <name>` before writing, modifying, or proposing any code. The tool reads the current lifecycle state so you don't have to read `_status.md` directly.
+You MUST locate and run the specflowctl binary (see Section 1) with `next --unit <name>` before writing, modifying, or proposing any code. The tool reads the current lifecycle state so you don't have to read `_status.md` directly.
 **Exception:** If the unit does not exist in `_status.md` and `specflowctl next` returns an error or empty directive, skip Hard Rule 1 for this round. Instead, read `specflow/framework/operations/entry_routing.md` Natural Language Routes to determine the correct entry action (Onboarding Source Decision for new units), read `specflow/framework/lifecycle/overview.md`, then proceed to the matching lifecycle Context Card.
 
 **HARD RULE 2: No Implementation Without Directive Authority**
@@ -124,7 +130,7 @@ You MUST stop and report status when any of these are true:
 - Behavior or rule truth exists only in chat and has not been written to durable truth.
 - A rule or repository mapping change is required first.
 - The request uses removed scenario lifecycle concepts (`scenario_*`, `scenario_advance:{id}`, or `object-type=scenario`).
-Before stopping, run `specflowctl next --explain` for full context.
+Before stopping, locate and run the specflowctl binary (see Section 1) with `next --unit <name> --explain` for full context.
 
 ---
 
@@ -186,6 +192,7 @@ Detailed routing, lifecycle, implementation-change, migration, governance review
 
 Project truth inputs: `docs/specs/`.
 ==SPECFLOW:END==
+==ATOM_END:entry_template==
 
 ## Host Instructions
 

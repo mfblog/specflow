@@ -28,7 +28,7 @@ Do not delete upstream process files that still validate and are still supported
 When impact sync reports `freshness_review_required`, run the deterministic freshness classification first:
 
 ```text
-<tooling-root>/bin/specflowctl-<os>-<arch> snapshot validate-process --object-type unit --object <unit> --process check|verify|stable_verify
+./specflow/tooling/bin/specflowctl-<os>-<arch> snapshot validate-process --object-type unit --object <unit> --process check|verify|stable_verify
 ```
 
 The tooling output classifies the freshness state and returns the resolved branch. If tooling is unavailable, the process snapshot is stale (fingerprint mismatch) but truth has not drifted. This is not a fallback layer — no evidence cleanup is required. The agent must re-read the current truth files to verify the snapshot's claims against the latest content, then:
@@ -42,11 +42,11 @@ When the failure is classified as `truth_layer` and the cause is `truth_drift` (
 
 1. **Correct candidate truth** — Before deleting any evidence, restore `docs/specs/units/candidate/c_unit_{unit}.md` to alignment with the stable Spec at `docs/specs/units/stable/s_unit_{unit}.md`. Remove content that contradicts the stable baseline and restore any content that was incorrectly omitted. If the divergence was intentional (a legitimate scope addition), preserve the intentional changes — the subsequent `unit_check` re-validation will determine their validity. (See `framework/candidate_intent.md` for the distinction between change candidates — which intentionally diverge from the stable layer — and repair candidates — which must not.)
 2. **Delete invalid evidence** — Remove process artifacts per the `truth_layer` row in the fallback table above (check_work, check result, verify result).
-3. **Reset lifecycle state** — Run `command close` with outcome `truth_fallback` —
+3. **Reset lifecycle state** — Run `./specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_verify --object-type unit --object {unit} --outcome truth_fallback --apply` —
    this sets `Next Command=unit_check` and clears `Notes` per the fallback table.
    (See `unit_verify.md` How to End `truth_fallback` outcome.)
 4. **Re-validate** — Run `unit_check:{unit}` on the corrected candidate truth.
-5. **Get post-recovery directive** — After re-validation passes, run `specflowctl next --unit {unit}` to obtain the deterministic directive for the next governance step. The directive tells you TASK, READS, WRITES, BLOCKED, and COMPLETION.
+5. **Get post-recovery directive** — After re-validation passes, run `./specflow/tooling/bin/specflowctl-<os>-<arch> next --unit {unit}` to obtain the deterministic directive for the next governance step. The directive tells you TASK, READS, WRITES, BLOCKED, and COMPLETION.
 
 ## Candidate Recovery
 

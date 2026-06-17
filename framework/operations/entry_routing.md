@@ -1,16 +1,17 @@
 # Entry Routing
 
 > **Agent note:** This file is the internal routing source for `specflowctl next`.
-> In normal operation, run `specflowctl next --unit <name>` to receive your
-> current directive. Read this file only when `specflowctl next --explain` directs
-> you here, or when `specflowctl` is unavailable.
+> In normal operation, locate and run the specflowctl binary with the full path
+> (`./specflow/tooling/bin/specflowctl-<os>-<arch> next --unit <name>`) to receive
+> your current directive. Read this file only when `specflowctl next --explain`
+> directs you here, or when `specflowctl` is unavailable.
 
 ---
 
 ## ⚠️ Fallback Entry
 
 **When `specflowctl next` is insufficient:**
-1. Run `specflowctl next --unit <name> --explain` for full lifecycle context.
+1. Run `./specflow/tooling/bin/specflowctl-<os>-<arch> next --unit <name> --explain` for full lifecycle context.
 2. If still unclear, this file can help resolve routing for:
    - Natural-language unit or rule requests where no unit name is known
    - Onboarding new units (source decision)
@@ -18,7 +19,7 @@
    - Independent review format
    - Governance review entries
 
-Use `specflowctl next` as the primary directive source.
+Use the directive from `specflowctl next` (see fallback entry above) as the primary directive source.
 
 **If `specflowctl` is unavailable**, read this file and the matching lifecycle Context Card at `framework/lifecycle/unit_*.md` to determine the correct action. The Context Card provides state-specific guidance.
 
@@ -130,7 +131,7 @@ For unit lifecycle requests, select one existing command from the table below ba
 | Candidate truth repair | `unit_check:{unit}` | Standard: `Next Command=unit_check`. Re-validation: `Next Command=unit_verify` with `Notes=pending_impl` and spec changed |
 | Implementation-only | Read Implementation Classification section | Routes based on classification result |
 
-> **Procedural surface note:** The natural-language route selection is deterministic when based on the state table above. The table row matching the current `_status.md` state selects the command; the rules below define how the state table rows map to routing decisions. When `specflowctl` is available, run `specflowctl next --unit <name>` instead — it produces a deterministic directive from current `_status.md` state. The rules below are the fallback path and the policy source; they are not the preferred execution entry.
+> **Procedural surface note:** The natural-language route selection is deterministic when based on the state table above. The table row matching the current `_status.md` state selects the command; the rules below define how the state table rows map to routing decisions. When `specflowctl` is available, run `./specflow/tooling/bin/specflowctl-<os>-<arch> next --unit <name>` instead — it produces a deterministic directive from current `_status.md` state. The rules below are the fallback path and the policy source; they are not the preferred execution entry.
 
 **Priority rule — guidance before lifecycle:** If the request qualifies as pre-formal-truth guidance work (guidance scenarios 1-5 described below), route to guidance **before** applying the lifecycle routing rules. A request about shaping a design before formal truth is clear must not enter Onboarding Source Decision before the guidance session concludes.
 
@@ -202,7 +203,7 @@ The managed block's governance rules take precedence over host content in the sa
 
 If managed blocks differ after edits, choose one file as source and run:
 ```text
-specflowctl entry sync --source <registered-entry-file>
+./specflow/tooling/bin/specflowctl-<os>-<arch> entry sync --source <registered-entry-file>
 ```
 
 When a project entry file's managed block contradicts framework governance rules (including routing, review scope, or lifecycle rules defined in this file or `framework/governance/review.md`), the framework governance rule takes precedence. The executor must report the contradiction as a governance concern.

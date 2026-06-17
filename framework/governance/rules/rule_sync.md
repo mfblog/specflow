@@ -121,7 +121,7 @@ If any deleted ref still exists as a Rule file or still has a current-layer unit
    pre-computed set is authoritative; `impact_sync` must not re-derive consumers from
    `rule_refs` when called from `rule_sync`.
 9. Hand the fixed result to `impact_sync`:
-   - If tooling is available, run `specflowctl rule sync-impact` with the exact `--rule-refs`, `--rule-ids`, or `--deleted-rule-refs` and any already-proven exception flags. The tooling output subsumes the manual handoff and returns the structured result.
+   - If tooling is available, run `./specflow/tooling/bin/specflowctl-<os>-<arch> rule sync-impact` with the exact `--rule-refs`, `--rule-ids`, or `--deleted-rule-refs` and any already-proven exception flags. The tooling output subsumes the manual handoff and returns the structured result.
    - If tooling is unavailable, handoff is manual via the Rule Sync Handoff contract in `framework/governance/impact_sync.md` Section "Consumer Discovery". The affected-unit set and invalidating rule refs are the authoritative consumer list for this round.
 
 If repository truth is insufficient, return control to `rule_escape` without performing fallback cleanup. A caller that already mutated truth must follow its own post-mutation recovery rule or caller-owned blocked transition before rerouting. If the caller has no such post-mutation rule, it must stop before mutation instead of leaving mutated truth without an owner.

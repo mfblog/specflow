@@ -7,6 +7,8 @@ shared_guards | lifecycle/shared_guards.md | framework/lifecycle/unit_check.md,f
 
 rule_layout_note | misc/layout_note.md | framework/governance/rules/rule_new.md,framework/governance/rules/rule_extract.md,framework/governance/rules/rule_bind.md,framework/governance/rules/rule_topology.md,framework/governance/rules/rule_sync.md,framework/governance/rules/rule_escape.md
 
+entry_template | entry/template_managed_block.md | templates/AGENTS.md,templates/CLAUDE.md,templates/GEMINI.md
+
 # Future atoms (content is identical but embedded in different surrounding context —
 # needs parameterization or per-file wrapper support):
 # scenario_list: 5-item guidance scenario list (5 files: entry_routing, 3 templates, 1 SKILL)
