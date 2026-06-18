@@ -10,7 +10,7 @@ import (
 func TestNextCommandStateStableIdle(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | |\n")
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/demo.md"), "# Demo\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -23,9 +23,9 @@ func TestNextCommandStateStableIdle(t *testing.T) {
 	expected := []string{
 		"TASK: Fork stable truth",
 		"READS:",
-		"  - docs/specs/units/demo.md",
+		"  - docs/specs/units/stable/s_unit_demo.md",
 		"WRITES:",
-		"  - docs/specs/units/demo.md",
+		"  - docs/specs/units/stable/s_unit_demo.md",
 		"COMPLETION:",
 		"command unit_fork",
 		"forked",
@@ -40,7 +40,7 @@ func TestNextCommandStateStableIdle(t *testing.T) {
 func TestNextCommandStateStableVerify(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `no` | `stable` | `unit_stable_verify` | |\n")
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/demo.md"), "# Demo\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -70,7 +70,7 @@ func TestNextCommandStateStableVerify(t *testing.T) {
 func TestNextCommandStateCandidateCheck(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_check` | |\n")
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/demo.md"), "# Demo\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -98,7 +98,7 @@ func TestNextCommandStateCandidateCheck(t *testing.T) {
 func TestNextCommandStateCandidatePending(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_verify` | `pending_impl` |\n")
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/demo.md"), "# Demo\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -127,7 +127,7 @@ func TestNextCommandStateCandidatePending(t *testing.T) {
 func TestNextCommandStateCandidateVerify(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_verify` | |\n")
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/demo.md"), "# Demo\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -155,7 +155,7 @@ func TestNextCommandStateCandidateVerify(t *testing.T) {
 func TestNextCommandStateCandidatePromote(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_promote` | |\n")
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/demo.md"), "# Demo\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -181,7 +181,7 @@ func TestNextCommandStateCandidatePromote(t *testing.T) {
 func TestNextCommandStateUnitNew(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `no` | `yes` | `candidate` | `unit_new` | |\n")
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/demo.md"), "# Demo\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -208,7 +208,7 @@ func TestNextCommandStateUnitNew(t *testing.T) {
 func TestNextCommandStateUnitInit(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `no` | `no` | `` | `unit_init` | |\n")
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/demo.md"), "# Demo\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -235,7 +235,7 @@ func TestNextCommandStateUnitInit(t *testing.T) {
 func TestNextCommandExplain(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_check` | |\n")
-	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/demo.md"), "# Demo\n")
+	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

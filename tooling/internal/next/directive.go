@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
@@ -53,12 +54,19 @@ func GetDirective(repoRoot, unitName string) (*Directive, error) {
 }
 
 func directiveForState(unitName string, state UnitState, status statusfile.ObjectStatus) (*Directive, error) {
-	specPath := fmt.Sprintf("docs/specs/units/%s.md", unitName)
+	layer := status.ActiveLayer
+	if layer == "" {
+		layer = "stable"
+	}
+	specPath, err := specpaths.ObjectMainSpecFileRef("unit", layer, unitName)
+	if err != nil {
+		return nil, fmt.Errorf("resolve spec path for %q (layer=%q): %w", unitName, layer, err)
+	}
 	mappingPath := "docs/specs/repository_mapping.md"
 
 	switch state {
 	case StateUnregistered:
-		return unregisteredDirective(unitName, status)
+		return unregisteredDirective(unitName, specPath, status)
 	case StateStableIdle:
 		return &Directive{
 			Unit:  unitName,
@@ -107,9 +115,8 @@ func directiveForState(unitName string, state UnitState, status statusfile.Objec
 	}
 }
 
-func unregisteredDirective(unitName string, status statusfile.ObjectStatus) (*Directive, error) {
+func unregisteredDirective(unitName, specPath string, status statusfile.ObjectStatus) (*Directive, error) {
 	next := strings.TrimSpace(status.NextCommand)
-	specPath := fmt.Sprintf("docs/specs/units/%s.md", unitName)
 
 	switch next {
 	case "unit_init":
