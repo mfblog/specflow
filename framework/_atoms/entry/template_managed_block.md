@@ -32,6 +32,10 @@ This repository uses specFlow to manage development work. specFlow maintains pro
 - `docs/specs/_status.md` — Each unit's current layer and the only legal next lifecycle command.
 - `docs/specs/repository_mapping.md` — Ownership between units, spec files, and implementation paths.
 
+**Path Resolution**
+
+Framework-root relative paths: specFlow references may use either `framework/...` (source repository layout) or `specflow/framework/...` (installed project layout). The tooling resolves both layouts automatically. Use `framework/...` in source-repo agent instructions and `specflow/framework/...` in installed-project templates.
+
 **specflowctl Location**
 `specflow/tooling/bin/specflowctl-<os>-<arch>` — replace `<os>` and `<arch>` with your platform (e.g. `linux-amd64`, `darwin-arm64`, `windows-amd64.exe`)
 
@@ -84,6 +88,7 @@ If the user named a unit, use that name. If no unit is named, read `docs/specs/_
 
 Locate the specflowctl binary (see Section 1) and run:
   ./specflow/tooling/bin/specflowctl-<os>-<arch> next --unit <name>
+(Equivalent: `specflowctl next --unit <name>` when specflowctl is in PATH.)
 
 Its output tells you:
 - **TASK** — what to do in this step

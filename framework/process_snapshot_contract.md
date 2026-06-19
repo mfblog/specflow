@@ -599,3 +599,32 @@ Freshness impact is defined by `framework/core/freshness.md`.
 When only normalized text drift exists and freshness reuse is accepted, the process file remains valid for downstream use.
 When freshness reuse is missing or rejected, validation reports `freshness_layer` without recommending lifecycle fallback.
 When behavior, acceptance, dependency, or schema drift is found, existing fallback and recovery rules still apply.
+
+## 12. Snapshot Maintenance
+
+`specflowctl snapshot --fix` and `specflowctl snapshot --update-check-result` are maintenance commands that modify process state outside the standard lifecycle command flow. They must not be used to bypass lifecycle gates.
+
+### 12.1 Appendix Coverage Fix
+
+`specflowctl snapshot --repo-root <root> --object-type unit --object <unit> --fix` auto-detects missing candidate appendix files for a candidate-layer unit and adds the corresponding stable appendix file references as `appendix_exc:` entries to the unit's Notes in `_status.md` (see `framework/core/status.md` §Appendix Coverage Exclusions).
+
+This is applicable only when:
+1. The unit is in `Active Layer=candidate`.
+2. A stable appendix exists at `docs/specs/units/stable/appendix/s_unit_{unit}_{name}.md` with no corresponding candidate appendix at `docs/specs/units/candidate/appendix/c_unit_{unit}_{name}.md`.
+3. The absence is intentional — the stable appendix content is not relevant to the current candidate round and should not trigger a coverage validation failure.
+
+The command does NOT modify any spec files or process evidence. It only updates the unit's Notes in `_status.md`. After `--fix`, snapshot validation will exclude the listed stable appendix refs from coverage mismatch reporting.
+
+**Limitation:** `--fix` does not distinguish between intentional exclusions and omissions that indicate incomplete fork work. The executor must verify that each excluded appendix is genuinely irrelevant before relying on this command. `unit_fork` commands must not use `--fix` as a substitute for creating the required candidate appendix files during fork.
+
+### 12.2 Check-Result Fingerprint Update
+
+`specflowctl snapshot --repo-root <root> --object-type unit --object <unit> --update-check-result` updates the `truth_fingerprint`, `acceptance_behavior_fingerprint`, `truth_version_ref`, and `truth_file_ref` fields in the existing `_check_result` file to match the current spec.
+
+This is applicable only when:
+1. The spec was amended without changing acceptance behavior (text-only drift per `framework/core/freshness.md`).
+2. The amendment happened during the implementation phase (`Next Command=unit_verify`, `Notes=pending_impl`).
+3. After the fingerprint update, an independent freshness review is completed using pack `freshness_text_drift_reuse` (see `framework/core/freshness.md` §Evidence Reuse).
+4. The freshness receipt is written to the `_check_result` file.
+
+**Constraint:** This command must not be used to silently update fingerprints after semantic spec changes, acceptance item changes, or rule binding changes. Those changes require re-running `unit_check` through the re-validation path. Using `--update-check-result` as a gate bypass is a governance violation and invalidates the check result as lifecycle evidence.

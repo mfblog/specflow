@@ -13,6 +13,25 @@ import (
 
 const constraintsNotesPrefix = "constraints:"
 
+// extractConstraintsSegment finds the ;-separated segment in notes that starts
+// with the constraints: prefix and returns the content after the prefix.
+// Returns empty string if no constraints segment is found.
+func extractConstraintsSegment(notes string) string {
+	if notes == "" {
+		return ""
+	}
+	if strings.HasPrefix(notes, constraintsNotesPrefix) {
+		return strings.TrimPrefix(notes, constraintsNotesPrefix)
+	}
+	for _, part := range strings.Split(notes, ";") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, constraintsNotesPrefix) {
+			return strings.TrimPrefix(part, constraintsNotesPrefix)
+		}
+	}
+	return ""
+}
+
 func runValidate(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		writeValidateUsage(stderr)
@@ -96,12 +115,15 @@ func validateWrite(repoRoot, path, phase, unit string) validateResult {
 		if unit != "" && status.Object != unit {
 			continue
 		}
-		// Skip rows without constraints in notes
-		if !strings.HasPrefix(strings.TrimSpace(status.Notes), constraintsNotesPrefix) {
+		// Skip rows without constraints in notes (constraints: may appear as
+		// a ;-separated segment within Notes, e.g. "pending_impl; constraints:phase=...")
+		notes := strings.TrimSpace(status.Notes)
+		constraintsSegment := extractConstraintsSegment(notes)
+		if constraintsSegment == "" {
 			continue
 		}
 
-		constraintsStr := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(status.Notes), constraintsNotesPrefix))
+		constraintsStr := strings.TrimSpace(constraintsSegment)
 		constraints, err := filevalidation.ParseConstraints(constraintsStr)
 		if err != nil {
 			return validateResult{

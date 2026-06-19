@@ -817,7 +817,9 @@ func validateCandidateAppendixCoverage(repoRoot string, result *ValidationResult
 	if expected.ObjectType != "unit" || expected.TruthLayerRef != "candidate" {
 		return
 	}
-	mismatches, err := unitappendix.CandidateCoverageMismatches(repoRoot, expected.ObjectType, expected.Object)
+	// Load governance exceptions (appendix exclusions) from _status.md
+	excludedRefs := loadAppendixExclusions(repoRoot, expected.ObjectType, expected.Object)
+	mismatches, err := unitappendix.CandidateCoverageMismatchesWithExclusions(repoRoot, expected.ObjectType, expected.Object, excludedRefs)
 	if err != nil {
 		result.Valid = false
 		result.Mismatches = append(result.Mismatches, err.Error())
@@ -828,6 +830,15 @@ func validateCandidateAppendixCoverage(repoRoot string, result *ValidationResult
 	}
 	result.Valid = false
 	result.Mismatches = append(result.Mismatches, mismatches...)
+}
+
+// loadAppendixExclusions reads the appendix exclusion list from the unit's _status.md Notes.
+func loadAppendixExclusions(repoRoot, objectType, object string) []string {
+	status, err := statusfile.LookupObjectStatus(repoRoot, objectType, object)
+	if err != nil {
+		return nil
+	}
+	return statusfile.ParseAppendixExclusions(status.Notes)
 }
 
 func requiredFieldsForObjectProcess(objectType, processKind string) ([]string, bool) {
@@ -1191,13 +1202,17 @@ func RenderWithAppendixCoverage(snapshot Snapshot, repoRoot string) string {
 	if snapshot.TruthLayerRef != "candidate" {
 		return text
 	}
-	mismatches, err := unitappendix.CandidateCoverageMismatches(
-		repoRoot, snapshot.ObjectType, snapshot.Object,
+	excludedRefs := loadAppendixExclusions(repoRoot, snapshot.ObjectType, snapshot.Object)
+	mismatches, err := unitappendix.CandidateCoverageMismatchesWithExclusions(
+		repoRoot, snapshot.ObjectType, snapshot.Object, excludedRefs,
 	)
 	if err != nil {
 		return text + "\n# appendix coverage: error (appendix coverage check failed — see stderr for details)\n"
 	}
 	if len(mismatches) == 0 {
+		if len(excludedRefs) > 0 {
+			return text + "\n# appendix coverage: valid (stable appendices with exclusions: " + strings.Join(excludedRefs, ", ") + ")\n"
+		}
 		return text + "\n# appendix coverage: valid (every stable appendix has a candidate counterpart)\n"
 	}
 	var buf strings.Builder
@@ -3554,6 +3569,112 @@ func ProcessArtifactPaths(objectType, object, processKind string) ([]string, err
 	default:
 		return nil, fmt.Errorf("unsupported process kind %q", processKind)
 	}
+}
+
+// FixCandidateAppendixCoverage detects missing candidate appendices for a
+// candidate-layer unit and returns an updated Notes string with the missing
+// stable appendix refs added as exclusions. It does NOT modify any files.
+// The caller is responsible for persisting the updated Notes via status update.
+// Returns the updated Notes and the list of stable refs that were excluded.
+func FixCandidateAppendixCoverage(repoRoot, objectType, object, currentNotes string) (string, []string, error) {
+	if objectType != "unit" {
+		return currentNotes, nil, fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
+	}
+	excludedRefs := statusfile.ParseAppendixExclusions(currentNotes)
+	status, err := statusfile.LookupObjectStatus(repoRoot, objectType, object)
+	if err != nil {
+		return currentNotes, nil, err
+	}
+	if status.ActiveLayer != "candidate" {
+		return currentNotes, nil, fmt.Errorf("unit %q is not in candidate layer; cannot fix appendix coverage", object)
+	}
+
+	stableEntries, err := unitappendix.Scan(repoRoot, objectType, object, "stable")
+	if err != nil {
+		return currentNotes, nil, err
+	}
+	candidateEntries, err := unitappendix.Scan(repoRoot, objectType, object, "candidate")
+	if err != nil {
+		return currentNotes, nil, err
+	}
+	candidateNames := map[string]bool{}
+	for _, entry := range candidateEntries {
+		candidateNames[entry.Name] = true
+	}
+	alreadyExcluded := map[string]bool{}
+	for _, ref := range excludedRefs {
+		alreadyExcluded[ref] = true
+	}
+
+	var toExclude []string
+	for _, entry := range stableEntries {
+		if candidateNames[entry.Name] {
+			continue
+		}
+		if alreadyExcluded[entry.FileRef] {
+			continue
+		}
+		toExclude = append(toExclude, entry.FileRef)
+	}
+	if len(toExclude) == 0 {
+		return currentNotes, nil, nil
+	}
+	updatedNotes := currentNotes
+	for _, ref := range toExclude {
+		updatedNotes = statusfile.AddAppendixExclusion(updatedNotes, ref)
+	}
+	return updatedNotes, toExclude, nil
+}
+
+// UpdateCheckResultFingerprints updates the truth_fingerprint and
+// acceptance_behavior_fingerprint in the _check_result file to match the
+// current spec. It returns the path to the updated file.
+// This is used after intentional spec amendments during implementation.
+func UpdateCheckResultFingerprints(repoRoot, objectType, object string) (string, error) {
+	if objectType != "unit" {
+		return "", fmt.Errorf("object type %q is not supported; only unit is supported", objectType)
+	}
+	current, err := RebuildCurrentObject(repoRoot, objectType, object)
+	if err != nil {
+		return "", fmt.Errorf("rebuild current snapshot: %w", err)
+	}
+	checkResultPath := CheckResultFilePath(objectType, object)
+	checkResultAbs := filepath.Join(repoRoot, filepath.FromSlash(checkResultPath))
+	content, err := os.ReadFile(checkResultAbs)
+	if err != nil {
+		return "", fmt.Errorf("read %s: %w", checkResultPath, err)
+	}
+	text := string(content)
+
+	// Update truth_fingerprint
+	text = updateYamlField(text, "truth_fingerprint", current.SpecFingerprint)
+	// Update acceptance_behavior_fingerprint
+	text = updateYamlField(text, "acceptance_behavior_fingerprint", current.AcceptanceBehaviorFingerprint)
+	// Update truth_version_ref
+	text = updateYamlField(text, "truth_version_ref", current.SpecVersionRef)
+	// Update truth_file_ref
+	text = updateYamlField(text, "truth_file_ref", current.SpecFileRef)
+
+	if err := os.WriteFile(checkResultAbs, []byte(text), 0o644); err != nil {
+		return "", fmt.Errorf("write %s: %w", checkResultPath, err)
+	}
+	return checkResultPath, nil
+}
+
+// updateYamlField replaces a YAML key: value pair in a string, preserving
+// the rest of the content. It matches lines starting with key + ":" at
+// position 0 (after trimming space) and replaces the entire line.
+func updateYamlField(text, key, newValue string) string {
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, key+":") {
+			indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
+			lines[i] = indent + key + ": " + newValue
+			break
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func ProcessFilePath(objectType, object, processKind string) (string, error) {

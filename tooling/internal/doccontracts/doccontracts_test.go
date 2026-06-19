@@ -150,7 +150,7 @@ func TestEntryManagedBlocksDefineActionGuide(t *testing.T) {
 
 func TestFrameworkDocsUseFrameworkRootRelativeRefs(t *testing.T) {
 	repoRoot := findRepoRoot(t)
-	allowed := map[string]bool{"templates/CLAUDE.md": true, "templates/AGENTS.md": true, "templates/GEMINI.md": true, "framework/governance/review.md": true, "framework/governance/review_scope.md": true, "framework/lifecycle/overview.md": true, "framework/spec_flow_design_review.md": true, "framework/spec_flow_review.md": true}
+	allowed := map[string]bool{"templates/CLAUDE.md": true, "templates/AGENTS.md": true, "templates/GEMINI.md": true, "framework/governance/review.md": true, "framework/governance/review_scope.md": true, "framework/lifecycle/overview.md": true, "framework/spec_flow_design_review.md": true, "framework/spec_flow_review.md": true, "framework/_atoms/entry/template_managed_block.md": true}
 	root := filepath.Join(repoRoot, "framework")
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil { return err }

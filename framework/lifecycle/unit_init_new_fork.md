@@ -10,16 +10,21 @@ This file covers three entry commands: `unit_init:{unit}`, `unit_new:{unit}`, an
 
 ## Input
 
-> **Reading guidance:** Unit truth and process files (listed first) provide the data this command evaluates. Framework and contract files provide format and rule context. Procedural instructions are inline in "What This Step Does" and "How to End" below.
+> **Reading guidance:** Must Read files are the truth and process data this command evaluates. May Reference files hold the format and policy contracts — read them when a specific check question needs the exact rule text. Procedural instructions are inline in "What This Step Does" and "How to End" below.
+
+### Must Read
 
 - `docs/specs/_status.md` (if the target unit may already be registered)
 - `docs/specs/repository_mapping.md` (if path ownership or registration must be confirmed)
 - `docs/specs/units/stable/s_unit_{unit}.md` + stable-layer appendices (unit_fork only)
 - `docs/specs/_stable_verify_result/unit/{unit}.md` (for candidate intent determination — `unit_fork` only)
-- `framework/spec_writing_guide.md` (for unit Spec format, source field format, and appendix format)
-- `framework/candidate_intent.md` (for candidate_intent determination rules)
-- `framework/process_snapshot_contract.md` (for process evidence file format if applicable)
-- `framework/operations/entry_routing.md` (for Onboarding Source Decision — `unit_new` uses this to determine `source_basis` and whether `unit_init` applies)
+
+### May Reference
+
+- `framework/spec_writing_guide.md` (unit Spec format, source field format, and appendix format)
+- `framework/candidate_intent.md` (candidate_intent determination rules)
+- `framework/process_snapshot_contract.md` (process evidence file format if applicable)
+- `framework/operations/entry_routing.md` (Onboarding Source Decision — `unit_new` uses this to determine `source_basis` and whether `unit_init` applies)
 
 ## Pre-Execution Self-Check (MANDATORY)
 
@@ -110,6 +115,7 @@ If any pre-condition fails: STOP, report what is missing, and do not perform the
 2. Update `docs/specs/_status.md` for the target unit:
    - Set `Next Command` to the value specified in the outcome's Next Step.
    - Set or clear `Notes` per the outcome's Next Step description.
+   - **When setting `Notes` to `pending_impl`:** derive the `constraints:` prefix from the unit's `implementation_paths` in `docs/specs/repository_mapping.md` Object Registry per `framework/core/status.md` §Constraints Derivation. Append it to `Notes` as `; constraints:phase=pending_impl deny=docs/specs/units/stable/** deny=docs/specs/_check_result/** deny=docs/specs/_check_work/** deny=docs/specs/_verify_result/** deny=docs/specs/_stable_verify_result/** deny=docs/specs/_independent_evaluation/** deny=docs/specs/_plans/** deny=docs/specs/_status.md deny=framework/** allow=<implementation_paths> allow=docs/specs/repository_mapping.md allow=docs/specs/units/candidate/**`. If the unit is not yet registered in `repository_mapping.md`, still append the deny clauses without per-path allow entries: `; constraints:phase=pending_impl deny=docs/specs/units/stable/** deny=docs/specs/_check_result/** deny=docs/specs/_check_work/** deny=docs/specs/_verify_result/** deny=docs/specs/_stable_verify_result/** deny=docs/specs/_independent_evaluation/** deny=docs/specs/_plans/** deny=docs/specs/_status.md deny=framework/** allow=docs/specs/repository_mapping.md allow=docs/specs/units/candidate/**`.
    - For `unit_fork` with outcome `candidate_created`: set `Active Layer` to `candidate`.
    - For `unit_promote` with outcome `promoted`: set `Active Layer` to `stable`, `Stable` to `yes`, `Candidate` to `no`.
    - For `unit_init` with outcome `stable_created`: set `Stable=yes`, `Candidate=no`, `Active Layer=stable`.

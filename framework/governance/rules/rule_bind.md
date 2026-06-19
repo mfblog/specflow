@@ -82,7 +82,7 @@ If repository truth becomes insufficient before any mutation, stop and return to
 
 Stop when one of these is true:
 
-1. the candidate unit binding, body explanation, target unit fallback, touched rule terminal state, and `rule_sync` reconciliation are complete
+1. the candidate unit binding, body explanation, target unit fallback, touched rule terminal state, and `rule_sync` reconciliation are complete. If `rule_sync` returned `freshness_review_required=true`, run the 'Freshness Review Required' procedure from `framework/lifecycle/recovery.md:27-37` before claiming closure.
 2. the request is not binding and must route to another rule flow or unit lifecycle work
 3. the target unit does not actually consume the rule truth
 4. the target unit is stable and `rule_escape` must raise a `prerequisite_action` checkpoint before writeback can continue

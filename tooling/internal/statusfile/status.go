@@ -114,6 +114,112 @@ func LoadModuleStatuses(repoRoot string) ([]ModuleStatus, error) {
 	return statuses, nil
 }
 
+// appendixExclusionPrefix is the Notes prefix for appendix coverage exclusions.
+const appendixExclusionPrefix = "appendix_exc:"
+
+// ParseAppendixExclusions extracts the list of excluded stable appendix file refs
+// from a Notes string. The format is:
+//
+//	appendix_exc:path1|path2|path3
+//
+// Multiple exclusions are appended with ";". Example Notes value:
+//
+//	pending_impl; appendix_exc:docs/specs/units/stable/appendix/s_unit_x_a.md|s_unit_x_b.md
+func ParseAppendixExclusions(notes string) []string {
+	notes = strings.TrimSpace(notes)
+	if notes == "" {
+		return nil
+	}
+	parts := strings.Split(notes, ";")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if !strings.HasPrefix(part, appendixExclusionPrefix) {
+			continue
+		}
+		value := strings.TrimPrefix(part, appendixExclusionPrefix)
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return nil
+		}
+		return strings.Split(value, "|")
+	}
+	return nil
+}
+
+// AddAppendixExclusion adds a stable appendix file ref to the Notes appendix exclusion list.
+// If the Notes string is empty, it creates a new exclusion entry.
+func AddAppendixExclusion(notes, stableFileRef string) string {
+	existing := ParseAppendixExclusions(notes)
+	for _, ref := range existing {
+		if ref == stableFileRef {
+			return notes // already present
+		}
+	}
+	value := strings.TrimSpace(notes)
+	var sb strings.Builder
+	if value != "" {
+		sb.WriteString(value)
+		sb.WriteString("; ")
+	}
+	sb.WriteString(appendixExclusionPrefix)
+	if len(existing) > 0 {
+		sb.WriteString(strings.Join(existing, "|"))
+		sb.WriteString("|")
+	}
+	sb.WriteString(stableFileRef)
+	return sb.String()
+}
+
+// RemoveNotesKeyword removes a specific keyword (like "pending_impl") from a Notes string
+// while preserving all other content. This is used instead of clearing all Notes when
+// transitioning between lifecycle states.
+// Matching is case-insensitive — currently only lowercase "pending_impl" is used
+// across the codebase, but the comparison tolerates any casing.
+func RemoveNotesKeyword(notes, keyword string) string {
+	notes = strings.TrimSpace(notes)
+	if notes == "" {
+		return ""
+	}
+	parts := strings.Split(notes, ";")
+	var kept []string
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if strings.TrimSpace(strings.ToLower(part)) == strings.TrimSpace(strings.ToLower(keyword)) {
+			continue
+		}
+		kept = append(kept, part)
+	}
+	return strings.Join(kept, "; ")
+}
+
+// RemoveNotesPrefix removes all parts from a Notes string that start with the
+// given prefix (after trimming space). This is used to remove stale constraint
+// prefixes during lifecycle transitions.
+// Example: RemoveNotesPrefix("pending_impl; constraints:phase=...; appendix_exc:x", "constraints:")
+// returns "pending_impl; appendix_exc:x"
+func RemoveNotesPrefix(notes, prefix string) string {
+	notes = strings.TrimSpace(notes)
+	if notes == "" {
+		return ""
+	}
+	parts := strings.Split(notes, ";")
+	var kept []string
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if strings.HasPrefix(part, prefix) {
+			continue
+		}
+		kept = append(kept, part)
+	}
+	return strings.Join(kept, "; ")
+}
+
 func LookupObjectStatus(repoRoot, objectType, object string) (ObjectStatus, error) {
 	statuses, err := LoadObjectStatuses(repoRoot)
 	if err != nil {

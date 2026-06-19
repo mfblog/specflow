@@ -114,7 +114,7 @@ func TestNextCommandStateCandidatePending(t *testing.T) {
 		"WRITES:",
 		"  - src/**",
 		"  - tests/**",
-		"BLOCKED: docs/specs/** (except repository_mapping.md), framework/**",
+		"BLOCKED: docs/specs/units/stable/**, docs/specs/_check_result/**, docs/specs/_check_work/**, docs/specs/_verify_result/**, docs/specs/_stable_verify_result/**, docs/specs/_independent_evaluation/**, docs/specs/_plans/**, docs/specs/_status.md, framework/**",
 		"specflowctl next --unit demo",
 	}
 	for _, s := range expected {

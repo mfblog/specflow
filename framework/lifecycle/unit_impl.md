@@ -49,6 +49,7 @@ Agent may read these as needed during implementation:
 - `tests/**` — test files
 - Configs, fixtures, prompts, and other implementation-side files required by the unit's acceptance items
 - `docs/specs/repository_mapping.md` — implementation path registration and `registration_state=landed` update
+- `docs/specs/units/candidate/**` — candidate spec and appendix files; only for fixes discovered during implementation; must run `unit_check:{unit}` after any modification
 
 ## How to End
 

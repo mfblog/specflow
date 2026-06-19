@@ -190,7 +190,7 @@ func candidatePendingDirective(unitName, specPath string) (*Directive, error) {
 			"tests/**",
 			mappingPath,
 		},
-		Blocked: "docs/specs/** (except repository_mapping.md), framework/**",
+		Blocked: "docs/specs/units/stable/**, docs/specs/_check_result/**, docs/specs/_check_work/**, docs/specs/_verify_result/**, docs/specs/_stable_verify_result/**, docs/specs/_independent_evaluation/**, docs/specs/_plans/**, docs/specs/_status.md, framework/**",
 		Completion: "No close command for implementation. Run `specflowctl next --unit %s` when done.",
 		Outcomes:  nil,
 	}, nil

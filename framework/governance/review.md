@@ -34,7 +34,7 @@ Plain exact `spec_flow_design_review` routes through this file first, then direc
 
 When the entry is exact `spec_flow_review:full`, `framework/spec_flow_review.md` is the deep-audit owner.
 
-If the entry expression does not match any recognized review entry (`spec_flow_review`, `spec_flow_review:full`, `spec_flow_design_review`), stop and report that the entry is unrecognized. Do not silently fall through to a default or guess the caller's intent.
+If the entry expression does not match any recognized review entry (exact forms or keyword-matched entries from rule 0), stop and report that the entry is unrecognized. Do not silently fall through to a default or guess the caller's intent.
 
 ### Unrecognized Entry
 

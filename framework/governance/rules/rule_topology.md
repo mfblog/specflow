@@ -103,7 +103,7 @@ If repository truth becomes insufficient before any mutation, stop and return to
 
 Stop when one of these is true:
 
-1. the topology plan is fully written, every touched rule file has a terminal state, any repository mapping update is complete, and `rule_sync` has closed reconciliation or terminal no-impact
+1. the topology plan is fully written, every touched rule file has a terminal state, any repository mapping update is complete, and `rule_sync` has closed reconciliation or terminal no-impact. If `rule_sync` returned `freshness_review_required=true`, run the 'Freshness Review Required' procedure from `framework/lifecycle/recovery.md:27-37` before claiming closure.
 2. the request belongs to another rule flow
 3. a stable unit requires a `rule_escape` prerequisite checkpoint before binding writeback can continue
 4. repository truth is insufficient to prove the affected unit set or topology plan

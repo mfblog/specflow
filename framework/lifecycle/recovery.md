@@ -40,7 +40,7 @@ The tooling output classifies the freshness state and returns the resolved branc
 
 When the failure is classified as `truth_layer` and the cause is `truth_drift` (candidate truth has diverged from the stable baseline — see `framework/lifecycle/unit_verify.md` `truth_fallback` outcome), apply the following procedure:
 
-1. **Correct candidate truth** — Before deleting any evidence, restore `docs/specs/units/candidate/c_unit_{unit}.md` to alignment with the stable Spec at `docs/specs/units/stable/s_unit_{unit}.md`. Remove content that contradicts the stable baseline and restore any content that was incorrectly omitted. If the divergence was intentional (a legitimate scope addition), preserve the intentional changes — the subsequent `unit_check` re-validation will determine their validity. (See `framework/candidate_intent.md` for the distinction between change candidates — which intentionally diverge from the stable layer — and repair candidates — which must not.)
+1. **Determine the baseline and correct candidate truth** — Before deleting any evidence, decide which baseline applies. If the candidate diverged from the stable Spec (e.g., through `truth_fallback` from `unit_verify` at `framework/lifecycle/unit_verify.md:95`), restore `docs/specs/units/candidate/c_unit_{unit}.md` to alignment with the stable Spec at `docs/specs/units/stable/s_unit_{unit}.md`. Remove content that contradicts the stable baseline and restore any content that was incorrectly omitted. If the candidate was intentionally modified during implementation without re-validation (a legitimate scope addition), preserve all intentional changes — the subsequent `unit_check` re-validation will determine their validity. (See `framework/candidate_intent.md` for the distinction between change candidates — which intentionally diverge from the stable layer — and repair candidates — which must not.)
 2. **Delete invalid evidence** — Remove process artifacts per the `truth_layer` row in the fallback table above (check_work, check result, verify result).
 3. **Reset lifecycle state** — Run `./specflow/tooling/bin/specflowctl-<os>-<arch> command close --command unit_verify --object-type unit --object {unit} --outcome truth_fallback --apply` —
    this sets `Next Command=unit_check` and clears `Notes` per the fallback table.
@@ -120,3 +120,50 @@ The stable promotion summary is written by tooling (`command close --apply`) bef
 
 Requests that use `scenario_*`, `scenario_advance:{id}`, or `object-type=scenario` are not recoverable lifecycle work.
 Stop and report that scenario lifecycle support has been removed.
+
+## Governance Exception (Force Bypass)
+
+`specflowctl command close --force --force-reason <reason>` allows a caller to bypass non-critical validation checks during command close. The bypass records a `forced:` entry in the unit's Notes to enable audit and downstream recovery.
+
+### Bypassable Checks
+
+The following checks may be bypassed with `--force`:
+
+1. **Process validation** — when `snapshot validate-process` reports a mismatch between current truth and the stored process evidence. Common causes: intentional spec amendment during implementation, appendix file changes outside the lifecycle flow, or transient repository state that will be resolved by the next lifecycle command.
+2. **Unit fork appendix coverage** — when `unit_fork` with outcome `candidate_created` detects missing candidate appendix files for one or more stable appendix references.
+
+The following checks are NEVER bypassable with `--force`:
+
+1. **Controlled fork intent validation** (`validateControlledStableVerifyForkIntent`) — fork intent validation checks whether stable verify evidence supports the requested fork. Bypassing this gate would allow lifecycle advancement without valid stable-verify evidence. This is a governance hard constraint and must not be overridden.
+
+### Usage Rules
+
+1. `--force-reason` is required. A descriptive reason must explain why the bypass is necessary and what downstream action will resolve the bypassed condition.
+2. Force bypass must not be used to avoid fixing legitimate governance gaps. It is intended for transient, non-recurring scenarios where the bypassed check produces a false positive or where the repository state will be corrected by the next lifecycle command.
+3. Repeated use of `--force` for the same unit and same check type without resolution is a governance concern and must be flagged during review.
+
+### Notes Recording
+
+When `--force` bypasses a check, the tooling appends a `forced:` entry to the unit's `Notes` in `_status.md`:
+
+```text
+forced:<check_type>:<reason>
+```
+
+- `check_type` is `validation` (process validation bypass) or `appendix_coverage` (fork appendix coverage bypass).
+- `reason` is the `--force-reason` value passed by the caller.
+- If `--force-reason` is empty (invalid — tooling rejects this), the reason defaults to `no_reason`.
+
+Multiple `forced:` entries accumulate in Notes, separated by `;`.
+
+### Recovery After Force Bypass
+
+A `forced:` Notes entry indicates that a governance gate was bypassed. The condition that caused the bypass must be resolved before the unit advances to the next lifecycle command:
+
+1. For `forced:validation` — the process validation mismatch must be corrected or the check result must be re-created by re-running `unit_check` through the re-validation path. `snapshot --update-check-result` may be used only when text-only drift caused the mismatch (see `framework/process_snapshot_contract.md` §12.2).
+2. For `forced:appendix_coverage` — the missing candidate appendix files must be created, or the `appendix_exc:` exclusion must be confirmed as intentional (see `framework/core/status.md` §Appendix Coverage Exclusions).
+3. After resolution, the `forced:` entry should be removed from Notes. The executor must not remove `forced:` entries without verifying that the underlying condition has been resolved.
+
+### Audit Trail
+
+Every `--force` use creates an audit record in `_status.md` Notes. Governance reviews and lifecycle audits MUST inspect `forced:` entries and verify that each one has a documented resolution path. Unresolved `forced:` entries at lifecycle command boundaries are governance findings.

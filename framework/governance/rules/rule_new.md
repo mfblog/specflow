@@ -97,7 +97,7 @@ If repository truth becomes insufficient before any mutation, stop and return to
 
 Stop when one of these is true:
 
-1. the candidate rule file is written, any required repository mapping update is complete, and `rule_sync` has closed reconciliation
+1. the candidate rule file is written, any required repository mapping update is complete, and `rule_sync` has closed reconciliation. If `rule_sync` returned `freshness_review_required=true`, run the 'Freshness Review Required' procedure from `framework/lifecycle/recovery.md:27-37` before claiming closure.
 2. the request belongs to `rule_extract`, `rule_bind`, `rule_topology`, or unit lifecycle work instead
 3. duplicate formal truth remains and cannot be removed by this flow
 4. current repository truth is insufficient to justify the rule boundary, rule version, mapping update, or promotion owner

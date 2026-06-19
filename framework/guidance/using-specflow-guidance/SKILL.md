@@ -25,7 +25,7 @@ Before selecting a guidance skill, diagnose the user's goal in ordinary language
 Do not ask the user to classify the request as `unit`, `rule`, stable `g_` rule, or `repository_mapping`.
 Use repository truth and natural-language routing to translate the user's goal into the internal specFlow owner.
 
-Do not use guidance when the user gives an exact standard command such as `unit_check:skill` or `unit_verify:agent`. Exact commands route through `framework/operations/entry_routing.md` into lifecycle Context Cards.
+Do not use guidance when the user gives an exact standard command such as `unit_check:{unit}` or `unit_verify:{unit}`. Exact commands route through `framework/operations/entry_routing.md` into lifecycle Context Cards.
 
 ## Skill Selection
 

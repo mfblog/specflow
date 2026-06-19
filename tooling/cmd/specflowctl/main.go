@@ -116,12 +116,17 @@ func runCommand(args []string, stdout, stderr io.Writer) error {
 		notes := fs.String("notes", "", "status notes")
 		stableBefore := fs.String("stable-before", "", "previous stable value for promotion recovery: yes | no")
 		apply := fs.Bool("apply", false, "write status and cleanup process files")
+		force := fs.Bool("force", false, "bypass non-critical validation and record governance exception")
+		forceReason := fs.String("force-reason", "", "reason for using --force (required with --force)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
 		if strings.TrimSpace(*command) == "" || strings.TrimSpace(*objectType) == "" || strings.TrimSpace(*object) == "" || strings.TrimSpace(*outcome) == "" {
 			writeCommandUsage(stderr)
 			return errors.New("command, object-type, object, and outcome are required")
+		}
+		if *force && strings.TrimSpace(*forceReason) == "" {
+			return errors.New("--force-reason is required when using --force")
 		}
 
 		result, err := commandclose.Close(commandclose.Options{
@@ -136,6 +141,8 @@ func runCommand(args []string, stdout, stderr io.Writer) error {
 			Notes:           *notes,
 			StableBefore:    *stableBefore,
 			Apply:           *apply,
+			Force:           *force,
+			ForceReason:     *forceReason,
 		})
 		if result.Command != "" {
 			writeCommandCloseResult(stdout, result, err)
@@ -1093,6 +1100,9 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		objectType := fs.String("object-type", "", "formal object type: unit")
 		object := fs.String("object", "", "formal object name")
+		fix := fs.Bool("fix", false, "auto-fix missing candidate appendix coverage by adding exclusions to _status.md Notes")
+		confirm := fs.Bool("confirm", false, "confirm appendix exclusion changes (required with --fix)")
+		updateCheckResult := fs.Bool("update-check-result", false, "update truth_fingerprint in _check_result to match current spec")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -1100,11 +1110,63 @@ func runSnapshot(args []string, stdout, stderr io.Writer) error {
 			writeSnapshotUsage(stderr)
 			return errors.New("object-type and object are required")
 		}
-		result, err := snapshot.RebuildCurrentObject(mustAbs(*repoRoot), *objectType, *object)
+		absRoot := mustAbs(*repoRoot)
+
+		if *fix {
+			// Load current status to get current Notes
+			status, err := statusfile.LookupObjectStatus(absRoot, *objectType, *object)
+			if err != nil {
+				return err
+			}
+			if !*confirm {
+				// Print detected omissions for review without modifying any files.
+				_, excluded, err := snapshot.FixCandidateAppendixCoverage(absRoot, *objectType, *object, status.Notes)
+				if err != nil {
+					return err
+				}
+				if len(excluded) == 0 {
+					fmt.Fprintln(stdout, "No appendix coverage issues found; nothing to fix.")
+				} else {
+					fmt.Fprintf(stdout, "Detected %d stable appendix refs without candidate counterparts (dry-run):\n", len(excluded))
+					for _, ref := range excluded {
+						fmt.Fprintf(stdout, "  - %s\n", ref)
+					}
+					fmt.Fprintln(stdout, "Re-run with --confirm to apply these exclusions. Verify each exclusion is intentional before confirming.")
+				}
+				return nil
+			}
+			updatedNotes, excluded, err := snapshot.FixCandidateAppendixCoverage(absRoot, *objectType, *object, status.Notes)
+			if err != nil {
+				return err
+			}
+			if len(excluded) == 0 {
+				fmt.Fprintln(stdout, "No appendix coverage issues found; nothing to fix.")
+			} else {
+				status.Notes = updatedNotes
+				_, err := statusfile.UpsertObjectStatus(absRoot, status, false)
+				if err != nil {
+					return fmt.Errorf("update status with appendix exclusions: %w", err)
+				}
+				fmt.Fprintf(stdout, "Added appendix exclusions (%d stable appendix refs):\n", len(excluded))
+				for _, ref := range excluded {
+					fmt.Fprintf(stdout, "  - %s\n", ref)
+				}
+			}
+		}
+
+		if *updateCheckResult {
+			updatedPath, err := snapshot.UpdateCheckResultFingerprints(absRoot, *objectType, *object)
+			if err != nil {
+				return fmt.Errorf("update check-result fingerprints: %w", err)
+			}
+			fmt.Fprintf(stdout, "Updated fingerprints: %s\n", updatedPath)
+		}
+
+		result, err := snapshot.RebuildCurrentObject(absRoot, *objectType, *object)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(stdout, snapshot.RenderWithAppendixCoverage(result, mustAbs(*repoRoot)))
+		fmt.Fprintln(stdout, snapshot.RenderWithAppendixCoverage(result, absRoot))
 		return nil
 	case "validate-process":
 		fs := flag.NewFlagSet("snapshot validate-process", flag.ContinueOnError)

@@ -29,7 +29,17 @@ type Result struct {
 // defaultPendingImplDenyPatterns are the default deny write patterns applied
 // when no constraints are defined for the pending_impl/unit_impl implementation phase.
 // These prevent implementation-phase agents from modifying spec, status, or framework files.
-var defaultPendingImplDenyPatterns = []string{"docs/specs/**", "framework/**"}
+var defaultPendingImplDenyPatterns = []string{
+	"docs/specs/units/stable/**",
+	"docs/specs/_check_result/**",
+	"docs/specs/_check_work/**",
+	"docs/specs/_verify_result/**",
+	"docs/specs/_stable_verify_result/**",
+	"docs/specs/_independent_evaluation/**",
+	"docs/specs/_plans/**",
+	"docs/specs/_status.md",
+	"framework/**",
+}
 
 // DefaultPendingImplDenyPatterns returns the default deny patterns for the implementation phase.
 func DefaultPendingImplDenyPatterns() []string {
@@ -229,8 +239,8 @@ func parseCompactFormat(input string) (Constraints, error) {
 		}
 
 		var phase string
-		var allowPattern string
-		var denyPattern string
+		var allowPatterns []string
+		var denyPatterns []string
 
 		// Parse key=value pairs separated by spaces
 		fields := strings.Fields(segment)
@@ -247,9 +257,9 @@ func parseCompactFormat(input string) (Constraints, error) {
 			case "phase":
 				phase = value
 			case "allow":
-				allowPattern = value
+				allowPatterns = append(allowPatterns, value)
 			case "deny":
-				denyPattern = value
+				denyPatterns = append(denyPatterns, value)
 			}
 		}
 
@@ -258,23 +268,23 @@ func parseCompactFormat(input string) (Constraints, error) {
 			return Constraints{}, fmt.Errorf("malformed constraint segment %q: missing phase", segment)
 		}
 
-		if denyPattern == "" && allowPattern == "" {
+		if len(denyPatterns) == 0 && len(allowPatterns) == 0 {
 			// segment has phase but no deny or allow — malformed, fail closed
 			return Constraints{}, fmt.Errorf("malformed constraint segment %q: has phase=%s but no deny or allow pattern", segment, phase)
 		}
 
 		anyValidSegment = true
 
-		if denyPattern != "" {
-			rule := WriteRule{Pattern: denyPattern}
+		for _, p := range denyPatterns {
+			rule := WriteRule{Pattern: p}
 			if phase != "" {
 				rule.Phases = []string{phase}
 			}
 			c.ForbiddenWrites = append(c.ForbiddenWrites, rule)
 		}
 
-		if allowPattern != "" {
-			rule := WriteRule{Pattern: allowPattern}
+		for _, p := range allowPatterns {
+			rule := WriteRule{Pattern: p}
 			if phase != "" {
 				rule.Phases = []string{phase}
 			}

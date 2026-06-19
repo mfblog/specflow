@@ -22,6 +22,8 @@ Required inputs:
 3. boundary refs needed to verify handoff, authority, or tooling agreement.
 4. minimal convergence refs when the changed surface crosses another owner.
 
+When the user does not specify a review scope (no file paths, no changed files, no specific question), default to reviewing git working directory changes (`git diff` against HEAD). If no working directory changes exist, default to the most recent commit (`git log -1`). This default prevents unnecessary escalation to `deep_audit` and aligns with the expectation that a plain `spec_flow_review` entry checks current uncommitted work.
+
 It must not use `_governance_review/` run-state by default.
 It must not require baseline slice table, dynamic slice table, score-state table, or full-scope run-state startup.
 

@@ -84,7 +84,7 @@ If repository truth becomes insufficient before any mutation, stop and return to
 
 Stop when one of these is true:
 
-1. extraction is complete, duplicated unit-local formal truth is removed, required unit bindings are written, and `rule_sync` has closed reconciliation
+1. extraction is complete, duplicated unit-local formal truth is removed, required unit bindings are written, and `rule_sync` has closed reconciliation. If `rule_sync` returned `freshness_review_required=true`, run the 'Freshness Review Required' procedure from `framework/lifecycle/recovery.md:27-37` before claiming closure.
 2. the request is not extraction and must route to another rule flow or unit lifecycle work
 3. a writeback-required unit is stable and `rule_escape` must raise a `prerequisite_action` checkpoint before extraction can continue
 4. unit-local truth and shared rule truth cannot be separated safely from current repository truth

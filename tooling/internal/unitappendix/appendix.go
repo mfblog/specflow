@@ -91,6 +91,10 @@ func ValidateCandidateCoverage(repoRoot, objectType, object string) error {
 }
 
 func CandidateCoverageMismatches(repoRoot, objectType, object string) ([]string, error) {
+	return CandidateCoverageMismatchesWithExclusions(repoRoot, objectType, object, nil)
+}
+
+func CandidateCoverageMismatchesWithExclusions(repoRoot, objectType, object string, excludedStableRefs []string) ([]string, error) {
 	stableEntries, err := Scan(repoRoot, objectType, object, "stable")
 	if err != nil {
 		return nil, err
@@ -103,9 +107,16 @@ func CandidateCoverageMismatches(repoRoot, objectType, object string) ([]string,
 	for _, entry := range candidateEntries {
 		candidateNames[entry.Name] = true
 	}
+	excluded := map[string]bool{}
+	for _, ref := range excludedStableRefs {
+		excluded[ref] = true
+	}
 	missing := []string{}
 	for _, entry := range stableEntries {
 		if candidateNames[entry.Name] {
+			continue
+		}
+		if excluded[entry.FileRef] {
 			continue
 		}
 		missing = append(missing, fmt.Sprintf("%s -> %s", entry.FileRef, CandidateFileRef(objectType, object, entry.Name)))
@@ -116,6 +127,8 @@ func CandidateCoverageMismatches(repoRoot, objectType, object string) ([]string,
 	}
 	return []string{"unit_appendix_snapshot mismatch: missing candidate appendix for stable appendix: " + strings.Join(missing, ", ")}, nil
 }
+
+
 
 func CandidateFileRef(objectType, object, name string) string {
 	if objectType != "unit" {

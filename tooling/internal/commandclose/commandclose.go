@@ -8,6 +8,7 @@ import (
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/commandpreflight"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/processcleanup"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/repositorymapping"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/snapshot"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitappendix"
@@ -31,6 +32,8 @@ type Options struct {
 	Notes           string
 	StableBefore    string
 	Apply           bool
+	Force           bool
+	ForceReason     string
 }
 
 type Result struct {
@@ -104,9 +107,18 @@ func Close(opts Options) (Result, error) {
 		}
 	}
 
+	if present && !opts.Force {
+		if err := validateNoUnresolvedForceEntries(before.Notes); err != nil {
+			return Result{}, err
+		}
+	}
+
 	trans, err := determineTransition(opts, before, present)
 	if err != nil {
 		return Result{}, err
+	}
+	if err := enrichNotesWithConstraints(opts.RepoRoot, opts.Object, &trans); err != nil {
+		return Result{}, fmt.Errorf("constraints derivation for unit %q: %w", opts.Object, err)
 	}
 
 	result := Result{
@@ -135,15 +147,28 @@ func Close(opts Options) (Result, error) {
 	if trans.ValidationProcess != "" {
 		mismatches, err := validateProcess(opts.RepoRoot, opts.ObjectType, opts.Object, trans.ValidationProcess, trans.ValidationDecision)
 		if err != nil {
-			return result, err
+			if opts.Force {
+				result.ValidationMismatches = mismatches
+				trans.Status.Notes = recordForceNote(trans.Status.Notes, "validation", err.Error(), opts.ForceReason)
+			} else {
+				return result, err
+			}
 		}
-		result.ValidationMismatches = mismatches
 	}
+	// validateControlledStableVerifyForkIntent is intentionally NOT bypassed
+	// by --force. Controlled fork intent mismatches are governance concerns
+	// that must not be silently overridden. Only validation process and
+	// appendix coverage checks are force-bypassable.
 	if err := validateControlledStableVerifyForkIntent(opts); err != nil {
 		return result, err
 	}
 	if err := validateUnitForkAppendixCoverage(opts); err != nil {
-		return result, err
+		if opts.Force {
+			result.ValidationMismatches = append(result.ValidationMismatches, err.Error())
+			trans.Status.Notes = recordForceNote(trans.Status.Notes, "appendix_coverage", err.Error(), opts.ForceReason)
+		} else {
+			return result, err
+		}
 	}
 
 	if !opts.Apply {
@@ -587,12 +612,14 @@ func promoteInvalidTransition(opts Options, current statusfile.ObjectStatus, obj
 func withNext(current statusfile.ObjectStatus, next string) transition {
 	after := current
 	after.NextCommand = next
-	// Clear Notes when transitioning to unit_check. The pending_impl value
-	// is only meaningful with Next Command=unit_verify; leaving stale
-	// Notes causes tooling to misclassify StateCandidateCheck as
-	// StateCandidatePending (see next/state.go ClassifyUnitState).
+	// Remove the pending_impl keyword and constraints prefix when transitioning
+	// to unit_check. Constraints are stale outside pending_impl and MUST be
+	// re-derived on the next pending_impl entry. Other Notes content (e.g.
+	// appendix_exc) must be preserved — exclusions remain valid for the current
+	// candidate round.
 	if next == "unit_check" {
-		after.Notes = ""
+		after.Notes = statusfile.RemoveNotesKeyword(after.Notes, "pending_impl")
+		after.Notes = statusfile.RemoveNotesPrefix(after.Notes, "constraints:")
 	}
 	return transition{Status: after, CleanupKind: cleanupNone}
 }
@@ -612,12 +639,13 @@ func withNextAndValidationDecision(current statusfile.ObjectStatus, next, proces
 func fallback(current statusfile.ObjectStatus, next, layer, reason string) transition {
 	after := current
 	after.NextCommand = next
-	// Clear Notes during fallback — pending_impl only has meaning with
-	// Next Command=unit_verify. Fallback transitions always move to
-	// unit_check or unit_verify/unit_stable_verify, never to unit_verify
-	// with pending_impl.
+	// Remove the pending_impl keyword and constraints prefix during fallback.
+	// Constraints are stale outside pending_impl and MUST be re-derived on the
+	// next pending_impl entry. Other Notes content (e.g. appendix_exc) must be
+	// preserved — exclusions remain valid for the current candidate round.
 	if next == "unit_check" {
-		after.Notes = ""
+		after.Notes = statusfile.RemoveNotesKeyword(after.Notes, "pending_impl")
+		after.Notes = statusfile.RemoveNotesPrefix(after.Notes, "constraints:")
 	}
 	return transition{Status: after, CleanupKind: cleanupFallback, FailureLayer: layer, Reason: reason}
 }
@@ -700,11 +728,39 @@ func validateControlledStableVerifyForkIntent(opts Options) error {
 	return nil
 }
 
+// validateUnitForkAppendixCoverage validates that every stable appendix has a
+// candidate counterpart during unit_fork. It intentionally passes nil exclusions
+// rather than loading appendix_exc from _status.md Notes, because fork creates a
+// fresh candidate layer that must have full coverage. Appendix exclusions are
+// only applied post-fork via snapshot --fix for maintenance scenarios.
 func validateUnitForkAppendixCoverage(opts Options) error {
 	if opts.Command != "unit_fork" || opts.Outcome != "candidate_created" {
 		return nil
 	}
 	return unitappendix.ValidateCandidateCoverage(opts.RepoRoot, opts.ObjectType, opts.Object)
+}
+
+// validateNoUnresolvedForceEntries scans the unit's Notes for unresolved
+// `forced:` entries. A `forced:` entry indicates a governance gate was
+// bypassed via `--force` in a previous command close. The underlying
+// condition must be resolved before the unit advances to the next lifecycle
+// command. This is a deterministic tooling-enforced check rather than an
+// agent-self-enforced rule.
+func validateNoUnresolvedForceEntries(notes string) error {
+	if notes == "" {
+		return nil
+	}
+	// Parse Notes segments separated by `;`. Each segment may be a keyword
+	// (e.g., "pending_impl"), a prefix group (e.g., "constraints:...",
+	// "appendix_exc:..."), or a forced entry (e.g., "forced:validation:reason").
+	segments := strings.Split(notes, ";")
+	for _, seg := range segments {
+		trimmed := strings.TrimSpace(seg)
+		if strings.HasPrefix(trimmed, "forced:") {
+			return fmt.Errorf("unresolved forced entry in Notes: %q. Resolve the forced condition and remove the `forced:` entry before advancing lifecycle state", trimmed)
+		}
+	}
+	return nil
 }
 
 func emptyAsNone(value string) string {
@@ -774,4 +830,55 @@ func isCreateCommand(command string) bool {
 	default:
 		return false
 	}
+}
+
+func recordForceNote(notes, checkType, detail, forceReason string) string {
+	note := fmt.Sprintf("forced:%s:%s", checkType, forceReason)
+	if forceReason == "" {
+		note = fmt.Sprintf("forced:%s:no_reason", checkType)
+	}
+	notes = strings.TrimSpace(notes)
+	if notes == "" {
+		return note
+	}
+	return notes + "; " + note
+}
+
+const constraintsPrefix = "constraints:"
+
+func enrichNotesWithConstraints(repoRoot, unit string, trans *transition) error {
+	notes := trans.Status.Notes
+	if notes == "" || !strings.Contains(notes, "pending_impl") {
+		return nil
+	}
+	if strings.Contains(notes, constraintsPrefix) {
+		return nil
+	}
+
+	paths, err := repositorymapping.GetImplementationPaths(repoRoot, unit)
+	if err != nil {
+		return fmt.Errorf("cannot derive constraints: %w", err)
+	}
+
+	var sb strings.Builder
+	sb.WriteString(constraintsPrefix)
+	sb.WriteString("phase=pending_impl")
+	sb.WriteString(" deny=docs/specs/units/stable/**")
+	sb.WriteString(" deny=docs/specs/_check_result/**")
+	sb.WriteString(" deny=docs/specs/_check_work/**")
+	sb.WriteString(" deny=docs/specs/_verify_result/**")
+	sb.WriteString(" deny=docs/specs/_stable_verify_result/**")
+	sb.WriteString(" deny=docs/specs/_independent_evaluation/**")
+	sb.WriteString(" deny=docs/specs/_plans/**")
+	sb.WriteString(" deny=docs/specs/_status.md")
+	sb.WriteString(" deny=framework/**")
+	for _, p := range paths {
+		sb.WriteString(" allow=")
+		sb.WriteString(p)
+	}
+	sb.WriteString(" allow=docs/specs/repository_mapping.md")
+	sb.WriteString(" allow=docs/specs/units/candidate/**")
+
+	trans.Status.Notes = notes + "; " + sb.String()
+	return nil
 }
