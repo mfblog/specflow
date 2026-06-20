@@ -258,7 +258,7 @@ or lists.
 
 `unit_appendix_snapshot` records the current-layer appendix files owned by the unit through appendix path and appendix frontmatter.
 
-For an active candidate unit, every stable appendix `s_unit_{unit}_{name}.md` must have a corresponding candidate appendix `c_unit_{unit}_{name}.md`.
+For an active candidate unit, every stable appendix `s_unit_{unit}_{name}.md` must have a corresponding candidate appendix `c_unit_{unit}_{name}.md`, **unless** that stable appendix declares `status: exempt` in its frontmatter (see `framework/spec_writing_guide.md` §Appendix Files).
 Candidate-only appendices are allowed.
 
 `unit_snapshot` records stable unit dependencies resolved from current unit `unit_refs`.
@@ -604,6 +604,8 @@ When behavior, acceptance, dependency, or schema drift is found, existing fallba
 
 `specflowctl snapshot --fix` and `specflowctl snapshot --update-check-result` are maintenance commands that modify process state outside the standard lifecycle command flow. They must not be used to bypass lifecycle gates.
 
+A stable appendix may also declare `status: exempt` in its frontmatter to opt out of candidate coverage requirements (see `framework/spec_writing_guide.md` §Appendix Files). This is the preferred mechanism for new exclusions because it is intrinsic to the artifact and is respected in all validation paths, including `unit_fork`.
+
 ### 12.1 Appendix Coverage Fix
 
 `specflowctl snapshot --repo-root <root> --object-type unit --object <unit> --fix` auto-detects missing candidate appendix files for a candidate-layer unit and adds the corresponding stable appendix file references as `appendix_exc:` entries to the unit's Notes in `_status.md` (see `framework/core/status.md` §Appendix Coverage Exclusions).
@@ -615,7 +617,9 @@ This is applicable only when:
 
 The command does NOT modify any spec files or process evidence. It only updates the unit's Notes in `_status.md`. After `--fix`, snapshot validation will exclude the listed stable appendix refs from coverage mismatch reporting.
 
-**Limitation:** `--fix` does not distinguish between intentional exclusions and omissions that indicate incomplete fork work. The executor must verify that each excluded appendix is genuinely irrelevant before relying on this command. `unit_fork` commands must not use `--fix` as a substitute for creating the required candidate appendix files during fork.
+**Limitation:** `--fix` uses the `appendix_exc:` Notes mechanism, which is **not** respected during `unit_fork` command close validation. For permanent exclusions that should apply across all lifecycle phases (including fork), set `status: exempt` in the stable appendix frontmatter instead. See `framework/spec_writing_guide.md` §Appendix Files.
+
+`unit_fork` commands must not use `--fix` as a substitute for creating the required candidate appendix files during fork. If a stable appendix genuinely should not be forked, set its frontmatter `status: exempt` before the fork operation.
 
 ### 12.2 Check-Result Fingerprint Update
 

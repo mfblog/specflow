@@ -189,6 +189,13 @@ All appendix files must use the `/appendix/` subdirectory under the layer direct
 - Stable: `docs/specs/units/stable/appendix/s_unit_{unit}_{name}.md`
 The candidate may have additional candidate appendices.
 
+An appendix file may carry an optional `status` field in its frontmatter:
+
+- `status: active` (default) — the appendix participates normally in governance validation and coverage checks.
+- `status: exempt` — the appendix is exempt from candidate coverage requirements. A stable appendix with `status: exempt` does **not** require a corresponding candidate appendix, even when the unit has an active candidate round. The tooling skips exempt stable appendices during `CandidateCoverageMismatchesWithExclusions` checks.
+
+The `status` field is validated only when present. Absence is treated as `active`. This field is intended for stable-layer appendices that are valid governance artifacts but not relevant to the current candidate round.
+
 **Evidence appendix promotion restriction:** Evidence appendix files referenced by `evidence_appendix_ref` record observed behavior (traceability data) and are not durable behavior truth. They must not be promoted to stable truth as behavior-correctness claims during `unit_promote` (tooling removes all candidate appendix files during promotion cleanup, structurally preventing evidence appendix survival into the stable layer). The `evidence_appendix_ref` field is a candidate-only concept; stable units must not carry `evidence_appendix_ref` frontmatter. See `framework/lifecycle/unit_promote.md` for promotion write rules and `framework/candidate_intent.md` for evidence appendix semantics.
 
 ## 8. Process Snapshots

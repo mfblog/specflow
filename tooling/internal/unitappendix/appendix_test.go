@@ -56,6 +56,23 @@ func TestCandidateCoverageAllowsExtraCandidateAppendix(t *testing.T) {
 	}
 }
 
+func TestCandidateCoverageAllowsExemptStableAppendix(t *testing.T) {
+	repoRoot := t.TempDir()
+	writeTestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/appendix/s_unit_demo_prompt.md"), strings.Join([]string{
+		"---",
+		"unit: demo",
+		"layer: stable",
+		"status: exempt",
+		"---",
+		"",
+		"# Exempt Stable Prompt",
+	}, "\n")+"\n")
+
+	if err := ValidateCandidateCoverage(repoRoot, "unit", "demo"); err != nil {
+		t.Fatalf("ValidateCandidateCoverage with exempt stable appendix: %v", err)
+	}
+}
+
 func TestCandidateCoverageRejectsMissingCandidateAppendix(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeTestFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/appendix/s_unit_demo_prompt.md"), strings.Join([]string{

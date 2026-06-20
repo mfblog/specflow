@@ -127,6 +127,8 @@ This value is used by tooling for (a) re-validation directive state classificati
 
 The `Notes` field may carry an `appendix_exc:` prefix to declare stable appendix file references for which the corresponding candidate appendix is intentionally absent. The tooling uses this to avoid false appendix coverage validation failures when a stable appendix is not relevant to the current candidate round.
 
+Alternatively, a stable appendix file may declare `status: exempt` in its frontmatter (see `framework/spec_writing_guide.md` §Appendix Files). When present, the tooling skips that appendix during coverage checks without requiring a `_status.md` entry. The frontmatter approach is preferred for new exclusions because the intent is stored alongside the artifact itself and is respected in all coverage validation paths, including `unit_fork`. The `appendix_exc:` mechanism is retained for compatibility with existing exclusions.
+
 Format (single Notes value, `|`-separated list):
 
 ```text

@@ -119,6 +119,9 @@ func CandidateCoverageMismatchesWithExclusions(repoRoot, objectType, object stri
 		if excluded[entry.FileRef] {
 			continue
 		}
+		if isExemptAppendix(entry.Content) {
+			continue
+		}
 		missing = append(missing, fmt.Sprintf("%s -> %s", entry.FileRef, CandidateFileRef(objectType, object, entry.Name)))
 	}
 	sort.Strings(missing)
@@ -186,6 +189,15 @@ func appendixName(fileRef, prefix string) string {
 	return strings.TrimPrefix(base, prefix)
 }
 
+const exemptStatusValue = "exempt"
+
+// isExemptAppendix returns true when the appendix frontmatter contains
+// status: exempt, indicating the stable appendix intentionally does not
+// require a candidate counterpart in the current governance round.
+func isExemptAppendix(content string) bool {
+	return strings.TrimSpace(parseFrontmatter(content)["status"]) == exemptStatusValue
+}
+
 func validateAppendixFrontmatter(fileRef string, frontmatter map[string]string, object, layer string) error {
 	unitValue, ok := frontmatter["unit"]
 	if !ok || strings.TrimSpace(unitValue) == "" {
@@ -200,6 +212,12 @@ func validateAppendixFrontmatter(fileRef string, frontmatter map[string]string, 
 	}
 	if strings.TrimSpace(layerValue) != layer {
 		return fmt.Errorf("%s: frontmatter.layer mismatch: actual=%s expected=%s", fileRef, strings.TrimSpace(layerValue), layer)
+	}
+	if status, ok := frontmatter["status"]; ok {
+		s := strings.TrimSpace(status)
+		if s != "" && s != "active" && s != "exempt" {
+			return fmt.Errorf("%s: invalid frontmatter.status %q: must be \"active\" or \"exempt\"", fileRef, s)
+		}
 	}
 	return nil
 }

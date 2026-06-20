@@ -58,7 +58,7 @@ Confirm the target unit does not yet have a row in `docs/specs/_status.md` — `
   - `controlled_change_required` → write `change`
   - `truth_text_change_required` → write `repair`
   - `aligned` → no specific intent required
-- Every stable-layer appendix must have a corresponding same-named candidate-layer appendix
+- Every stable-layer appendix must have a corresponding same-named candidate-layer appendix, unless the stable appendix declares `status: exempt` in its frontmatter (see `framework/spec_writing_guide.md` §Appendix Files)
 - Rewrite Markdown document references within the candidate main Spec body AND within every copied candidate appendix file from stable appendix paths (`s_unit_*`) to candidate appendix paths (`c_unit_*`), ensuring the candidate body and appendix files reference the correct candidate-layer paths. Additionally, rewrite the `layer` frontmatter field in each copied appendix file from `stable` to `candidate`, and update the `version` field if applicable.
 - If the status table is empty: STOP, report that no units are registered, and suggest `unit_new` as the first step
 
@@ -77,7 +77,7 @@ Confirm the target unit does not yet have a row in `docs/specs/_status.md` — `
 - `docs/specs/units/candidate/c_unit_{unit}.md` — candidate main Spec (unit_new, unit_fork)
 - `docs/specs/units/stable/s_unit_{unit}.md` — stable main Spec (unit_init)
 - `docs/specs/repository_mapping.md` — path ownership registration
-- `docs/specs/units/candidate/appendix/c_unit_{unit}_*.md` — candidate appendix files (unit_fork: copied from stable with frontmatter rewrites)
+- `docs/specs/units/candidate/appendix/c_unit_{unit}_*.md` — candidate appendix files (unit_fork: copied from stable with frontmatter rewrites; stable appendix files with `status: exempt` are skipped)
 
 ## Note
 

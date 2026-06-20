@@ -200,6 +200,18 @@ These files define the command procedure for each state. They are consumed by `s
 as the source of lifecycle reference material and are also available for direct reading when
 `specflowctl` is unavailable.
 
+### Context Card File Paths
+
+| Command | Context Card File |
+|---------|------------------|
+| `unit_init` / `unit_fork` | `framework/lifecycle/unit_init_new_fork.md` |
+| `unit_check` | `framework/lifecycle/unit_check.md` |
+| `unit_impl` | `framework/lifecycle/unit_impl.md` |
+| `unit_verify` | `framework/lifecycle/unit_verify.md` |
+| `unit_stable_verify` | `framework/lifecycle/unit_stable_verify.md` |
+| `unit_promote` | `framework/lifecycle/unit_promote.md` |
+| recovery | `framework/lifecycle/recovery.md` |
+
 Sections:
 
 1. **Input** — files that must be read for this step
