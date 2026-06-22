@@ -26,10 +26,10 @@ type Result struct {
 	Path    string
 }
 
-// defaultPendingImplDenyPatterns are the default deny write patterns applied
-// when no constraints are defined for the pending_impl/unit_impl implementation phase.
+// defaultImplementationDenyPatterns are the default deny write patterns applied
+// when no constraints are defined for the implementation phase.
 // These prevent implementation-phase agents from modifying spec, status, or framework files.
-var defaultPendingImplDenyPatterns = []string{
+var defaultImplementationDenyPatterns = []string{
 	"docs/specs/units/stable/**",
 	"docs/specs/_check_result/**",
 	"docs/specs/_check_work/**",
@@ -41,10 +41,10 @@ var defaultPendingImplDenyPatterns = []string{
 	"framework/**",
 }
 
-// DefaultPendingImplDenyPatterns returns the default deny patterns for the implementation phase.
-func DefaultPendingImplDenyPatterns() []string {
-	result := make([]string, len(defaultPendingImplDenyPatterns))
-	copy(result, defaultPendingImplDenyPatterns)
+// DefaultImplementationDenyPatterns returns the default deny patterns for the implementation phase.
+func DefaultImplementationDenyPatterns() []string {
+	result := make([]string, len(defaultImplementationDenyPatterns))
+	copy(result, defaultImplementationDenyPatterns)
 	return result
 }
 
@@ -76,10 +76,10 @@ func ValidateWrite(phase string, path string, constraints Constraints) Result {
 
 	// Check allowed rules: if no allowed rules are defined, apply defaults
 	if len(constraints.AllowedWrites) == 0 {
-		// During implementation phase (pending_impl / unit_impl), apply default deny
+		// During implementation phase, apply default deny
 		// patterns for docs/specs/** and framework/** to prevent accidental spec/truth writes.
-		if phase == "pending_impl" || phase == "unit_impl" {
-			for _, denyPattern := range defaultPendingImplDenyPatterns {
+		if phase == "implementation" {
+			for _, denyPattern := range defaultImplementationDenyPatterns {
 				if patternMatch(denyPattern, normalizedPath) {
 					return Result{
 						Allowed: false,

@@ -10,12 +10,12 @@ It applies to unit lifecycle work, rule-governance work that already mutated fil
 
 > **Note:** This table covers both candidate and stable unit evidence. The `evidence_layer` row routes candidate evidence to `unit_verify` and stable verify evidence to `unit_stable_verify` — see the per-row routing for the correct restart command. `binding_drift` and `rule_drift` in the `truth_layer` row apply to candidate units only; stable units with those reason codes are routed per `framework/governance/impact_sync.md` Fallback Routing item 6 (to `unit_stable_verify`). Stable-layer truth changes follow the separate rules in [Stable Unit Recovery](#stable-unit-recovery) below.
 
-Layer classification maps a failure to the layer whose evidence is invalidated. See `framework/process_snapshot_contract.md` Section 4 (Fallback Layers) for the classification rules: truth mismatch → `truth_layer`, check schema or gate evidence mismatch → `gate_layer`, verify evidence mismatch → `evidence_layer`.
+Layer classification maps a failure to the layer whose evidence is invalidated. See `framework/process_snapshot_contract.md` Section 5 (Fallback Layers) for the classification rules: truth mismatch → `truth_layer`, check schema or gate evidence mismatch → `gate_layer`, verify evidence mismatch → `evidence_layer`.
 
 | Failure Layer | Reason Codes | Deletes | Next Command |
-|---|---|---|---|
-| `truth_layer` | `truth_drift`, `binding_drift` (candidate only), `baseline_drift`, `rule_drift` (candidate only), `truth_incomplete` | check_work, check result (if any), verify result | `unit_check` (clears `Notes`) |
-| `gate_layer` | `gate_missing`, `spec_issue` | check_work, check result (if any) | `unit_check` (clears `Notes`) |
+|---|---|---|---|---|
+| `truth_layer` | `truth_drift`, `binding_drift` (candidate only), `baseline_drift`, `rule_drift` (candidate only), `truth_incomplete` | check_work, check result (if any), verify result | `unit_check` (removes `constraints:` prefix, preserves `appendix_exc:` and other Notes content) |
+| `gate_layer` | `gate_missing`, `spec_issue` | check_work, check result (if any) | `unit_check` (removes `constraints:` prefix, preserves `appendix_exc:` and other Notes content) |
 | `evidence_layer` | `evidence_incomplete` (candidate-layer only), `stable_verify_invalid` | verify result or stable verify result | `unit_verify` if `evidence_incomplete`; `unit_stable_verify` if `stable_verify_invalid` |
 
 Only reason codes in this table are valid for fallback cleanup.
@@ -53,7 +53,7 @@ When the failure is classified as `truth_layer` and the cause is `truth_drift` (
 When candidate truth changes, bound rule references change, repository mapping changes the unit boundary (maps to `truth_layer`, reason: `baseline_drift`), or a global rule changes the candidate's constraints:
 
 1. delete downstream evidence that was derived from the prior truth.
-2. set the candidate unit's next command to the earliest required command from the fallback target table.
+2. set the candidate unit's next command to the earliest required command from the fallback target table. During the implementation phase (`Next Command` is the multi-value set `unit_check, unit_impl, unit_verify`), the fallback table's `truth_layer` or `gate_layer` row correctly resets `Next Command` to `unit_check` and removes the `constraints:` prefix while preserving `appendix_exc:` entries (see `framework/core/status.md` §Constraints Derivation and §Appendix Coverage Exclusions for the exact Notes retention rules).
 3. keep still-valid upstream evidence only when deterministic validation proves it still matches current truth.
 4. rerun impact sync when the change may affect other units.
 
@@ -114,7 +114,7 @@ After a command or rule flow closes successfully:
 | `unit_fork` | Process artifacts (check_work, check result, verify result, stable_verify result) and agent-internal artifacts (plan) for the target unit | Stable unit truth (main Spec + appendices) unchanged, candidate unit truth (main Spec + appendices) intact |
 | `unit_promote` | Candidate main Spec, candidate appendix files, process artifacts | Stable main Spec written by promotion; stable appendix files (copied from candidate before cleanup). Candidate appendix files (including evidence appendices) are deleted during cleanup regardless of content. Promotion summary at `docs/specs/_verify_result/stable/unit/{unit}.md` |
 
-The stable promotion summary is written by tooling (`command close --apply`) before cleanup begins, so it is preserved at a separate path that cleanup globs do not match. See `framework/process_snapshot_contract.md` Section 8 for the summary format and `tooling/internal/commandclose/commandclose.go` for implementation details.
+The stable promotion summary is written by tooling (`command close --apply`) before cleanup begins, so it is preserved at a separate path that cleanup globs do not match. See `framework/process_snapshot_contract.md` Section 9 for the summary format and `tooling/internal/commandclose/commandclose.go` for implementation details.
 
 ## Removed Scenario Lifecycle
 
@@ -160,7 +160,7 @@ Multiple `forced:` entries accumulate in Notes, separated by `;`.
 
 A `forced:` Notes entry indicates that a governance gate was bypassed. The condition that caused the bypass must be resolved before the unit advances to the next lifecycle command:
 
-1. For `forced:validation` — the process validation mismatch must be corrected or the check result must be re-created by re-running `unit_check` through the re-validation path. `snapshot --update-check-result` may be used only when text-only drift caused the mismatch (see `framework/process_snapshot_contract.md` §12.2).
+1. For `forced:validation` — the process validation mismatch must be corrected or the check result must be re-created by re-running `unit_check` through the re-validation path. `snapshot --update-check-result` may be used only when text-only drift caused the mismatch (see `framework/process_snapshot_contract.md` §13.2).
 2. For `forced:appendix_coverage` — the missing candidate appendix files must be created, or the `appendix_exc:` exclusion must be confirmed as intentional (see `framework/core/status.md` §Appendix Coverage Exclusions).
 3. After resolution, the `forced:` entry should be removed from Notes. The executor must not remove `forced:` entries without verifying that the underlying condition has been resolved.
 

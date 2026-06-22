@@ -1979,7 +1979,7 @@ function lifecycleView(object, nextCommandOverride) {
   const command = String(nextCommandOverride || object.next_command || "").trim();
   const notes = String(object.notes || "").trim();
   let effectiveCommand = command;
-  if (command === "unit_verify" && notes.indexOf("pending_impl") >= 0) {
+  if (command.indexOf("unit_impl") >= 0) {
     effectiveCommand = "unit_impl";
   }
   const complete = isNextRoundEntry(object, command);
@@ -2668,7 +2668,7 @@ function todoTypeForCommand(command) {
 
 function todoTypeForObject(object, command) {
   if (command === "unit_fork" && nextIntent(object) === "repair") return "repairFork";
-  if (command === "unit_verify" && (String(object.notes || "").indexOf("pending_impl") >= 0)) return "implementation";
+  if (command.indexOf("unit_impl") >= 0) return "implementation";
   return todoTypeForCommand(command);
 }
 
@@ -2791,14 +2791,14 @@ function renderAdvanceCommandButton(_item, _className) {
 }
 
 /**
- * When in pending_impl state (Next Command=unit_verify, Notes=pending_impl),
+ * When in implementation phase (Next Command=unit_check, unit_impl, unit_verify),
  * implementation may reveal spec issues that require going back to unit_check
  * for re-validation. This returns the alternative command text.
  */
 function pendingImplAltCommand(object, nextCommand) {
   const notes = String(object && object.notes ? object.notes : "").trim();
   const command = String(nextCommand || "").trim();
-  if (command === "unit_verify" && notes.indexOf("pending_impl") >= 0) {
+  if (command.indexOf("unit_impl") >= 0) {
     return `unit_check:${object.id}`;
   }
   return "";
@@ -2817,7 +2817,7 @@ function renderPendingImplAltButton(item) {
 function pendingImplImplCommand(object, nextCommand) {
   const notes = String(object && object.notes ? object.notes : "").trim();
   const command = String(nextCommand || "").trim();
-  if (command === "unit_verify" && notes.indexOf("pending_impl") >= 0) {
+  if (command.indexOf("unit_impl") >= 0) {
     return `unit_impl:${object.id}`;
   }
   return "";

@@ -50,7 +50,7 @@ func Run(repoRoot, command, objectType, object string) Result {
 		result.RecommendedNextCommand = "none"
 		return result
 	}
-	if status.NextCommand != result.Command {
+	if !statusfile.ContainsNextCommand(status.NextCommand, result.Command) {
 		result.MayContinue = false
 		result.FailureLayer = "status_layer"
 		result.RecommendedNextCommand = status.NextCommand
@@ -81,10 +81,10 @@ func Run(repoRoot, command, objectType, object string) Result {
 	}
 
 	// Re-validation check: when unit_verify is entered during the implementation
-	// phase (Next Command=unit_verify, Notes=pending_impl), detect whether the
-	// candidate spec was modified after the last unit_check pass. If the spec
-	// fingerprint changed, re-validation via unit_check is required first.
-	if result.MayContinue && result.Command == "unit_verify" && strings.Contains(status.Notes, "pending_impl") {
+	// phase (Next Command contains unit_impl), detect whether the candidate spec
+	// was modified after the last unit_check pass. If the spec fingerprint changed,
+	// re-validation via unit_check is required first.
+	if result.MayContinue && result.Command == "unit_verify" && statusfile.ContainsNextCommand(status.NextCommand, "unit_impl") {
 		specPath := filepath.Join(repoRoot, fmt.Sprintf("docs/specs/units/candidate/c_unit_%s.md", result.Object))
 		checkResultPath := filepath.Join(repoRoot, fmt.Sprintf("docs/specs/_check_result/unit/%s.md", result.Object))
 

@@ -8,7 +8,7 @@ It does not decide product behavior, acceptance meaning, rule meaning, implement
 ## 1. Entry
 
 Migration authority exists only when the user explicitly invokes the exact `spec_flow_migrate` entry.
-The entry may include a narrowing phrase that names the files or project-instance surfaces to inspect.
+The entry may include a narrowing phrase that names the files or project-instance surfaces to inspect. If no narrowing phrase is given, migration scans all governed project-instance surfaces, detects shape differences between current instance files and the current framework contracts (§2), and writes all differences that have a rule-derived target per §3. Surfaces without a rule-derived target are reported unchanged per §9. Migration does not require intermediate user confirmation before writing rule-derived targets — the narrowing phrase is a scope controller, not an execution gate.
 
 Requests that do not explicitly invoke `spec_flow_migrate` must not receive migration write authority by implication.
 They must be handled by the route selected for that request, or stopped when the route is unclear.

@@ -38,7 +38,7 @@ decision: pass  # always 'pass' for advancing check and verify evidence. The --o
 blocking_summary: none|{summary}
 coverage_summary: {summary}
 allow_next: true|false
-next_command: unit_verify|unit_promote|none
+next_command: unit_verify|unit_promote|unit_impl|none
 truth_layer_ref: candidate
 truth_file_ref: docs/specs/units/candidate/c_unit_{unit}.md
 truth_version_ref: c_unit_{unit}@x.y.z
@@ -68,10 +68,17 @@ snapshot supports advancing to. The `allow_next` field controls whether
 The semantics differ by gate type:
 
 1. **Check results (`gate: unit_check`):** `next_command` records the
-   advancement target (`unit_verify`). When `command close` writes the pass
-   transition (with `allow_next: true`), the status row advances to
-   `unit_verify`. The recorded value is the **post-transition** target;
-   the `allow_next` field determines whether advancement is permitted.
+   advancement target. When entering the implementation phase (standard
+   `pass` and `needs_human_decision → proceed` outcomes), `next_command`
+   MUST be `unit_impl`. When `command close` writes the pass transition
+   (with `allow_next: true`), the status row advances to the multi-value
+   set `unit_check, unit_impl, unit_verify` — entering the implementation
+   phase. The recorded value is the **post-transition** target; the
+   `allow_next` field determines whether advancement is permitted.
+
+   When the outcome directly advances to `unit_verify` (direct-advance
+   path without entering the implementation phase), `next_command: unit_verify`
+   remains valid.
 
    > **Note:** The previous convention stored the pre-transition gate
    > (`unit_check`) as `next_command`. That convention makes check-result
@@ -236,7 +243,7 @@ freshness_review_input_refs: freshness_text_drift_reuse;{request_file};{durable_
 freshness_review_findings: none
 ```
 
-`acceptance_behavior_fingerprint` is the normalized SHA-256 of the full formal acceptance item behavior fields (see Section 6a for the complete serialization format): `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `pass_condition`, `not_runnable_yet`, and `not_runnable_yet_reason`. When a recommended field (such as `target`) is absent from an acceptance item, the normalized hash MUST use an empty string as its value.
+`acceptance_behavior_fingerprint` is the normalized SHA-256 of the full formal acceptance item behavior fields (see Section 7a for the complete serialization format): `id`, `target`, `verification_surface`, `implementation_surface`, `verification_method`, `pass_condition`, `not_runnable_yet`, and `not_runnable_yet_reason`. When a recommended field (such as `target`) is absent from an acceptance item, the normalized hash MUST use an empty string as its value.
 Advancing check (when run), verify, and stable verify evidence must record it.
 Evidence without this field uses the old snapshot schema and is not current valid advancing evidence until it is migrated or recreated.
 It must not be treated as accepted `text_drift` reuse.
@@ -244,7 +251,41 @@ It must not be treated as accepted `text_drift` reuse.
 Tooling classifies freshness impact mechanically. It does not judge whether a changed paragraph preserves business meaning.
 Text drift evidence reuse requires the freshness receipt above and independent reviewer confirmation using reviewer pack `freshness_text_drift_reuse`.
 
-## 3. Dependency Snapshots
+## 3. Implementation Phase Contract
+
+The implementation phase is the state between `unit_check pass` (or `needs_human_decision → proceed`) and `unit_verify` (or `unit_impl spec_issue` → `unit_check`). During this phase, `Next Command` contains the multi-value set `unit_check, unit_impl, unit_verify`. When `specflowctl` is unavailable and a `command close` outcome enters the implementation phase, the close writer MUST also derive and append a `constraints:` prefix to `Notes` per `framework/core/status.md` §Constraints Derivation.
+
+### 3.1 Process Evidence During Implementation
+
+The implementation phase does not produce new gate-level process evidence files. Existing process files from the preceding `unit_check` round remain valid:
+
+- `docs/specs/_check_result/unit/{unit}.md` — the check result from the last `unit_check pass`. It remains valid as the recorded check evidence for the current implementation round. If spec changes trigger a re-validation (`unit_check` during implementation), a new check result replaces the previous one.
+- `docs/specs/_check_work/unit/{unit}.md` — optional progress checklist from `unit_check`. May be updated or replaced.
+- No `_verify_result`, `_stable_verify_result`, or `_plans/active/*.md` file is expected to exist during the implementation phase. If one exists, it belongs to a prior lifecycle round and is stale.
+
+### 3.2 Constraints Snapshot
+
+The `constraints:` prefix on `Notes` is the sole enforcement mechanism for write permissions during the implementation phase. It is not stored as a separate process snapshot file. The tooling reads it from `_status.md` Notes at runtime:
+
+- On entry to the implementation phase (via `command close`): `constraints:` is derived from `repository_mapping.md` Object Registry `implementation_paths` and appended to `Notes`.
+- On checkpoint resume: the existing `constraints:` prefix is preserved — the tooling does not re-derive it.
+- On `unit_impl impl_complete`: `constraints:` is removed from `Notes` as part of the close transition to `unit_verify`.
+- On `unit_impl spec_issue`: `constraints:` is removed from `Notes` as part of the close transition to `unit_check`.
+- On recovery (`truth_layer` or `gate_layer` fallback): `constraints:` is removed; `appendix_exc:` entries are preserved (see `framework/core/status.md` §Constraints Derivation and §Appendix Coverage Exclusions).
+
+### 3.3 Multi-Value Next Command in Process Fingerprints
+
+When computing fingerprints for process files during the implementation phase, `Next Command` is stored as its full multi-value string (`unit_check, unit_impl, unit_verify`). Tooling fingerprint normalization treats the comma-separated string as a single atomic value — reordering or reformatting the values invalidates the fingerprint.
+
+### 3.4 Evidence Freshness During Implementation
+
+During the implementation phase, evidence freshness follows these rules:
+
+1. The check result (`_check_result`) is considered fresh if the candidate spec fingerprint matches `truth_fingerprint` in the check result. If the spec was modified after the last `unit_check pass`, the check result is stale — the executor MUST run `unit_check:{unit}` for re-validation before proceeding to `unit_verify:{unit}`.
+2. No independent evaluation receipt is required during the implementation phase unless `unit_check` re-validation produces a new check result requiring a `unit_check_pass` reviewer pack.
+3. The `constraints:` prefix derivation does not affect evidence freshness — it is a mechanical write-permission annotation, not a process evidence file.
+
+## 4. Dependency Snapshots
 
 Candidate check (when run) and verify process files must record the current package snapshots:
 
@@ -268,7 +309,7 @@ Stable global rules are included even when the unit has `rule_refs: none`.
 
 Tooling must validate these snapshots against current truth.
 
-## 4. Fallback Layers
+## 5. Fallback Layers
 
 Process validation failure maps to these layers:
 
@@ -289,7 +330,7 @@ The legal fallback commands are:
 
 See `framework/lifecycle/recovery.md` for the cleanup procedure after fallback classification.
 
-## 5. Rejection
+## 6. Rejection
 
 Tooling must reject:
 
@@ -300,11 +341,11 @@ Tooling must reject:
 
 It must not convert those files into unit evidence.
 
-## 6. Fingerprint Contract
+## 7. Fingerprint Contract
 
 The process fingerprint algorithm is fixed:
 
-1. normalize file text according to Section 7
+1. normalize file text according to Section 8
 2. encode the normalized text as UTF-8
 3. compute `sha256`
 4. render the result as lowercase hexadecimal
@@ -319,10 +360,10 @@ This same fingerprint contract applies to:
 6. `stable_truth_fingerprint`
 7. `acceptance_behavior_fingerprint`
 
-### 6a. acceptance_behavior_fingerprint Serialization
+### 7a. acceptance_behavior_fingerprint Serialization
 
 The acceptance behavior fingerprint is computed by serializing the sorted
-acceptance item set and then applying the Section 7 normalization + SHA-256
+acceptance item set and then applying the Section 8 normalization + SHA-256
 algorithm.
 
 Serialization steps:
@@ -340,7 +381,7 @@ Serialization steps:
 3. If a recommended field (such as `target`) is absent from an acceptance
    item, the serialized value is an empty string (e.g., `target=`).
 4. Join all item lines with `\n`.
-5. Apply Section 7 normalization to the joined text: convert CRLF to LF,
+5. Apply Section 8 normalization to the joined text: convert CRLF to LF,
    ensure exactly one trailing LF.
 6. Compute SHA-256 of the UTF-8 encoded normalized text.
 7. Render the hash as lowercase hexadecimal.
@@ -349,7 +390,7 @@ The `specflowctl snapshot compute-fingerprint --field acceptance_behavior_finger
 command prints this fingerprint plus serialization metadata for diagnostic
 comparison.
 
-## 7. Text Normalization Rules
+## 8. Text Normalization Rules
 
 Before hashing a markdown truth file, normalize it in this exact order:
 
@@ -366,7 +407,7 @@ The fingerprint represents the actual normalized file text.
 
 If the text changes, the fingerprint changes.
 
-## 8. Stable Promotion Summary
+## 9. Stable Promotion Summary
 
 `docs/specs/_verify_result/stable/unit/{unit}.md` stores the minimal acceptance coverage summary preserved by `unit_promote`.
 
@@ -387,7 +428,7 @@ Each stable promotion summary must record:
 4. `stable_truth_version_ref`
    - `s_unit_{unit}@<version>`
 5. `stable_truth_fingerprint`
-   - the Section 6 fingerprint of `stable_truth_file_ref`
+   - the Section 7 fingerprint of `stable_truth_file_ref`
 6. `promotion_verify_result_ref`
    - the current-round verify result file consumed before cleanup
 7. `acceptance_item_set`
@@ -399,7 +440,7 @@ Each stable promotion summary must record:
 
 Later stable verification may read this summary as background, but it must collect current evidence before making a new stable-alignment claim.
 
-## 9. Stable Verify Result
+## 10. Stable Verify Result
 
 `docs/specs/_stable_verify_result/unit/{unit}.md` stores current evidence produced by `unit_stable_verify`.
 
@@ -435,7 +476,7 @@ Items marked `not_runnable_yet: yes` in stable truth must use evidence status `n
 
 `aligned`, `controlled_repair_required`, `controlled_change_required`, and `truth_text_change_required` may advance to `unit_fork` only when the matching stable verify result validates and the command close outcome matches the stored `decision`.
 
-## 10. Unit Check Checklist
+## 11. Unit Check Checklist
 
 `docs/specs/_check_work/unit/{unit}.md` records resumable `unit_check` progress for one target candidate.
 
@@ -453,7 +494,7 @@ It is not:
 4. a substitute for `_check_result/unit/{unit}.md`
 5. a place for tooling to decide semantic pass, finding severity, or final conclusion
 
-### 10.1 Required Run Fields
+### 11.1 Required Run Fields
 
 The checklist run table must record:
 
@@ -475,9 +516,9 @@ blocked_reason: none|{reason}
 resume_next_step: {step}
 ```
 
-`truth_fingerprint` uses the same normalized SHA-256 contract as Section 6.
+`truth_fingerprint` uses the same normalized SHA-256 contract as Section 7.
 
-### 10.2 Checklist Fields
+### 11.2 Checklist Fields
 
 The checklist table uses these fields:
 
@@ -503,7 +544,7 @@ Allowed `status` values:
 `clear`, `incomplete`, and `blocked` are semantic statuses set by the executor.
 Tooling may create `pending`, preserve executor-set statuses, and mechanically mark `clear` items as `stale` when inputs change.
 
-### 10.3 Baseline Checklist
+### 11.3 Baseline Checklist
 
 1. `goal_and_responsibility`
 2. `dependency_truth_surface`
@@ -514,7 +555,7 @@ Tooling may create `pending`, preserve executor-set statuses, and mechanically m
 7. `acceptance_and_testability`
 8. `implementation_handoff`
 
-### 10.4 Freshness And Stale Rules
+### 11.4 Freshness And Stale Rules
 
 Before a `unit_check` pass gate is written, the checklist file may be refreshed and validated if the executor used it during the round.
 The pass gate still depends only on `_check_result` validation.
@@ -529,7 +570,7 @@ Refresh rules:
 
 If truth drift, binding drift, fallback cleanup, unit fork, unit promote, rule change or rule release, project-instance migration, or a `fix_required` / `blocked` `unit_check` outcome invalidates the target candidate's prior check state, the old `_check_work` file must be deleted or marked unusable by the owning cleanup path.
 
-### 10.5 Tooling Boundary
+### 11.5 Tooling Boundary
 
 `specflowctl process check-work-*` commands may:
 
@@ -548,9 +589,27 @@ They must not:
 5. decide whether the candidate is good enough to pass
 6. write `_check_result/unit/{unit}.md`
 
-## 11. Process Validation
+## 12. Process Validation
 
-When a command writes or consumes a supported unit process file, it must rebuild the current snapshot from current bound truth and compare it against the stored fields exactly.
+Process validation has two tiers with different blocking semantics:
+
+**Tier 1 — Routing Validation (close-time, blocks lifecycle advancement):**
+Validated by `command close` before updating `_status.md`. Checks:
+- The process file exists and is non-empty
+- Routing fields (`gate`, `decision`, `allow_next`, `next_command`) match expected values for the current command and outcome
+- Independent evaluation receipt is present when required for advancing outcomes
+
+Tier 1 failures block state advancement. Use `--force` only for genuine edge cases.
+
+**Tier 2 — Full Schema Validation (audit-time, does not block):**
+Run separately via `snapshot validate-process`. Rebuilds the current snapshot from bound truth and compares all stored fields including fingerprints, snapshots, and receipt fields. Warnings are reported but do not block lifecycle advancement.
+
+When both tiers are run, the combined result is:
+- Tier 1 pass → state can advance
+- Tier 2 pass → evidence is fully valid
+- Tier 2 fail → evidence has schema issues (reported as warnings); fix by re-running process evidence or running `snapshot validate-process --fix`
+
+When a command writes or consumes a supported unit process file, it should rebuild the current snapshot from current bound truth and compare it against the stored fields exactly.
 
 At minimum, validation must rebuild:
 
@@ -600,13 +659,13 @@ When only normalized text drift exists and freshness reuse is accepted, the proc
 When freshness reuse is missing or rejected, validation reports `freshness_layer` without recommending lifecycle fallback.
 When behavior, acceptance, dependency, or schema drift is found, existing fallback and recovery rules still apply.
 
-## 12. Snapshot Maintenance
+## 13. Snapshot Maintenance
 
 `specflowctl snapshot --fix` and `specflowctl snapshot --update-check-result` are maintenance commands that modify process state outside the standard lifecycle command flow. They must not be used to bypass lifecycle gates.
 
 A stable appendix may also declare `status: exempt` in its frontmatter to opt out of candidate coverage requirements (see `framework/spec_writing_guide.md` §Appendix Files). This is the preferred mechanism for new exclusions because it is intrinsic to the artifact and is respected in all validation paths, including `unit_fork`.
 
-### 12.1 Appendix Coverage Fix
+### 13.1 Appendix Coverage Fix
 
 `specflowctl snapshot --repo-root <root> --object-type unit --object <unit> --fix` auto-detects missing candidate appendix files for a candidate-layer unit and adds the corresponding stable appendix file references as `appendix_exc:` entries to the unit's Notes in `_status.md` (see `framework/core/status.md` §Appendix Coverage Exclusions).
 
@@ -621,13 +680,13 @@ The command does NOT modify any spec files or process evidence. It only updates 
 
 `unit_fork` commands must not use `--fix` as a substitute for creating the required candidate appendix files during fork. If a stable appendix genuinely should not be forked, set its frontmatter `status: exempt` before the fork operation.
 
-### 12.2 Check-Result Fingerprint Update
+### 13.2 Check-Result Fingerprint Update
 
 `specflowctl snapshot --repo-root <root> --object-type unit --object <unit> --update-check-result` updates the `truth_fingerprint`, `acceptance_behavior_fingerprint`, `truth_version_ref`, and `truth_file_ref` fields in the existing `_check_result` file to match the current spec.
 
 This is applicable only when:
 1. The spec was amended without changing acceptance behavior (text-only drift per `framework/core/freshness.md`).
-2. The amendment happened during the implementation phase (`Next Command=unit_verify`, `Notes=pending_impl`).
+2. The amendment happened during the implementation phase (`Next Command` contains `unit_impl`).
 3. After the fingerprint update, an independent freshness review is completed using pack `freshness_text_drift_reuse` (see `framework/core/freshness.md` §Evidence Reuse).
 4. The freshness receipt is written to the `_check_result` file.
 

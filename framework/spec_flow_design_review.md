@@ -131,7 +131,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `<template-root>/docs/specs/_verify_result/README.md`
    - `<template-root>/docs/specs/_stable_verify_result/README.md`
    - `<template-root>/docs/specs/_independent_evaluation/README.md`
-3. `human_operability_and_extension`
+3. `executor_operability_and_extension`
    - `operations/entry_routing.md` (Entry File Registration section)
    - `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` for `installed_project`
    - `example.md` for `source_repo`
@@ -142,7 +142,7 @@ For the default design-baseline review, the execution-local `review_plan` must u
 The review must judge whether entry files and Context Cards deliver self-contained instruction packs to the executor, whether cross-file links are used only for non-essential context, and whether each lifecycle phase can be executed without context inherited from prior phases.
 
 Onboarding and evidence appendix design must be judged as part of `design_foundation`.
-The review must judge whether that design solves the real historical-project and partially implemented project onboarding problem, avoids creating an unnecessary lifecycle state, keeps evidence separate from implementation truth, and makes the current position and next action understandable to normal users and executors.
+The review must judge whether that design solves the real historical-project and partially implemented project onboarding problem, avoids creating an unnecessary lifecycle state, keeps evidence separate from implementation truth, and makes the current position and next action understandable to the executor (LLM agent as primary lifecycle executor).
 
 Project-instance migration design must be judged as part of `design_foundation`.
 The review must judge whether `spec_flow_migrate` solves the real framework-update migration problem without turning old-format compatibility into a permanent second path, without hiding business-truth decisions inside mechanical updates, and without adding a heavier workflow than project-instance format migration requires.
@@ -152,8 +152,8 @@ The review must judge whether `spec_flow_migrate` solves the real framework-upda
 For the default design-baseline review, the minimum cross-block convergence checks are:
 
 1. `design_foundation <-> lifecycle_and_gate_design`
-2. `design_foundation <-> human_operability_and_extension`
-3. `lifecycle_and_gate_design <-> human_operability_and_extension`
+2. `design_foundation <-> executor_operability_and_extension`
+3. `lifecycle_and_gate_design <-> executor_operability_and_extension`
 
 The review must include all three design blocks before any `pass` or `pass-with-optimization` conclusion.
 If one of those block boundaries is not reviewed, the review must stop without a passing conclusion.
@@ -258,14 +258,14 @@ The required baseline slices are:
    - tracks the fixed `design_foundation` review block from Section 3
 2. `lifecycle_and_gate_design`
    - tracks the fixed `lifecycle_and_gate_design` review block from Section 3
-3. `human_operability_and_extension`
-   - tracks the fixed `human_operability_and_extension` review block from Section 3
+3. `executor_operability_and_extension`
+   - tracks the fixed `executor_operability_and_extension` review block from Section 3
 4. `foundation_to_lifecycle_convergence`
    - tracks `design_foundation <-> lifecycle_and_gate_design`
 5. `foundation_to_operability_convergence`
-   - tracks `design_foundation <-> human_operability_and_extension`
+   - tracks `design_foundation <-> executor_operability_and_extension`
 6. `lifecycle_to_operability_convergence`
-   - tracks `lifecycle_and_gate_design <-> human_operability_and_extension`
+   - tracks `lifecycle_and_gate_design <-> executor_operability_and_extension`
 7. `scoring_and_pass_gate`
    - tracks whether the hard-blocker review, eight question scores, group averages, weighted score, and pass gate were completed by the executor
 
@@ -320,7 +320,7 @@ If any in-scope file cannot be assigned to a review block, do not issue `pass`.
 3. build the `review_plan`
 4. review each fixed block for:
    - design necessity
-   - human operability
+   - executor operability
    - gate usefulness
    - extension-surface cost
 5. run the `entry_control_chain_check` from Section 7.1 before judging hard blockers or scoring Questions 6, 7, or 8
@@ -379,6 +379,7 @@ For Question 6, the score basis must explicitly evaluate:
 a. whether Agent-facing instruction files (Context Cards, entry files) are self-contained or require chain-linked reading across multiple files to obtain essential phase instructions
 b. whether each phase delivers a self-contained instruction pack or assumes the executor inherits context and decisions from prior phases
 c. whether the design expects the executor to hold governance context across lifecycle phases versus reloading it fresh per phase
+d. whether each document that declares optional or conditional inputs defines the default behavior for every branch, or whether any branch is left undefined — forcing the executor to invent a fallback, stop and ask, or silently guess
 
 For Question 7, the score basis must explicitly evaluate:
 
@@ -423,7 +424,7 @@ The `entry_control_chain_check result` must be one of:
 The check must judge these abstract capabilities:
 
 1. `startup_entry_control`
-   - human entry documents act as the first control point for governed work; the opening rule makes the next action clear before background explanation
+   - human entry documents act as the first control point for governed work; the opening rule makes the next action clear, either directly or after necessary context that the action rule depends on for interpretability
 2. `first_owner_selection`
    - before any lifecycle action, implementation proposal, repair plan, reconciliation plan, or repository mutation, human entry documents tell the executor how to choose the first owning file
 3. `owner_only_continuation`
@@ -626,7 +627,7 @@ The fixed score groups are:
    - Questions `1`, `2`, and `3`
 2. `control_effectiveness`
    - Questions `4` and `5`
-3. `human_operability`
+3. `executor_operability`
    - Questions `6`, `7`, and `8`
 
 Every review must compute and report the arithmetic average for each group.
@@ -661,14 +662,14 @@ Any one of them forces the final conclusion to `blocked`, regardless of the weig
 2. boundary or lifecycle design leaves repair ownership or repair landing point unstable
 3. any key gate has Question `4 = 0`
 4. the mechanism clearly rewards surface compliance over real risk reduction
-5. a normal user cannot rely on the official documents alone to know current position, next step, and why that step is next
+5. the primary lifecycle executor (LLM agent) cannot rely on the official documents alone to know current position, next step, and why that step is next
 6. the mechanism forces simple changes through a full heavy path when the work does not change durable truth, object ownership, lifecycle advancement, implementation permission, rule truth, system truth, or end-to-end verification obligations, and the design provides no smaller legal path
 7. the mechanism forces simple changes through full pre-action rule consumption when a smaller `action_before_hard_rule`, `on_demand_rule_lookup`, or `post_action_check` path would preserve the same control, and the design provides no smaller legal path
 8. a triggered `routine_work_path_check` proves that routine implementation-only work cannot be handled with lightweight pre-action prohibitions plus automatic impact checks, and the design provides no smaller legal path
 9. the human entry design lets an executor propose implementation-side work or mutate implementation-side repository files before selecting the first owner and proving implementation permission
 10. the human entry design does not require stop-and-reroute when execution discovers possible truth, ownership, rule, lifecycle, boundary, acceptance, or implementation-permission impact
-11. the human entry design makes an executor believe every code edit must change spec documents or enter the full lifecycle, and the design provides no smaller implementation-only legal path
-12. the human entry design opens with background explanation, concept teaching, or a classification table instead of a first-owner action rule, so the executor cannot immediately know which owner to read first
+11. the human entry design instructs the executor to treat every code edit as a spec change or full-lifecycle entry, and the design provides no smaller implementation-only legal path
+12. the human entry design opens with background explanation, concept teaching, or a classification table without a first-owner action rule, so the executor cannot immediately know which owner to read first
 13. the human entry design lets an executor replace the recorded next command, active Context Card, or operation owner with an ad hoc reconciliation, audit, alignment, gap-review, or similarly named intermediate flow
 14. the human entry design routes requests that already involve formal truth creation or change, no formal truth, owner decisions, lifecycle decisions, chat-claimed lifecycle state, skipped status or owner checks, contract-like fields, downstream compatibility, repository mapping, guidance, or custom intermediate flows through implementation-change as the default first owner
 15. the human entry design forbids read-only inspection or verification needed to classify a request and provides no smaller legal diagnostic path before mutation

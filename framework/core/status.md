@@ -13,7 +13,7 @@ The status table uses this header:
 - `Object Type` must be `unit`.
 - `Stable` and `Candidate` columns accept `yes` or `no`.
 - `Active Layer` is `stable` or `candidate`.
-- `Next Command` is the only legal lifecycle command to run next.
+- `Next Command` is the legal lifecycle command(s) to run next. A single value for most lifecycle states; a comma-separated set (`unit_check, unit_impl, unit_verify`) during the implementation phase (`[implementation]`).
 
 Legal (Stable, Candidate, Active Layer) combinations:
 | Stable | Candidate | Active Layer | Meaning |
@@ -32,9 +32,10 @@ The active unit lifecycle commands are:
 2. `unit_new`
 3. `unit_fork`
 4. `unit_check`
-5. `unit_verify`
-6. `unit_promote`
-7. `unit_stable_verify`
+5. `unit_impl`
+6. `unit_verify`
+7. `unit_promote`
+8. `unit_stable_verify`
 
 For units with Active Layer=stable, `unit_stable_verify` may also be selected as a check command regardless of the recorded Next Command, provided that Next Command is not `unit_promote`. This is the "allows" semantics referenced by the unit_stable_verify Context Card precondition.
 
@@ -52,7 +53,7 @@ The deterministic tooling entry is `specflowctl validate write --path <path> --p
 constraints:phase=<phase> deny=<glob> [allow=<glob>];phase=<phase> deny=<glob> [allow=<glob>]
 ```
 
-- `phase`: current lifecycle phase name (e.g. `pending_impl`, `unit_verify`)
+- `phase`: current lifecycle phase name (e.g. `implementation`, `unit_verify`)
 - `deny`: file glob pattern that the executor must not write in this phase
 - `allow`: file glob pattern that the executor may write in this phase (optional)
 
@@ -62,7 +63,7 @@ When both `deny` and `allow` are specified within the same group, `allow` patter
 Example (single-line Notes value):
 
 ```text
-constraints:phase=pending_impl deny=docs/specs/** allow=src/my_feature/**
+constraints:phase=implementation deny=docs/specs/** allow=src/my_feature/**
 ```
 
 ### YAML-like Block Format
@@ -72,7 +73,7 @@ When the Notes field contains multiple lines, the constraints may use a YAML-lik
 ```text
 constraints:allowed_writes:
   - pattern: "src/my_feature/**"
-    phases: [pending_impl, unit_verify]
+    phases: [implementation, unit_verify]
   - pattern: "tests/my_feature/**"
 forbidden_writes:
   - pattern: "docs/specs/units/stable/**"
@@ -84,13 +85,11 @@ forbidden_writes:
 - Each `- pattern:` specifies a glob pattern
 - `phases:` is an optional list of lifecycle phases the rule applies to; when absent, the rule applies to all phases
 
-## Notes Field — Lifecycle Phase
+## Notes Field — Implementation Phase
 
-The `Notes` field may carry a lifecycle phase value to indicate the unit's current activity within a `Next Command`:
+The implementation phase does not use a Notes keyword. Instead, it is indicated by the `Next Command` field: during the implementation phase, `Next Command` contains `unit_impl` as one of its comma-separated values (e.g. `unit_check, unit_impl, unit_verify`). The `[implementation]` label in the lifecycle flow diagram marks this phase. See `framework/lifecycle/overview.md` for the lifecycle flow and `framework/lifecycle/unit_impl.md` for the trigger command and close outcomes.
 
-- `pending_impl` — unit_check has passed; implementation has not started or is in progress. `Next Command` is `unit_verify`.
-
-**Constraints requirement for `pending_impl`:** When `Notes` contains `pending_impl`, a `constraints:` prefix MUST be set to define write-permission boundaries for the implementation phase. Without constraints, implementation-phase agents have unbounded write access, which risks unintended modifications to spec files, status, or other governed content. The tooling enforces this requirement mechanically: when no constraints are defined for the `pending_impl` phase, `specflowctl validate write` denies writes to the following paths by default:
+**Constraints requirement during the implementation phase:** When `Next Command` contains `unit_impl`, a `constraints:` prefix MUST be set on `Notes` to define write-permission boundaries. Without constraints, implementation-phase agents have unbounded write access, which risks unintended modifications to spec files, status, or other governed content. The tooling enforces this requirement mechanically: when no constraints are defined during the implementation phase, `specflowctl validate write` denies writes to the following paths by default:
 - `docs/specs/units/stable/**`
 - `docs/specs/_check_result/**`
 - `docs/specs/_check_work/**`
@@ -103,25 +102,25 @@ The `Notes` field may carry a lifecycle phase value to indicate the unit's curre
 
 Paths NOT denied by default include `docs/specs/units/candidate/**` (candidate spec and appendix files) and `docs/specs/repository_mapping.md` — these are intentionally writable during implementation to support path registration and candidate appendix maintenance.
 
-Lifecycle reviews and governance audits MUST flag the absence of constraints on `pending_impl` units as a governance gap.
+Lifecycle reviews and governance audits MUST flag the absence of constraints during the implementation phase as a governance gap.
 
 ### Constraints Derivation
 
-When a command close caller sets `Notes=pending_impl`, it MUST also set a `constraints:` prefix. The constraints values are derived from the unit's `implementation_paths` in `docs/specs/repository_mapping.md` Object Registry.
+When a command close sets `Next Command` to include `unit_impl` (entering the implementation phase), it MUST also set a `constraints:` prefix. The constraints values are derived from the unit's `implementation_paths` in `docs/specs/repository_mapping.md` Object Registry.
 
 The command close caller MUST:
 1. Read the target unit's `implementation_paths` from the repository_mapping.md Object Registry.
 2. Build the constraint string using this template:
    ```
-   constraints:phase=pending_impl deny=docs/specs/units/stable/** deny=docs/specs/_check_result/** deny=docs/specs/_check_work/** deny=docs/specs/_verify_result/** deny=docs/specs/_stable_verify_result/** deny=docs/specs/_independent_evaluation/** deny=docs/specs/_plans/** deny=docs/specs/_status.md deny=framework/** allow=<implementation_paths> allow=docs/specs/repository_mapping.md allow=docs/specs/units/candidate/**
+   constraints:phase=implementation deny=docs/specs/units/stable/** deny=docs/specs/_check_result/** deny=docs/specs/_check_work/** deny=docs/specs/_verify_result/** deny=docs/specs/_stable_verify_result/** deny=docs/specs/_independent_evaluation/** deny=docs/specs/_plans/** deny=docs/specs/_status.md deny=framework/** allow=<implementation_paths> allow=docs/specs/repository_mapping.md allow=docs/specs/units/candidate/**
    ```
-3. Include the constraint string in the `--notes` parameter of the `specflowctl command close` invocation.
+3. The tooling appends the constraint string to `Notes` automatically during `command close`. For tooling-unavailable manual close, include it in the Notes update.
 
 When `implementation_paths` is empty, use the default tooling behavior (`deny=docs/specs/units/stable/** deny=docs/specs/_check_result/** deny=docs/specs/_check_work/** deny=docs/specs/_verify_result/** deny=docs/specs/_stable_verify_result/** deny=docs/specs/_independent_evaluation/** deny=docs/specs/_plans/** deny=docs/specs/_status.md deny=framework/** allow=docs/specs/repository_mapping.md allow=docs/specs/units/candidate/**`) — `allow=docs/specs/repository_mapping.md` and `allow=docs/specs/units/candidate/**` are always included to support implementation path registration per `framework/lifecycle/unit_impl.md` Allowed Writes and candidate-file fixes during implementation, even when no implementation paths are registered yet. With no implementation-path allow patterns, the executor may write to implementation directories (`src/**`, `tests/**`) per the Context Card's Allowed Writes; registering implementation paths in `repository_mapping.md` is the agent's first implementation action.
 
-After recovery (truth_layer or gate_layer fallback) that transitions the unit to `unit_check`, the tooling removes the `constraints:` prefix and `pending_impl` keyword from `Notes` while preserving other content such as `appendix_exc:`. The next `unit_check` pass outcome writer MUST re-derive constraints from current `repository_mapping.md` when setting `Notes=pending_impl`.
+After recovery (truth_layer or gate_layer fallback) that transitions the unit to `unit_check`, the tooling removes the `constraints:` prefix from `Notes` while preserving other content such as `appendix_exc:`. The next `unit_check` pass outcome writer MUST re-derive constraints from current `repository_mapping.md` when entering the implementation phase again.
 
-This value is used by tooling for (a) re-validation directive state classification (differentiating `StateCandidatePending` from `StateCandidateVerify`) and (b) `unit_check` re-validation gate enforcement during the implementation phase. It is not a routing token for `Next Command` selection.
+The multi-value Next Command is used by tooling for (a) `ContainsNextCommand(NextCommand, "unit_impl")` to differentiate `StateCandidatePending` from `StateCandidateVerify` and (b) `unit_check` re-validation gate enforcement during the implementation phase.
 
 ### Appendix Coverage Exclusions
 
@@ -138,7 +137,7 @@ appendix_exc:docs/specs/units/stable/appendix/s_unit_x_a.md|s_unit_x_b.md
 When combined with other Notes values, separate groups with `;`. Combined example:
 
 ```text
-pending_impl; appendix_exc:docs/specs/units/stable/appendix/s_unit_x_a.md
+appendix_exc:docs/specs/units/stable/appendix/s_unit_x_a.md
 ```
 
 The tooling loads exclusions during snapshot validation and appendix coverage rendering. `specflowctl snapshot --fix` auto-detects missing candidate appendices and adds the corresponding stable references as exclusions to the unit's Notes (see `framework/process_snapshot_contract.md` §Snapshot Maintenance).

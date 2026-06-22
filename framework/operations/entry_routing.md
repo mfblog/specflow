@@ -1,6 +1,7 @@
 # Entry Routing
 
 > **Agent note:** This file is the internal routing source for `specflowctl next`.
+> **SKIP this file if `specflowctl next` gives a sufficient directive.**
 > In normal operation, locate and run the specflowctl binary with the full path
 > (`./specflow/tooling/bin/specflowctl-<os>-<arch> next --unit <name>`) to receive
 > your current directive. Read this file only when `specflowctl next --explain`
@@ -70,9 +71,9 @@ unit_stable_verify:{unit}
 ```
 
 `unit_init:{unit}`, `unit_new:{unit}`, and `unit_fork:{unit}` share one Context Card at `framework/lifecycle/unit_init_new_fork.md`.
-`unit_impl:{unit}` is a trigger command. It does not change lifecycle state or advance `_status.md`. Valid only when `Next Command=unit_verify`. Routes to `framework/lifecycle/unit_impl.md`.
+`unit_impl:{unit}` enters the implementation phase. It is valid when `Next Command` contains `unit_impl`. Routes to `framework/lifecycle/unit_impl.md`.
 
-`unit_plan:{unit}` is a removed command. If the user explicitly requests `unit_plan:{unit}`, report that it is no longer a SpecFlow-governed command and that the agent handles planning internally. Route to `unit_impl:{unit}` trigger when `Next Command=unit_verify`. For all other `Next Command` values, route to the Context Card matching the current `Next Command`, reporting that planning is handled internally during the implementation phase.
+`unit_plan:{unit}` is a removed command. If the user explicitly requests `unit_plan:{unit}`, report that it is no longer a SpecFlow-governed command and that the agent handles planning internally. Route to `unit_impl:{unit}` when `Next Command` contains `unit_impl`. For all other `Next Command` values, route to the Context Card matching the current `Next Command`, reporting that planning is handled internally during the implementation phase.
 
 After a lifecycle Context Card is selected, read the following sections in order:
 
@@ -123,13 +124,13 @@ Do not guess ownership from directory shape alone.
 For unit lifecycle requests, select one existing command from the table below based on the current `_status.md` state. Detailed rules follow the table.
 
 | Current State | Selected Command | Notes |
-|---|---|---|
+|---|---|---|---|
 | No unit row exists | `unit_init:{unit}` or `unit_new:{unit}` | Read Onboarding Source Decision first |
-| Formal row exists | Command matching `Next Command` | `Next Command` is the only legal command |
-| `Next Command=unit_verify`, first entry | `unit_impl:{unit}` → then `unit_verify:{unit}` | Trigger command when no implementation files exist (first entry into verify phase) |
+| Formal row exists, single value | Command matching `Next Command` | `Next Command` is the only legal command |
+| `Next Command` contains `unit_impl` (implementation phase) | Route by user intent: `unit_impl:{unit}` to continue impl, `unit_check:{unit}` for re-validation, `unit_verify:{unit}` when impl_complete | Multi-value set: `unit_check, unit_impl, unit_verify`. See rule 2a |
 | Stable layer, `Next Command=unit_fork`, changes formal unit truth | `unit_fork:{unit}` | Determine `candidate_intent` via `candidate_intent.md` |
 | Stable layer, check alignment | `unit_stable_verify:{unit}` | `Next Command` must not be `unit_promote` |
-| Candidate truth repair | `unit_check:{unit}` | Standard: `Next Command=unit_check`. Re-validation: `Next Command=unit_verify` with `Notes=pending_impl` and spec changed |
+| Candidate truth repair | `unit_check:{unit}` | Standard: `Next Command=unit_check`. Re-validation: `Next Command` contains `unit_check` and `unit_impl` (multi-value implementation set), spec modified since last check |
 | Implementation-only | Read Implementation Classification section | Routes based on classification result |
 
 > **Procedural surface note:** The natural-language route selection is deterministic when based on the state table above. The table row matching the current `_status.md` state selects the command; the rules below define how the state table rows map to routing decisions. When `specflowctl` is available, run `./specflow/tooling/bin/specflowctl-<os>-<arch> next --unit <name>` instead — it produces a deterministic directive from current `_status.md` state. The rules below are the fallback path and the policy source; they are not the preferred execution entry.
@@ -145,11 +146,16 @@ For a natural-language unit lifecycle request, start from the state table row wh
 
    After selecting `unit_new`, determine `source_basis` from the Onboarding Source Decision table. If the user's request does not specify the source of behavior truth, stop and ask the user which `source_basis` applies (`new_design`, `existing_implementation`, `mixed`, or `replacement`). Do not proceed without a confirmed `source_basis`.
 
-2. **State-table row: "Formal row exists, Command matching `Next Command`."** Matches when `_status.md` has a row for the target unit with a non-empty `Next Command` value. The `Next Command` cell value is the only legal lifecycle command. Select the matching existing command form and Context Card only when the requested work can legally be performed at that recorded next step. If the user asks for a later lifecycle result, report the recorded prerequisite step instead of skipping it.
-   - **unit_impl trigger note:** When `Next Command=unit_verify` and the executor is entering this phase for the first time (no implementation files exist), run `unit_impl:{unit}` as a trigger command before proceeding to `unit_verify:{unit}`.
+2. **State-table row: "Formal row exists, single value."** Matches when `_status.md` has a row for the target unit with a single-value `Next Command` (no commas). That single value is the only legal lifecycle command. Select the matching existing command form and Context Card only when the requested work can legally be performed at that recorded next step. If the user asks for a later lifecycle result, report the recorded prerequisite step instead of skipping it.
+
+2a. **State-table row: "`Next Command` contains `unit_impl` (implementation phase)."** Matches when `_status.md` has a row for the target unit whose `Next Command` is the multi-value set `unit_check, unit_impl, unit_verify` (indicating the implementation phase). Select the command based on user intent:
+    - To continue or resume implementation: select `unit_impl:{unit}`.
+    - To re-validate candidate truth after spec changes: select `unit_check:{unit}` (re-validation per `unit_check.md` Pre-Execution Self-Check item 1).
+    - To verify implementation when implementation is complete: the executor must first run `unit_impl:{unit}` with outcome `impl_complete`, then `unit_verify:{unit}`.
+    - If intent is unclear from the request: report the three available continuations (`unit_impl`, `unit_check` for re-validation, `unit_verify` after closing impl) and ask the user to clarify.
 3. **State-table row: "Stable layer, `Next Command=unit_fork`, changes formal unit truth."** Matches when `_status.md` row for the target unit shows `Active Layer=stable` AND `Next Command=unit_fork` AND the Implementation Classification (see Implementation Classification section) is not `implementation_only`. Select `unit_fork:{unit}`; determine `candidate_intent` through `framework/candidate_intent.md` and any current valid stable-verify constraint required by the entry Context Card.
 4. **State-table row: "Stable layer, check alignment."** Matches when `_status.md` row shows `Active Layer=stable` AND `Next Command` is not `unit_promote` AND the request is to verify whether the current implementation conforms to stable truth (inspection, comparison, or diagnostic intent). Select `unit_stable_verify:{unit}` (see `framework/core/status.md` "Valid Next Commands" for `unit_stable_verify` check-command semantics).
-5. **State-table row: "Candidate truth repair."** Matches when `_status.md` row shows `Next Command=unit_check` (standard entry), OR `Next Command=unit_verify` with `Notes=pending_impl` and candidate spec modified after the last check pass (re-validation entry, per `unit_check.md` Pre-Execution Self-Check item 1). Select `unit_check:{unit}`; the repair must stay inside the card's allowed writes. Other candidate progression selects only the Context Card matching the recorded `Next Command`.
+5. **State-table row: "Candidate truth repair."** Matches when `_status.md` row shows `Next Command=unit_check` (standard entry), OR `Next Command` contains `unit_check` and `unit_impl` (multi-value implementation set, per `unit_check.md` Pre-Execution Self-Check item 1 — re-validation entry). Select `unit_check:{unit}`; the repair must stay inside the card's allowed writes. Other candidate progression selects only the Context Card matching the recorded `Next Command`.
 6. **State-table row: "Implementation-only."** Matches when the request is limited to implementation-side edits (code, tests, configs, prompts, fixtures) and no behavior/boundary/acceptance/rule/ownership truth change is involved. Route through the Implementation Classification section first. It enters a lifecycle Context Card only when that section requires an existing lifecycle command as the next legal step.
 
 After selecting a lifecycle command from natural language, read `framework/lifecycle/overview.md` and that command's matching Context Card. Do not invent a command alias, enter a generic unit lifecycle without an active Context Card, or ask the user to choose an internal command name.
@@ -239,9 +245,9 @@ A request touches formal behavior truth when it changes: unit goal/boundary, ext
 2. No formal truth + undecided source → resolve onboarding source first through Onboarding Source Decision
 3. Existing stable + behavior change → when `Next Command=unit_fork`, route to `unit_fork:{unit}` with `candidate_intent=change`; otherwise route to the Context Card matching the current `Next Command`. Determine `candidate_intent` through `framework/candidate_intent.md` before invoking the fork.
 4. Existing stable + large repair → when `Next Command=unit_fork`, route to `unit_fork:{unit}` with `candidate_intent=repair`; otherwise route to the Context Card matching the current `Next Command`. Determine `candidate_intent` through `framework/candidate_intent.md` before invoking the fork.
-5. Existing candidate + truth change → write candidate truth first, then route to `unit_check:{unit}`. This enters the re-validation path — confirm the unit's `Next Command` is `unit_check` (standard entry) or `unit_verify` with `Notes=pending_impl` and spec fingerprint changed (re-validation per `unit_check.md` Pre-Execution Self-Check item 1).
+5. Existing candidate + truth change → write candidate truth first, then route to `unit_check:{unit}`. This enters the re-validation path — confirm the unit's `Next Command` is `unit_check` (standard entry) or contains `unit_check` and `unit_impl` (implementation phase, spec fingerprint changed, per `unit_check.md` Pre-Execution Self-Check item 1).
 6. Small `implementation_only` on stable → continue within stable truth. Do not automatically route to `unit_stable_verify:{unit}` — that requires explicit user intent or evidence misalignment first. When evidence misalignment is detected, route to `unit_stable_verify:{unit}` only after confirming the `Active Layer` is `stable`.
-7. `implementation_only` on candidate → route to `unit_impl:{unit}` when `Next Command=unit_verify` allows
+7. `implementation_only` on candidate → route to `unit_impl:{unit}` when `Next Command` contains `unit_impl` (implementation phase). When `Next Command=unit_verify` (post-impl_complete), implementation is already complete; route to the Context Card matching the current `Next Command`.
 
 ## Onboarding Source Decision
 

@@ -972,9 +972,9 @@ func specFlowDesignReviewBaselineDefinitions() []sliceDefinition {
 			},
 		},
 		{
-			ID:             "human_operability_and_extension",
+			ID:             "executor_operability_and_extension",
 			SliceType:      "local",
-			ReviewQuestion: "Can normal users and executors operate the entry surfaces without excessive burden.",
+			ReviewQuestion: "Can the executor (LLM agent as primary lifecycle executor) operate the entry surfaces without excessive burden.",
 			InputFiles: func(scope reviewscope.SpecFlowScope) []string {
 				return union([]string{
 				}, scope.ProjectEntryFiles, scope.SourceRepoEntryExampleFiles, scope.TemplateEntryFiles)
@@ -990,23 +990,23 @@ func specFlowDesignReviewBaselineDefinitions() []sliceDefinition {
 		{
 			ID:             "foundation_to_operability_convergence",
 			SliceType:      "cross_convergence",
-			ReviewQuestion: "Do design foundation rules and human operability surfaces converge without hidden context.",
-			DependsOn:      []string{"design_foundation", "human_operability_and_extension"},
-			InputFiles:     designDependencyFiles("design_foundation", "human_operability_and_extension"),
+			ReviewQuestion: "Do design foundation rules and executor operability surfaces converge without hidden context.",
+			DependsOn:      []string{"design_foundation", "executor_operability_and_extension"},
+			InputFiles:     designDependencyFiles("design_foundation", "executor_operability_and_extension"),
 		},
 		{
 			ID:             "lifecycle_to_operability_convergence",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Do lifecycle gates and human entry surfaces keep routine work proportionate.",
-			DependsOn:      []string{"lifecycle_and_gate_design", "human_operability_and_extension"},
-			InputFiles:     designDependencyFiles("lifecycle_and_gate_design", "human_operability_and_extension"),
+			DependsOn:      []string{"lifecycle_and_gate_design", "executor_operability_and_extension"},
+			InputFiles:     designDependencyFiles("lifecycle_and_gate_design", "executor_operability_and_extension"),
 		},
 		{
 			ID:             "scoring_and_pass_gate",
 			SliceType:      "cross_convergence",
 			ReviewQuestion: "Did the executor complete hard-blocker review, eight question scores, group averages, weighted score, and pass gate judgment.",
-			DependsOn:      []string{"design_foundation", "lifecycle_and_gate_design", "human_operability_and_extension"},
-			InputFiles:     designDependencyFiles("design_foundation", "lifecycle_and_gate_design", "human_operability_and_extension"),
+			DependsOn:      []string{"design_foundation", "lifecycle_and_gate_design", "executor_operability_and_extension"},
+			InputFiles:     designDependencyFiles("design_foundation", "lifecycle_and_gate_design", "executor_operability_and_extension"),
 		},
 	}
 }

@@ -44,7 +44,7 @@ func runValidate(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		path := fs.String("path", "", "file path to validate")
-		phase := fs.String("phase", "", "current lifecycle phase (e.g. pending_impl, unit_verify)")
+		phase := fs.String("phase", "", "current lifecycle phase (e.g. implementation, unit_verify)")
 		unit := fs.String("unit", "", "unit name (optional, restricts constraint check to one unit)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
@@ -116,7 +116,7 @@ func validateWrite(repoRoot, path, phase, unit string) validateResult {
 			continue
 		}
 		// Skip rows without constraints in notes (constraints: may appear as
-		// a ;-separated segment within Notes, e.g. "pending_impl; constraints:phase=...")
+		// a ;-separated segment within Notes, e.g. "appendix_exc:...; constraints:phase=...")
 		notes := strings.TrimSpace(status.Notes)
 		constraintsSegment := extractConstraintsSegment(notes)
 		if constraintsSegment == "" {
@@ -160,9 +160,9 @@ func validateWrite(repoRoot, path, phase, unit string) validateResult {
 	}
 
 	// No constraints found - apply defaults based on phase
-	if phase == "pending_impl" || phase == "unit_impl" {
+	if phase == "implementation" {
 		// During implementation phase, deny spec/status/framework writes by default
-		for _, denyPattern := range filevalidation.DefaultPendingImplDenyPatterns() {
+		for _, denyPattern := range filevalidation.DefaultImplementationDenyPatterns() {
 			if filevalidation.MatchGlobPattern(denyPattern, path) {
 				return validateResult{
 					Allowed: false,

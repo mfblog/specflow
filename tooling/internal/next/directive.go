@@ -171,7 +171,7 @@ func candidateCheckDirective(unitName, specPath, mappingPath string) (*Directive
 		Reads: []string{specPath, mappingPath},
 		Completion: "specflowctl command close --command unit_check --object-type unit --object %s --outcome <pass|blocked|fix_required> --apply",
 		Outcomes: []Outcome{
-			{Value: "pass", Desc: "spec is clear, proceed to implementation"},
+			{Value: "pass", Desc: "spec is clear, proceed to implementation (Next Command = unit_check, unit_impl, unit_verify)"},
 			{Value: "blocked", Desc: "spec has issues, list them"},
 			{Value: "fix_required", Desc: "spec needs fixes, re-check after fixing"},
 		},
@@ -191,8 +191,12 @@ func candidatePendingDirective(unitName, specPath string) (*Directive, error) {
 			mappingPath,
 		},
 		Blocked: "docs/specs/units/stable/**, docs/specs/_check_result/**, docs/specs/_check_work/**, docs/specs/_verify_result/**, docs/specs/_stable_verify_result/**, docs/specs/_independent_evaluation/**, docs/specs/_plans/**, docs/specs/_status.md, framework/**",
-		Completion: "No close command for implementation. Run `specflowctl next --unit %s` when done.",
-		Outcomes:  nil,
+		Completion: "specflowctl command close --command unit_impl --object-type unit --object %s --outcome <impl_complete|spec_issue|checkpoint>",
+		Outcomes: []Outcome{
+			{Value: "impl_complete", Desc: "implementation complete, proceed to verification"},
+			{Value: "spec_issue", Desc: "spec needs revision during implementation, re-check"},
+			{Value: "checkpoint", Desc: "save progress, continue implementation later"},
+		},
 	}, nil
 }
 

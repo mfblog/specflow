@@ -328,7 +328,7 @@ func TestInitCreatesValidDesignReviewRunState(t *testing.T) {
 	for _, sliceID := range []string{
 		"design_foundation",
 		"lifecycle_and_gate_design",
-		"human_operability_and_extension",
+		"executor_operability_and_extension",
 		"foundation_to_lifecycle_convergence",
 		"foundation_to_operability_convergence",
 		"lifecycle_to_operability_convergence",

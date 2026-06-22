@@ -1418,7 +1418,7 @@ button.registry-path:hover {
   color: #15803d;
 }
 
-/* pending_impl alternative command (unit_check re-validation) */
+/* implementation-phase alternative command (unit_check re-validation) */
 .todo-copy-command.pending-impl-alt,
 .review-next-command.pending-impl-alt {
   border-color: #fde68a;

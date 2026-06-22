@@ -143,11 +143,17 @@ Before stopping, locate and run the specflowctl binary (see Section 1) with `nex
 **Lifecycle Flow**
 
 ```text
-unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promote
+unit_new / unit_fork → unit_check → [implementation] → unit_verify → unit_promote
+                                       │  ── unit_check (re-validation)
+                                       │  ── unit_impl (continue)
+                                       └── unit_verify (complete)
 ```
 
 - `unit_check` is a required pre-verify quality gate.
-- `unit_impl:{unit}` is a trigger command — provides implementation context without changing lifecycle state. Implementation proceeds during the `unit_verify` phase.
+- `[implementation]` is a special phase that does not correspond to a single `Next Command` value — during this phase the `Next Command` field contains `unit_check, unit_impl, unit_verify`, indicating three possible continuations. Use `unit_impl:{unit}` to enter the implementation phase.
+  - Choose `unit_check` when spec issues are discovered during implementation (re-validation).
+  - Choose `unit_impl` when continuing implementation after a checkpoint.
+  - Choose `unit_verify` when implementation is complete.
 - Lifecycle state advances only through legal `command close`. Do not manually edit `_status.md`.
 - For stable alignment checks: `unit_stable_verify`.
 
@@ -161,7 +167,7 @@ unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promo
 | `unit_new:{unit}` | Brand new → first candidate truth |
 | `unit_fork:{unit}` | Stable truth → candidate change round |
 | `unit_check:{unit}` | Candidate truth quality check |
-| `unit_impl:{unit}` | Implementation context trigger command |
+| `unit_impl:{unit}` | Enter the implementation phase (trigger command; three close outcomes: `impl_complete`, `spec_issue`, `checkpoint`) |
 | `unit_verify:{unit}` | Verify implementation vs candidate truth |
 | `unit_promote:{unit}` | Candidate truth → stable truth |
 | `unit_stable_verify:{unit}` | Check implementation vs stable truth |

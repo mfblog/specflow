@@ -85,22 +85,14 @@ func Close(opts Options) (Result, error) {
 		if !present {
 			return Result{}, fmt.Errorf("%s %q is not registered in docs/specs/_status.md", opts.ObjectType, opts.Object)
 		}
-		if before.NextCommand != opts.Command {
-			// unit_check may close when Next Command is unit_verify — this
-			// handles spec re-validation during the implementation phase
-			// (Next Command=unit_verify, Notes=pending_impl). The state
-			// transition table already handles all outcomes correctly:
-			//   pass         → unit_verify (no net change)
-			//   fix_required → unit_check  (valid regression)
-			if opts.Command == "unit_check" && before.NextCommand == "unit_verify" {
-				if !strings.Contains(before.Notes, "pending_impl") {
-					return Result{}, fmt.Errorf("unit_check re-validation requires Notes=pending_impl: actual Notes=%q", before.Notes)
-				}
-			} else if opts.Command == "unit_stable_verify" && before.ActiveLayer == "stable" && before.NextCommand != "unit_promote" {
+		// Check that the closing command is in the Next Command set.
+		// Next Command may contain multiple comma-separated values during
+		// the implementation phase (e.g. "unit_check, unit_impl, unit_verify").
+		if !statusfile.ContainsNextCommand(before.NextCommand, opts.Command) {
+			if opts.Command == "unit_stable_verify" && before.ActiveLayer == "stable" && before.NextCommand != "unit_promote" {
 				// unit_stable_verify may close for stable units regardless of
-				// Next Command, per status.md "Valid Next Commands" allows
+				// single Next Command value, per status.md "Valid Next Commands" allows
 				// semantics — provided Next Command is not unit_promote.
-				// The transition table handles all outcomes correctly.
 			} else {
 				return Result{}, fmt.Errorf("status next command mismatch: actual=%s expected=%s", before.NextCommand, opts.Command)
 			}
@@ -477,15 +469,20 @@ func determineTransition(opts Options, before statusfile.ObjectStatus, present b
 		trans.CleanupKind = cleanupSuccess
 		trans.CleanupMode = "unit_fork"
 	case "unit_check":
-		trans = nextOnlyTransition(opts, current, map[string]string{
-			"pass":         "unit_verify",
-			"blocked":      "unit_check",
-			"fix_required": "unit_check",
-			"checkpoint":   "unit_check",
-		})
 		if opts.Outcome == "pass" {
+			after := current
+			after.NextCommand = "unit_check, unit_impl, unit_verify"
+			trans = transition{Status: after, CleanupKind: cleanupNone}
 			trans.ValidationProcess = "check"
+		} else {
+			trans = nextOnlyTransition(opts, current, map[string]string{
+				"blocked":      "unit_check",
+				"fix_required": "unit_check",
+				"checkpoint":   "unit_check",
+			})
 		}
+	case "unit_impl":
+		trans = unitImplTransition(opts, current)
 	case "unit_verify":
 		trans = unitVerifyTransition(opts, current)
 	case "unit_promote":
@@ -527,6 +524,9 @@ func nextOnlyTransition(opts Options, current statusfile.ObjectStatus, outcomes 
 	}
 	after := current
 	after.NextCommand = next
+	if statusfile.ContainsNextCommand(current.NextCommand, "unit_impl") && !statusfile.ContainsNextCommand(next, "unit_impl") {
+		after.Notes = statusfile.RemoveNotesPrefix(after.Notes, "constraints:")
+	}
 	return transition{Status: after, CleanupKind: cleanupNone}
 }
 
@@ -552,6 +552,21 @@ func unitStableVerifyTransition(opts Options, current statusfile.ObjectStatus) t
 }
 
 
+
+func unitImplTransition(opts Options, current statusfile.ObjectStatus) transition {
+	switch opts.Outcome {
+	case "impl_complete":
+		return withNext(current, "unit_verify")
+	case "spec_issue":
+		return fallback(current, "unit_check", "gate_layer", "spec_issue")
+	case "checkpoint":
+		after := current
+		after.NextCommand = "unit_check, unit_impl, unit_verify"
+		return transition{Status: after, CleanupKind: cleanupNone}
+	default:
+		return transition{}
+	}
+}
 
 func unitVerifyTransition(opts Options, current statusfile.ObjectStatus) transition {
 	switch opts.Outcome {
@@ -612,13 +627,11 @@ func promoteInvalidTransition(opts Options, current statusfile.ObjectStatus, obj
 func withNext(current statusfile.ObjectStatus, next string) transition {
 	after := current
 	after.NextCommand = next
-	// Remove the pending_impl keyword and constraints prefix when transitioning
-	// to unit_check. Constraints are stale outside pending_impl and MUST be
-	// re-derived on the next pending_impl entry. Other Notes content (e.g.
-	// appendix_exc) must be preserved — exclusions remain valid for the current
-	// candidate round.
-	if next == "unit_check" {
-		after.Notes = statusfile.RemoveNotesKeyword(after.Notes, "pending_impl")
+	if statusfile.ContainsNextCommand(current.NextCommand, "unit_impl") && !statusfile.ContainsNextCommand(next, "unit_impl") {
+		// Transitioning away from the implementation phase.
+		// Constraints are stale and must be removed; they will be re-derived
+		// on the next implementation-phase entry. Other Notes content (e.g.
+		// appendix_exc) must be preserved.
 		after.Notes = statusfile.RemoveNotesPrefix(after.Notes, "constraints:")
 	}
 	return transition{Status: after, CleanupKind: cleanupNone}
@@ -639,12 +652,9 @@ func withNextAndValidationDecision(current statusfile.ObjectStatus, next, proces
 func fallback(current statusfile.ObjectStatus, next, layer, reason string) transition {
 	after := current
 	after.NextCommand = next
-	// Remove the pending_impl keyword and constraints prefix during fallback.
-	// Constraints are stale outside pending_impl and MUST be re-derived on the
-	// next pending_impl entry. Other Notes content (e.g. appendix_exc) must be
-	// preserved — exclusions remain valid for the current candidate round.
-	if next == "unit_check" {
-		after.Notes = statusfile.RemoveNotesKeyword(after.Notes, "pending_impl")
+	if statusfile.ContainsNextCommand(current.NextCommand, "unit_impl") {
+		// Transitioning away from the implementation phase during fallback.
+		// Constraints are stale and must be removed.
 		after.Notes = statusfile.RemoveNotesPrefix(after.Notes, "constraints:")
 	}
 	return transition{Status: after, CleanupKind: cleanupFallback, FailureLayer: layer, Reason: reason}
@@ -751,7 +761,7 @@ func validateNoUnresolvedForceEntries(notes string) error {
 		return nil
 	}
 	// Parse Notes segments separated by `;`. Each segment may be a keyword
-	// (e.g., "pending_impl"), a prefix group (e.g., "constraints:...",
+	// (e.g., "appendix_exc:..."), a prefix group (e.g., "constraints:...",
 	// "appendix_exc:..."), or a forced entry (e.g., "forced:validation:reason").
 	segments := strings.Split(notes, ";")
 	for _, seg := range segments {
@@ -847,22 +857,25 @@ func recordForceNote(notes, checkType, detail, forceReason string) string {
 const constraintsPrefix = "constraints:"
 
 func enrichNotesWithConstraints(repoRoot, unit string, trans *transition) error {
-	notes := trans.Status.Notes
-	if notes == "" || !strings.Contains(notes, "pending_impl") {
+	// Derive constraints when transitioning into the implementation phase
+	// (Next Command contains unit_impl).
+	if !statusfile.ContainsNextCommand(trans.Status.NextCommand, "unit_impl") {
 		return nil
 	}
-	if strings.Contains(notes, constraintsPrefix) {
+	if strings.Contains(trans.Status.Notes, constraintsPrefix) {
 		return nil
 	}
 
 	paths, err := repositorymapping.GetImplementationPaths(repoRoot, unit)
 	if err != nil {
-		return fmt.Errorf("cannot derive constraints: %w", err)
+		// Unit not yet registered in Object Registry — generate constraints
+		// without per-path allow entries. The deny patterns are still valid.
+		paths = nil
 	}
 
 	var sb strings.Builder
 	sb.WriteString(constraintsPrefix)
-	sb.WriteString("phase=pending_impl")
+	sb.WriteString("phase=implementation")
 	sb.WriteString(" deny=docs/specs/units/stable/**")
 	sb.WriteString(" deny=docs/specs/_check_result/**")
 	sb.WriteString(" deny=docs/specs/_check_work/**")
@@ -879,6 +892,6 @@ func enrichNotesWithConstraints(repoRoot, unit string, trans *transition) error 
 	sb.WriteString(" allow=docs/specs/repository_mapping.md")
 	sb.WriteString(" allow=docs/specs/units/candidate/**")
 
-	trans.Status.Notes = notes + "; " + sb.String()
+	trans.Status.Notes = trans.Status.Notes + "; " + sb.String()
 	return nil
 }

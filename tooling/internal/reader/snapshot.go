@@ -724,6 +724,15 @@ func humanLayer(layer string) string {
 }
 
 func humanNextCommand(command string) string {
+	// Handle multi-value Next Command (e.g. "unit_check, unit_impl, unit_verify")
+	if strings.Contains(command, ",") {
+		parts := statusfile.ParseNextCommands(command)
+		labels := make([]string, 0, len(parts))
+		for _, p := range parts {
+			labels = append(labels, humanNextCommand(p))
+		}
+		return strings.Join(labels, ", ")
+	}
 	switch command {
 	case "unit_init":
 		return "初始化能力真相"
@@ -735,6 +744,8 @@ func humanNextCommand(command string) string {
 		return "检查实现是否仍符合已确认设计"
 	case "unit_check":
 		return "检查设计是否足够支撑开发"
+	case "unit_impl":
+		return "开发阶段"
 	case "unit_verify":
 		return "验证实现是否符合设计"
 	case "unit_promote":
@@ -745,7 +756,7 @@ func humanNextCommand(command string) string {
 }
 
 func nextIntentFromStatus(status statusfile.ObjectStatus) string {
-	if status.ObjectType != "unit" || status.NextCommand != "unit_fork" {
+	if status.ObjectType != "unit" || !statusfile.ContainsNextCommand(status.NextCommand, "unit_fork") {
 		return ""
 	}
 	match := candidateIntentPattern.FindStringSubmatch(strings.ToLower(status.Notes))

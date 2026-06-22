@@ -35,8 +35,41 @@ var allowedNextCommands = map[string]bool{
 	"unit_fork":          true,
 	"unit_stable_verify": true,
 	"unit_check":         true,
+	"unit_impl":          true,
 	"unit_verify":        true,
 	"unit_promote":       true,
+}
+
+// ParseNextCommands splits a Next Command value (which may be comma-separated)
+// into individual command strings.
+func ParseNextCommands(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	if len(result) == 0 {
+		return []string{raw}
+	}
+	return result
+}
+
+// ContainsNextCommand checks whether a set of next commands (comma-separated)
+// contains a specific command.
+func ContainsNextCommand(nextCommand string, target string) bool {
+	for _, cmd := range ParseNextCommands(nextCommand) {
+		if strings.EqualFold(cmd, target) {
+			return true
+		}
+	}
+	return false
 }
 
 var allowedObjectTypes = map[string]bool{
@@ -124,7 +157,7 @@ const appendixExclusionPrefix = "appendix_exc:"
 //
 // Multiple exclusions are appended with ";". Example Notes value:
 //
-//	pending_impl; appendix_exc:docs/specs/units/stable/appendix/s_unit_x_a.md|s_unit_x_b.md
+//	appendix_exc:docs/specs/units/stable/appendix/s_unit_x_a.md|s_unit_x_b.md
 func ParseAppendixExclusions(notes string) []string {
 	notes = strings.TrimSpace(notes)
 	if notes == "" {
@@ -170,36 +203,11 @@ func AddAppendixExclusion(notes, stableFileRef string) string {
 	return sb.String()
 }
 
-// RemoveNotesKeyword removes a specific keyword (like "pending_impl") from a Notes string
-// while preserving all other content. This is used instead of clearing all Notes when
-// transitioning between lifecycle states.
-// Matching is case-insensitive — currently only lowercase "pending_impl" is used
-// across the codebase, but the comparison tolerates any casing.
-func RemoveNotesKeyword(notes, keyword string) string {
-	notes = strings.TrimSpace(notes)
-	if notes == "" {
-		return ""
-	}
-	parts := strings.Split(notes, ";")
-	var kept []string
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		if strings.TrimSpace(strings.ToLower(part)) == strings.TrimSpace(strings.ToLower(keyword)) {
-			continue
-		}
-		kept = append(kept, part)
-	}
-	return strings.Join(kept, "; ")
-}
-
 // RemoveNotesPrefix removes all parts from a Notes string that start with the
 // given prefix (after trimming space). This is used to remove stale constraint
 // prefixes during lifecycle transitions.
-// Example: RemoveNotesPrefix("pending_impl; constraints:phase=...; appendix_exc:x", "constraints:")
-// returns "pending_impl; appendix_exc:x"
+// Example: RemoveNotesPrefix("notes; constraints:phase=...; appendix_exc:x", "constraints:")
+// returns "notes; appendix_exc:x"
 func RemoveNotesPrefix(notes, prefix string) string {
 	notes = strings.TrimSpace(notes)
 	if notes == "" {
@@ -428,8 +436,14 @@ func validateObjectStatus(status ObjectStatus) error {
 	if strings.TrimSpace(status.Object) == "" {
 		return fmt.Errorf("object is required")
 	}
-	if !allowedNextCommands[strings.TrimSpace(status.NextCommand)] {
-		return fmt.Errorf("next command %q is not a supported status value", status.NextCommand)
+	cmds := ParseNextCommands(status.NextCommand)
+	if len(cmds) == 0 {
+		return fmt.Errorf("next command is required")
+	}
+	for _, cmd := range cmds {
+		if !allowedNextCommands[cmd] {
+			return fmt.Errorf("next command %q is not a supported status value", cmd)
+		}
 	}
 
 	// Validate cross-field (Stable, Candidate, Active Layer) combinations.

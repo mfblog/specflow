@@ -14,7 +14,7 @@ const (
 	StateStableIdle       UnitState = "stable_idle"
 	StateStableVerify     UnitState = "stable_verify"
 	StateCandidateCheck   UnitState = "candidate_check"
-	StateCandidatePending UnitState = "candidate_pending_impl"
+	StateCandidatePending UnitState = "candidate_impl"
 	StateCandidateVerify  UnitState = "candidate_verify"
 	StateCandidatePromote UnitState = "candidate_promote"
 	StateUnregistered     UnitState = "unregistered"
@@ -29,7 +29,6 @@ func ClassifyUnitState(s statusfile.ObjectStatus) UnitState {
 	candidate := strings.TrimSpace(strings.ToLower(s.Candidate))
 	active := strings.TrimSpace(strings.ToLower(s.ActiveLayer))
 	next := strings.TrimSpace(strings.ToLower(s.NextCommand))
-	notes := strings.TrimSpace(strings.ToLower(s.Notes))
 
 	switch {
 	case stable == "yes" && candidate == "no" && active == "stable" && next == "unit_fork":
@@ -42,7 +41,7 @@ func ClassifyUnitState(s statusfile.ObjectStatus) UnitState {
 		return StateCandidateCheck
 	case candidate == "yes" && next == "unit_check":
 		return StateCandidateCheck
-	case candidate == "yes" && next == "unit_verify" && strings.Contains(notes, "pending_impl"):
+	case candidate == "yes" && statusfile.ContainsNextCommand(s.NextCommand, "unit_impl"):
 		return StateCandidatePending
 	case candidate == "yes" && next == "unit_verify":
 		return StateCandidateVerify

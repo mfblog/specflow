@@ -426,7 +426,7 @@ Execution rules:
 2. with `--apply`, the command writes `_status.md` and executes the success or fallback cleanup required by the fixed transition table
 3. the current `_status.md` `Next Command` must equal `--command`, except for:
    - creation commands that register a missing object row
-   - `unit_check` when `Next Command` is `unit_verify` and `Notes` contains `pending_impl` (re-validation during implementation phase)
+   - `unit_check` when `Next Command` contains `unit_impl` (re-validation during implementation phase)
    - `unit_stable_verify` when `Active Layer` is `stable` and `Next Command` is not `unit_promote` (per status.md allows semantics — stable verify is a check command, not a progression command)
 4. pass outcomes for check, plan, and verify gates validate the required process file before status progression
 5. controlled stable-verify outcomes require the matching `--candidate-intent`

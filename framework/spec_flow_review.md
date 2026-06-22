@@ -843,7 +843,7 @@ For each file in `input_files`:
 1. file paths must be repository-relative paths rendered with `/`
 2. file paths must be sorted lexicographically before hashing
 3. read the full file text
-4. normalize the text using `process_snapshot_contract.md` Section 7
+4. normalize the text using `process_snapshot_contract.md` Section 8
 5. compute `sha256` of the normalized UTF-8 bytes
 6. render the file hash as lowercase hexadecimal
 
@@ -1077,5 +1077,5 @@ This flow does not:
 2. replace `impact_sync`
 3. review business truth by default
 4. treat recently touched governance files as the whole scope unless the user explicitly narrows it that way
-5. prove design adequacy, human operability, or design worthiness
+5. prove design adequacy, executor operability, or design worthiness
 6. replace the default `scoped_review` front door in `framework/governance/review.md`

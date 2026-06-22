@@ -97,7 +97,7 @@ func TestNextCommandStateCandidateCheck(t *testing.T) {
 
 func TestNextCommandStateCandidatePending(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
-	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_verify` | `pending_impl` |\n")
+	writeCLIStatusRows(t, repoRoot, "| `unit` | `demo` | `yes` | `yes` | `candidate` | `unit_check, unit_impl, unit_verify` | |\n")
 	writeCLITestFile(t, filepath.Join(repoRoot, "docs/specs/units/candidate/c_unit_demo.md"), "# Demo\n")
 
 	var stdout bytes.Buffer
@@ -115,7 +115,7 @@ func TestNextCommandStateCandidatePending(t *testing.T) {
 		"  - src/**",
 		"  - tests/**",
 		"BLOCKED: docs/specs/units/stable/**, docs/specs/_check_result/**, docs/specs/_check_work/**, docs/specs/_verify_result/**, docs/specs/_stable_verify_result/**, docs/specs/_independent_evaluation/**, docs/specs/_plans/**, docs/specs/_status.md, framework/**",
-		"specflowctl next --unit demo",
+		"specflowctl command close --command unit_impl",
 	}
 	for _, s := range expected {
 		if !strings.Contains(output, s) {

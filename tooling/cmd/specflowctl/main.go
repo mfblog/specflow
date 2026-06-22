@@ -60,6 +60,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return runDoctor(args[1:], stdout, stderr)
 	case "build-release":
 		return runBuildRelease(args[1:], stdout, stderr)
+	case "check-report":
+		return runCheckReport(args[1:], stdout, stderr)
 	case "command":
 		return runCommand(args[1:], stdout, stderr)
 	case "entry":
@@ -279,6 +281,52 @@ func writeCommandCloseStatus(stdout io.Writer, status statusfile.ObjectStatus) {
 	fmt.Fprintf(stdout, "  active_layer: %s\n", noneIfEmpty(status.ActiveLayer))
 	fmt.Fprintf(stdout, "  next_command: %s\n", noneIfEmpty(status.NextCommand))
 	fmt.Fprintf(stdout, "  notes: %s\n", noneIfEmpty(status.Notes))
+}
+
+func runCheckReport(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		writeCheckReportUsage(stderr)
+		return errors.New("missing check-report subcommand")
+	}
+
+	switch args[0] {
+	case "init":
+		fs := flag.NewFlagSet("check-report init", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		repoRoot := fs.String("repo-root", ".", "repository root")
+		unit := fs.String("unit", "", "unit name")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*unit) == "" {
+			writeCheckReportUsage(stderr)
+			return errors.New("unit is required")
+		}
+		return checkReportInit(mustAbs(*repoRoot), *unit, stdout, stderr)
+	default:
+		writeCheckReportUsage(stderr)
+		return fmt.Errorf("unknown check-report subcommand %q", args[0])
+	}
+}
+
+func checkReportInit(repoRoot, unit string, stdout, stderr io.Writer) error {
+	// This command reads the candidate spec, computes fingerprints, and
+	// generates the _check_result skeleton with all deterministic fields
+	// pre-filled.
+	//
+	// TODO: implement full skeleton generation per framework/operations/migration.md
+	//       plan — read c_unit_{unit}.md, compute fingerprints, resolve
+	//       snapshots, write _check_result/unit/{unit}.md
+	unitDir := filepath.Join(repoRoot, "docs/specs/units/candidate")
+	specPath := filepath.Join(unitDir, fmt.Sprintf("c_unit_%s.md", unit))
+	if _, err := os.Stat(specPath); err != nil {
+		return fmt.Errorf("candidate spec not found at %s: %w", specPath, err)
+	}
+	fmt.Fprintf(stdout, "Check report skeleton for unit %q:\n", unit)
+	fmt.Fprintf(stdout, "  Spec: %s\n", specPath)
+	fmt.Fprintf(stdout, "  Not yet implemented: run specflowctl snapshot compute-fingerprint and write _check_result manually.\n")
+	fmt.Fprintf(stdout, "  See framework/lifecycle/unit_check.md for the required fields.\n")
+	return nil
 }
 
 func runInit(args []string, stdout, stderr io.Writer) error {
@@ -1536,6 +1584,11 @@ func writeRuleUsage(w io.Writer) {
 func writeUnitUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl unit check-appendix-coverage --object OBJECT [--object-type unit] [--repo-root PATH]")
+}
+
+func writeCheckReportUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  specflowctl check-report init --unit UNIT [--repo-root PATH]")
 }
 
 func writeSnapshotUsage(w io.Writer) {

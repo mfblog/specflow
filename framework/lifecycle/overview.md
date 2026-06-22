@@ -5,13 +5,15 @@
 When formal unit governance is needed, the standard lifecycle is:
 
 ```
-unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promote
+unit_new / unit_fork → unit_check → [implementation] → unit_verify → unit_promote
+                                       │  ── unit_check (re-validation)
+                                       │  ── unit_impl (continue)
+                                       └── unit_verify (complete)
 ```
 
 - `unit_check` is a quality gate that validates whether candidate truth is clear enough. It can be
-  re-run as a spec re-validation when candidate truth changes during the implementation phase
-  (`Next Command=unit_verify`, `Notes=pending_impl`) — see `unit_check.md` precondition exception.
-- `unit_impl` is a non-command phase between check and verify — the agent implements the candidate truth
+  re-run as a spec re-validation when candidate truth changes during the implementation phase — see `unit_check.md` precondition exception.
+- `[implementation]` is a special phase — during this phase `Next Command` contains `unit_check, unit_impl, unit_verify`, indicating three possible continuations. See `unit_impl.md` for the trigger command and close outcomes.
 - `unit_verify` verifies whether the implementation satisfies the candidate truth
 - `unit_promote` promotes the verified candidate truth to stable truth
 
@@ -45,7 +47,10 @@ Both exact command matching (`command:{unit}`) and natural language are supporte
 | `unit_promote:{unit}` | Candidate truth → stable truth |
 | `unit_stable_verify:{unit}` | Check implementation vs stable truth |
 
-`unit_impl:{unit}` is a trigger command — it provides implementation context to the agent without changing lifecycle state. It is valid when `Next Command=unit_verify`. After implementation, run `unit_verify:{unit}`. There is no `command close` for `unit_impl`. If spec issues are found during implementation, fix the spec and re-run `unit_check:{unit}` for re-validation (see `unit_check.md`).
+`unit_impl:{unit}` is a trigger command that enters the implementation phase. It is valid when `Next Command` contains `unit_impl`. There are three `command close` outcomes:
+- `impl_complete` → Next Command becomes `unit_verify`. Then run `unit_verify:{unit}`.
+- `spec_issue` → Next Command becomes `unit_check`. Fix the spec and re-run `unit_check:{unit}` for re-validation.
+- `checkpoint` → Next Command stays as `unit_check, unit_impl, unit_verify`. Resume later with `unit_impl:{unit}`.
 
 ## Command Execution Rules
 
@@ -94,7 +99,8 @@ reliably reproduce.
    receipt is present in the process evidence, satisfying the gate rule requirements from
    `framework/core/independent_evaluation.md` Section Gate Rules.
 4. The `_status.md` file is readable and the target unit's current `Next Command` matches
-   the command being closed.
+   the command being closed (when `Next Command` contains multiple values, the command
+   being closed must be one of them).
 
 If any pre-condition fails: STOP, report what is missing, and do not perform the manual close.
 
@@ -108,6 +114,7 @@ and `Notes` for the target unit:
   description (e.g., `command close sets Next Command=unit_verify`).
 - If the outcome table shows `keeps` instead of `sets`, the `Next Command` does not change.
 - If the outcome table shows an explicit `Notes` value, include it; otherwise clear `Notes`.
+- When `Next Command` contains multiple comma-separated values (e.g. `unit_check, unit_impl, unit_verify`), the command being closed must be one of them.
 
 Manual state mapping (command → outcome → `_status.md` update):
 
@@ -116,10 +123,11 @@ Manual state mapping (command → outcome → `_status.md` update):
 | unit_init | stable_created | yes | no | stable | unit_fork | (cleared) |
 | unit_new | candidate_created | no | yes | candidate | unit_check | (cleared) |
 | unit_fork | candidate_created | yes | yes | candidate | unit_check | (cleared) |
-| unit_check | pass | — | — | — | unit_verify | caller-supplied |
+| unit_check | pass | — | — | — | unit_check, unit_impl, unit_verify | (derive constraints) |
+| unit_check | needs_human_decision (proceed) | — | — | — | unit_check, unit_impl, unit_verify | (derive constraints) |
 | unit_check | checkpoint | — | — | — | unit_check | (cleared) |
-| unit_check | fix_required | — | — | — | unit_check | (cleared) |
-| unit_check | blocked | — | — | — | unit_check | (cleared) |
+| unit_check | fix_required | — | — | — | unit_check | (removes constraints:, preserves appendix_exc:) |
+| unit_check | blocked | — | — | — | unit_check | (removes constraints:, preserves appendix_exc:) |
 | unit_verify | ready_to_promote | — | — | — | unit_promote | (cleared) |
 | unit_verify | truth_fallback | — | — | — | unit_check | (cleared) |
 | unit_verify | spec_issue | — | — | — | unit_check | (cleared) |
@@ -135,6 +143,9 @@ Manual state mapping (command → outcome → `_status.md` update):
 | unit_stable_verify | truth_text_change_required | — | — | — | unit_fork | (cleared) |
 | unit_stable_verify | evidence_incomplete | — | — | — | unit_stable_verify | (cleared) |
 | unit_stable_verify | blocked | — | — | — | unit_stable_verify | (cleared) |
+| unit_impl | impl_complete | — | — | — | unit_verify | (cleared) |
+| unit_impl | spec_issue | — | — | — | unit_check | (cleared) |
+| unit_impl | checkpoint | — | — | — | unit_check, unit_impl, unit_verify | (preserved) |
 | unit_promote | promoted | — | — | — | unit_fork | (cleared) |
 | unit_promote | promotion_recovered | — | — | — | unit_check | (cleared) |
 | unit_promote | verify_invalid_truth | — | — | — | unit_check | (cleared) |
@@ -163,12 +174,13 @@ Manual state mapping (command → outcome → `_status.md` update):
        `Active Layer=candidate`, `Next Command=unit_check`, `Notes=(cleared)`
 3. Set the `Next Command` field to the value from the deterministic mapping above.
 4. Set or clear `Notes` per the mapping.
-5. For `unit_fork`, set `Active Layer` to `candidate` per the mapping table.
+5. When the mapping table's `Notes` column shows `(derive constraints)`: derive the `constraints:` prefix from the unit's `implementation_paths` in `docs/specs/repository_mapping.md` Object Registry per `framework/core/status.md` §Constraints Derivation. Append it to `Notes` as `; constraints:phase=implementation deny=... allow=...`. If `implementation_paths` is empty or the unit is not registered, use the default deny patterns (see `framework/core/status.md` §Constraints Derivation, default tooling behavior paragraph).
+6. For `unit_fork`, set `Active Layer` to `candidate` per the mapping table.
     For `unit_promote` with outcome `promoted`: set `Active Layer` to `stable`,
     `Stable` to `yes`, and `Candidate` to `no` — this mirrors the `--apply`
     side effect that the manual close must reproduce.
     For all other commands, do **not** change `Active Layer`.
-6. Write the updated `_status.md`.
+7. Write the updated `_status.md`.
 
 #### Post-close cleanup
 
@@ -204,7 +216,7 @@ as the source of lifecycle reference material and are also available for direct 
 
 | Command | Context Card File |
 |---------|------------------|
-| `unit_init` / `unit_fork` | `framework/lifecycle/unit_init_new_fork.md` |
+| `unit_init` / `unit_new` / `unit_fork` | `framework/lifecycle/unit_init_new_fork.md` |
 | `unit_check` | `framework/lifecycle/unit_check.md` |
 | `unit_impl` | `framework/lifecycle/unit_impl.md` |
 | `unit_verify` | `framework/lifecycle/unit_verify.md` |
@@ -222,7 +234,7 @@ Sections:
 The directive from `specflowctl next` is the primary execution guide. Read the lifecycle Context
 Card when you need the full procedure detail (check items, outcome tables, pre-checks).
 
-**Exception — `unit_impl`:** As a trigger command that does not change lifecycle state, produce process evidence, or execute a `command close`, `unit_impl` may adjust this layout: its Input section may contain a Condition paragraph (pre-execution prerequisite), and its How to End section uses prose instead of an outcome table (there is only one terminal outcome with no command close). The four standard section labels remain the same for discoverability.
+**Exception — `unit_impl`:** `unit_impl` has a standard layout with a `command close` outcome table (three outcomes: `impl_complete`, `spec_issue`, `checkpoint`). The `[implementation]` notation in the lifecycle flow diagram marks it as a special phase where `Next Command` contains three values instead of one. The outcome table and close process follow the same format as other lifecycle Context Cards.
 
 > **Terminology note:** SpecFlow has one directive type and one card type. (1) **Directive** — produced by `specflowctl next`, the primary execution authority that returns TASK, READS, WRITES, BLOCKED, and COMPLETION for the current governance step. (2) **Lifecycle Context Card** (also called **Per-Command Card**) — the lifecycle file at `framework/lifecycle/unit_*.md`, consumed by `specflowctl next` as the source of lifecycle reference material and also available for direct reading. When any file uses "Context Card" without qualification, it refers to the lifecycle file.
 

@@ -13,7 +13,7 @@
 - Current unit's candidate-layer appendix files
 - Stable-layer truth and rule files referenced by the current unit
 - The unit's implementation and test files
-- `docs/specs/_check_result/unit/{unit}.md` — present in standard flow (unit_check → unit_impl → unit_verify); may be absent or stale in re-validation flow (unit_check re-validation path; see `unit_check.md` Pre-Execution Self-Check for the full precondition: `Next Command=unit_verify` with `Notes=pending_impl` after spec modification)
+- `docs/specs/_check_result/unit/{unit}.md` — present in standard flow (unit_check pass → [implementation] → unit_verify); may be absent or stale in re-validation flow (unit_check re-validation path; see `unit_check.md` Pre-Execution Self-Check for the full precondition: `Next Command` contains `unit_check` (meaning the unit is in the implementation phase))
 - `docs/specs/repository_mapping.md` (for implementation file ownership discovery)
 
 ### May Reference
@@ -48,7 +48,7 @@ Before executing this step, you MUST verify:
 ==ATOM_END:shared_guards==
 3. [ ] Read `docs/specs/units/candidate/c_unit_{unit}.md` — confirm candidate truth and acceptance items are available.
 4. [ ] Confirm the unit's implementation and test files exist and are accessible.
-5. [ ] Compare the current candidate spec fingerprint against `truth_fingerprint` stored in `docs/specs/_check_result/unit/{unit}.md` (see `framework/process_snapshot_contract.md` Section 6 for fingerprint calculation). If the fingerprint changed after the last `unit_check` pass, STOP: the spec was modified without re-validation. Close with outcome `spec_issue` to set `Next Command=unit_check` (see the `spec_issue` outcome row in How to End below), then route through `unit_check:{unit}` for re-validation. If `_check_result/unit/{unit}.md` does not exist (absent in re-validation flow), treat as spec-modified — the candidate truth has never passed check in this session; close with outcome `spec_issue` and route through `unit_check:{unit}` first.
+5. [ ] Compare the current candidate spec fingerprint against `truth_fingerprint` stored in `docs/specs/_check_result/unit/{unit}.md` (see `framework/process_snapshot_contract.md` Section 7 for fingerprint calculation). If the fingerprint changed after the last `unit_check` pass, STOP: the spec was modified without re-validation. Close with outcome `spec_issue` to set `Next Command=unit_check` (see the `spec_issue` outcome row in How to End below), then route through `unit_check:{unit}` for re-validation. If `_check_result/unit/{unit}.md` does not exist (absent in re-validation flow), treat as spec-modified — the candidate truth has never passed check in this session; close with outcome `spec_issue` and route through `unit_check:{unit}` first.
 6. [ ] If any check fails: STOP, report what is missing, and do not proceed.
 
 If all checks pass: proceed to "What This Step Does" below.
@@ -99,7 +99,7 @@ If all checks pass: proceed to "What This Step Does" below.
 | `impl_issue` | Implementation needs repair | Fix code and rerun `unit_verify:{unit}` | command close keeps `Next Command=unit_verify`. |
 | `blocked` | Unresolvable condition — use when evidence_incomplete, human_verify, or impl_issue persist without a path to resolution | Report the blocking condition and stop. command close keeps `Next Command=unit_verify`. This outcome is an escalation path when non-advancing outcomes (evidence_incomplete, human_verify, impl_issue) cannot be resolved after multiple retries — it records the persistent block and keeps the unit at `unit_verify` without looping. | command close keeps `Next Command=unit_verify`. |
 
-> **Note:** The `ready_to_promote` flow writes the verify result without the independent evaluation receipt (step 1), then updates it with receipt fields after review returns `pass` (step 4). See `framework/core/independent_evaluation.md` "Handoff Requests" for the two-phase validation rules and `framework/process_snapshot_contract.md` Section 11 item 15 for pre-receipt validation.
+> **Note:** The `ready_to_promote` flow writes the verify result without the independent evaluation receipt (step 1), then updates it with receipt fields after review returns `pass` (step 4). See `framework/core/independent_evaluation.md` "Handoff Requests" for the two-phase validation rules and `framework/process_snapshot_contract.md` Section 12 item 15 for pre-receipt validation.
 
 For non-standard failures (process validation failure, tooling error, corrupted state), apply fallback cleanup per the failure layer:
 
@@ -110,51 +110,13 @@ For non-standard failures (process validation failure, tooling error, corrupted 
 | evidence_layer (candidate) | evidence_incomplete | Delete verify_result | `unit_verify` |
 | evidence_layer (stable) | stable_verify_invalid | See `framework/lifecycle/recovery.md` evidence_layer row | Per recovery.md |
 
-See `framework/lifecycle/recovery.md` for the full procedure and `framework/process_snapshot_contract.md` Section 4 for layer classification rules.
+See `framework/lifecycle/recovery.md` for the full procedure and `framework/process_snapshot_contract.md` Section 5 for layer classification rules.
 
 Tooling invocation: `specflowctl command close --command unit_verify --object-type unit --object <unit> --outcome <outcome> [--notes <notes>] [--apply]`
 ==ATOM_BEGIN:close_fallback==
 ### Manual Command Close (when `specflowctl` is unavailable)
 
-When `specflowctl command close` is unavailable (tooling not installed, broken, or inaccessible), perform a manual close following these deterministic rules. This is the **only** exception to the rule that `command close` is the sole mechanism for advancing lifecycle state.
-
-**Manual close is scoped to the current lifecycle command only.** It must not be used to skip lifecycle phases, jump ahead in the lifecycle sequence, or perform close operations that involve automatic file mutations that manual file editing cannot reliably reproduce.
-
-**Pre-conditions (mandatory — all must pass):**
-
-1. All required writes from the "How to End" outcome above are complete and correct.
-2. All process evidence files are written with the correct schema (see `framework/process_snapshot_contract.md` for file format).
-3. For advancing outcomes: the independent evaluation receipt is present in the process evidence, satisfying gate rule requirements from `framework/core/independent_evaluation.md` Section Gate Rules.
-4. The `docs/specs/_status.md` file is readable and the target unit's `Next Command` matches the command being closed.
-
-If any pre-condition fails: STOP, report what is missing, and do not perform the manual close.
-
-**Procedure:**
-
-1. From the "How to End" outcome table above, identify your outcome and its Next Step column.
-2. Update `docs/specs/_status.md` for the target unit:
-   - Set `Next Command` to the value specified in the outcome's Next Step.
-   - Set or clear `Notes` per the outcome's Next Step description.
-   - **When setting `Notes` to `pending_impl`:** derive the `constraints:` prefix from the unit's `implementation_paths` in `docs/specs/repository_mapping.md` Object Registry per `framework/core/status.md` §Constraints Derivation. Append it to `Notes` as `; constraints:phase=pending_impl deny=docs/specs/units/stable/** deny=docs/specs/_check_result/** deny=docs/specs/_check_work/** deny=docs/specs/_verify_result/** deny=docs/specs/_stable_verify_result/** deny=docs/specs/_independent_evaluation/** deny=docs/specs/_plans/** deny=docs/specs/_status.md deny=framework/** allow=<implementation_paths> allow=docs/specs/repository_mapping.md allow=docs/specs/units/candidate/**`. If the unit is not yet registered in `repository_mapping.md`, still append the deny clauses without per-path allow entries: `; constraints:phase=pending_impl deny=docs/specs/units/stable/** deny=docs/specs/_check_result/** deny=docs/specs/_check_work/** deny=docs/specs/_verify_result/** deny=docs/specs/_stable_verify_result/** deny=docs/specs/_independent_evaluation/** deny=docs/specs/_plans/** deny=docs/specs/_status.md deny=framework/** allow=docs/specs/repository_mapping.md allow=docs/specs/units/candidate/**`.
-   - For `unit_fork` with outcome `candidate_created`: set `Active Layer` to `candidate`.
-   - For `unit_promote` with outcome `promoted`: set `Active Layer` to `stable`, `Stable` to `yes`, `Candidate` to `no`.
-   - For `unit_init` with outcome `stable_created`: set `Stable=yes`, `Candidate=no`, `Active Layer=stable`.
-   - For `unit_new` with outcome `candidate_created`: set `Stable=no`, `Candidate=yes`, `Active Layer=candidate`.
-   - For all other commands and outcomes: do **not** change `Active Layer`, `Stable`, or `Candidate`.
-3. If the target unit has **no row** in `_status.md` (applies to `unit_init` and `unit_new`), add a new row with the columns `| unit | {unit} | ... |` and fill values from the mapping above.
-4. Perform the cleanup described in the outcome's Next Step column (delete specified evidence files, preserve others).
-5. Write the updated `docs/specs/_status.md`.
-
-**Recording the fallback:**
-
-Add the following to the command's process evidence file (if one exists):
-
-```yaml
-command_close_fallback: manual
-command_close_fallback_recorded_at: <UTC ISO 8601 timestamp>
-```
-
-This annotation documents that manual intervention occurred and is consumed by subsequent executors only as advisory context — it is not a lifecycle gate validation input.
-
-For the reference per-outcome state transition mapping across all lifecycle commands, see `framework/lifecycle/overview.md:114-145`.
+When `specflowctl command close` is unavailable (tooling not installed, broken, or
+inaccessible), read `framework/lifecycle/command_close_fallback.md` for the complete
+manual command close procedure.
 ==ATOM_END:close_fallback==

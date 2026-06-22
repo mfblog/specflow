@@ -101,7 +101,7 @@ After impact_sync completes, it produces:
 
 1. `affected_candidate_units` — list of candidate units and their applied fallback reason codes
 2. `affected_stable_units` — list of stable units and their applied fallback reason codes
-3. `next_command_updates` — per-unit Next Command changes applied through `framework/lifecycle/recovery.md`
+3. `next_command_updates` — per-unit Next Command changes applied through `framework/lifecycle/recovery.md`. During the implementation phase (where `Next Command` may be the multi-value set `unit_check, unit_impl, unit_verify`), the fallback table in `recovery.md` correctly handles this state by resetting `Next Command` to `unit_check` and removing the `constraints:` prefix while preserving `appendix_exc:`. The implementation-phase state is not preserved as a separate checkpoint — the unit exits the implementation phase and must re-enter through a new `unit_check pass` outcome. See `framework/lifecycle/recovery.md` §Candidate Recovery for the handling of implementation-phase units.
 4. `freshness_review_required` — when set to `true`, at least one affected unit has process evidence whose freshness state (text_drift without confirmed fallback layer) requires the caller to run deterministic freshness classification before fallback cleanup. When set to `false` or absent from the output, no freshness review is needed.
 
 ## Removed Scenario Lifecycle
