@@ -76,6 +76,8 @@ After this, platform hooks will automatically inject specFlow rules into your ag
 
 Manual setup:
 
+> `specflowctl` is not on PATH. After cloning, the binary is at `specflow/tooling/bin/specflowctl-<os>-<arch>`. Replace `<os>` and `<arch>` with your platform (e.g. `linux-amd64`, `darwin-arm64`, `windows-amd64.exe`).
+
 1. clone this repository into a directory named `specflow`: `git clone https://github.com/Bingordinary/SpecFlow.git specflow`
 2. add `specflow/` to `.gitignore` if desired
 3. run `specflowctl init` from your project root
@@ -160,6 +162,8 @@ Agent: [runs specflowctl promote...]
 
 ### Tool Commands (specflowctl)
 
+All commands below use the binary at `specflow/tooling/bin/specflowctl-<os>-<arch>` — substitute `<os>` and `<arch>` for your platform.
+
 | Command | What it does |
 |---------|-------------|
 | `specflowctl next --unit <name>` | Discover unit files, specs, rules, and dependencies |
@@ -191,7 +195,7 @@ The agent also proactively suggests these at natural transition points: "Shall I
 
 ### The Agent's Role
 
-1. **Read** — `specflowctl next --unit <name>` to discover unit files
+1. **Read** — run `specflowctl next --unit <name>` (full path: `specflow/tooling/bin/specflowctl-<os>-<arch>`) to discover unit files
 2. **Edit and implement** — update candidate spec and code. No gate before this step.
 3. **Validate** — when you say `spec_validate {unit}` or confirm the agent's suggestion, opens a read-only subagent with a structured checklist (frontmatter, acceptance items, reference integrity, cross-unit consistency). Reports PASS/FAIL per check.
 4. **Verify** — when you say `spec_verify {unit}` or confirm, opens a read-only subagent with a verify checklist (per-item implementation check, scope check, code quality). Reports PASS/FAIL per item.

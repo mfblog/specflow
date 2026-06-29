@@ -6,14 +6,18 @@ When the user says `spec_flow_migrate`, follow this procedure. It first runs the
 
 ### Step 1: Run specflowctl migrate
 
-Execute:
+==ATOM_BEGIN:specflowctl_location==
+specflowctl is not on PATH. Its binary is at `specflow/tooling/bin/specflowctl-<os>-<arch>`. Replace `<os>` and `<arch>` with your platform (e.g. `linux-amd64`, `darwin-arm64`, `windows-amd64.exe`). Use the full path when running specflowctl commands.
+==ATOM_END:specflowctl_location==
+
+Execute from the project root:
 ```
-specflowctl migrate
+specflow/tooling/bin/specflowctl-<os>-<arch> migrate
 ```
 
 If the command succeeds (exit code 0), hook files are up to date and the binary version is current. Proceed to Step 2.
 
-If the command fails (non-zero exit or command not found), report the error output. Tell the user to run `specflowctl migrate` manually from the repository root, then restart the agent session so the updated hooks take effect. Do not proceed to Step 2.
+If the command fails (non-zero exit or command not found), report the error output. Tell the user to run the full command above manually from the project root, then restart the agent session so the updated hooks take effect. Do not proceed to Step 2.
 
 ### Step 2: Check Project Document Format
 
