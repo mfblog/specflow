@@ -71,9 +71,6 @@ func cleanAllowedRelativePath(path string) (string, error) {
 }
 
 func isAllowedSourcePath(path string) bool {
-	if path == "docs/chart_syntax_compatibility.md" {
-		return true
-	}
 	for _, prefix := range []string{
 		"docs/specs/",
 	} {

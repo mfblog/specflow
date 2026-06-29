@@ -112,6 +112,9 @@ func Doctor(repoRoot string) (DoctorResult, error) {
 
 	result := DoctorResult{}
 	for _, item := range items {
+		if item.Mode != "framework" {
+			continue
+		}
 		expectedRelative := item.DestinationRelative
 		if layout.Kind == specflowlayout.SourceRepo {
 			expectedRelative = specflowlayout.Relative(layout.ContentRoot, item.SourceRelative)
@@ -124,6 +127,36 @@ func Doctor(repoRoot string) (DoctorResult, error) {
 
 	checkBinary(repoRoot, layout, &result)
 	checkReaderWeb(repoRoot, layout, &result)
+	return result, nil
+}
+
+// CheckProjectInit checks that project-mode manifest files exist in the project.
+// Unlike Doctor (framework integrity), this verifies the project initialization
+// state — i.e. whether 'specflowctl init' has been run successfully.
+func CheckProjectInit(repoRoot string) (DoctorResult, error) {
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return DoctorResult{}, err
+	}
+	items, err := manifest.Load(repoRoot)
+	if err != nil {
+		return DoctorResult{}, err
+	}
+
+	result := DoctorResult{}
+	for _, item := range items {
+		if item.Mode != "project" {
+			continue
+		}
+		expectedRelative := item.DestinationRelative
+		if layout.Kind == specflowlayout.SourceRepo {
+			expectedRelative = specflowlayout.Relative(layout.ContentRoot, item.SourceRelative)
+		}
+		expected := filepath.Join(repoRoot, filepath.FromSlash(expectedRelative))
+		if _, err := os.Stat(expected); err != nil {
+			result.Failures = append(result.Failures, fmt.Sprintf("MISSING %s (project init file)", expectedRelative))
+		}
+	}
 	return result, nil
 }
 

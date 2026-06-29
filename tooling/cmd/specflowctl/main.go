@@ -192,11 +192,28 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 	fs.SetOutput(stderr)
 	repoRoot := fs.String("repo-root", ".", "repository root")
 	force := fs.Bool("force", false, "overwrite framework files")
+	verify := fs.Bool("verify", false, "check project initialization state only (no copy)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
 	absRoot := mustAbs(*repoRoot)
+
+	if *verify {
+		result, err := install.CheckProjectInit(absRoot)
+		if err != nil {
+			return err
+		}
+		if len(result.Failures) == 0 {
+			fmt.Fprintln(stdout, "Project initialization is complete.")
+			return nil
+		}
+		for _, failure := range result.Failures {
+			fmt.Fprintln(stdout, failure)
+		}
+		return fmt.Errorf("project initialization check failed: %d missing file(s)", len(result.Failures))
+	}
+
 	result, err := install.Init(absRoot, *force)
 	if err != nil {
 		return err
@@ -223,21 +240,30 @@ func runDoctor(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 
-	result, err := install.Doctor(mustAbs(*repoRoot))
+	absRoot := mustAbs(*repoRoot)
+
+	frameworkResult, err := install.Doctor(absRoot)
 	if err != nil {
 		return err
 	}
-	for _, warning := range result.Warnings {
+	projectResult, err := install.CheckProjectInit(absRoot)
+	if err != nil {
+		return err
+	}
+
+	allFailures := append(frameworkResult.Failures, projectResult.Failures...)
+
+	for _, warning := range frameworkResult.Warnings {
 		fmt.Fprintln(stdout, warning)
 	}
-	if len(result.Failures) == 0 {
+	if len(allFailures) == 0 {
 		fmt.Fprintln(stdout, "specFlow doctor passed")
 		return nil
 	}
-	for _, failure := range result.Failures {
+	for _, failure := range allFailures {
 		fmt.Fprintln(stdout, failure)
 	}
-	return fmt.Errorf("specFlow doctor failed: %d issue(s)", len(result.Failures))
+	return fmt.Errorf("specFlow doctor failed: %d issue(s)", len(allFailures))
 }
 
 func runBuildRelease(args []string, stdout, stderr io.Writer) error {
