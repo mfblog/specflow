@@ -13,7 +13,7 @@ export const SpecFlowPlugin = async ({ client, directory }) => {
   const getBootstrapContent = () => {
     if (_bootstrapCache !== undefined) return _bootstrapCache;
 
-    const conceptsPath = path.resolve(directory, 'framework/concepts.md');
+    const conceptsPath = path.resolve(directory, 'specflow/framework/concepts.md');
     if (!fs.existsSync(conceptsPath)) {
       _bootstrapCache = null;
       return null;

@@ -113,3 +113,4 @@ For each supported platform, the corresponding hook JSON file exists at the inst
 
 - Claude Code: `.claude-plugin/plugin.json` is the plugin manifest. Hooks are discovered by convention at `hooks/hooks.json`. `specflowctl` installs both.
 - OpenCode: `.opencode/plugins/specflow.js` installed by `specflowctl`. OpenCode auto-discovers plugins in `.opencode/plugins/` at startup — no config file registration needed.
+- **Consumer path validation**: For every platform plugin that reads files from disk (`.opencode/plugins/specflow.js`), verify that its hardcoded file paths resolve correctly from the plugin runtime's working directory or project root, not from the source-repo layout. See `framework/spec_flow_review.md` Section 2.16.

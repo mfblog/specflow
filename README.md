@@ -72,7 +72,7 @@ The installer does:
 3. install the current platform's `specflowctl`, `specflow-reader`, and `SHA256SUMS`
 4. run `specflowctl init` (installs framework files and platform hooks)
 
-After this, platform hooks will automatically inject specFlow rules into your agent's context on session start. No entry file maintenance is needed. Ask your agent the passphrase to verify hooks are working.
+After this, platform hooks will automatically inject specFlow rules into your agent's context on session start. No entry file maintenance is needed.
 
 Manual setup:
 

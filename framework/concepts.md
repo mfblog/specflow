@@ -150,7 +150,3 @@ Stop and ask when the target unit is unclear, the required spec or framework fil
 | `specflowctl validate` | Validate file write permissions | Human maintainer |
 
 Project truth inputs: `docs/specs/`.
-
-## Hook Verification
-
-暗号: 土豆

@@ -69,7 +69,7 @@ irm https://raw.githubusercontent.com/Bingordinary/SpecFlow/main/tooling/scripts
 3. 安装当前平台需要的 `specflowctl`、`specflow-reader` 和 `SHA256SUMS`
 4. 执行 `specflowctl init`（安装框架文件和平台 hooks）
 
-之后平台 hooks 会在每次 agent session 启动时自动注入 specFlow 规则。不再需要手动维护入口文件。让 agent 对口令可验证 hooks 是否生效。
+之后平台 hooks 会在每次 agent session 启动时自动注入 specFlow 规则。不再需要手动维护入口文件。
 
 手动接入：
 

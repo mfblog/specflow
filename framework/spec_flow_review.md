@@ -339,6 +339,26 @@ A pass claim for any slice that covers atom-managed content must not ignore an a
 
 Atom system integrity failures are always contract drift findings (Section 2.6) because they represent divergence between the canonical source and its distributed targets.
 
+### 2.16 Consumer-Aware Path Validation
+
+When a deployable file (hook script, platform plugin, template bootstrap script) contains hardcoded paths that are resolved at runtime by a consumer, the reviewer must validate those paths from the consumer's execution context — not from the source layout in which the file was authored.
+
+Platform hooks and plugins are installed into a `specflow/`-prefixed directory tree under the parent project (the `installed_project` layout), but authored under the `source_repo` layout where content lives at the repository root. The reviewer must verify that every hardcoded path in a deployable file resolves correctly in its deployment context.
+
+Consumer-aware path validation requires all of the following:
+
+1. **Identify the deployment context** — determine where the file is installed relative to the parent project root. Files deployed by `specflowctl` hooks installation (see `tooling/internal/install/install.go` `InstallHooks`) are placed into `specflow/hooks/` or the project-level `.opencode/plugins/` directory; their consumer sees the `installed_project` layout.
+
+2. **Identify the root-resolution strategy** — determine how the file's runtime determines its base directory: self-relative navigation (`dirname $0` / `SCRIPT_DIR`), externally-provided runtime parameter (`PluginInput.directory`), environment variable (`CLAUDE_PLUGIN_ROOT`), or implicit working-directory convention. Each strategy produces a different base directory and requires different path validation.
+
+3. **Validate every hardcoded path** — for each hardcoded file path in the deployable file, resolve it against the consumer's base directory (not the source layout) and verify the target file exists in the deployment layout. A path that does not exist at the consumer's runtime is a finding even if it exists in the source layout.
+
+4. **Cover every platform variant** — when multiple platform plugins or hook scripts serve the same purpose (reading `framework/concepts.md` for context injection), each platform variant must be validated independently. A finding in one variant is not resolved by a correct path in another.
+
+5. **Path-vs-content separation** — this standard applies to hardcoded paths in executable code (hook scripts, plugin JS files). It does not apply to path references in injected content text (the body of `framework/concepts.md`), which are governed by the delivery-specific exemption in Section 2.6. It does not apply to Go tooling that uses `specflowlayout.Resolve()` for layout-aware path construction.
+
+A pass claim for agent-operability review must not ignore unresolved consumer-path findings in deployable files. Each unresolved path that would fail at runtime is a real finding under this standard.
+
 ## 3. Default Scope
 
 This section applies only to explicit `deep_audit`.
@@ -453,6 +473,7 @@ Local slices review one owner area for internal closure, side effects, contract 
  8. `hook_check`
     - reviews hook configuration files: `specflow/hooks/hooks.json`, `specflow/hooks/hooks-cursor.json`, `specflow/hooks/hooks-codex.json`
     - verifies `specflow/hooks/session-start` reads `framework/concepts.md` and produces correct platform-specific JSON output
+    - verifies every platform plugin (`.opencode/plugins/specflow.js`, etc.) resolves its hardcoded file paths correctly from the deployment context per Section 2.16
     - verifies `framework/concepts.md` contains complete agent governance content (triggers, HARD RULES, commands reference)
     - reference: `framework/hooks.md` for the full verification checklist
  9. `tooling_execution`
