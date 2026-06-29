@@ -7,10 +7,14 @@ $ErrorActionPreference = "Stop"
 
 function Show-Usage {
     [Console]::Error.WriteLine(@"
-Usage: push_with_release.ps1
+Usage: push_with_release.ps1 [-Help]
 
-Push the current SpecFlow branch to origin and tag a release for CI.
-USAGE
+Push the current SpecFlow branch to origin and optionally tag a release
+for CI when on the main branch.
+
+Options:
+    -Help    Display this help message.
+"@)
 }
 
 function Invoke-CheckedNative {
