@@ -15,13 +15,11 @@ This skill is a bridge into existing specFlow routing. It does not create a new 
 
 1. Identify which approved conclusions affect behavior, boundary, acceptance, rule truth, repository mapping, or global rules.
 2. Restate the approved conclusion as current truth content, not as a transcript of the discussion.
-3. Read `framework/operations/entry_routing.md` and route by goal diagnosis, work shape, and intent fragments.
-4. Read `framework/core/repository_mapping.md` when ownership, object boundaries, or support surfaces matter.
-5. Read `framework/operations/entry_routing.md` (Implementation Classification section) before any implementation-side proposal or edit.
-6. Write only current approved truth into the proper candidate, appendix, Rule, repository mapping, or global rule proposal path.
-7. Do not copy design discussion history, rejected options, or patch-note language into candidate truth.
-8. After writeback, route to the smallest legal next step, normally `unit_check` for affected candidate unit truth.
-9. If the approved conclusion describes a larger development chain, write only the durable truth owned by the selected target and rerun routing from current repository truth for the next step.
+3. Read `framework/core/repository_mapping.md` when ownership, object boundaries, or support surfaces matter.
+4. Write only current approved truth into the proper candidate, appendix, Rule, repository mapping, or global rule proposal path.
+5. Do not copy design discussion history, rejected options, or patch-note language into candidate truth.
+6. After writeback, route to the smallest legal next step.
+7. If the approved conclusion describes a larger development chain, write only the durable truth owned by the selected target and rerun routing from current repository truth for the next step.
 
 ## Output Shape
 
@@ -37,7 +35,7 @@ Report:
 
 ## Boundaries
 
-1. Candidate writeback is not `unit_check` pass.
+1. Candidate writeback is not the final review step—run `specflowctl promote` for final validation.
 2. Do not implement from chat-only design.
 3. Do not create `_plans/active`, `_verify_result`, or `_stable_verify_result`.
 4. Do not ask the user to choose internal rule-governance flow names.

@@ -6,7 +6,7 @@ Files under `specflow/` are framework and delivery documents and are written in 
 
 Files under `docs/` are project communication documents and are written in Chinese unless a specific delivery artifact requires otherwise.
 
-This file defines formal Spec shape and reference rules, including the semantic authoring baseline in Section 9.
+This file defines formal Spec shape and reference rules, including the semantic authoring baseline in Section 8.
 
 Format compliance does not by itself prove handoff completeness.
 
@@ -53,13 +53,6 @@ unit_refs:
 rule_refs:
   - s_b_rule_example@1.0.0
 ```
-
-Candidate unit Specs must also record the candidate source fields required by the active unit command, such as `source_basis`, `repair_basis`, and `evidence_appendix_ref`, and — for `change` or `repair` candidates — `candidate_intent`. (`unit_new` does not write `candidate_intent`; see `framework/candidate_intent.md`.) For the complete candidate frontmatter schema including all candidate-specific YAML fields, see `framework/candidate_intent.md`.
-
-> **Cross-layer reference prohibition:** Stable units must not reference
-> candidate-layer appendix paths as current behavior truth. Candidate units
-> must not reference stable-layer appendix paths as current behavior truth.
-> See Section 7 (Appendix Files) item 4 for the full rule.
 
 ## 3. Unit Dependencies
 
@@ -155,8 +148,6 @@ When `verification_type` is `reviewable`, human review is the primary verificati
 
 The acceptance item ids are used by process evidence. Changing ids invalidates existing process files.
 
-For `candidate_intent: change` with `source_basis: replacement`, at least one acceptance item must have `verification_type: inspectable` and `evidence_requirements` that include `old_code_deleted` and `no_remaining_refs`. This declares the retirement scope for the replaced code paths.
-
 ## 7. Appendix Files
 
 Appendix files are support truth for one unit.
@@ -170,17 +161,6 @@ Each unit appendix must:
 1. use the current path shape for its layer and unit id
 2. declare `unit: {unit}` in frontmatter
 3. declare `layer: stable|candidate` in frontmatter
-4. **Cross-layer reference prohibition:** Stable units must not reference
-   candidate-layer appendix paths (`c_unit_*`) as current behavior truth.
-   Candidate units must not reference stable-layer appendix paths
-   (`s_unit_*`) as current behavior truth. The fork/promote path rewriting
-   rules handle cross-layer references correctly during standard flow —
-   stable-to-candidate fork rewrites `s_unit_*` to `c_unit_*`, and promote
-   deletes all candidate appendix files. Manual edits must not create
-   cross-layer references. A stable unit that points to a `c_unit_*` path,
-   or a candidate unit that points to an `s_unit_*` path without going
-   through the fork/promote path rewriting, is invalid and must be rejected
-   during `unit_check`.
 
 When a stable unit with appendix files is forked to candidate, every stable appendix `s_unit_{unit}_{name}.md` must have a corresponding candidate appendix `c_unit_{unit}_{name}.md`.
 
@@ -196,27 +176,9 @@ An appendix file may carry an optional `status` field in its frontmatter:
 
 The `status` field is validated only when present. Absence is treated as `active`. This field is intended for stable-layer appendices that are valid governance artifacts but not relevant to the current candidate round.
 
-**Evidence appendix promotion restriction:** Evidence appendix files referenced by `evidence_appendix_ref` record observed behavior (traceability data) and are not durable behavior truth. They must not be promoted to stable truth as behavior-correctness claims during `unit_promote` (tooling removes all candidate appendix files during promotion cleanup, structurally preventing evidence appendix survival into the stable layer). The `evidence_appendix_ref` field is a candidate-only concept; stable units must not carry `evidence_appendix_ref` frontmatter. See `framework/lifecycle/unit_promote.md` for promotion write rules and `framework/candidate_intent.md` for evidence appendix semantics.
+## 8. Authoring Baseline
 
-## 8. Process Snapshots
-
-Candidate check and verify process files must include:
-
-1. `unit_appendix_snapshot`
-2. `unit_snapshot`
-3. `rule_snapshot`
-
-`unit_appendix_snapshot` records the current-layer appendix files owned by the unit.
-
-`unit_snapshot` records resolved stable unit dependencies from `unit_refs`.
-
-`rule_snapshot` records resolved stable global rules and resolved bound shared rule dependencies from `rule_refs`.
-
-Snapshots prove what one command reviewed and preserve package constraints across handoff. They do not create or replace formal truth.
-
-## 9. Authoring Baseline
-
-A formal Spec must make the following clear for the next lifecycle step:
+A formal Spec must make the following clear for the next governance step:
 
 1. the intended user, actor, or caller
 2. the unit responsibility and why the unit owns it
@@ -244,44 +206,7 @@ If a decision is intentionally not made, the Spec must state that boundary and e
 
 Appendix files may carry detailed truth for one unit but do not weaken the handoff baseline. An appendix used as implementation truth must not contain only background, motivation, principles, or patch notes — it must state the current rule or design as directly readable truth.
 
-## 10. Handoff Contract
-
-### Verify to Promote
-
-`unit_promote` consumes `docs/specs/_verify_result/unit/{unit}.md` only when it validates against current candidate unit truth. The verify result must prove every executable acceptance item through the `acceptance_item_evidence_matrix` with `status: pass` and durable `evidence_refs`.
-
-Before stable writeback, `unit_promote` must resolve:
-1. `unit_refs` (must reference stable unit versions)
-2. `rule_refs`
-3. global baseline rules
-
-### Stable Verify to Fork
-
-`unit_stable_verify` advancing outcomes consume `docs/specs/_stable_verify_result/unit/{unit}.md` only when it validates against current stable unit truth. If the stable verify result is missing, malformed, stale, or records a different decision, the unit must remain at `unit_stable_verify`.
-
-## 11. Candidate Relation Graph
-
-Candidate advancement order is a computed relation, not a manually maintained field.
-
-The relation graph reads only:
-1. `docs/specs/_status.md`
-2. current-layer candidate unit main Specs
-3. same-layer candidate appendix files owned by current-layer candidates
-4. `unit_refs`, `rule_refs`, Markdown `.md` links, explicit version refs
-
-The graph builder must not infer candidate order from prose alone.
-
-Edge meanings:
-- **stable dependency edge**: current-layer unit depends on stable unit or Rule truth
-- **candidate progression edge**: candidate explicitly references another current candidate — the referencing candidate waits for the referenced one
-- **reference-only edge**: evidence appendix references — traceability only, does not block
-
-Cycle rules:
-1. stable-dependency-only cycles: diagnostic only, does not block
-2. any cycle containing candidate progression edges: blocks all candidates in that cycle
-3. blocked candidates must not receive `unit_check pass`
-
-## 12. Rule Scope Resolution
+## 9. Rule Scope Resolution
 
 Rule scope is resolved from rule truth:
 - `rule_scope: global` or id beginning with `g_rule_` → repository-wide rule, applies to every current-layer unit
@@ -289,7 +214,7 @@ Rule scope is resolved from rule truth:
 
 Rule files must not store consumer lists. `bound_objects` is not the source of rule consumers. The bound shared rule consumer graph is reconstructed from current-layer unit frontmatter `rule_refs`.
 
-## 13. Dependency Order
+## 10. Dependency Order
 
 ```text
 repository_mapping → unit → rule

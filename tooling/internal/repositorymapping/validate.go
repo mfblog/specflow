@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
 const registryHeader = "kind|id|registration_state|implementation_paths|spec_files|responsibility"
@@ -41,18 +40,7 @@ func Validate(repoRoot string) (Result, error) {
 	}
 	result := Result{Diagnostics: append([]string(nil), mapping.Diagnostics...)}
 
-	statuses, err := statusfile.LoadObjectStatuses(repoRoot)
-	if err != nil {
-		return Result{}, err
-	}
-	statusRows := map[string]statusfile.ObjectStatus{}
-	for _, status := range statuses {
-		if status.ObjectType == "unit" {
-			statusRows[status.ObjectType+":"+status.Object] = status
-		}
-	}
-
-	for key, entry := range mapping.Entries {
+	for _, entry := range mapping.Entries {
 		switch entry.RegistrationState {
 		case "planned":
 			if len(entry.ImplementationPaths) > 0 {
@@ -73,39 +61,17 @@ func Validate(repoRoot string) (Result, error) {
 				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("registered spec file does not exist: %s", specFile))
 			}
 		}
-		if entry.RegistrationState == "landed" {
-			if entry.Kind == "unit" {
-				if _, ok := statusRows[key]; !ok {
-					result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("landed %s %q is missing from _status.md", entry.Kind, entry.ID))
-				}
+		// Validate that landed units have at least one spec file on the filesystem
+		if entry.RegistrationState == "landed" && entry.Kind == "unit" {
+			stablePath, _ := specpaths.ObjectMainSpecFileRef("unit", "stable", entry.ID)
+			candidatePath, _ := specpaths.ObjectMainSpecFileRef("unit", "candidate", entry.ID)
+			if !exists(repoRoot, stablePath) && !exists(repoRoot, candidatePath) {
+				result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("landed %s %q has no spec file (checked stable: %s, candidate: %s)", entry.Kind, entry.ID, stablePath, candidatePath))
 			}
 		}
 	}
 
-	for key, status := range statusRows {
-		if _, ok := mapping.Entries[key]; !ok {
-			result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s %q is present in _status.md but missing from Object Registry", status.ObjectType, status.Object))
-			continue
-		}
-		validateStatusTruthFiles(&result, repoRoot, status)
-	}
-
 	return result, nil
-}
-
-func validateStatusTruthFiles(result *Result, repoRoot string, status statusfile.ObjectStatus) {
-	if status.ActiveLayer != "stable" && status.ActiveLayer != "candidate" {
-		result.Diagnostics = append(result.Diagnostics, fmt.Sprintf("%s %q has unsupported Active Layer %q", status.ObjectType, status.Object, status.ActiveLayer))
-		return
-	}
-
-	if status.Stable == "yes" {
-		validateLayerFile(result, repoRoot, status.ObjectType, status.Object, "stable")
-	}
-	if status.Candidate == "yes" {
-		validateLayerFile(result, repoRoot, status.ObjectType, status.Object, "candidate")
-	}
-	validateLayerFile(result, repoRoot, status.ObjectType, status.Object, status.ActiveLayer)
 }
 
 func validateLayerFile(result *Result, repoRoot, objectType, object, layer string) {

@@ -9,8 +9,7 @@ target files via deterministic scripts.
 
 The specFlow governance framework has documented procedural content that must appear in
 multiple files simultaneously (Section 2.12 self-containment requirement). Examples include
-the manual command close procedure (5 Context Cards), rule governance shared footer (6 rule
-files), and the guidance scenario list (5 files).
+rule governance shared footer (6 rule files).
 
 Without atoms, updating any shared content requires editing every affected file manually —
 a maintenance risk that has already produced documented drift (see `spec_flow_review:full`
@@ -29,18 +28,10 @@ framework/_atoms/
 ├── manifest.txt                 # Atom registry (atom_id → source → targets)
 ├── generate.sh                  # Generation script
 ├── verify.sh                    # Verification script
-├── lifecycle/
-│   ├── close_fallback.md        # Manual command close procedure
-│   ├── shared_guards.md         # Shared guard conditions
-│   └── lifecycle_commands.md    # Lifecycle command reference table
 ├── rules/
 │   └── shared_footer.md         # Rule governance shared footer
-├── guidance/
-│   └── scenario_list.md         # Guidance scenario list
-├── misc/
-│   └── scenario_deprecation.md  # Scenario lifecycle deprecation stop message
-└── entry/
-    (reserved for entry-file atoms if needed)
+└── misc/
+    └── layout_note.md           # Layout-aware path note for rule files
 ```
 
 ## How Target Files Reference Atoms
@@ -105,10 +96,10 @@ correct atom content. This should be run:
 5. The atom system is **layout-agnostic** — all paths in `manifest.txt` are repository-root relative.
 6. Atom markers are inert markdown — they do not affect rendering or execution.
 
-## Relationship to Managed Blocks
+## Historical Managed Blocks
 
-The existing `==SPECFLOW:BEGIN==` / `==SPECFLOW:END==` managed block system (used for
-template entry files) is separate from the atom system. Managed blocks are consumed
-by `specflowctl` Go tooling for project-instance entry file synchronization. Atom markers
-are consumed by `generate.sh` / `verify.sh` for framework governance file content
-synchronization. They coexist independently.
+The `==SPECFLOW:BEGIN==` / `==SPECFLOW:END==` managed block system was a legacy mechanism
+for synchronizing specFlow governance content into project entry files (`AGENTS.md`,
+`CLAUDE.md`, `GEMINI.md`). It has been replaced by the hook-based injection system
+(`framework/hooks.md`). All managed block parsing and synchronization tooling has been
+removed.

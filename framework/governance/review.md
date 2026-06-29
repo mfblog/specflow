@@ -42,57 +42,40 @@ The paragraph above is the Unrecognized Entry stop condition.
 
 ## Review Layout
 
-Deep-audit review tooling is layout-aware.
+Deep-audit review tooling uses a single fixed layout: `source_repo`.
 
-Supported layouts:
-
-1. `installed_project`
-   - framework inputs live under `specflow/framework/`
-   - templates live under `specflow/templates/`
-   - tooling lives under `specflow/tooling/`
-   - project-instance compatibility reviews real `docs/specs/` files
-2. `source_repo`
-   - framework inputs live under local `framework/`
-   - templates live under local `templates/`
-   - tooling lives under local `tooling/`
-   - project-instance compatibility reviews template bootstrap compatibility and does not require real `docs/specs/` instance files
-
-`specflowctl review ... --layout auto` detects the layout. Callers may pass `--layout installed` or `--layout source` to force one layout.
+- framework inputs live under local `framework/`
+- templates live under local `templates/`
+- tooling lives under local `tooling/`
+- project-instance compatibility reviews template bootstrap compatibility
+  under `templates/docs/specs/` and does not require real project-instance
+  `docs/specs/` files
 
 ### Layout-Aware Path Resolution
 
-Files in `framework/` reference paths that resolve differently depending on layout.
-`docs/specs/` paths are project-instance files present only in `installed_project` layout;
-in `source_repo` layout they do not exist and must be treated as informational references
-(agents must check path existence before reading and skip non-existent paths with a documented note).
-Lifecycle and rule files at `framework/lifecycle/` and `framework/governance/rules/` may include
-layout-aware notes on specific Required Reads entries; this section is the centralized authority
-for how those path references should be resolved.
+Files in `framework/` reference paths that resolve to the `source_repo` layout.
+`docs/specs/` paths are template bootstrap files present under `templates/docs/specs/`;
+project-instance files at `docs/specs/` do not exist in this layout and must be
+treated as informational references (agents must check path existence before reading
+and skip non-existent paths with a documented note).
+Rule files at `framework/governance/rules/` may include layout-aware notes on specific
+Required Reads entries; this section is the centralized authority for how those path
+references should be resolved.
 
-Project entry files (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`) contain managed blocks
-(defined in `framework/operations/entry_routing.md` Entry File Registration section)
-that must not contradict framework governance rules on routing, review scope, or lifecycle
-progression. Use `specflowctl entry check` to verify managed-block consistency across
-all registered entry files. When a managed block contradicts framework governance rules,
-the framework rule takes precedence and the executor must report the contradiction as a
-governance concern.
-
-If `--layout auto` detects both `installed_project` and `source_repo` markers, the review must stop and require an explicit `--layout installed` or `--layout source` argument. Auto-detection must not silently choose one layout.
-
-Review layout applies to exact `spec_flow_review:full` mechanism deep audit and every `spec_flow_design_review`.
-It does not widen ordinary `spec_flow_review` scoped review.
+Review layout applies to exact `spec_flow_review:full` mechanism deep audit and
+every `spec_flow_design_review`. It does not widen ordinary `spec_flow_review`
+scoped review.
 
 ## Active Scope
 
 Default `spec_flow_review` scoped review uses the layered framework structure:
 
 1. `core/`
-2. `lifecycle/`
-3. `governance/`
-4. `operations/`
-5. guidance skills
-6. templates
-7. tooling contracts and source
+2. `governance/`
+3. `operations/`
+4. guidance skills
+5. templates
+6. tooling contracts and source
 
 `framework/spec_flow_review.md` is the mechanism deep-audit owner and is not ordinary default context for scoped review.
 `framework/spec_flow_design_review.md` is the ordinary owner for every `spec_flow_design_review`.

@@ -24,16 +24,13 @@ By default it governs:
 
 1. `spec_flow_review`
 2. `spec_flow_design_review`
-3. `unit_check`
-4. `unit_verify`
-5. `unit_stable_verify`
 
 It may also be reused by other governance flows if those flows explicitly say so.
 
 It does not define:
 
 1. `fallback_reason_code`
-2. lifecycle progression
+2. governance progression
 3. whether a command may continue after binding validation
 
 ---
@@ -143,9 +140,6 @@ This policy works together with:
 
 1. `framework/spec_flow_review.md`
 2. `framework/spec_flow_design_review.md`
-3. `framework/lifecycle/unit_check.md`
-4. `framework/lifecycle/unit_verify.md`
-5. `framework/lifecycle/unit_stable_verify.md`
 
 Priority rules:
 

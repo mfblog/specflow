@@ -32,58 +32,53 @@ This flow is valid only when a rule already exists (either global or bound share
 Before any write, read:
 
 1. `framework/spec_writing_guide.md`
-2. `framework/candidate_intent.md`
-3. `framework/lifecycle/overview.md`
-4. `framework/governance/impact_sync.md`
-5. `framework/lifecycle/recovery.md`
-6. `framework/governance/rules/rule_sync.md`
-7. `docs/specs/_status.md`
-8. the target unit current-layer main Spec
-9. the target rule file
-10. any currently bound rule file that may be replaced by this binding
-11. every current-layer unit main Spec needed to derive the repository-wide bound shared rule consumer set for each touched rule from `rule_refs`
-12. `framework/lifecycle/unit_init_new_fork.md` when the target unit is currently stable
-13. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may affect a repository-wide default rule
+2. `framework/governance/impact_sync.md`
+3. `framework/governance/rules/rule_sync.md`
+4. the target unit current-layer main Spec
+5. the target rule file
+6. any currently bound rule file that may be replaced by this binding
+7. every current-layer unit main Spec needed to derive the repository-wide bound shared rule consumer set for each touched rule from `rule_refs`
+8. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may affect a repository-wide default rule
 
+==ATOM_BEGIN:shared_footer==
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
+==ATOM_END:shared_footer==
 
 ==ATOM_BEGIN:rule_layout_note==
-**Layout-aware path note:** Paths in this file are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+**Layout-aware path note:** Paths in this file use `<framework-root>` and `<tooling-root>` as layout-relative roots. In `source_repo` layout, `<framework-root>` is `framework/` and `<tooling-root>` is `tooling/`. In `installed_project` layout, both use a `specflow/` prefix before the root name (e.g., `specflow/framework/`, `specflow/tooling/`). `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
 ==ATOM_END:rule_layout_note==
 
 ## 3. Procedure
 
 1. Confirm that the target unit truly depends on the target rule truth.
-2. Resolve the target unit's current layer from `_status.md`.
-3. If the target unit is stable, stop before writeback and return control to `rule_escape` to raise a `prerequisite_action` checkpoint requiring `unit_fork:{unit}`.
-4. Read the target unit's current `rule_refs` and record any previous rule ref that this round will remove or replace.
-5. Build the repository-wide bound shared rule consumer set for the target rule and every previous touched rule from current-layer unit `rule_refs`.
-6. Before the first file mutation, capture the recovery baseline required by `framework/lifecycle/recovery.md`.
-7. Rewrite the target candidate unit `rule_refs` using exact rule refs and the sorting rules from `spec_writing_guide.md`.
-8. Rewrite the target candidate unit body so the relevant behavior or acceptance chain explains the rule consumption.
-9. If a touched candidate rule has a stable sibling, validate that exactly one `promotion_owner_unit` remains correct after this binding change. If that cannot be proven from current truth, stop and return to `rule_escape`.
-10. If removing or retargeting the previous ref would leave a touched bound shared rule with no formal current consumers, do not leave its terminal state implicit:
+2. If the target unit is stable, stop before writeback and return control to `rule_escape` to raise a `prerequisite_action` checkpoint.
+3. Read the target unit's current `rule_refs` and record any previous rule ref that this round will remove or replace.
+4. Build the repository-wide bound shared rule consumer set for the target rule and every previous touched rule from current-layer unit `rule_refs`.
+5. Rewrite the target candidate unit `rule_refs` using exact rule refs and the sorting rules from `spec_writing_guide.md`.
+6. Rewrite the target candidate unit body so the relevant behavior or acceptance chain explains the rule consumption.
+7. If a touched candidate rule has a stable sibling, validate that exactly one `promotion_owner_unit` remains correct after this binding change. If that cannot be proven from current truth, stop and return to `rule_escape`.
+8. If removing or retargeting the previous ref would leave a touched bound shared rule with no formal current consumers, do not leave its terminal state implicit:
     - delete it only when cleanup is already proven legal by current repository truth
     - otherwise write intentional unbound-retention fields (including `unbound_retention_owner: rule_bind`) when current truth proves the rule should remain independently authored
     - otherwise stop and return to `rule_escape` so the terminal-state decision can route to `rule_topology`
-11. Remove unbound-retention fields from any touched bound shared rule that still has formal current consumers after the binding change.
-12. Do not write consumer lists or `bound_objects` into touched rule files.
-13. Run `rule_sync` after any unit `rule_refs` write or touched rule-file write.
+9. Remove unbound-retention fields from any touched bound shared rule that still has formal current consumers after the binding change.
+10. Do not write consumer lists or `bound_objects` into touched rule files.
+11. Run `rule_sync` after any unit `rule_refs` write or touched rule-file write.
     Execution-local inputs for `rule_sync`:
     - `rule_refs`: the exact refs added, removed, or retargeted in this bind round
     - `rule_ids`: the touched rule ids
     - `units`: the target unit plus any unit whose binding was read to prove the consumer set
     - `deleted_rule_refs`: the removed rule refs only when terminal deletion is proven by current repository truth
-14. Ensure target unit candidate process state falls back after the candidate main Spec changes. If the `rule_sync` handoff does not include that target unit, use the candidate fallback rules from `framework/governance/impact_sync.md` and `framework/lifecycle/recovery.md`.
+12. Ensure target unit candidate process state falls back after the candidate main Spec changes. If the `rule_sync` handoff does not include that target unit, use the candidate fallback rules from `framework/governance/impact_sync.md`.
 
-If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `framework/lifecycle/recovery.md` before returning to `framework/operations/entry_routing.md`.
+If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`.
 
 ## 4. Stop Conditions
 
 Stop when one of these is true:
 
-1. the candidate unit binding, body explanation, target unit fallback, touched rule terminal state, and `rule_sync` reconciliation are complete. If `rule_sync` returned `freshness_review_required=true`, run the 'Freshness Review Required' procedure from `framework/lifecycle/recovery.md:27-37` before claiming closure.
-2. the request is not binding and must route to another rule flow or unit lifecycle work
+1. the candidate unit binding, body explanation, target unit fallback, touched rule terminal state, and `rule_sync` reconciliation are complete.
+2. the request is not binding and must route to another rule flow or unit governance work
 3. the target unit does not actually consume the rule truth
 4. the target unit is stable and `rule_escape` must raise a `prerequisite_action` checkpoint before writeback can continue
 5. a touched candidate rule with a stable sibling cannot keep or receive exactly one valid `promotion_owner_unit`
@@ -103,4 +98,4 @@ The output must report:
 8. any touched rule terminal-state result
 9. confirmation that touched rule files do not carry `bound_objects`
 10. the `rule_sync` result
-11. the target unit candidate fallback result or the recovery and rerouting result
+11. the target unit candidate fallback result

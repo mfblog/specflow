@@ -11,18 +11,14 @@ import (
 
 func TestResolveRefRequiresPromotionOwnerUnitWhenCandidateSharedHasStableSibling(t *testing.T) {
 	repoRoot := t.TempDir()
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/candidate"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/stable"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/candidate"))
 
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | note |\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md"), `---
 rule_id: shared_demo
 rule_scope: bound
 layer: stable
 rule_version: 0.1.0
-bound_objects:
-  - unit:demo
 ---
 
 # Stable
@@ -32,8 +28,6 @@ rule_id: shared_demo
 rule_scope: bound
 layer: candidate
 rule_version: 0.2.0
-bound_objects:
-  - unit:demo
 ---
 
 # Candidate
@@ -47,18 +41,17 @@ bound_objects:
 
 func TestResolveRefAcceptsPromotionOwnerUnitWhenCandidateSharedHasStableSibling(t *testing.T) {
 	repoRoot := t.TempDir()
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/candidate"))
 	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/stable"))
-	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/rules/candidate"))
+	mustMkdirAll(t, filepath.Join(repoRoot, "docs/specs/units/stable"))
 
-	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/_status.md"), "# Spec Status\n\n## Formal Objects\n\n| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |\n|---|---|---|---|---|---|---|\n| `unit` | `demo` | `yes` | `no` | `stable` | `unit_fork` | note |\n")
+	// Create spec file for promotion_owner_unit (file existence is state)
+	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/units/stable/s_unit_demo.md"), "---\nid: demo\nlayer: stable\nversion: 1.0.0\n---\n# Demo\n")
 	mustWriteFile(t, filepath.Join(repoRoot, "docs/specs/rules/stable/s_b_rule_demo.md"), `---
 rule_id: shared_demo
 rule_scope: bound
 layer: stable
 rule_version: 0.1.0
-bound_objects:
-  - unit:demo
 ---
 
 # Stable
@@ -69,8 +62,6 @@ rule_scope: bound
 layer: candidate
 rule_version: 0.2.0
 promotion_owner_unit: demo
-bound_objects:
-  - unit:demo
 ---
 
 # Candidate

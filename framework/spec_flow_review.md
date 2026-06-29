@@ -9,11 +9,11 @@ The only full-scope mechanism review entry is exact `spec_flow_review:full`.
 
 It answers five questions:
 
-1. whether the governance rule set still closes the full Spec Flow
-2. whether the tooling layer still matches the rule layer
-3. whether rule-governance and impact-reconciliation semantics still converge with the command core
-4. whether governance documents can make an executor operational without prior `specFlow` knowledge or avoidable reading cost
-5. whether the repository may still claim one coherent governance baseline
+1. whether the framework documents are self-consistent and complete
+2. whether the three commands (next, review, promote) cover the governance needs without gaps or overlap
+3. whether the tooling boundary is correct — specflowctl does deterministic work, LLM does semantic judgment
+4. whether an executor can operate the framework without prior specFlow knowledge
+5. whether all framework files, templates, and governance files agree with each other
 
 Deep audit must use exact `spec_flow_review:full`. Plain exact entry must not automatically start full-scope run-state review.
 
@@ -29,7 +29,7 @@ That judgment belongs to `spec_flow_design_review`.
 It does not pass a review only because the required files were read or the required slices were visited.
 Each in-scope rule, file, slice, and cross-convergence path must satisfy the standards in this section.
 
-The fixed standards are `content validity`, `logical closure`, `chain closure`, `state-space closure`, `governance closure and ownership`, `contract drift`, `cross-convergence`, `supporting truth lifecycle closure`, `agent operability`, `tooling boundary`, `project-instance compatibility`, and `project-instance migration closure`.
+The fixed standards are `content validity`, `logical closure`, `process closure`, `command completeness`, `governance closure and ownership`, `contract drift`, `cross-convergence`, `supporting layer closure`, `agent operability`, `tooling boundary`, `project-instance compatibility`, `project-instance migration closure`, and `review scope completeness`.
 
 ### 2.1 Content Validity
 
@@ -68,71 +68,46 @@ A file is internally closed only when a capable executor can determine from that
 6. where durable writeback or process-state writeback may happen
 7. when execution must stop
 8. what output or stop report is required
-9. how execution resumes after a stop, checkpoint, repair, or downstream handoff
+9. how execution resumes after a stop, repair, or downstream handoff
 
 If one of those items is intentionally owned elsewhere, the file must link or name the owner clearly enough that the executor does not guess.
 
-### 2.3 Chain Closure
+### 2.3 Process Closure
 
-When an in-scope file is one step in a governance chain, the review must include the in-scope files it calls, hands off to, consumes, or depends on.
+The three commands (next, review, promote) form a simple process. The review must verify:
 
-A governance chain is closed only when:
+1. each command has a defined purpose and does not overlap with the others
+2. `next` outputs enough information for the agent to start work
+3. `review` produces a structured output (issue list) that the agent can act on
+4. `promote` has a complete flow: review step → verify step → archive step
+5. promote's archive step deterministically copies candidate files to stable directories
+6. promote's review and verify steps are independent review sessions (subagent), not self-approval
+7. if promote fails (review or verify finds issues), the outcome is clearly communicated and no files are archived
 
-1. the calling file and owner file describe the same governed object
-2. outputs from one step are accepted by the next step with the same meaning
-3. status values and result values are fixed and shared by every producer and consumer that uses them
-4. permission boundaries match across the handoff
-5. stop conditions have a legal resume owner or next action
-6. downstream side effects are either closed in the same chain or explicitly handed to the correct owner
-7. no step requires the executor to fill a missing interface, owner, state transition, or branch condition from memory or ordinary term meaning
+If a command is missing a required output, has undefined behavior for failure cases, or requires the executor to infer its purpose, the related slice must not be marked `passed`.
 
-If a chain is missing one required file, contains a conflicting interface, or only works by executor inference, the related local or cross-convergence slice must not be marked `passed`.
+### 2.4 Command Completeness
 
-### 2.4 State-Space Closure
+The three commands must each have clearly defined boundaries. The review must verify:
 
-The review must prove that the governance mechanism has legal progress paths for important states.
-Reading every relevant file is not enough.
-A locally consistent rule is still invalid when one of its important results leaves the executor with no legal state-changing next action.
+1. **next**: given a unit name, outputs the unit's candidate and stable spec files, appendix files, rule references, and related units. Does NOT output process directives or "next step" instructions.
 
-For this review, a `state` is any recorded or implied governance condition that can affect:
+2. **review**: given a unit name, reviews the candidate spec quality. Uses a subagent session. Outputs a structured issue list with categories (format, cross-spec consistency, acceptance item clarity) — each category is PASS or FAIL with a reason. Does NOT block the agent from continuing work.
 
-1. `Active Layer`
-2. `Next Command`
-3. truth writeback permission or truth writeback target
-4. process-file presence, validity, freshness, cleanup, or reuse
-5. command, review, migration, checkpoint, or tooling gate result
-6. checkpoint position or resume permission
-7. implementation permission
-8. recovery owner
+3. **promote**: given a unit name, runs three steps:
+   a. Review phase: reads candidate spec(s), checks quality and cross-unit consistency
+   b. Verify phase: for each acceptance item, checks implementation satisfies it
+   c. Archive phase: copies candidate files to stable directories
+   
+   Promote must fail and report findings if either review or verify finds issues. Promote must not archive if any check fails.
 
-An `important state type` is any class of state that changes at least one of:
+Each command must have:
+1. a defined input (what parameters it accepts)
+2. defined output (what it returns or writes)
+3. defined failure behavior (what happens on error)
+4. no side effects outside its defined scope
 
-1. the next legal action
-2. the allowed writeback location
-3. the verification responsibility
-4. the recovery path
-5. the implementation permission boundary
-
-A `transition` is the complete relation:
-
-```text
-current state + command/result/condition -> allowed writeback -> next state -> next legal owner/action
-```
-
-State-space closure requires all of the following:
-
-1. every important command result, review result, migration result, checkpoint result, tooling freshness result, fallback result, blocked result, drift result, repair result, and impact-sync result in scope has a legal transition
-2. the transition names the allowed writeback target, or explicitly states that no writeback is allowed
-3. the transition names the next legal owner or action
-4. the transition can change governance state, implementation state, or a documented blocker state before the same command, gate, or review is run again
-5. a stop is closed only when the blocking condition, owner, allowed writeback, and resume action are explicit
-6. process invalidation, stale fingerprints, changed truth, migration, impact sync, and recovery states identify the owner that may clear, rebuild, or replace the affected state
-
-If `Next Command` remains the same command after a failed, blocked, stale, or fallback result, the review must prove that an intermediate legal action can change the state consumed by that command before rerun.
-If no such action exists, or if the intermediate action is only implied by executor judgment, the review must report a dead-loop finding.
-
-The review must not use "the files were read", "the local rule is self-consistent", or "an executor can decide what to do" as a substitute for transition proof.
-Missing transitions, ownerless transitions, contradictory transitions, and same-command reruns without a legal state-changing source are findings.
+Missing definitions or undefined behavior for any command is a finding.
 
 ### 2.5 Governance Closure And Ownership
 
@@ -141,11 +116,11 @@ Each in-scope owner area must close from a legal entry to one legal next action,
 The review must find a real finding when an in-scope rule can cause:
 
 1. ambiguous entry selection
-2. missing truth, process-state, tooling, recovery, or close-out ownership
-3. bypass of a required command gate, truth writeback gate, rule-governance gate, impact-reconciliation gate, recovery gate, or close-out gate
+2. missing truth, tooling, or process ownership
+3. bypass of a required governance gate or impact-reconciliation gate
 4. a side effect with no downstream owner
-5. a branch that never rejoins a legal command, review, repair, or stop path
-6. chat agreement, repository history, directory shape, or ordinary term meaning to substitute for durable governance truth
+5. a branch that never rejoins a legal action or stop path
+6. chat agreement, repository history, directory shape, or ordinary term meaning substituted for durable governance truth
 
 ### 2.6 Contract Drift
 
@@ -157,116 +132,67 @@ Contract drift exists when two in-scope surfaces define or consume the same gove
 2. different state values or result values
 3. different required fields or writeback containers
 4. different path ownership rules
-5. different lifecycle advancement or fallback meanings
+5. different advancement or fallback meanings
 6. different tooling responsibilities
 7. different freshness, fingerprint, cleanup, sync, or validation rules
 
 Any contract drift that can change execution, stop behavior, review judgment, or downstream ownership is a finding.
+
+Delivery-specific path references in hook-injected content are not contract drift. Files such as `framework/concepts.md` are delivered to the agent session through platform hook injection at startup. Their path references use `installed_project`-format paths (e.g., `specflow/tooling/bin/`) because that is the delivery context expected by the hook system — the hook files are installed into a `specflow/`-prefixed directory tree. Reviewers must not flag delivery-context-specific paths in hook-injected content as drift. Governance files read directly from the filesystem must use `source_repo` paths.
 
 ### 2.7 Cross-Convergence
 
 Locally correct rules must still compose into one coherent governance baseline.
 
 The review must test cross-convergence wherever one rule area depends on another rule area.
-At minimum, cross-convergence covers routing, commands, project-instance migration, truth writeback, implementation gates, onboarding source decision, rule governance, impact reconciliation, process state, entry files, tooling, and recovery when those areas are in scope.
-
-When onboarding source decision is in scope, the review must verify that candidate source fields, candidate main Spec text, evidence appendix handling, implementation permission, and lifecycle gates converge without allowing observed implementation behavior to become implementation truth outside the candidate main Spec.
+At minimum, cross-convergence covers commands, project-instance migration, truth writeback, rule governance, impact reconciliation, hooks, concepts.md, and tooling when those areas are in scope.
 
 If a narrowed review crosses a boundary whose owner slice is not included, the narrowed review must stop or explicitly remain non-baseline.
 It must not claim default governance-baseline `pass`.
 
-### 2.7.1 Supporting Truth Lifecycle Closure
+### 2.7.1 Supporting Layer Closure
 
-Durable supporting truth must remain layer-correct across fork, promote, cleanup, rule release, and impact-reconciliation paths.
+Durable supporting truth must remain layer-correct across the promote path.
 
 For this review, supporting truth includes:
 
 1. stable and candidate main Spec files
 2. stable and candidate appendix files
-3. evidence appendix files
-4. Rule refs and Rule files consumed by current-layer Specs
-5. process snapshots and cleanup targets that preserve or delete those files
-6. deterministic tooling that creates, retargets, deletes, validates, or reports those files
+3. Rule refs and Rule files consumed by current-layer Specs
 
-Supporting truth lifecycle closure requires all of the following:
+Layer closure requires:
 
-1. a fork path that creates candidate truth from stable truth must prove whether every stable-layer supporting file referenced by the stable main Spec is copied, retargeted, intentionally omitted, or remains only historical evidence
-2. a promote path that lands candidate truth as stable truth must prove whether every candidate-layer supporting file is migrated, absorbed, deleted as evidence, or intentionally left out of stable behavior truth
-3. success cleanup must preserve current-round supporting truth until the owning command has migrated, absorbed, or intentionally deleted it
-4. deterministic auto-fork tooling must implement the same supporting-file writeback, retarget, and cleanup contract as the command rule it mechanizes
-5. current-layer main Specs must not depend on previous-layer appendix files as current behavior truth
-6. stable main Specs must not point to candidate-layer appendix files as stable behavior truth
-7. evidence appendix files must stay evidence only; they must not become stable behavior truth unless an in-scope command rule explicitly makes that migration legal
+1. promote must copy all candidate main Spec files and appendix files to the stable layer
+2. stable layer must not depend on candidate layer files
+3. candidate layer may reference stable layer files (baseline for comparison)
 
-A review must not mark a supporting-truth lifecycle path `passed` only because files are present, readable, or shape-valid.
-It must prove the current layer, link targets, cleanup ownership, and tool/source agreement for the path being reviewed.
-
-If a fork, promote, auto-fork, cleanup, or impact-reconciliation path can leave a current-layer Spec dependent on the wrong layer's supporting truth, can delete current-layer supporting truth before it is absorbed or migrated, or can make tooling behavior diverge from command rules, the review must report a finding.
+If promote can leave a candidate file unpromoted while its stable counterpart is overwritten, or can create a stable file that depends on candidate-layer content that no longer exists, the review must report a finding.
 
 ### 2.8 Agent Operability
 
-Governance files must be operable by a capable executor without prior `specFlow` memory.
+Governance files must be operable by a capable executor without prior `specFlow` knowledge.
 
-A narrowed review must include entry behavior, routing, commands, project-instance migration, checkpoints, rule governance, process state, entry files, and tooling contracts when the narrowed scope covers those areas.
-Governance rules are enforced by tooling (`specflowctl`) rather than by agent-operability documents.
+A narrowed review must include commands, project-instance migration, rule governance, hooks, concepts.md, and tooling contracts when the narrowed scope covers those areas.
 
 Agent-operability review must cover execution clarity, content economy, formal rule voice, and self-containment under Section 2.12 — whether Agent-facing instruction files deliver essential phase instructions inline rather than through chain-linked reading.
 
 A pass claim for an in-scope governance file must not ignore an applicable agent-operability failure.
 
-### 2.8.1 Evaluation Request Verification
+### 2.8.1 Agent Bootstrap Injection Path Review
 
-> **Scope:** This section applies to `spec_flow_review:full` (deep audit) only.
+The agent receives SpecFlow governance content through platform-specific bootstrap injection at session startup, not through entry file reading. The injection chain and verification checklist are defined in `framework/hooks.md`.
 
-The `specflowctl evaluation request` command generates a reviewer handoff file. A governance mechanism that depends on evaluation requests must verify that every reviewer pack produces a correct, minimal request.
+A review that does not trace the injection path from the hooks to the agent's runtime context cannot claim that agent operability has been verified.
 
-The reviewer must generate requests for every pack (`unit_check_pass`, `unit_verify_ready_to_promote`, `unit_stable_verify_advancing`, `freshness_text_drift_reuse`) and verify:
+The reviewer must report, for every in-scope governance surface, which injection paths were checked, whether each check passed or produced a finding, and whether any platform is missing its required hook or plugin configuration. A pass claim for agent operability must not ignore an unreviewed or unresolved injection path.
 
-1. **Content sourcing** — `Evaluation Questions`, `Allowed Inputs`, and `Forbidden Inputs` must be parsed from `framework/core/independent_evaluation.md` at runtime, not hardcoded in Go.
-2. **Subject as path only** — the Review Subject section must list artifact paths only; full file contents must not be inlined in the request.
-3. **Standards as path only** — framework standard files must be listed as paths, not inlined; Evaluation Questions carry the actionable criteria.
-4. **No stale placeholders** — `{unit}` must be replaced with the actual unit name in Allowed/Forbidden Inputs.
-5. **Section completeness** — all of Request, Reviewer Role, Review Goal, Allowed Inputs, Forbidden Inputs, Review Subject, Review Evidence Refs, Evaluation Questions, Reviewer Output, Executor Receipt, and Trigger Instruction must be present.
-6. **No Review Standard Refs section** — the Review Standard Refs section must not appear; standard files are listed in Review Subject instead.
-
-### 2.8.2 Agent Runtime Entry Path Review
-
-The agent runtime entry point is `templates/*.md` for `source_repo` layout and the project-root registered entry file (`AGENTS.md`, `CLAUDE.md`, or `GEMINI.md`) for `installed_project` layout. This file is the first governance content an executor reads at startup. Its navigation logic determines whether the executor reaches the correct route, command, or stop condition. A review that does not trace the entry path from this root file cannot claim that agent operability has been verified.
-
-> **Layout entry file ambiguity warning:** In `source_repo` layout, the repository root also contains a `CLAUDE.md` file that serves as a **source-repo-local development guide** — it tells executors how to work *on* the specFlow framework. It is NOT the agent runtime entry file. The review must distinguish between these two files:
->
-> | Layout | Agent runtime entry file | Non-entry file (do not use) |
-> |---|---|---|
-> | `installed_project` | Project-root `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` (contains managed block) | N/A |
-> | `source_repo` | `templates/CLAUDE.md` (contains managed block) | Repository-root `CLAUDE.md` (development guide, no managed block) |
->
-> The reviewer must explicitly report which file was used as the agent runtime entry file for each reviewed path. A review that uses the repository-root `CLAUDE.md` in `source_repo` layout instead of `templates/CLAUDE.md` has not verified the correct entry point and must report a finding under this section.
-
-The review must verify the agent runtime entry path for every in-scope governance surface. Scoped review must apply these checks to the extent that the narrowed scope includes entry files and routing policy.
-
-Required checks:
-
-1. **Entry-to-routing path alignment** — the navigation steps in the entry file (typically "Step 1 → Step 2 → Step 3" or equivalent) must produce the same first-owner selection, route, and command as `operations/entry_routing.md` would produce for the same request type. The entry file must not describe a navigation sequence that diverges from `operations/entry_routing.md` without an explicit override rule. If the entry file and `operations/entry_routing.md` assign different first owners for the same request category, that is a contract-drift finding under Section 2.6.
-
-2. **Fallback path determinism** — when the entry file provides fallback instructions for unavailable tooling, unresolved state, or missing lifecycle Context Cards (e.g., "If `specflowctl` is unavailable, read `framework/operations/entry_routing.md`"), the fallback path must produce a deterministic next owner, explicit route, or clear stop condition. A fallback that routes the executor to a file whose entry instructions then route back to the original fallback trigger is a dead-loop finding under Section 2.4.
-
-3. **Step-defined responsibility boundary** — each step in the entry file's navigation sequence must name a concrete next action, target file, or stop condition. Steps that rely on executor intuition, general term meaning, or prior conversation to decide the next action are agent-operability failures under this section.
-
-4. **Natural-language routing reachability** — when the entry file's fallback step routes to `operations/entry_routing.md` for natural-language requests, the review must verify that a request arriving at `operations/entry_routing.md` through that entry-file path can still reach every legal lifecycle command, rule-governance flow, framework governance entry, and guidance skill that is in scope. The entry file must not filter or narrow the routing surface exposed by `operations/entry_routing.md` without documenting that narrowing as an intentional design decision.
-
-5. **Unavailable-tooling path independence** — when `specflowctl` is unavailable and the entry file directs the executor to read the matching lifecycle Context Card directly, the review must verify that the executor can select the correct Context Card from `framework/lifecycle/unit_*.md` using only the current `Next Command` from `_status.md`. This requires at minimum that `_status.md` is readable and the route (exact command or natural-language-derived command) can resolve to one specific lifecycle Context Card under Section 2.2 (Logical Closure). If the path is ambiguous, the review must report an agent-operability finding.
-
-6. **Stop-condition transport** — any stop condition defined in `operations/entry_routing.md` (Hard Stops section) that is restated, implied, or weakened in the entry file must have the same meaning, trigger boundary, and effect in both locations. A stop condition in the entry file that allows the executor to proceed past a condition that `operations/entry_routing.md` requires to stop is a contract-drift finding under Section 2.6. A stop condition in `operations/entry_routing.md` that is missing from the entry file and affects the executor's startup behavior must be reported as an agent-operability finding unless the entry file explicitly delegates to `operations/entry_routing.md` for that stop class.
-
-The reviewer must report, for every in-scope governance surface, which entry file was used as the runtime root, which checks from this subsection were applied, and whether each check passed or produced a finding. A pass claim for agent operability must not ignore an unreviewed or unresolved runtime entry path.
-
-### 2.8.3 Procedural Surface Minimization
+### 2.8.2 Procedural Surface Minimization
 
 > **Scope:** This section applies to `spec_flow_review:full` (deep audit) only.
 
 LLM executors are associative approximators, not symbolic procedure executors. They match patterns in context rather than executing encoded procedures. Every independent procedural decision delegated to an LLM is an associative approximation and carries a probability of incorrect association.
 
-The primary consequence for governance mechanism design is **surface minimization**: a procedural decision that can be resolved by deterministic rules (state lookup, fixed mapping, closed-form check) must be resolved before reaching the executor. The first question for any governance instruction is not "is this instruction clear?" — it is "should this instruction reach the executor at all?"
+The primary consequence for governance mechanism design is **surface minimization**: a procedural decision that can be resolved by deterministic rules (command completeness lookup, fixed mapping, closed-form check) must be resolved before reaching the executor. The first question for any governance instruction is not "is this instruction clear?" — it is "should this instruction reach the executor at all?"
 
 This principle does not reduce executor autonomy for judgment decisions (quality evaluation, design choice, correctness assessment) — it applies only to procedural decisions (routing, permission boundaries, completion mechanics) that can be handled deterministically.
 
@@ -279,7 +205,7 @@ The following conditions always violate this standard:
 
 1. Routing decisions that affect the current step are embedded in prose conditional statements that the executor must match against natural language input, rather than being resolved by tooling from current state.
 2. Write permissions for the current step are defined in a separate reference document that the executor must read and interpret, rather than being stated as part of the step's directive.
-3. Completion syntax or valid outcomes must be inferred by the executor from general knowledge or from a lifecycle document read separately, rather than being stated as part of the step's directive.
+3. Completion syntax or valid outcomes must be inferred by the executor from general knowledge or from a framework document read separately, rather than being stated as part of the step's directive.
 4. The executor must read two or more linked documents in sequence to assemble the procedural content (action, boundaries, completion) for a single step.
 
 If any governance step has an `avoidable` procedural decision, the mechanism fails this standard. A failing review must report each avoidable decision as a finding and name the smallest correct repair — either moving the decision to tooling or stating it as part of a step-level directive that reaches the executor.
@@ -296,10 +222,9 @@ The tooling review must verify tooling necessity, allowed mechanical action surf
 
 ### 2.10 Project-Instance Compatibility
 
-Default full-scope `spec_flow_review` must perform a narrow project-instance compatibility check for the layout-selected project-instance surface.
+Default full-scope `spec_flow_review` must perform a narrow project-instance compatibility check for the source_repo project-instance surface.
 
-For `installed_project`, that surface is real project-instance files under `docs/specs/`.
-For `source_repo`, that surface is template bootstrap files under `<template-root>/docs/specs/**` and does not require real project-instance `docs/specs/` files.
+That surface is template bootstrap files under `<template-root>/docs/specs/**` and does not require real project-instance `docs/specs/` files.
 
 This check verifies only whether the current project's SpecFlow instance files can still be read and consumed by the current framework contracts, templates, commands, and tooling.
 It does not review business truth correctness.
@@ -307,13 +232,9 @@ It does not review business truth correctness.
 The compatibility check may judge only:
 
 1. required file presence for current project-instance entry points
-2. required section, table, field, frontmatter, status value, command name, reference, and binding shape
-3. agreement between project-instance process files and the template-side process contracts
-4. agreement between project-instance object references and the layout-selected status file, repository mapping file, and current framework path rules
-5. whether existing project-instance files use names, states, command forms, and reference formats that the current framework can consume
-6. candidate metadata shape for current candidates, including unit `candidate_intent`, unit `repair_basis` when required, `source_basis`, `evidence_appendix_ref`, required evidence appendix reference presence, and evidence appendix file shape when the current framework requires one
-7. current-layer supporting-truth reference shape, including whether candidate main Specs avoid stable appendix dependencies and stable main Specs avoid candidate appendix dependencies
-8. appendix frontmatter and path agreement for owner, layer, and file-prefix shape, without judging the appendix's business content
+2. required section, table, field, frontmatter, and binding shape
+3. agreement between project-instance object references and the layout-selected repository mapping file and current framework path rules
+4. appendix frontmatter and path agreement for owner, layer, and file-prefix shape, without judging the appendix's business content
 
 The compatibility check must not judge:
 
@@ -322,11 +243,10 @@ The compatibility check must not judge:
 3. whether a candidate or stable Spec should make different design decisions
 4. whether implementation actually satisfies a unit or rule
 5. whether the current governance design is worth using
-6. whether an evidence appendix's observed behavior is business-correct or should be retained
 
-If the project-instance compatibility check finds old file shape, unsupported status values, missing required references, invalid binding format, missing candidate source fields, invalid evidence appendix references, missing required evidence appendix files, or unreadable process-state shape, it is a `spec_flow_review` finding because the framework cannot safely operate on the current project instance.
-If the compatibility check finds a current-layer main Spec whose supporting-truth references point to the wrong layer, or an appendix whose owner, layer, or path prefix disagrees with the current framework path rules, it is a `spec_flow_review` finding because current framework commands cannot safely consume that project instance.
-If the discovered concern is only about the truth content being wrong, incomplete, or undesirable as business truth, report that it is outside this check and route it to the owning command, rule-governance flow, repository-mapping flow, or design review.
+If the project-instance compatibility check finds old file shape, missing required references, or invalid binding format, it is a `spec_flow_review` finding because the framework cannot safely operate on the current project instance.
+If the compatibility check finds an appendix whose owner, layer, or path prefix disagrees with the current framework path rules, it is a `spec_flow_review` finding because current framework commands cannot safely consume that project instance.
+If the discovered concern is only about the truth content being wrong, incomplete, or undesirable as business truth, report that it is outside this check and route it to the owning command, repository-mapping flow, or design review.
 
 ### 2.11 Project-Instance Migration Closure
 
@@ -337,21 +257,20 @@ It does not review business truth correctness.
 
 The migration closure check must judge:
 
-1. exact entry routing for `spec_flow_migrate`
+1. entry routing for `spec_flow_migrate`
 2. rejection of migration write authority for requests that do not explicitly invoke `spec_flow_migrate`
 3. migration read surface and target surface
 4. mechanical writeback boundaries
 5. forbidden compatibility aliases, fallback logic, and business-truth rewriting
-6. process-state invalidation after migrated truth or support files change
-7. registered entry managed-block handling
-8. blocked-stop and output contracts for blocked migration
-9. agreement with tooling boundaries when existing tooling is used
+6. registered path handling
+7. blocked-stop and output contracts for blocked migration
+8. agreement with tooling boundaries when existing tooling is used
 
-If migration can rewrite project files without a current rule-derived target, preserve stale process pass claims, choose business meaning, or leave invalidated downstream state without a legal next action, it is a `spec_flow_review` finding.
+If migration can rewrite project files without a current rule-derived target, choose business meaning, or leave an invalidated downstream state without a legal next action, it is a `spec_flow_review` finding.
 
 ### 2.12 Self-Containment
 
-When a governance file is an Agent-facing instruction file (Context Card, entry file, operation policy that an executor reads directly to decide the next governed action), the file must be self-contained for its essential instructions.
+When a governance file is an Agent-facing instruction file (operation policy that an executor reads directly to decide the next governed action), the file must be self-contained for its essential instructions.
 
 A file fails self-containment when:
 
@@ -365,11 +284,11 @@ Cross-file links are acceptable only for:
 2. optional skill files that the Agent may choose to load
 3. data references (file paths to specs, truth, evidence) that the Agent needs to read as input — these are not instructions about what to do
 
-A review must find a self-containment finding when a Context Card or entry file requires the Agent to follow a chain of two or more links to obtain essential phase instructions that should have been stated directly.
+A review must find a self-containment finding when a governance file requires the Agent to follow a chain of two or more links to obtain essential phase instructions that should have been stated directly.
 
 ### 2.13 Tool-Enforcement Boundary
 
-When a governance rule describes a hard constraint — an allowed write, forbidden write, required gate, lifecycle state advancement rule, or permission requirement that the executor must not violate — the review must judge whether the rule could be enforced by deterministic tooling (`specflowctl`).
+When a governance rule describes a hard constraint — an allowed write, forbidden write, required gate, or permission requirement that the executor must not violate — the review must judge whether the rule could be enforced by deterministic tooling (`specflowctl`).
 
 Review rules:
 
@@ -379,27 +298,18 @@ Review rules:
 
 This standard does not require every rule to have tooling enforcement. It requires the review to distinguish between rules that could be enforced (and should be) and rules that inherently require judgment (and must rely on Agent capability).
 
-### 2.14 Relationship To The Slice Catalog
+### 2.14 Review Scope Completeness
 
-`spec_flow_review` adopts `<framework-root>/slice_work_state_protocol.md` when it uses a review run-state file.
-This review file owns the adoption details, the review standard, the slice catalog, and the final conclusion rules.
+The review must verify that its own scope definition is complete.
 
-The baseline slice catalog is an execution organization for this review.
-It is not the review standard by itself.
+The review scope must be defined in terms of actual framework files, not abstract categories.
+For each file listed in scope, the review must verify:
 
-Every local slice, cross-convergence slice, and dynamic slice must be judged against this section.
-Coverage without the standards in this section is not sufficient for `pass`.
+1. the file exists and is readable
+2. the file's content is internally consistent
+3. the file's content does not contradict other files in scope
 
-Command-specific adoption rules:
-
-1. the state carrier for exact `spec_flow_review:full` is `docs/specs/_governance_review/spec_flow_review.md`
-2. ordinary scoped `spec_flow_review` does not use that carrier
-3. required run fields and slice fields are defined in Section 8
-4. baseline local and cross-convergence slices are defined in Section 4
-5. dynamic slices are allowed only under Section 5
-6. freshness and stale handling are defined in Section 6.5
-7. slice-set closure supports a final review conclusion only when every in-scope baseline and dynamic slice closes under this review standard
-8. missing governance truth, unclear ownership, or unsupported state transition must become a finding, blocker, or narrowed-scope stop; it must not be hidden by adding implementation work
+If the scope definition can be interpreted in multiple ways, or if it includes abstract categories without concrete file lists, the review must report an ambiguity finding.
 
 ### 2.15 Atom System Integrity
 
@@ -433,23 +343,12 @@ Atom system integrity failures are always contract drift findings (Section 2.6) 
 
 This section applies only to explicit `deep_audit`.
 
-Default scope is layout-normalized.
+Default scope uses the fixed `source_repo` layout.
 
-Supported review layouts:
-
-1. `installed_project`
-   - framework root: `specflow/framework/`
-   - template root: `specflow/templates/`
-   - tooling root: `specflow/tooling/`
-   - project-instance compatibility mode: real project `docs/specs/`
-2. `source_repo`
-   - framework root: `framework/`
-   - template root: `templates/`
-   - tooling root: `tooling/`
-   - project-instance compatibility mode: template bootstrap compatibility under `templates/docs/specs/`
-
-`specflowctl review ... --layout auto` detects the layout. `--layout installed` and `--layout source` are explicit overrides.
-When auto detection finds both layouts, the review must stop and require an explicit layout.
+- framework root: `framework/`
+- template root: `templates/`
+- tooling root: `tooling/`
+- project-instance compatibility mode: template bootstrap compatibility under `templates/docs/specs/`
 
 The default scope includes:
 
@@ -464,109 +363,52 @@ The default scope includes:
    - `<framework-root>/_atoms/generate.sh`
    - `<framework-root>/_atoms/verify.sh`
    - `<framework-root>/_atoms/**/*.md` (recursive, all atom source files)
-3. command rules
-   - active command contracts: `<framework-root>/lifecycle/*.md`
-   - lifecycle Context Cards under `<framework-root>/lifecycle/*.md` are the active command contract
-3. candidate intent standard rules
-   - `<framework-root>/candidate_intent.md`
-4. guidance skill rules
+3. framework concept and command rules
+   - `<framework-root>/concepts.md`
    - `<framework-root>/guidance/*/SKILL.md`
-5. template-side process and state contracts
-   - `<template-root>/docs/specs/_status.md`
-   - `<template-root>/docs/specs/_check_work/README.md`
-   - `<template-root>/docs/specs/_check_result/README.md`
-   - `<template-root>/docs/specs/_verify_result/README.md`
-   - `<template-root>/docs/specs/_stable_verify_result/README.md`
-   - `<template-root>/docs/specs/_governance_review/README.md`
-   - `<template-root>/docs/specs/_independent_evaluation/README.md`
-6. template-side project-instance bootstrap contracts
+4. template-side project-instance bootstrap contracts
    - `<template-root>/docs/specs/repository_mapping.md`
    - `<template-root>/docs/specs/rules/stable/s_g_rule_repository_baseline.md`
-7. template entry files
-   - `<template-root>/AGENTS.md`
-   - `<template-root>/GEMINI.md`
-   - `<template-root>/CLAUDE.md`
-8. project entry files for `installed_project`
-   - `AGENTS.md`
-   - `GEMINI.md`
-   - `CLAUDE.md`
-9. source repository local-entry example for `source_repo`
-   - `example.md`
-10. entry registry and project-level agent rule files
-   - `<framework-root>/operations/entry_routing.md` (Entry File Registration section)
-11. tooling contract, tooling source input, and reader runtime input
+5. tooling contract and tooling source
    - `<framework-root>/tooling_execution_policy.md`
-   - `<framework-root>/slice_work_state_protocol.md`
    - `<tooling-root>/README.md`
    - `<tooling-root>/cmd/**/*.go`
    - `<tooling-root>/internal/**/*.go`
    - `<tooling-root>/go.mod`
-   - `<tooling-root>/manifest.tsv`
    - `<tooling-root>/go.sum` when it exists
    - `<tooling-root>/scripts/**`
-   - `<tooling-root>/reader/web/**`
 
-Default scope excludes project-instance truth and project-instance state files under `docs/specs/` from business-truth review.
+Default scope excludes project-instance truth files under `docs/specs/` from business-truth review.
 
 Files excluded from business-truth review include:
 
 1. `docs/specs/repository_mapping.md`
-2. `docs/specs/_status.md`
-3. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
-4. `docs/specs/units/**`
-6. `docs/specs/rules/**`
-7. `docs/specs/_check_result/**`
-8. `docs/specs/_check_work/**`
-9. `docs/specs/_plans/**`
-10. `docs/specs/_verify_result/**`
-11. `docs/specs/_stable_verify_result/**`
-12. `docs/specs/_governance_review/**`
-13. `docs/specs/_independent_evaluation/**`
+2. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
+3. `docs/specs/units/**`
+4. `docs/specs/rules/**`
+5. `docs/specs/_governance_review/**`
 
-Those files may be reviewed for business-truth correctness only when the user explicitly narrows `spec_flow_review` to project-instance state, or when a command, repository-mapping flow, rule-governance flow, or verification flow consumes them under its own policy.
+Those files may be reviewed for business-truth correctness only when the user explicitly narrows `spec_flow_review` to project-instance state, or when a command, repository-mapping flow, or rule-governance flow consumes them under its own policy.
 
 Default full-scope `spec_flow_review` must still perform the compatibility check from Section 2.10.
 This check is narrow and does not turn `docs/specs/` into default business-truth review scope.
 
-For `installed_project`, the compatibility input surface includes:
-
-1. `docs/specs/_status.md`
-2. `docs/specs/repository_mapping.md`
-3. `docs/specs/rules/stable/s_g_rule_repository_baseline.md`
-4. existing project process files under `docs/specs/_check_work/**`, `docs/specs/_check_result/**`, `docs/specs/_plans/**`, `docs/specs/_verify_result/**`, and `docs/specs/_stable_verify_result/**`
-5. existing independent evaluation request files under `docs/specs/_independent_evaluation/**`, only for request-file path, field, reviewer-pack, and reference shape
-6. existing project truth files under `docs/specs/units/**` and `docs/specs/rules/**`, only for file shape, required fields, references, and binding format
+Compatibility input is template bootstrap compatibility under `<template-root>/docs/specs/**`.
+It must not require real project-instance `docs/specs/repository_mapping.md` or project truth files.
 
 `docs/specs/_governance_review/**` is not part of the compatibility input fingerprint.
 The active full-scope run-state file is governed by the run-state procedure in Section 6, because including that file in its own slice fingerprint would create self-referential stale state.
 
-For `source_repo`, compatibility input is template bootstrap compatibility under `<template-root>/docs/specs/**`.
-It must not require real project-instance `docs/specs/_status.md`, `docs/specs/repository_mapping.md`, or project truth files.
+Default scope must explicitly cover:
 
-Default scope must explicitly include:
+1. the concept and command rule set — at minimum `concepts.md` and `spec_writing_guide.md`
+2. the rule-governance rule set — at minimum `governance/rule_system.md` plus `governance/rules/rule_new.md`, `governance/rules/rule_extract.md`, `governance/rules/rule_bind.md`, `governance/rules/rule_topology.md`, `governance/rules/rule_sync.md`, and `governance/rules/rule_escape.md`
+3. the tooling execution contract set — at minimum `tooling_execution_policy.md`, `<tooling-root>/README.md`, and in-scope tooling source files
+4. the agent-operability standard — at minimum `concepts.md` (hook-injected content), rule-governance files, and review policy files
+5. the project-instance compatibility check — at minimum the layout-selected repository mapping, global rule, and formal truth compatibility inputs, limited by Section 2.10
+6. the project-instance migration flow — at minimum `operations/migration.md`
 
-1. the onboarding source decision rule set
-   - at minimum `operations/entry_routing.md` where it enters onboarding source decision or continuation routing, `candidate_intent.md`, `spec_writing_guide.md`, `lifecycle/unit_init_new_fork.md` for `unit_init`, `unit_new`, and `unit_fork`, `lifecycle/unit_check.md`, `lifecycle/unit_promote.md`
-2. the rule-governance rule set
-   - at minimum `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch, plus `governance/rules/rule_new.md`, `governance/rules/rule_extract.md`, `governance/rules/rule_bind.md`, `governance/rules/rule_topology.md`, `governance/rules/rule_sync.md`, and `governance/rules/rule_escape.md`
-3. the guidance-skill rule set
-   - at minimum `using-specflow-guidance/SKILL.md`, `project-framing/SKILL.md`, `scope-cutting/SKILL.md`, `solution-design/SKILL.md`, `design-quality-review/SKILL.md`, and `spec-writeback-guidance/SKILL.md`
-4. the impact-reconciliation rule set
-   - at minimum `governance/impact_sync.md`, `process_snapshot_contract.md`, `slice_work_state_protocol.md`, `lifecycle/recovery.md`, template `_status.md`, and the template-side process, review-state, and independent-evaluation README files
-5. the tooling execution contract set
-   - at minimum `tooling_execution_policy.md`, `slice_work_state_protocol.md`, `<tooling-root>/README.md`, the in-scope tooling source files, and the runtime reader web files
-6. the agent-operability standard
-   - at minimum entry files, routing policy files, `core/independent_evaluation.md`, `core/freshness.md`, `lifecycle/overview.md`, lifecycle Context Cards, `candidate_intent.md`, rule-governance files, guidance skill files, review policy files, Spec writing policy files, and process-state contract files in the current review scope
-7. the state-space closure check
-   - at minimum routing policy (including state-based advancement), lifecycle overview, lifecycle Context Cards, candidate intent policy and standards, implementation permission rules, process-state contracts, recovery rules, impact-sync rules, migration rules, and project-instance compatibility inputs needed to prove important non-success transitions
-8. the project-instance compatibility check
-   - at minimum the layout-selected status, repository mapping, global rule, process-file, and formal truth compatibility inputs, limited by Section 2.10
-9. the project-instance migration flow
-   - at minimum `operations/migration.md`, `operations/entry_routing.md` where it routes project-instance migration, `lifecycle/overview.md` where it defines command boundaries, `process_snapshot_contract.md`, `lifecycle/recovery.md`, and the template-side process, independent-evaluation, and entry files that migration consumes
-10. the supporting-truth lifecycle closure check
-   - at minimum fork commands, promote commands, process cleanup and recovery rules, Rule sync and release-version paths, project-instance compatibility inputs, tooling contracts, and tooling source that creates, retargets, preserves, or deletes supporting truth
-
-If any one of those ten coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
+If any one of those six coverage sets is missing from a default-scope review, that review is not complete and must not issue `pass`.
 
 ## 4. Baseline Slice Catalog
 
@@ -584,75 +426,67 @@ It does not replace the Review Standard in Section 2.
 Local slices review one owner area for internal closure, side effects, contract drift, missing ownership, and local agent operability.
 
 1. `scope_inventory`
-   - verifies default-scope collection, excluded project-instance truth, installed project entry files, source repository entry example files, and unassigned file handling
+   - verifies default-scope collection, excluded project-instance truth, and unassigned file handling
    - includes the deterministic scope produced by `review collect-default-scope --flow spec_flow_review`
 2. `review_entry_policy`
-   - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `governance/review.md`, `governance/review_scope.md`, `severity_policy.md`, and `operations/entry_routing.md` (Exact Commands and Framework Governance sections)
+   - reviews `spec_flow_review.md`, `spec_flow_design_review.md`, `governance/review.md`, `governance/review_scope.md`, and `severity_policy.md`
    - verifies review entry meaning, output contracts, finding contracts, and stop behavior
-3. `routing_and_lifecycle_policy`
-   - reviews `operations/entry_routing.md`, `core/adoption_modes.md`, `core/independent_evaluation.md`, `core/freshness.md`, `lifecycle/overview.md`, `operations/migration.md`, `candidate_intent.md`, `lifecycle/*.md`, and `guidance/*/SKILL.md`
-   - verifies exact command routing, state-based routing for continuation requests, exact project-instance migration routing, natural-language routing, onboarding source routing, unit command progression, and guidance entry behavior
+3. `concept_and_command_policy`
+   - reviews `concepts.md`, `operations/migration.md`, and `guidance/*/SKILL.md`
+   - verifies the three commands (next, review, promote) have defined input, output, and failure behavior per Section 2.4
+   - verifies project-instance migration routing and guidance entry behavior
 4. `truth_and_implementation_gates`
-   - reviews `spec_writing_guide.md`, `core/status.md`, `core/repository_mapping.md`, `candidate_intent.md`, `lifecycle/recovery.md`, and `lifecycle/overview.md`
-   - verifies truth ownership, candidate source fields, evidence appendix ownership, implementation diversion, handoff, fallback, and recovery rules
+   - reviews `spec_writing_guide.md`, `core/repository_mapping.md`, and `concepts.md`
+   - verifies truth ownership and candidate entry rules
 5. `shared_governance`
-   - reviews `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch
+   - reviews `governance/rule_system.md` where it defines the rule-governance branch
    - reviews `governance/rules/rule_new.md`, `governance/rules/rule_extract.md`, `governance/rules/rule_bind.md`, `governance/rules/rule_topology.md`, `governance/rules/rule_sync.md`, and `governance/rules/rule_escape.md`
 6. `process_and_impact_state`
-   - reviews `core/independent_evaluation.md`, `core/freshness.md`, `governance/impact_sync.md`, `process_snapshot_contract.md`, `slice_work_state_protocol.md`, `lifecycle/recovery.md`, template `_status.md`, template `_check_work`, template `_check_result`, template `_verify_result`, template `_stable_verify_result`, template `_governance_review`, and template `_independent_evaluation`
-   - verifies process-state contracts, independent-evaluation request contracts, snapshot invalidation, impact handling, and governance-review run-state boundaries
+   - reviews `governance/impact_sync.md`
+   - verifies impact handling and governance-review run-state boundaries
 7. `project_instance_contract_compatibility`
    - reviews the current project-instance files under `docs/specs/` only for format and contract compatibility with current framework rules
-   - reviews `core/status.md`, `core/repository_mapping.md`, and `spec_writing_guide.md` as the owner contracts for object family, object state, registry shape, formal Spec shape, reference format, and rule binding format
+   - reviews `core/repository_mapping.md` and `spec_writing_guide.md` as the owner contracts for object family, reference format, and rule binding format
    - reviews `operations/migration.md` as the migration owner for project-instance shape drift discovered by this slice
-   - verifies status shape, repository mapping shape, global rules shape, process-file shape, formal object file shape, candidate source metadata shape, candidate intent standard shape, evidence appendix reference shape, evidence appendix file shape, current-layer supporting-truth reference shape, appendix owner/layer/path agreement, reference format, status values, command names, rule binding format, migration writeback boundary, migration state invalidation, migration blocked-stop handling, and migration output closure
-   - must not judge unit, rule, or evidence-appendix business truth correctness
-8. `entry_and_project_extension`
-   - reviews `operations/entry_routing.md` (Entry File Registration section), registered entry files, and template entry files
-   - verifies entry file navigation logic correctness under Section 2.8.3, including Step-sequence alignment with routing policy and fallback path completeness
-9. `tooling_execution`
-   - reviews `tooling_execution_policy.md`, `slice_work_state_protocol.md`, `<tooling-root>/README.md`, in-scope tooling source files, and runtime reader web files
-   - verifies tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness, reader runtime coverage, and document/source/runtime agreement
+   - verifies repository mapping shape, appendix owner/layer/path agreement, reference format, rule binding format, migration writeback boundary, migration blocked-stop handling, and migration output closure
+   - must not judge unit, rule, or appendix business truth correctness
+ 8. `hook_check`
+    - reviews hook configuration files: `specflow/hooks/hooks.json`, `specflow/hooks/hooks-cursor.json`, `specflow/hooks/hooks-codex.json`
+    - verifies `specflow/hooks/session-start` reads `framework/concepts.md` and produces correct platform-specific JSON output
+    - verifies `framework/concepts.md` contains complete agent governance content (triggers, HARD RULES, commands reference)
+    - reference: `framework/hooks.md` for the full verification checklist
+ 9. `tooling_execution`
+   - reviews `tooling_execution_policy.md`, `<tooling-root>/README.md`, and in-scope tooling source files
+   - verifies tooling necessity, allowed mechanical action surface, forbidden semantic judgment, freshness, and document/source agreement
 10. `agent_operability_local`
-   - reviews entry files, routing policy files, `core/independent_evaluation.md`, `core/freshness.md`, `lifecycle/overview.md`, lifecycle Context Cards, `candidate_intent.md`, rule-governance files, guidance skill files, review policy files, Spec writing policy files, and process-state contract files in the current review scope
-   - resolves the agent runtime entry file per layout before reviewing:
-     - `source_repo`: `templates/CLAUDE.md` (not the repository-root `CLAUDE.md`, which is a source-repo-local development guide without a managed block)
-     - `installed_project`: project-root registered entry file (`AGENTS.md`, `CLAUDE.md`, or `GEMINI.md`)
-   - verifies entry files as the root agent execution entry under Section 2.8.3, including entry-to-routing navigation alignment, fallback path determinism, stop-condition transport between entry files and routing policy, and that entry file routing instructions do not contradict `operations/entry_routing.md`
-   - verifies that local slice conclusions, including candidate intent policy, entry-file consumption, tooling-root command refs, and review entry behavior, did not rely on prior conversation, ordinary term meanings, hidden layout assumptions, or avoidable repeated reading
+    - reviews `concepts.md`, rule-governance files, review policy files, and Spec writing policy files in the current review scope
+    - verifies that `concepts.md` (the hook-injected content) contains self-contained instructions: trigger phrases, HARD RULES, commands, and suggestion flow rules
+    - verifies that local slice conclusions did not rely on prior conversation, ordinary term meanings, hidden layout assumptions, or avoidable repeated reading
 
 ### 4.2 Cross-Convergence Baseline Slices
 
 Cross-convergence slices review whether locally correct rules still compose into one coherent governance baseline.
 
-1. `routing_to_command_convergence`
-   - verifies natural-language routing, exact command routing, state-based routing for continuation requests, exact project-instance migration routing, guidance entry, and review entry behavior converge without ambiguous owner selection
-2. `command_to_process_state_convergence`
-   - verifies command pass, fallback, cleanup, snapshot, and process-file consumption rules converge
-3. `truth_to_implementation_convergence`
-   - verifies truth writeback, onboarding source decision, repository mapping, implementation gates, evidence appendix non-truth handling, handoff, and recovery converge
-4. `state_space_closure`
-   - depends on `routing_and_lifecycle_policy`, `truth_and_implementation_gates`, `process_and_impact_state`, and `project_instance_contract_compatibility`
-   - verifies important advance loops, command results, fallback states, checkpoint states, drift states, blocked states, repair states, migration states, and impact-sync states have legal progress transitions
-   - verifies same-command reruns have a legal state-changing source before the rerun
-   - must not use file-read coverage or local rule consistency as a substitute for transition proof
-5. `shared_to_impact_convergence`
-   - verifies rule-governance changes correctly converge with impact reconciliation and downstream process-state invalidation
-6. `entry_extension_to_review_convergence`
-   - verifies entry files and project-level agent rules cannot bypass the framework baseline, narrow default scope silently, or change review meaning without owner rules
-7. `tooling_to_rule_convergence`
-   - verifies tooling executes only rule-decided mechanical work, does not become a second semantic source of truth, and does not introduce a migration command unless a rule owner defines its mechanical surface
-8. `supporting_truth_lifecycle_convergence`
-   - depends on `routing_and_lifecycle_policy`, `truth_and_implementation_gates`, `process_and_impact_state`, `project_instance_contract_compatibility`, and `tooling_execution`
-   - verifies fork, promote, cleanup, rule `release-version`, rule sync, project-instance compatibility, and tooling-to-rule agreement for stable and candidate main Specs, appendices, evidence appendices, and Rule refs
-   - must explicitly report the supporting-truth lifecycle paths walked; a generic cross-convergence `passed` statement is not sufficient
-9. `project_instance_to_framework_convergence`
-   - verifies the project-instance compatibility check and `spec_flow_migrate` compose with routing, lifecycle, process-state, repository-mapping, shared-binding, entry-file, and tooling rules without judging business truth content
-10. `agent_operability_path_walk`
-   - walks representative execution paths starting from the agent runtime entry file (`templates/CLAUDE.md` for `source_repo` — NOT the repository-root `CLAUDE.md`; or project-root registered entry file for `installed_project`), through routing, command, shared, process-state, entry, and tooling rules (state-based advancement is covered by routing and command rules)
-   - verifies a new executor can proceed from the entry file's first step to the correct first owner, route, command, and next legal action without hidden context, prior `specFlow` memory, or circular navigation between the entry file and `operations/entry_routing.md`
-   - entry-to-routing alignment under Section 2.8.3, fallback path completeness, and stop-condition transport must be explicitly reported for every walked path
-   - the reviewer must explicitly report which file was used as the agent runtime entry file for each walked path; using the repository-root `CLAUDE.md` in `source_repo` layout instead of `templates/CLAUDE.md` is a finding under Section 2.6 contract drift and Section 2.8.2
+1. `command_to_process_convergence`
+   - verifies the three commands (next, review, promote) converge with process closure rules from Section 2.3
+2. `truth_to_implementation_convergence`
+   - verifies truth writeback, repository mapping, implementation gates, and candidate entry rules converge
+3. `shared_to_impact_convergence`
+   - verifies rule-governance changes correctly converge with impact reconciliation
+4. `hook_to_review_convergence`
+   - verifies hook configuration and `concepts.md` injection cannot bypass the framework baseline, narrow default scope silently, or change review meaning without owner rules
+5. `tooling_to_rule_convergence`
+   - verifies tooling executes only rule-decided mechanical work and does not become a second semantic source of truth
+6. `supporting_layer_convergence`
+   - depends on `concept_and_command_policy`, `truth_and_implementation_gates`, `project_instance_contract_compatibility`, and `tooling_execution`
+   - verifies promote path correctly migrates candidate supporting files to stable layer per Section 2.7.1
+7. `project_instance_to_framework_convergence`
+   - verifies the project-instance compatibility check and `spec_flow_migrate` compose with hook and tooling rules without judging business truth content
+ 8. `agent_operability_path_walk`
+    - walks representative execution paths starting from the hook-injected content (`framework/concepts.md`), through triggers (`spec_validate`, `spec_verify`, `spec_promote`), commands, and tooling rules
+    - verifies a new executor can proceed from the injected content to the correct first command without hidden context or prior `specFlow` knowledge
+    - injection-to-command alignment under Section 2.8.1 must be explicitly reported for every walked path
+    - verifies the injection chain for each supported platform per `framework/hooks.md`
 
 The final result must not issue `pass` until every required local baseline slice, every required cross-convergence baseline slice, and every dynamic slice is closed as `passed` or `skipped_not_in_scope`.
 
@@ -723,7 +557,7 @@ Mechanical fields must be written by deterministic tooling when the tooling is a
 If the tooling is unavailable, the executor must obtain UTC time from the runtime environment before writing timestamp fields.
 The executor must not invent timestamps, input fingerprints, or stale-refresh results from conversation context.
 
-The mechanical fields are the fields allowed by `slice_work_state_protocol.md` and this review's run-state contract:
+The mechanical fields are the fields allowed by this review's run-state contract:
 
 1. `created_at`
 2. `last_updated_at`
@@ -732,18 +566,17 @@ The mechanical fields are the fields allowed by `slice_work_state_protocol.md` a
 5. `input_fingerprint`
 6. stale status changes caused only by changed or missing `input_files`
 
-The deterministic tooling entry is `specflowctl review run-* --flow spec_flow_review --layout auto|installed|source`.
+The deterministic tooling entry is `specflowctl review run-* --flow spec_flow_review`.
 
 Rules:
 
-1. `review run-init --flow spec_flow_review --layout auto|installed|source` creates, reuses, deletes, or recreates the fixed full-scope run-state file
-2. `review run-validate --flow spec_flow_review --layout auto|installed|source` checks the run-state file shape and all fixed status values, including closed statuses; it is not a reuse decision
-3. `review run-refresh --flow spec_flow_review --layout auto|installed|source` recomputes slice fingerprints and marks affected `passed` slices as `stale` only for an open run-state file
-4. `review run-touch --flow spec_flow_review --layout auto|installed|source` updates only `last_updated_at` on a structurally valid run-state file
+1. `review run-init --flow spec_flow_review` creates, reuses, deletes, or recreates the fixed full-scope run-state file
+2. `review run-validate --flow spec_flow_review` checks the run-state file shape and all fixed status values, including closed statuses; it is not a reuse decision
+3. `review run-refresh --flow spec_flow_review` recomputes slice fingerprints and marks affected `passed` slices as `stale` only for an open run-state file
+4. `review run-touch --flow spec_flow_review` updates only `last_updated_at` on a structurally valid run-state file
 5. tooling must not decide whether a slice has passed review
 6. tooling must not write finding content
 7. tooling must not decide final `pass` or `blocked`
-8. an explicit layout that conflicts with an existing open run-state file's `review_layout` must fail instead of rewriting that file
 
 ### 6.2 Startup Procedure
 
@@ -836,14 +669,12 @@ Manual fingerprint calculations may be used only as diagnostics; they must not b
 
 ### 6.5.1 Slice Input Fingerprint Contract
 
-Slice input fingerprints use the same text normalization rules as `<framework-root>/process_snapshot_contract.md`.
-
 For each file in `input_files`:
 
 1. file paths must be repository-relative paths rendered with `/`
 2. file paths must be sorted lexicographically before hashing
 3. read the full file text
-4. normalize the text using `process_snapshot_contract.md` Section 8
+4. normalize the text (strip trailing whitespace from each line, replace all line endings with `\n`, remove trailing empty lines)
 5. compute `sha256` of the normalized UTF-8 bytes
 6. render the file hash as lowercase hexadecimal
 
@@ -932,19 +763,16 @@ The output must report at least:
 12. the tooling coverage result, including reader runtime coverage
 13. the project-instance compatibility and migration-flow result
 14. the agent-operability result, including local slice results and path-walk result
-15. the supporting-truth lifecycle result:
-   - fork paths reviewed for stable-to-candidate supporting truth retargeting
-   - promote paths reviewed for candidate-to-stable supporting truth migration, absorption, or deletion
-   - cleanup paths reviewed for preserving current-round supporting truth until owned handling completes
-   - deterministic tooling paths reviewed for agreement with command rules
-   - wrong-layer current reference cases found, or explicit `none`
+15. the supporting layer result:
+   - promote paths reviewed for candidate-to-stable supporting file migration
+   - stable-layer dependency on candidate-layer files found, or explicit `none`
+   - candidate-layer dependency on stable-layer files confirmed as baseline reference only
 16. the cross-convergence results
-17. the state-space coverage result:
-   - covered state carriers
-   - covered commands and governance flows
-   - key non-success transitions reviewed
-   - same-command rerun cases and their legal state-changing source, or explicit `none`
-   - uncovered important state types, if any, reported as findings
+17. the command completeness result:
+   - next command input, output, and failure behavior verified
+   - review command input, output, and failure behavior verified
+   - promote command input, output, and failure behavior verified
+   - undefined behavior or missing definitions found, or explicit `none`
 18. the findings result:
    - explicit `none` when no real finding exists
    - otherwise every finding must satisfy Section 8.2
@@ -1016,7 +844,7 @@ Do not present a raw field dump as the user-facing finding.
 Lists such as `background`, `what happened`, `impact`, and `recommended fix` may be used only as private drafting aids or trace details; they do not satisfy the user-facing finding requirement by themselves.
 
 The first use of an internal term must explain the term in place.
-For example, if a finding mentions a `Context Card`, it must state that this is the command file that tells the executor what to read, what it may write, and when it must stop.
+For example, if a finding mentions a `command file`, it must state that this is the framework governance file that tells the executor what to read, what it may write, and when it must stop.
 
 Every real finding must still contain these information items:
 
@@ -1042,21 +870,7 @@ Every real finding must still contain these information items:
 Recommended user-facing shape:
 
 ```text
-Finding F-006: Natural-language unit requests can send the executor into the wrong lifecycle path.
-
-A user may ask to create, modify, or continue a unit in ordinary language instead of typing an exact command. In that situation, the executor first reads entry_routing.md to decide which lifecycle command file to use. That command file, also called a Context Card, tells the executor what files must be read, what files may be written, and when the command must stop. The current routing text only points to a broad unit lifecycle area, so the executor still has to guess which specific Context Card applies. That can make the executor choose the wrong flow or skip the required read/write boundary. The minimal repair is to make entry_routing.md select a concrete existing Context Card, or stop when it cannot safely choose one.
-
-Fix:
-Make entry_routing.md choose the first concrete existing Context Card for natural-language unit lifecycle requests after reading the minimum required status and truth files. If the correct card cannot be determined, it must stop instead of routing to a broad lifecycle area.
-
-Evidence:
-...
-
-Status:
-P1; blocking for the current review slice.
-
-Trace:
-...
+(Historical finding F-006 removed — entry files no longer contain routing logic. Agent bootstrap is handled by platform-specific hook injection.)
 ```
 
 Additional rules:

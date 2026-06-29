@@ -9,7 +9,7 @@ description: Use when a natural-language specFlow request may need product or de
 
 Use this skill to decide whether a natural-language request should enter a guidance skill before a formal specFlow command or truth writeback.
 
-Guidance helps a user form a better project design. It does not create a lifecycle object, advance `_status.md`, replace lifecycle routing, or become durable truth.
+Guidance helps a user form a better project design. It does not become durable truth.
 
 ## Routing Rule
 
@@ -25,8 +25,6 @@ Before selecting a guidance skill, diagnose the user's goal in ordinary language
 Do not ask the user to classify the request as `unit`, `rule`, stable `g_` rule, or `repository_mapping`.
 Use repository truth and natural-language routing to translate the user's goal into the internal specFlow owner.
 
-Do not use guidance when the user gives an exact standard command such as `unit_check:{unit}` or `unit_verify:{unit}`. Exact commands route through `framework/operations/entry_routing.md` into lifecycle Context Cards.
-
 ## Skill Selection
 
 1. Use `project-framing` when the goal, user, problem, or success meaning is unclear.
@@ -40,10 +38,9 @@ Do not use guidance when the user gives an exact standard command such as `unit_
 1. Do not implement from guidance output.
 2. Do not treat chat-only agreement as durable truth.
 3. Do not write `_plans/active`, `_verify_result`, `_stable_verify_result`, or `_check_result` from guidance.
-4. Do not advance `_status.md` from guidance.
-5. Once a conclusion affects behavior, boundary, acceptance, rule truth, or global rule truth, route it into formal specFlow truth writeback before implementation.
-6. Do not turn guidance into a command-alias conversation where the user must choose internal command or object-family names.
-7. Ask only ordinary-language questions about goal, scope, outcome, success meaning, or required human judgment.
+4. Once a conclusion affects behavior, boundary, acceptance, rule truth, or global rule truth, route it into formal specFlow truth writeback before implementation.
+5. Do not turn guidance into a command-alias conversation where the user must choose internal command or object-family names.
+6. Ask only ordinary-language questions about goal, scope, outcome, success meaning, or required human judgment.
 
 ## Completion
 

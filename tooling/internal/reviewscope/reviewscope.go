@@ -10,11 +10,7 @@ import (
 )
 
 const (
-	LayoutAuto             = "auto"
-	LayoutInstalledProject = "installed_project"
 	LayoutSourceRepo       = "source_repo"
-
-	CompatibilityInstalledProject  = "project_instance"
 	CompatibilityTemplateBootstrap = "template_bootstrap"
 )
 
@@ -43,90 +39,29 @@ type SpecFlowScope struct {
 	ToolingRuntimeFiles               []string
 }
 
-type layoutRoots struct {
-	Layout                           string
-	FrameworkRoot                    string
-	TemplateRoot                     string
-	ToolingRoot                      string
-	ProjectInstanceCompatibilityMode string
-}
-
-func NormalizeLayout(value string) (string, error) {
-	switch strings.TrimSpace(value) {
-	case "", LayoutAuto:
-		return LayoutAuto, nil
-	case "installed", LayoutInstalledProject:
-		return LayoutInstalledProject, nil
-	case "source", LayoutSourceRepo:
-		return LayoutSourceRepo, nil
-	default:
-		return "", fmt.Errorf("unsupported review layout %q", value)
-	}
-}
-
-func ResolveLayout(repoRoot, requested string) (string, error) {
-	normalized, err := NormalizeLayout(requested)
-	if err != nil {
-		return "", err
-	}
-	if normalized != LayoutAuto {
-		if !layoutMarkersPresent(repoRoot, normalized) {
-			return "", fmt.Errorf("requested review layout %s is not present under repository root", normalized)
-		}
-		return normalized, nil
-	}
-
-	sourcePresent := layoutMarkersPresent(repoRoot, LayoutSourceRepo)
-	installedPresent := layoutMarkersPresent(repoRoot, LayoutInstalledProject)
-	switch {
-	case sourcePresent && installedPresent:
-		return "", fmt.Errorf("ambiguous review layout: both source_repo and installed_project markers are present; pass --layout source or --layout installed")
-	case sourcePresent:
-		return LayoutSourceRepo, nil
-	case installedPresent:
-		return LayoutInstalledProject, nil
-	default:
-		return "", fmt.Errorf("could not detect review layout: expected source_repo markers or installed_project markers")
-	}
-}
-
 func CollectDefaultSpecFlowScope(repoRoot string) (SpecFlowScope, error) {
-	return CollectDefaultSpecFlowScopeForLayout(repoRoot, LayoutAuto)
-}
-
-func CollectDefaultSpecFlowScopeForLayout(repoRoot, requestedLayout string) (SpecFlowScope, error) {
-	roots, err := resolveRoots(repoRoot, requestedLayout)
-	if err != nil {
-		return SpecFlowScope{}, err
-	}
 	scope := SpecFlowScope{
 		Profile:                          "default_governance_baseline",
-		Layout:                           roots.Layout,
-		FrameworkRoot:                    roots.FrameworkRoot,
-		TemplateRoot:                     roots.TemplateRoot,
-		ToolingRoot:                      roots.ToolingRoot,
-		ProjectInstanceCompatibilityMode: roots.ProjectInstanceCompatibilityMode,
+		Layout:                           LayoutSourceRepo,
+		FrameworkRoot:                    "framework",
+		TemplateRoot:                     "templates",
+		ToolingRoot:                      "tooling",
+		ProjectInstanceCompatibilityMode: CompatibilityTemplateBootstrap,
 	}
 
-	frameworkFiles, err := layeredFrameworkFiles(repoRoot, roots)
+	frameworkFiles, err := layeredFrameworkFiles(repoRoot, scope.FrameworkRoot)
 	if err != nil {
 		return scope, err
 	}
-	commandFiles, err := globRelative(repoRoot, joinPath(roots.FrameworkRoot, "lifecycle/*.md"))
+	guidanceSkillFiles, err := globRelative(repoRoot, scope.FrameworkPath("guidance/*/SKILL.md"))
 	if err != nil {
 		return scope, err
 	}
-	candidateIntentFile := scope.FrameworkPath("candidate_intent.md")
-	candidateIntentFiles := []string{candidateIntentFile}
-	guidanceSkillFiles, err := globRelative(repoRoot, joinPath(roots.FrameworkRoot, "guidance/*/SKILL.md"))
+	ruleFlowFiles, err := globRelative(repoRoot, scope.FrameworkPath("governance/rules/*.md"))
 	if err != nil {
 		return scope, err
 	}
-	ruleFlowFiles, err := globRelative(repoRoot, joinPath(roots.FrameworkRoot, "governance/rules/*.md"))
-	if err != nil {
-		return scope, err
-	}
-	if len(frameworkFiles) == 0 || len(commandFiles) == 0 || !fileExists(repoRoot, candidateIntentFile) || len(guidanceSkillFiles) == 0 || len(ruleFlowFiles) == 0 {
+	if len(frameworkFiles) == 0 || len(guidanceSkillFiles) == 0 || len(ruleFlowFiles) == 0 {
 		return scope, fmt.Errorf("default governance files are incomplete")
 	}
 
@@ -143,26 +78,15 @@ func CollectDefaultSpecFlowScopeForLayout(repoRoot, requestedLayout string) (Spe
 		scope.FrameworkPath("governance/impact_sync.md"),
 	}
 	ruleFiles = sortAndDedupe(append(ruleFiles, ruleFlowFiles...))
-	templateProcessStateFiles := templateProcessStateFiles(scope)
-	templateGovernanceFiles := append([]string{}, templateProcessStateFiles...)
 	templateProjectInstanceFiles := []string{
 		scope.TemplatePath("docs/specs/repository_mapping.md"),
 		scope.TemplatePath("docs/specs/rules/stable/s_g_rule_repository_baseline.md"),
 	}
-	templateEntryFiles := templateEntryFiles(scope)
-	projectEntryFiles := projectEntryFiles(roots.Layout)
-	sourceRepoEntryExampleFiles := sourceRepoEntryExampleFiles(roots.Layout)
 	toolingContractFiles := []string{
 		scope.FrameworkPath("tooling_execution_policy.md"),
-		scope.FrameworkPath("slice_work_state_protocol.md"),
 		scope.ToolingPath("README.md"),
 	}
-	processStateContractFiles := []string{
-		scope.FrameworkPath("process_snapshot_contract.md"),
-		scope.FrameworkPath("slice_work_state_protocol.md"),
-		scope.FrameworkPath("lifecycle/recovery.md"),
-	}
-	agentOperabilityFiles := collectAgentOperabilityFiles(scope, projectEntryFiles, sourceRepoEntryExampleFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, candidateIntentFiles, guidanceSkillFiles, ruleFiles, processStateContractFiles, toolingContractFiles)
+	agentOperabilityFiles := collectAgentOperabilityFiles(scope, guidanceSkillFiles, ruleFiles, toolingContractFiles)
 	projectInstanceCompatibilityFiles, err := collectProjectInstanceCompatibilityFiles(repoRoot, scope)
 	if err != nil {
 		return scope, err
@@ -202,13 +126,8 @@ func CollectDefaultSpecFlowScopeForLayout(repoRoot, requestedLayout string) (Spe
 	}
 
 	required := append([]string{}, ruleFiles...)
-	required = append(required, candidateIntentFiles...)
 	required = append(required, minimumGuidanceSkillFiles...)
-	required = append(required, templateGovernanceFiles...)
 	required = append(required, templateProjectInstanceFiles...)
-	required = append(required, templateEntryFiles...)
-	required = append(required, projectEntryFiles...)
-	required = append(required, sourceRepoEntryExampleFiles...)
 	required = append(required, agentOperabilityFiles...)
 	required = append(required, toolingContractFiles...)
 	required = append(required, toolingSourceFiles...)
@@ -219,15 +138,9 @@ func CollectDefaultSpecFlowScopeForLayout(repoRoot, requestedLayout string) (Spe
 	}
 
 	scope.FrameworkGuidelineFiles = frameworkFiles
-	scope.CommandFiles = commandFiles
-	scope.CandidateIntentFiles = sortAndDedupe(candidateIntentFiles)
 	scope.GuidanceSkillFiles = sortAndDedupe(guidanceSkillFiles)
 	scope.RuleGovernanceFiles = ruleFiles
-	scope.TemplateGovernanceFiles = templateGovernanceFiles
 	scope.TemplateProjectInstanceFiles = templateProjectInstanceFiles
-	scope.TemplateEntryFiles = templateEntryFiles
-	scope.ProjectEntryFiles = projectEntryFiles
-	scope.SourceRepoEntryExampleFiles = sourceRepoEntryExampleFiles
 	scope.AgentOperabilityFiles = agentOperabilityFiles
 	scope.ProjectInstanceCompatibilityFiles = projectInstanceCompatibilityFiles
 	scope.ToolingContractFiles = toolingContractFiles
@@ -238,34 +151,13 @@ func CollectDefaultSpecFlowScopeForLayout(repoRoot, requestedLayout string) (Spe
 }
 
 func CollectDefaultSpecFlowDesignScope(repoRoot string) (SpecFlowScope, error) {
-	return CollectDefaultSpecFlowDesignScopeForLayout(repoRoot, LayoutAuto)
-}
-
-func CollectDefaultSpecFlowDesignScopeForLayout(repoRoot, requestedLayout string) (SpecFlowScope, error) {
-	roots, err := resolveRoots(repoRoot, requestedLayout)
-	if err != nil {
-		return SpecFlowScope{}, err
-	}
 	scope := SpecFlowScope{
 		Profile:                          "default_design_baseline",
-		Layout:                           roots.Layout,
-		FrameworkRoot:                    roots.FrameworkRoot,
-		TemplateRoot:                     roots.TemplateRoot,
-		ToolingRoot:                      roots.ToolingRoot,
-		ProjectInstanceCompatibilityMode: roots.ProjectInstanceCompatibilityMode,
-	}
-
-	commandFiles, err := globRelative(repoRoot, joinPath(roots.FrameworkRoot, "lifecycle/*.md"))
-	if err != nil {
-		return scope, err
-	}
-	if len(commandFiles) == 0 {
-		return scope, fmt.Errorf("default design lifecycle files are incomplete")
-	}
-	candidateIntentFile := scope.FrameworkPath("candidate_intent.md")
-	candidateIntentFiles := []string{candidateIntentFile}
-	if !fileExists(repoRoot, candidateIntentFile) {
-		return scope, fmt.Errorf("default design candidate intent files are incomplete")
+		Layout:                           LayoutSourceRepo,
+		FrameworkRoot:                    "framework",
+		TemplateRoot:                     "templates",
+		ToolingRoot:                      "tooling",
+		ProjectInstanceCompatibilityMode: CompatibilityTemplateBootstrap,
 	}
 
 	designFoundationFiles := []string{
@@ -273,43 +165,19 @@ func CollectDefaultSpecFlowDesignScopeForLayout(repoRoot, requestedLayout string
 		scope.FrameworkPath("governance/review.md"),
 		scope.FrameworkPath("governance/review_scope.md"),
 		scope.FrameworkPath("governance/rule_system.md"),
+		scope.FrameworkPath("concepts.md"),
 		scope.FrameworkPath("core/object_model.md"),
-		scope.FrameworkPath("core/status.md"),
 		scope.FrameworkPath("core/repository_mapping.md"),
-		scope.FrameworkPath("lifecycle/overview.md"),
-		scope.FrameworkPath("operations/entry_routing.md"),
 		scope.FrameworkPath("operations/migration.md"),
 		scope.FrameworkPath("spec_writing_guide.md"),
-		scope.FrameworkPath("slice_work_state_protocol.md"),
+		scope.FrameworkPath("governance/impact_sync.md"),
 	}
-	designFoundationFiles = append(designFoundationFiles, candidateIntentFiles...)
-	lifecycleContractFiles := []string{
-		scope.FrameworkPath("process_snapshot_contract.md"),
-		scope.FrameworkPath("slice_work_state_protocol.md"),
-		scope.FrameworkPath("lifecycle/recovery.md"),
-	}
-	templateProcessStateFiles := templateProcessStateFiles(scope)
-	templateEntryFiles := templateEntryFiles(scope)
-	projectEntryFiles := projectEntryFiles(roots.Layout)
-	sourceRepoEntryExampleFiles := sourceRepoEntryExampleFiles(roots.Layout)
-
 	required := append([]string{}, designFoundationFiles...)
-	required = append(required, lifecycleContractFiles...)
-	required = append(required, templateProcessStateFiles...)
-	required = append(required, templateEntryFiles...)
-	required = append(required, projectEntryFiles...)
-	required = append(required, sourceRepoEntryExampleFiles...)
 	if err := ensureRelativeFiles(repoRoot, required); err != nil {
 		return scope, err
 	}
 
 	scope.FrameworkGuidelineFiles = sortAndDedupe(designFoundationFiles)
-	scope.CommandFiles = commandFiles
-	scope.CandidateIntentFiles = sortAndDedupe(candidateIntentFiles)
-	scope.TemplateGovernanceFiles = sortAndDedupe(append(lifecycleContractFiles, templateProcessStateFiles...))
-	scope.TemplateEntryFiles = templateEntryFiles
-	scope.ProjectEntryFiles = projectEntryFiles
-	scope.SourceRepoEntryExampleFiles = sourceRepoEntryExampleFiles
 	return scope, nil
 }
 
@@ -325,48 +193,35 @@ func (scope SpecFlowScope) ToolingPath(relPath string) string {
 	return joinPath(scope.ToolingRoot, relPath)
 }
 
-func collectAgentOperabilityFiles(scope SpecFlowScope, projectEntryFiles, sourceRepoEntryExampleFiles, templateEntryFiles, templateProcessStateFiles, commandFiles, candidateIntentFiles, guidanceSkillFiles, sharedGovernanceFiles, processStateContractFiles, toolingContractFiles []string) []string {
+func collectAgentOperabilityFiles(scope SpecFlowScope, guidanceSkillFiles, ruleFiles, toolingContractFiles []string) []string {
 	files := []string{
-		scope.FrameworkPath("core/adoption_modes.md"),
-		scope.FrameworkPath("core/freshness.md"),
-		scope.FrameworkPath("core/independent_evaluation.md"),
+		scope.FrameworkPath("concepts.md"),
 		scope.FrameworkPath("core/object_model.md"),
-		scope.FrameworkPath("core/status.md"),
 		scope.FrameworkPath("core/repository_mapping.md"),
-		scope.FrameworkPath("lifecycle/overview.md"),
 		scope.FrameworkPath("governance/review.md"),
 		scope.FrameworkPath("governance/review_scope.md"),
+		scope.FrameworkPath("governance/rule_system.md"),
 		scope.FrameworkPath("operations/migration.md"),
-		scope.FrameworkPath("operations/entry_routing.md"),
 		scope.FrameworkPath("severity_policy.md"),
-		scope.FrameworkPath("slice_work_state_protocol.md"),
 		scope.FrameworkPath("spec_flow_design_review.md"),
 		scope.FrameworkPath("spec_flow_review.md"),
 		scope.FrameworkPath("spec_writing_guide.md"),
 	}
-	files = append(files, projectEntryFiles...)
-	files = append(files, sourceRepoEntryExampleFiles...)
-	files = append(files, templateEntryFiles...)
-	files = append(files, commandFiles...)
-	files = append(files, candidateIntentFiles...)
 	files = append(files, guidanceSkillFiles...)
-	files = append(files, sharedGovernanceFiles...)
-	files = append(files, processStateContractFiles...)
+	files = append(files, ruleFiles...)
 	files = append(files, toolingContractFiles...)
-	files = append(files, templateProcessStateFiles...)
 	return sortAndDedupe(files)
 }
 
-func layeredFrameworkFiles(repoRoot string, roots layoutRoots) ([]string, error) {
-	result, err := globRelative(repoRoot, joinPath(roots.FrameworkRoot, "*.md"))
+func layeredFrameworkFiles(repoRoot string, frameworkRoot string) ([]string, error) {
+	result, err := globRelative(repoRoot, joinPath(frameworkRoot, "*.md"))
 	if err != nil {
 		return nil, err
 	}
 	for _, relDir := range []string{
-		joinPath(roots.FrameworkRoot, "core"),
-		joinPath(roots.FrameworkRoot, "lifecycle"),
-		joinPath(roots.FrameworkRoot, "governance"),
-		joinPath(roots.FrameworkRoot, "operations"),
+		joinPath(frameworkRoot, "core"),
+		joinPath(frameworkRoot, "governance"),
+		joinPath(frameworkRoot, "operations"),
 	} {
 		files, err := walkRelativeFiles(repoRoot, relDir, ".md")
 		if err != nil {
@@ -378,179 +233,7 @@ func layeredFrameworkFiles(repoRoot string, roots layoutRoots) ([]string, error)
 }
 
 func collectProjectInstanceCompatibilityFiles(repoRoot string, scope SpecFlowScope) ([]string, error) {
-	if scope.ProjectInstanceCompatibilityMode == CompatibilityTemplateBootstrap {
-		return walkRelativeFiles(repoRoot, scope.TemplatePath("docs/specs"), ".md")
-	}
-
-	required := []string{
-		"docs/specs/_status.md",
-		"docs/specs/repository_mapping.md",
-		"docs/specs/rules/stable/s_g_rule_repository_baseline.md",
-	}
-	if err := ensureRelativeFiles(repoRoot, required); err != nil {
-		return nil, err
-	}
-
-	root := filepath.Join(repoRoot, filepath.FromSlash("docs/specs"))
-	if _, err := os.Stat(root); err != nil {
-		return nil, fmt.Errorf("required scope directory missing: docs/specs")
-	}
-
-	result := append([]string{}, required...)
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(d.Name(), ".md") {
-			return nil
-		}
-		rel, err := filepath.Rel(repoRoot, path)
-		if err != nil {
-			return err
-		}
-		relPath := filepath.ToSlash(rel)
-		if strings.HasPrefix(relPath, "docs/specs/_governance_review/") {
-			return nil
-		}
-		result = append(result, relPath)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return sortAndDedupe(result), nil
-}
-
-func resolveRoots(repoRoot, requestedLayout string) (layoutRoots, error) {
-	layout, err := ResolveLayout(repoRoot, requestedLayout)
-	if err != nil {
-		return layoutRoots{}, err
-	}
-	switch layout {
-	case LayoutInstalledProject:
-		return layoutRoots{
-			Layout:                           LayoutInstalledProject,
-			FrameworkRoot:                    "specflow/framework",
-			TemplateRoot:                     "specflow/templates",
-			ToolingRoot:                      "specflow/tooling",
-			ProjectInstanceCompatibilityMode: CompatibilityInstalledProject,
-		}, nil
-	case LayoutSourceRepo:
-		return layoutRoots{
-			Layout:                           LayoutSourceRepo,
-			FrameworkRoot:                    "framework",
-			TemplateRoot:                     "templates",
-			ToolingRoot:                      "tooling",
-			ProjectInstanceCompatibilityMode: CompatibilityTemplateBootstrap,
-		}, nil
-	default:
-		return layoutRoots{}, fmt.Errorf("unsupported resolved review layout %q", layout)
-	}
-}
-
-func layoutMarkersPresent(repoRoot, layout string) bool {
-	var requiredDirs []string
-	switch layout {
-	case LayoutSourceRepo:
-		requiredDirs = []string{
-			"framework/core",
-			"framework/lifecycle",
-			"framework/governance",
-			"framework/operations",
-			"templates",
-			"tooling",
-		}
-	case LayoutInstalledProject:
-		requiredDirs = []string{
-			"specflow/framework/core",
-			"specflow/framework/lifecycle",
-			"specflow/framework/governance",
-			"specflow/framework/operations",
-			"specflow/templates",
-			"specflow/tooling",
-		}
-	default:
-		return false
-	}
-	for _, relDir := range requiredDirs {
-		info, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(relDir)))
-		if err != nil || !info.IsDir() {
-			return false
-		}
-	}
-	return true
-}
-
-func templateProcessStateFiles(scope SpecFlowScope) []string {
-	return []string{
-		scope.TemplatePath("docs/specs/_status.md"),
-		scope.TemplatePath("docs/specs/_check_work/README.md"),
-		scope.TemplatePath("docs/specs/_check_result/README.md"),
-		scope.TemplatePath("docs/specs/_verify_result/README.md"),
-		scope.TemplatePath("docs/specs/_stable_verify_result/README.md"),
-		scope.TemplatePath("docs/specs/_governance_review/README.md"),
-		scope.TemplatePath("docs/specs/_independent_evaluation/README.md"),
-	}
-}
-
-func templateEntryFiles(scope SpecFlowScope) []string {
-	return []string{
-		scope.TemplatePath("AGENTS.md"),
-		scope.TemplatePath("GEMINI.md"),
-		scope.TemplatePath("CLAUDE.md"),
-	}
-}
-
-func projectEntryFiles(layout string) []string {
-	if layout != LayoutInstalledProject {
-		return nil
-	}
-	return []string{
-		"AGENTS.md",
-		"GEMINI.md",
-		"CLAUDE.md",
-	}
-}
-
-func sourceRepoEntryExampleFiles(layout string) []string {
-	if layout != LayoutSourceRepo {
-		return nil
-	}
-	return []string{"example.md"}
-}
-
-// ValidateEntryFileGovernance reads a registered entry file and checks whether its
-// managed block contains routing instructions that contradict framework governance rules.
-// Returns a diagnostic message if a contradiction is found, or empty string if clean.
-func ValidateEntryFileGovernance(repoRoot, filePath string) string {
-	data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(filePath)))
-	if err != nil {
-		return fmt.Sprintf("cannot read entry file %s: %v", filePath, err)
-	}
-	content := string(data)
-
-	// Check for managed block
-	beginIdx := strings.Index(content, "==SPECFLOW:BEGIN==")
-	endIdx := strings.Index(content, "==SPECFLOW:END==")
-	if beginIdx == -1 || endIdx == -1 || endIdx <= beginIdx {
-		return "" // no managed block — source_repo exception applies
-	}
-
-	managedBlock := content[beginIdx : endIdx+len("==SPECFLOW:END==")]
-
-	// Check for routing contradictions: managed block must not redirect
-	// spec_flow_review or spec_flow_design_review away from framework/governance/review.md
-	if strings.Contains(managedBlock, "spec_flow_review") || strings.Contains(managedBlock, "spec_flow_design_review") {
-		if strings.Contains(managedBlock, "framework/governance/review.md") {
-			return "" // correctly routes to review.md
-		}
-		return fmt.Sprintf("entry file %s managed block references governance review entries but does not route to framework/governance/review.md", filePath)
-	}
-
-	return ""
+	return walkRelativeFiles(repoRoot, scope.TemplatePath("docs/specs"), ".md")
 }
 
 func globRelative(repoRoot, pattern string) ([]string, error) {

@@ -10,9 +10,9 @@ It must not be narrowed into `scoped_review`.
 It answers five questions:
 
 1. whether the main governance design solves real repository problems rather than self-created process problems
-2. whether the object boundaries, lifecycle order, and gate structure still fit real work shape
-3. whether the governance chain creates real downstream control instead of only adding formal steps
-4. whether the design remains operable for its governing executor type (LLM agents for lifecycle execution, humans for framework maintenance and governance decisions) without excessive or disproportional cost
+2. whether the object boundaries and process structure still fit real work shape
+3. whether the promote-as-only-gate design creates real downstream control instead of adding formal overhead
+4. whether the design remains operable for its governing executor type (LLM agents for specFlow execution, humans for framework maintenance and governance decisions) without excessive cost
 5. whether the repository may still claim that the current `specFlow` design is worth using as designed
 
 Plain exact `spec_flow_design_review` starts the full-scope design-baseline review.
@@ -20,7 +20,7 @@ It uses the run-state, baseline slice table, dynamic risk slice table, score sta
 
 This flow does not replace `spec_flow_review`.
 `spec_flow_review` answers whether the governance rule set still closes coherently.
-`spec_flow_design_review` answers whether that governance design is still reasonable and usable for its intended executor types (LLM agents as primary lifecycle executors, humans as governance maintainers and decision-makers).
+`spec_flow_design_review` answers whether that governance design is still reasonable and usable for its intended executor types (LLM agents as primary executors, humans as governance maintainers and decision-makers).
 
 This flow does not review business truth by default.
 It reviews the design of the governance mechanism that governs business truth.
@@ -30,21 +30,12 @@ It reviews the design of the governance mechanism that governs business truth.
 This section applies to every `spec_flow_design_review`.
 
 The default scope includes the design main chain only.
-It is layout-normalized:
+It uses the fixed `source_repo` layout:
 
-1. `installed_project`
-   - framework root: `specflow/framework/`
-   - template root: `specflow/templates/`
-   - tooling root: `specflow/tooling/`
-   - project-instance compatibility mode: real project `docs/specs/`
-2. `source_repo`
-   - framework root: `framework/`
-   - template root: `templates/`
-   - tooling root: `tooling/`
-   - project-instance compatibility mode: template bootstrap compatibility under `templates/docs/specs/`
-
-`specflowctl review ... --layout auto` detects the layout. `--layout installed` and `--layout source` are explicit overrides.
-When auto detection finds both layouts, the review must stop and require an explicit layout.
+- framework root: `framework/`
+- template root: `templates/`
+- tooling root: `tooling/`
+- project-instance compatibility mode: template bootstrap compatibility under `templates/docs/specs/`
 
 That default scope includes:
 
@@ -52,35 +43,16 @@ That default scope includes:
    - `spec_flow_design_review.md`
    - `governance/review.md`
    - `governance/review_scope.md`
-   - `lifecycle/overview.md`
-   - `operations/entry_routing.md`
+   - `concepts.md`
    - `operations/migration.md`
    - `core/repository_mapping.md`
+   - `core/object_model.md`
    - `spec_writing_guide.md`
-   - `candidate_intent.md`
-   - `slice_work_state_protocol.md`
-   - `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch
-2. lifecycle and gate-shape rules
-   - active command contracts under `<framework-root>/lifecycle/*.md`
-   - lifecycle Context Cards under `<framework-root>/lifecycle/*.md` are the active command contract
-   - `process_snapshot_contract.md`
-   - `slice_work_state_protocol.md`
-   - `lifecycle/recovery.md`
-   - `<template-root>/docs/specs/_status.md`
-   - `<template-root>/docs/specs/_check_work/README.md`
-   - `<template-root>/docs/specs/_check_result/README.md`
-   - `<template-root>/docs/specs/_verify_result/README.md`
-   - `<template-root>/docs/specs/_stable_verify_result/README.md`
-   - `<template-root>/docs/specs/_governance_review/README.md`
-   - `<template-root>/docs/specs/_independent_evaluation/README.md`
-3. human-entry rules
-   - `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` for `installed_project`
-   - `example.md` for `source_repo`
-   - `<template-root>/AGENTS.md`
-   - `<template-root>/GEMINI.md`
-   - `<template-root>/CLAUDE.md`
-   - `operations/entry_routing.md` (Entry File Registration section)
-
+   - `governance/rule_system.md` where it defines the rule-governance branch
+2. process rules
+   - `concepts.md` (the candidate-to-promote process)
+   - `spec_writing_guide.md`
+   - `governance/impact_sync.md`
 The default scope excludes:
 
 1. `tooling_execution_policy.md`
@@ -106,43 +78,22 @@ For the default design-baseline review, the execution-local `review_plan` must u
    - `spec_flow_design_review.md`
    - `governance/review.md`
    - `governance/review_scope.md`
-   - `lifecycle/overview.md`
-   - `operations/entry_routing.md`
+   - `concepts.md`
    - `operations/migration.md`
    - `core/repository_mapping.md`
+   - `core/object_model.md`
    - `spec_writing_guide.md`
-   - `candidate_intent.md`
-   - `slice_work_state_protocol.md`
-   - `operations/entry_routing.md` and `governance/rule_system.md` where they define the rule-governance branch
-   - `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` for `installed_project`
-   - `example.md` for `source_repo`
-   - `<template-root>/AGENTS.md`
-   - `<template-root>/GEMINI.md`
-   - `<template-root>/CLAUDE.md`
-2. `lifecycle_and_gate_design`
-   - active command contracts under `<framework-root>/lifecycle/*.md`
-   - lifecycle Context Cards under `<framework-root>/lifecycle/*.md`
-   - `process_snapshot_contract.md`
-   - `slice_work_state_protocol.md`
-   - `lifecycle/recovery.md`
-   - `<template-root>/docs/specs/_status.md`
-   - `<template-root>/docs/specs/_check_work/README.md`
-   - `<template-root>/docs/specs/_check_result/README.md`
-   - `<template-root>/docs/specs/_verify_result/README.md`
-   - `<template-root>/docs/specs/_stable_verify_result/README.md`
-   - `<template-root>/docs/specs/_independent_evaluation/README.md`
-3. `executor_operability_and_extension`
-   - `operations/entry_routing.md` (Entry File Registration section)
-   - `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` for `installed_project`
-   - `example.md` for `source_repo`
-   - `<template-root>/AGENTS.md`
-   - `<template-root>/GEMINI.md`
-   - `<template-root>/CLAUDE.md`
+   - `governance/rule_system.md` where it defines the rule-governance branch
+   - `governance/impact_sync.md`
+2. `process_and_gate_design`
+   - `concepts.md` (the candidate-to-promote process design)
+   - `spec_writing_guide.md`
+   - `core/object_model.md`
+   - `governance/impact_sync.md`
+ 3. `executor_operability_and_extension`
+    - `source_repo` guidance is derived from `concepts.md` and the design-review procedure itself
 
-The review must judge whether entry files and Context Cards deliver self-contained instruction packs to the executor, whether cross-file links are used only for non-essential context, and whether each lifecycle phase can be executed without context inherited from prior phases.
-
-Onboarding and evidence appendix design must be judged as part of `design_foundation`.
-The review must judge whether that design solves the real historical-project and partially implemented project onboarding problem, avoids creating an unnecessary lifecycle state, keeps evidence separate from implementation truth, and makes the current position and next action understandable to the executor (LLM agent as primary lifecycle executor).
+The review must judge whether `framework/concepts.md` (the hook-injected instruction source) delivers a self-contained instruction pack to the executor, whether cross-file links are used only for non-essential context, and whether each specFlow process step can be executed without context inherited from prior steps.
 
 Project-instance migration design must be judged as part of `design_foundation`.
 The review must judge whether `spec_flow_migrate` solves the real framework-update migration problem without turning old-format compatibility into a permanent second path, without hiding business-truth decisions inside mechanical updates, and without adding a heavier workflow than project-instance format migration requires.
@@ -151,9 +102,9 @@ The review must judge whether `spec_flow_migrate` solves the real framework-upda
 
 For the default design-baseline review, the minimum cross-block convergence checks are:
 
-1. `design_foundation <-> lifecycle_and_gate_design`
+1. `design_foundation <-> process_and_gate_design`
 2. `design_foundation <-> executor_operability_and_extension`
-3. `lifecycle_and_gate_design <-> executor_operability_and_extension`
+3. `process_and_gate_design <-> executor_operability_and_extension`
 
 The review must include all three design blocks before any `pass` or `pass-with-optimization` conclusion.
 If one of those block boundaries is not reviewed, the review must stop without a passing conclusion.
@@ -161,9 +112,6 @@ If one of those block boundaries is not reviewed, the review must stop without a
 ## 5. Preconditions
 
 ### 5.1 Full-Scope Review Run State
-
-`spec_flow_design_review` adopts `<framework-root>/slice_work_state_protocol.md` for its review run-state file.
-This review file owns the adoption details, design review blocks, scoring model, hard-blocker rules, optimization rules, and final conclusion rules.
 
 Every `spec_flow_design_review` uses a run-state process file.
 
@@ -221,8 +169,8 @@ Rules:
 7. if the fixed run-state file is closed or structurally invalid, the startup procedure must delete it, report the deletion reason, create a new run-state file, and begin at `design_foundation`
 8. if the fixed run-state file is valid, open, and last updated no more than two hours before startup, the startup procedure may reuse it automatically; before review work continues, the executor must refresh fingerprints, mark stale slices, and resume from the recorded active slice
 9. if the fixed run-state file is valid, open, and last updated more than two hours but no more than seven days before startup, the startup procedure must stop for an explicit manual decision to either reuse the file or delete it and start a new run
-    - if the decision is reuse, the executor must refresh fingerprints, mark stale slices, and resume from the recorded active slice
-    - if the decision is delete, the startup procedure must delete the file, create a new run-state file, and begin at `design_foundation`
+   - if the decision is reuse, the executor must refresh fingerprints, mark stale slices, and resume from the recorded active slice
+   - if the decision is delete, the startup procedure must delete the file, create a new run-state file, and begin at `design_foundation`
 10. if the fixed run-state file is valid, open, and last updated more than seven days before startup, the startup procedure must delete it as expired, report the deletion reason, create a new run-state file, and begin at `design_foundation`
 11. the startup procedure must not scan a per-flow subdirectory or preserve old closed run-state files as review history
 
@@ -239,12 +187,11 @@ Design-review adoption rules:
 
 Structural validation rule:
 
-1. `review run-validate --flow spec_flow_design_review --layout auto|installed|source` checks file shape, `review_layout`, and all fixed status values, including closed statuses; it is not a reuse decision.
+1. `review run-validate --flow spec_flow_design_review` checks file shape, `review_layout`, and all fixed status values, including closed statuses; it is not a reuse decision.
 2. closed run-state files may be structurally valid, but they are not open and must not be reused by startup.
 3. freshness refresh applies only to an open run-state file.
-4. `review run-refresh --flow spec_flow_design_review --layout auto|installed|source` is the authoritative entry for updating `input_fingerprint` and marking stale slices.
+4. `review run-refresh --flow spec_flow_design_review` is the authoritative entry for updating `input_fingerprint` and marking stale slices.
 5. manual hashes, shell checksum output, editor display, temporary scripts, and conversation-derived values must not be written as `input_fingerprint` values or used to decide that a design-review slice remains fresh.
-6. an explicit layout that conflicts with an existing open run-state file's `review_layout` must fail instead of rewriting that file.
 
 ### 5.2 Baseline Slice Catalog
 
@@ -256,16 +203,16 @@ The required baseline slices are:
 
 1. `design_foundation`
    - tracks the fixed `design_foundation` review block from Section 3
-2. `lifecycle_and_gate_design`
-   - tracks the fixed `lifecycle_and_gate_design` review block from Section 3
+2. `process_and_gate_design`
+   - tracks the fixed `process_and_gate_design` review block from Section 3
 3. `executor_operability_and_extension`
    - tracks the fixed `executor_operability_and_extension` review block from Section 3
-4. `foundation_to_lifecycle_convergence`
-   - tracks `design_foundation <-> lifecycle_and_gate_design`
+4. `foundation_to_process_convergence`
+   - tracks `design_foundation <-> process_and_gate_design`
 5. `foundation_to_operability_convergence`
    - tracks `design_foundation <-> executor_operability_and_extension`
-6. `lifecycle_to_operability_convergence`
-   - tracks `lifecycle_and_gate_design <-> executor_operability_and_extension`
+6. `process_to_operability_convergence`
+   - tracks `process_and_gate_design <-> executor_operability_and_extension`
 7. `scoring_and_pass_gate`
    - tracks whether the hard-blocker review, eight question scores, group averages, weighted score, and pass gate were completed by the executor
 
@@ -324,19 +271,17 @@ If any in-scope file cannot be assigned to a review block, do not issue `pass`.
    - gate usefulness
    - extension-surface cost
 5. run the `entry_control_chain_check` from Section 7.1 before judging hard blockers or scoring Questions 6, 7, or 8
-6. when a design risk concerns heavy gate structure, mandatory read chains, or required pre-action routing, judge whether the rule-consumption timing from Section 7.1 matches the work risk before scoring Questions 6, 7, or 8
-7. run the `routine_work_path_check` from Section 7.1 when its trigger condition is met
-8. when a design risk concerns avoidable rule weight, classify the affected rule text with the rule-weight classes from Section 7.1 before scoring Questions 6, 7, or 8
-9. complete the required cross-block convergence checks
-10. add required dynamic risk slices when newly discovered design risks cannot be tracked by an existing baseline slice
-11. judge the hard-blocker set from Section 7.4 before any scoring-based `pass` claim
-12. score all eight fixed design questions from Section 7.1
-13. compute the fixed group averages from Section 7.2
-14. compute the `weighted_score` from Section 7.3
-15. separate blocking findings from non-blocking optimizations
+6. run the `routine_work_path_check` from Section 7.1 when its trigger condition is met
+7. complete the required cross-block convergence checks
+8. add required dynamic risk slices when newly discovered design risks cannot be tracked by an existing baseline slice
+9. judge the hard-blocker set from Section 7.4 before any scoring-based `pass` claim
+10. score all eight fixed design questions from Section 7.1
+11. compute the fixed group averages from Section 7.2
+12. compute the `weighted_score` from Section 7.3
+13. separate blocking findings from non-blocking optimizations
    - every real finding must use the fixed finding contract from Section 8.1
    - every non-blocking optimization must use the optimization contract from Section 8.2
-16. issue the final result only after baseline slices, dynamic risk slices, entry control chain check, hard-blocker review, routine-work path check when triggered, question scoring, group checks, weighted-score calculation, findings review, optimization review, and cross-block convergence are all complete
+14. issue the final result only after baseline slices, dynamic risk slices, entry control chain check, hard-blocker review, routine-work path check when triggered, question scoring, group checks, weighted-score calculation, findings review, optimization review, and cross-block convergence are all complete
 
 ## 7. Scoring Model
 
@@ -346,8 +291,8 @@ Every `spec_flow_design_review` must answer and score exactly these eight questi
 
 1. whether the mechanism solves a real problem
 2. whether object boundaries follow real work shape
-3. whether lifecycle steps are necessary and ordered for real progress
-4. whether each gate creates real downstream gain
+3. whether the next→review→promote process steps are necessary and correctly ordered for real progress
+4. whether the promote-as-only-gate creates real downstream gain
 5. whether the mechanism rewards correct behavior instead of surface compliance
 6. whether the mechanism's instruction design supports reliable executor orientation and following
 7. whether the operational cost matches the size of the work
@@ -374,41 +319,20 @@ Allowed score values are fixed:
 
 For Question 6, the score basis must explicitly evaluate:
 
-**Executor-type preamble:** The primary lifecycle executors are LLM agents. For LLM executors, "instruction design" cost is measured in: context-window consumption by governance instructions; self-containment (whether each phase carries complete instructions without requiring cross-phase memory); rule explicitness (whether rules are stated directly rather than implied); and stop-condition clarity (whether the executor can deterministically identify when to stop). Document length and chain-reading per se are negligible costs for LLMs. The real concerns are instruction ambiguity, missing rules that force the LLM to guess, and cross-file dependency chains that increase round-trips and risk inconsistency.
+**Executor-type preamble:** The primary executors are LLM agents. For LLM executors, "instruction design" cost is measured in: context-window consumption by governance instructions; self-containment (whether each phase carries complete instructions without requiring cross-phase memory); rule explicitness (whether rules are stated directly rather than implied); and stop-condition clarity (whether the executor can deterministically identify when to stop). Document length and chain-reading per se are negligible costs for LLMs. The real concerns are instruction ambiguity, missing rules that force the LLM to guess, and cross-file dependency chains that increase round-trips and risk inconsistency.
 
-a. whether Agent-facing instruction files (Context Cards, entry files) are self-contained or require chain-linked reading across multiple files to obtain essential phase instructions
-b. whether each phase delivers a self-contained instruction pack or assumes the executor inherits context and decisions from prior phases
-c. whether the design expects the executor to hold governance context across lifecycle phases versus reloading it fresh per phase
-d. whether each document that declares optional or conditional inputs defines the default behavior for every branch, or whether any branch is left undefined — forcing the executor to invent a fallback, stop and ask, or silently guess
+The hook-injected content is `framework/concepts.md` only. See `framework/hooks.md` for the injection chain. Chain-reading evaluation in Question 6 must be scoped to that set. Hooks deliver `framework/concepts.md` directly, and user project entry files (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`) are the user's own project instructions, not part of the governance instruction chain.
+
+1. whether Agent-facing instruction files (framework documentation, hook-injected content) are self-contained or require chain-linked reading across multiple files to obtain essential phase instructions
+2. whether each phase delivers a self-contained instruction pack or assumes the executor inherits context and decisions from prior phases
+3. whether the design expects the executor to hold governance context across specFlow process phases versus reloading it fresh per phase
+4. whether each document that declares optional or conditional inputs defines the default behavior for every branch, or whether any branch is left undefined — forcing the executor to invent a fallback, stop and ask, or silently guess
 
 For Question 7, the score basis must explicitly evaluate:
 
-a. whether the design uses the minimum file surface needed for each phase or requires the executor to read files that contain only meta-governance content not relevant to the current action. For LLM executors, file surface cost is primarily context-window consumption rather than reading effort. Unnecessary file inclusions dilute relevant instructions and reduce available context for code and user input, but reading a few extra paragraphs has negligible cost on its own.
-b. whether rules that could be tool-enforced are implemented in `specflowctl` or left as Agent-discipline-only
-c. whether the design has chain-reading requirements (read file A → A links to file B → B links to file C) for essential instructions. For LLM executors, the primary cost of chain-reading is not reading effort but: (1) each file hop adds a tool-calling round-trip, (2) cross-file instruction inconsistency is harder to detect, (3) interrupted chains (missing file, changed path) cause execution failures. Self-contained instruction packs avoid these costs entirely.
-
-Rule-weight classification is part of design judgment for Questions 6, 7, and 8.
-It does not create another review flow, another score group, or another output formula.
-
-Rule-consumption timing is part of the same design judgment for Questions 6, 7, and 8.
-It does not create another review flow, another score group, another lifecycle gate, or another output formula.
-
-When a review identifies a heavy gate, mandatory read chain, or required pre-action routing path, classify the timing that preserves the required control as exactly one of these classes:
-
-1. `action_before_hard_rule`
-   - the rule must be consumed before action because violating it could change durable truth, object ownership, lifecycle advancement, implementation permission, rule truth, system truth, end-to-end verification claims, or another state that cannot be reliably detected and repaired after the action
-2. `on_demand_rule_lookup`
-   - the rule should be consumed when the executor reaches the uncertainty it governs because it guides judgment but does not itself authorize writes, forbid writes, advance state, or define closure
-3. `post_action_check`
-   - the rule may be checked after action when violation is mechanically detectable, automatically detectable, or detectable by a fixed evidence-review procedure before closure and can be repaired without letting drift become accepted truth
-
-Rules:
-
-1. `action_before_hard_rule` is required when late detection would let an unsafe write, false pass, wrong owner, skipped verification, or durable-truth drift become accepted.
-2. `on_demand_rule_lookup` is preferred when the rule is only needed after a concrete uncertainty appears.
-3. `post_action_check` is preferred when the same control can be enforced by a deterministic or reviewable check before closure.
-4. a review must not classify a rule as `post_action_check` when the violation cannot be detected and repaired before closure.
-5. a review must treat forced pre-action consumption as suspect when the rule can move to `on_demand_rule_lookup` or `post_action_check` without losing the control listed in Rule 1.
+1. whether the design uses the minimum file surface needed for each phase or requires the executor to read files that contain only meta-governance content not relevant to the current action. For LLM executors, file surface cost is primarily context-window consumption rather than reading effort. Unnecessary file inclusions dilute relevant instructions and reduce available context for code and user input, but reading a few extra paragraphs has negligible cost on its own.
+2. whether rules that could be tool-enforced are implemented in `specflowctl` or left as Agent-discipline-only
+3. whether the design has chain-reading requirements (read file A → A links to file B → B links to file C) for essential instructions. For LLM executors, the primary cost of chain-reading is not reading effort but: (1) each file hop adds a tool-calling round-trip, (2) cross-file instruction inconsistency is harder to detect, (3) interrupted chains (missing file, changed path) cause execution failures. Self-contained instruction packs avoid these costs entirely.
 
 `entry_control_chain_check` is mandatory for every `spec_flow_design_review`.
 It judges whether human entry documents and their first-owner links act as executable entry control for an executor without project-specific context.
@@ -424,39 +348,33 @@ The `entry_control_chain_check result` must be one of:
 The check must judge these abstract capabilities:
 
 1. `startup_entry_control`
-   - human entry documents act as the first control point for governed work; the opening rule makes the next action clear, either directly or after necessary context that the action rule depends on for interpretability
+   - the hook-injected content (`framework/concepts.md`) acts as the first control point for governed work; the opening rules (key terms, triggers, HARD RULES) make the next action clear
 2. `first_owner_selection`
-   - before any lifecycle action, implementation proposal, repair plan, reconciliation plan, or repository mutation, human entry documents tell the executor how to choose the first owning file
+   - before any specFlow action or repository mutation, `concepts.md` tells the executor how to choose the first owning file or trigger (`spec_validate`, `spec_verify`, `spec_promote`)
 3. `owner_only_continuation`
-   - after the first owner routes the request, human entry documents require the executor to follow only the routed owner, Context Card, operation, or governance path
+   - after the first trigger routes the request, `concepts.md` requires the executor to follow only the routed operation or governance path
 4. `pre_action_permission_gate`
-   - before proposing or mutating implementation-side files, human entry documents require the active owner to prove implementation permission and allowed writes
-5. `route_specificity_before_implementation_gate`
-   - human entry documents do not route requests that already involve truth creation or change, no formal truth, owner decisions, lifecycle decisions, chat-claimed lifecycle state, skipped status or owner checks, contract-like fields, downstream compatibility, repository mapping, guidance, or custom intermediate flows through implementation-change as the default first owner
-6. `diagnostic_work_not_mutation`
-   - human entry documents distinguish read-only inspection or verification from implementation-side mutation, so diagnostic work can proceed only as investigation and cannot become a repair path without owner permission
-7. `exact_command_precedence`
-   - exact commands enter their owning Context Card directly and are not displaced by a broader natural-language or implementation-change route
-8. `drift_stop_and_reroute`
-   - when execution discovers possible behavior, boundary, acceptance, rule, ownership, lifecycle, or implementation-permission impact, the design requires the executor to stop the current path and return to the legal owner before further mutation
-9. `no_ad_hoc_flow_substitution`
-   - human entry documents forbid replacing the recorded next command, active Context Card, or operation owner with a custom reconciliation, audit, alignment, gap-review, or similarly named intermediate flow
-10. `hard_stop_clarity`
-   - unclear intent, state, owner, boundary, truth writeback target, implementation permission, or conflicting owner rules force a stop instead of a guessed write or guessed route
-11. `owner_reachability`
-   - human entry documents do not need to copy owner rules, but they must expose enough first-level owner routes for the executor to reach the governing lifecycle, implementation-change, natural-language routing, governance review, migration, guidance, onboarding, repository-mapping, or rule-governance owner
-12. `entry_robustness_probe`
-   - human entry design must be verified with tool-neutral probes run by an independent executor without project-specific context; the probe judges observed routing and mutation control, not the name of the tool used to run it
+   - before proposing or mutating implementation-side files, `concepts.md` requires the executor to read the relevant spec first (HARD RULE 1)
+5. `hard_stop_clarity`
+   - unclear intent, state, owner, boundary, or conflicting rules force a stop instead of a guessed write or guessed route
+6. `owner_reachability`
+   - `concepts.md` must expose enough first-level routes for the executor to reach the specFlow process, migration, governance review, or rule-governance owner
+7. `no_ad_hoc_flow_substitution`
+   - `concepts.md` must forbid replacing the standard triggers with custom reconciliation, audit, or gap-review flows
+ 8. `entry_robustness_probe`
+    - the hook injection design must be verified with tool-neutral probes that judge observed routing and mutation control
+    - primary: run by an independent executor without project-specific context
+    - fallback: conducted by the current reviewer using the same abstract prompt families and record fields, with `executor_independence` marked as `fallback_reviewer_conducted`
 
-The `entry_robustness_probe` must use abstract prompt families, not product, integration, vendor, or domain examples:
+The `entry_robustness_probe` must use abstract prompt families that test the hooks injection path and `concepts.md` instruction source, not product, integration, vendor, or domain examples:
 
 1. `mixed_intent_prompt`
-2. `disguised_truth_change_prompt`
-3. `chat_claimed_state_prompt`
-4. `skip_owner_or_status_prompt`
-5. `custom_flow_substitution_prompt`
-6. `exact_command_with_noise_prompt`
-7. `clean_implementation_only_control_prompt`
+2. `chat_claimed_state_prompt`
+3. `skip_owner_prompt`
+4. `custom_flow_substitution_prompt`
+5. `clean_implementation_only_control_prompt`
+6. `missing_hooks_prompt` — tests behavior when hooks injection files are absent
+7. `stale_concepts_prompt` — tests behavior when `concepts.md` content is outdated
 
 For each prompt family, the probe must record:
 
@@ -472,20 +390,28 @@ For each prompt family, the probe must record:
 
 Allowed probe evidence may come from an independent agent session, reviewer role-play, recorded replay harness, local multi-executor tool, or manual black-box exercise.
 Allowed `probe_source` values are `independent_agent_session`, `reviewer_role_play`, `recorded_replay_harness`, `local_multi_executor_tool`, and `manual_black_box_exercise`.
-`executor_independence` must be `confirmed_independent_no_project_specific_context`.
-Every allowed probe evidence source must satisfy the independent executor requirement; reviewer role-play, recorded replay, local tooling, and manual exercise must not bypass it.
-If a prompt-family record lacks `executor_independence` or cannot prove `confirmed_independent_no_project_specific_context`, that capability lacks enough in-scope evidence and the `entry_control_chain_check result` is `incomplete`.
+
+`executor_independence` has two allowed values:
+
+1. `confirmed_independent_no_project_specific_context` — primary mode. The probe is run by an executor that has never seen this project's framework or workspace. Any of the five probe source types may be used, as long as the independence requirement is satisfied.
+
+2. `fallback_reviewer_conducted` — fallback mode. The current reviewer runs the 7 abstract prompt families directly in the current session, using the same record fields. The reviewer must document that this is fallback evidence and why the primary mode was not feasible (e.g. no independent executor available, platform constraint, session limitation).
+
+When `executor_independence` is `fallback_reviewer_conducted`:
+- the probe still provides useful evidence about observable first-owner routing, diagnostic allowance, and mutation control
+- the `entry_control_chain_check result` may be `passed` with a fallback note
+- the conclusion must state that robustness was verified via fallback and recommend (but not require) a follow-up independent probe
+
+If a prompt-family record lacks `executor_independence` or cannot prove either allowed value, that capability lacks enough in-scope evidence and the `entry_control_chain_check result` is `incomplete`.
 The standard is tool-neutral: it must not require a specific platform capability, tool command, or command name.
 
 Probe failure classes are:
 
 1. `wrong_first_owner`
 2. `mutation_leak`
-3. `diagnostic_overblock`
-4. `chat_truth_trusted`
-5. `custom_flow_accepted`
-6. `exact_command_displaced`
-7. `implementation_gate_overmatch`
+3. `chat_truth_trusted`
+4. `custom_flow_accepted`
+5. `implementation_gate_overmatch`
 
 Completion rules:
 
@@ -493,14 +419,15 @@ Completion rules:
 2. if any capability is `blocked`, the check result is `blocked` and the hard-blocker rules must be evaluated before any scoring-based pass claim
 3. if any capability lacks enough in-scope evidence, the check result is `incomplete` and the review must stop or add a dynamic risk slice before final conclusion
 4. a passing check must explain how the result affects Questions 6, 7, and 8
+5. when all capabilities pass and only `entry_robustness_probe` uses `fallback_reviewer_conducted`, the check result is `passed` with a fallback note; the review must document that robustness was verified via fallback and why primary was not feasible
 
 When reflecting this check into Questions 6, 7, and 8:
 
 1. Question 6 judges whether an executor without project-specific context can find the first owner, next action, and stop points from the entry control text.
-2. Question 7 judges whether route specificity and diagnostic allowance scale the entry cost with work risk instead of forcing every request through the full governance chain or a hard stop.
+2. Question 7 judges whether route specificity and diagnostic allowance scale the entry cost with work risk instead of forcing every request through a hard stop.
 3. Question 8 judges whether the required startup reading buys repeatable execution control that is worth its cost.
 
-`routine_work_path_check` is mandatory when any of Questions 6, 7, or 8 is expected to score below `4` because of instruction loading cost, rule weight, routine-work path cost, full-chain execution overhead, mandatory cross-file navigation, heavy gate structure, or pre-action instruction overhead that reduces available context for substantive work.
+`routine_work_path_check` is mandatory when any of Questions 6, 7, or 8 is expected to score below `4` because of instruction loading cost, rule weight, routine-work path cost, mandatory cross-file navigation, heavy gate structure, or pre-action instruction overhead that reduces available context for substantive work.
 
 When triggered, `routine_work_path_check` must review these representative paths before any `pass` or `pass-with-optimization` conclusion:
 
@@ -509,7 +436,7 @@ When triggered, `routine_work_path_check` must review these representative paths
 2. implementation repair under existing truth
    - a repair where current Spec truth already defines the intended behavior and the requested change should not invent new behavior
 3. behavior, boundary, or acceptance change
-   - a request that may change durable behavior truth, object ownership, lifecycle permission, acceptance criteria, rule truth, system truth, or end-to-end verification claims
+   - a request that may change durable behavior truth, object ownership, acceptance criteria, rule truth, or end-to-end verification claims
 
 For each reviewed path, the review must state:
 
@@ -519,7 +446,7 @@ For each reviewed path, the review must state:
 3. the `D. Minimum Allowed Action`
    - the smallest action the current request explicitly authorizes, with no scope expansion, new behavior, boundary change, acceptance change, or incidental repair beyond that request
 4. the `E. Automatic Impact Check`
-   - the automatic checks, deterministic checks, or fixed evidence-review procedures that can carry rule enforcement after action, including path ownership, state permission, rule truth impact, global rule impact, fallback-to-design need, and reroute to check, plan, or verify
+   - the automatic checks, deterministic checks, or fixed evidence-review procedures that can carry rule enforcement after action, including path ownership, rule truth impact, and reroute to review
    - a free-form reviewer assertion does not count as `E. Automatic Impact Check` unless it is backed by a named deterministic check or fixed evidence-review procedure
 5. the timing decision for every rule currently consumed before action:
    - `action_before_hard_rule`
@@ -538,19 +465,19 @@ Completion rules:
 When a review identifies avoidable rule weight, classify the affected rule text as exactly one of these classes:
 
 1. `hard_rule`
-   - the rule is required because removing it could change durable truth, object ownership, lifecycle advancement, implementation permission, rule truth, system truth, or end-to-end verification claims
+   - the rule is required because removing it could change durable truth, object ownership, process advancement, implementation permission, rule truth, or end-to-end verification claims
 2. `judgment_guidance`
-   - the rule helps an executor choose a route or evaluate risk, but it does not itself authorize writes, forbid writes, advance state, or define a stop condition
+   - the rule helps an executor choose a route or evaluate risk, but it does not itself authorize writes, forbid writes, or define a stop condition
 3. `example_or_wording`
    - the text exists only to make the rule easier to understand, and it is justified only when it removes a real execution ambiguity
 4. `duplicate_or_restatement`
-   - the text repeats another owner file without adding a local allowed action, forbidden action, stop condition, output requirement, dependency order, or scoring consequence
+   - the text repeats another owner file without adding a local allowed action, forbidden action, stop condition, output requirement, or scoring consequence
 5. `overweight_rule`
-   - the rule forces a heavier path than the work risk requires, forces pre-action consumption when `on_demand_rule_lookup` or `post_action_check` would preserve the same control, or applies a specialized structure to routine work where no durable-truth, ownership, shared, system, or end-to-end verification risk needs that structure
+   - the rule forces a heavier path than the work risk requires, forces pre-action consumption when `on_demand_rule_lookup` or `post_action_check` would preserve the same control, or applies a specialized structure to routine work where no durable-truth, ownership, or end-to-end verification risk needs that structure
 
 Rules:
 
-1. accuracy has priority over lightness when a rule prevents durable truth drift, unsafe implementation, ambiguous ownership, skipped verification, or unrecoverable lifecycle advancement
+1. accuracy has priority over lightness when a rule prevents durable truth drift, unsafe implementation, ambiguous ownership, or skipped verification
 2. lightness has priority once the same execution safety is already provided by another owner rule or by a smaller path
 3. do not treat a rule as overweight only because it is long; treat it as overweight only when the extra reading or execution burden does not produce a distinct control gain
 4. do not preserve duplicate text merely because it is familiar; preserve it only when deleting it would make the executor guess an owner, boundary, dependency, next action, or scoring consequence
@@ -568,9 +495,9 @@ Question-specific scoring rules:
    - whether boundaries stay natural rather than artificially split
    - whether current object shape avoids repeated cross-object truth stitching
 3. Question 3 must judge:
-   - whether each lifecycle step corresponds to a real information change
+   - whether each specFlow process step corresponds to a real information change
    - whether the order reduces uncertainty rather than merely renaming state
-   - whether the current sequence remains the smallest stable path
+   - whether the current sequence (next→review→promote) remains the smallest stable path
 4. Question 4 must use only these four real-gain signals:
    - later ambiguity is materially reduced
    - the next step can start more directly
@@ -585,27 +512,26 @@ Question-specific scoring rules:
    - whether the executor can determine the current phase and position from official documents alone, without relying on inherited context from prior phases
    - whether the next step and the rationale for that step are directly derivable from the current phase's instruction pack
    - whether the official documents, rather than external reasoning or assumptions, carry the needed orientation
-   - whether entry documents explain the basic meaning of `specFlow` and its core terms before relying on internal command or lifecycle concepts
+   - whether entry documents explain the basic meaning of `specFlow` and its core terms before relying on internal command or process concepts
    - whether the entry control chain lets an executor identify the current route, next owner, and stop point from official entry documents alone
    - whether in-scope rules contain avoidable internal mechanism detail that could be removed or relocated without reducing the governing rules' clarity — for LLM executors, superfluous text competes with relevant instructions for context window rather than causing "learning burden"
    - whether `judgment_guidance`, `example_or_wording`, and `duplicate_or_restatement` content is kept small enough that it does not obscure the governing hard rules
-    - whether pre-action instruction loading is limited to `action_before_hard_rule` material, so that the executor's context window is occupied primarily by rules that prevent unsafe writes, truth drift, or missed verification — rules that could safely be consumed on demand or checked after action should not pre-occupy context during the action phase
+   - whether pre-action instruction loading is limited to `action_before_hard_rule` material, so that the executor's context window is occupied primarily by rules that prevent unsafe writes or truth drift — rules that could safely be consumed on demand or checked after action should not pre-occupy context during the action phase
 7. Question 7 must judge:
    - whether small changes have a smaller legal path than large changes
-   - whether routine work avoids full-chain over-processing (fewer gates, fewer tool-calling round-trips, less context-window consumption)
+   - whether routine work avoids over-processing (fewer tool-calling round-trips, less context-window consumption)
    - whether the mechanism's operational steps scale with actual work size
    - whether code-only or implementation-only work has a smaller legal path when written truth already constrains one safe implementation result
-   - whether entry pre-action controls scale with work risk instead of sending every request through the same full-chain path
-   - whether `hard_rule` requirements are limited to cases where durable truth, ownership, lifecycle, implementation permission, rule truth, system truth, or end-to-end verification risk actually requires them
+   - whether entry pre-action controls scale with work risk instead of sending every request through the same path
+   - whether `hard_rule` requirements are limited to cases where durable truth, ownership, or end-to-end verification risk actually requires them
    - whether a specialized structure is optional or conditional when the current work does not need that structure for safe closure
    - whether routine work avoids mandatory full-chain pre-execution loading when an `on_demand_rule_lookup` or `post_action_check` path would preserve the same safety — for LLM executors, "pre-reading" cost is primarily context-window consumption and round-trip latency, not reading fatigue
 8. Question 8 must judge:
    - whether the control gained is visible and repeatable
-   - whether the documentation maintenance, executor instruction overhead, and lifecycle execution cost stay proportionate to that gain — for LLM executors, the relevant cost model includes context-window consumption by governance instructions, tool-calling round-trips per lifecycle phase, and the risk of cross-file instruction inconsistency; it does not include "learning curve" or "document length" as significant factors
+   - whether the documentation maintenance, executor instruction overhead, and specFlow execution cost stay proportionate to that gain — for LLM executors, the relevant cost model includes context-window consumption by governance instructions, tool-calling round-trips per phase, and the risk of cross-file instruction inconsistency; it does not include "learning curve" or "document length" as significant factors
    - whether the mechanism still looks worth maintaining over time
-   - whether entry instruction pre-loading (the cost of loading governance context before action) prevents unsafe mutation without pushing legitimate code-only work into a truth-change or full-lifecycle path
-   - whether the entry control chain's instruction cost produces repeatable control over authority resolution, pre-mutation permission, and drift reclassification
-   - whether each heavy gate or required read produces a distinct control gain that is not already produced by a smaller rule or owner file
+   - whether entry instruction pre-loading (the cost of loading governance context before action) prevents unsafe mutation without pushing legitimate code-only work into a truth-change process
+   - whether the entry control chain's instruction cost produces repeatable control over authority resolution and pre-mutation permission
    - whether each required pre-action instruction load produces a distinct control gain that cannot be preserved by `on_demand_rule_lookup` or `post_action_check`
    - whether the recommended repair for excess rule instruction weight is the smallest correct one: keep as `action_before_hard_rule`, downgrade to `on_demand_rule_lookup`, convert to `post_action_check`, keep only as `example_or_wording`, merge or link as `duplicate_or_restatement`, or remove or narrow an `overweight_rule`
 
@@ -659,24 +585,23 @@ The following cases are hard blockers.
 Any one of them forces the final conclusion to `blocked`, regardless of the weighted score:
 
 1. the core mechanism cannot clearly explain which real problem it solves
-2. boundary or lifecycle design leaves repair ownership or repair landing point unstable
+2. boundary or process design leaves repair ownership or repair landing point unstable
 3. any key gate has Question `4 = 0`
 4. the mechanism clearly rewards surface compliance over real risk reduction
-5. the primary lifecycle executor (LLM agent) cannot rely on the official documents alone to know current position, next step, and why that step is next
-6. the mechanism forces simple changes through a full heavy path when the work does not change durable truth, object ownership, lifecycle advancement, implementation permission, rule truth, system truth, or end-to-end verification obligations, and the design provides no smaller legal path
+5. the primary executor (LLM agent) cannot rely on the official documents alone to know current position, next step, and why that step is next
+6. the mechanism forces simple changes through a full heavy path when the work does not change durable truth, object ownership, or end-to-end verification obligations, and the design provides no smaller legal path
 7. the mechanism forces simple changes through full pre-action rule consumption when a smaller `action_before_hard_rule`, `on_demand_rule_lookup`, or `post_action_check` path would preserve the same control, and the design provides no smaller legal path
 8. a triggered `routine_work_path_check` proves that routine implementation-only work cannot be handled with lightweight pre-action prohibitions plus automatic impact checks, and the design provides no smaller legal path
-9. the human entry design lets an executor propose implementation-side work or mutate implementation-side repository files before selecting the first owner and proving implementation permission
-10. the human entry design does not require stop-and-reroute when execution discovers possible truth, ownership, rule, lifecycle, boundary, acceptance, or implementation-permission impact
-11. the human entry design instructs the executor to treat every code edit as a spec change or full-lifecycle entry, and the design provides no smaller implementation-only legal path
-12. the human entry design opens with background explanation, concept teaching, or a classification table without a first-owner action rule, so the executor cannot immediately know which owner to read first
-13. the human entry design lets an executor replace the recorded next command, active Context Card, or operation owner with an ad hoc reconciliation, audit, alignment, gap-review, or similarly named intermediate flow
-14. the human entry design routes requests that already involve formal truth creation or change, no formal truth, owner decisions, lifecycle decisions, chat-claimed lifecycle state, skipped status or owner checks, contract-like fields, downstream compatibility, repository mapping, guidance, or custom intermediate flows through implementation-change as the default first owner
-15. the human entry design forbids read-only inspection or verification needed to classify a request and provides no smaller legal diagnostic path before mutation
-16. the `entry_robustness_probe` shows that an independent executor can propose implementation-side work or mutate implementation-side repository files before selecting the first owner and proving implementation permission
-17. the `entry_robustness_probe` shows that the entry design trusts chat-only state or permission, accepts a custom intermediate flow as owner, or displaces an exact command with a broader route
-18. the `entry_robustness_probe` shows that implementation-change overmatching hides the real owner for work that already needs owner judgment; if the result is conservative overblocking without mutation leakage, report a finding or optimization instead of a hard blocker unless no smaller legal diagnostic path exists
-19. the design requires the executor to perform chain-linked reading (read file A, then follow a link to file B for essential instructions, then follow a link from B to file C) for the core execution path of any lifecycle phase, and the design provides no self-contained alternative path
+ 9. `framework/concepts.md` (the hook-injected instruction source) lets an executor propose implementation-side work or mutate implementation-side repository files before selecting the first owner and proving implementation permission
+10. `framework/concepts.md` does not require stop-and-reroute when execution discovers possible truth, ownership, rule, or implementation-permission impact
+11. `framework/concepts.md` instructs the executor to treat every code edit as a spec change or full-process entry, and the design provides no smaller implementation-only legal path
+12. `framework/concepts.md` opens with background explanation or classification without a first-owner action rule, so the executor cannot immediately know which trigger to use first
+13. `framework/concepts.md` lets an executor replace the standard triggers with an ad hoc reconciliation, audit, alignment, gap-review, or similarly named intermediate flow
+14. `framework/concepts.md` forbids read-only inspection or verification needed to classify a request and provides no smaller legal diagnostic path before mutation
+15. the `entry_robustness_probe` shows that an independent executor can propose implementation-side work or mutate implementation-side repository files before selecting the first owner and proving implementation permission
+16. the `entry_robustness_probe` shows that the entry design trusts chat-only state or permission, accepts a custom intermediate flow as owner, or displaces an exact route
+17. the `entry_robustness_probe` shows that implementation-change overmatching hides the real owner for work that already needs owner judgment; if the result is conservative overblocking without mutation leakage, report a finding or optimization instead of a hard blocker unless no smaller legal diagnostic path exists
+18. the design requires the executor to perform chain-linked reading (read file A, then follow a link to file B for essential instructions, then follow a link from B to file C) for the core execution path of any specFlow process step, and the design provides no self-contained alternative path
 
 ### 7.5 Pass Gate
 
@@ -716,7 +641,7 @@ The output must report at least:
 13. the hard-blocker result
 14. the `entry_control_chain_check result`:
    - must be `passed`, `blocked`, or `incomplete`
-   - report evidence for `startup_entry_control`, `first_owner_selection`, `owner_only_continuation`, `pre_action_permission_gate`, `route_specificity_before_implementation_gate`, `diagnostic_work_not_mutation`, `exact_command_precedence`, `drift_stop_and_reroute`, `no_ad_hoc_flow_substitution`, `hard_stop_clarity`, `owner_reachability`, and `entry_robustness_probe`
+   - report evidence for all checked capabilities and the hook injection path (hooks files present, session-start script correctness, concepts.md completeness)
    - report probe evidence using `prompt_family`, `expected_control`, `observed_first_owner`, `diagnostic_allowed`, `mutation_allowed`, `result`, `failure_class`, `probe_source`, and `executor_independence`
    - report the impact on Questions 6, 7, and 8
 15. the `routine_work_path_check` result:
@@ -817,7 +742,3 @@ This flow does not:
 3. review business truth by default
 4. review tooling source or binaries by default
 5. create a new command chain
-6. update `_status.md`
-7. write `_check_result`, `_plans`, `_verify_result`, or `_stable_verify_result`
-8. use checkpoints in v1
-9. create a scoped or narrowed `spec_flow_design_review` mode

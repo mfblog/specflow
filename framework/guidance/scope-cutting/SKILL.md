@@ -36,4 +36,4 @@ The output is a discussion-stage scope decision. It becomes durable only after c
 
 1. Do not hide future work inside the current round.
 2. Do not use scope cutting to avoid required Rule or global rule routing.
-3. Do not let an oversized scope enter `unit_check` as if it were already closed.
+

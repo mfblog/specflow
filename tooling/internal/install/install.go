@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/buildrelease"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/managedblock"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/manifest"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specflowlayout"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
@@ -16,11 +15,6 @@ import (
 type InitResult struct {
 	Copied  int
 	Skipped int
-}
-
-type DoctorResult struct {
-	Failures []string
-	Warnings []string
 }
 
 func Init(repoRoot string, force bool) (InitResult, error) {
@@ -41,22 +35,64 @@ func Init(repoRoot string, force bool) (InitResult, error) {
 		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 			return result, fmt.Errorf("mkdir %s: %w", item.DestinationRelative, err)
 		}
-		if _, err := os.Stat(dest); err == nil {
-			if isManagedEntryFile(item.DestinationRelative) {
-				if err := syncManagedEntryFile(source, dest); err != nil {
-					return result, fmt.Errorf("install managed block %s: %w", item.DestinationRelative, err)
-				}
-				result.Copied++
-				continue
-			}
-			if !force {
-				result.Skipped++
-				continue
-			}
+		if _, err := os.Stat(dest); err == nil && !force {
+			result.Skipped++
+			continue
 		}
-
 		if err := copyFile(source, dest); err != nil {
 			return result, fmt.Errorf("copy %s: %w", item.DestinationRelative, err)
+		}
+		result.Copied++
+	}
+
+	return result, nil
+}
+
+type DoctorResult struct {
+	Failures []string
+	Warnings []string
+}
+
+type HooksResult struct {
+	Copied int
+}
+
+func InstallHooks(repoRoot string) (HooksResult, error) {
+	result := HooksResult{}
+
+	type hookFile struct {
+		source string
+		dest   string
+	}
+
+	files := []hookFile{
+		{"hooks/hooks.json", "hooks/hooks.json"},
+		{"hooks/run-hook.cmd", "specflow/hooks/run-hook.cmd"},
+		{"hooks/session-start", "specflow/hooks/session-start"},
+		{"templates/.claude-plugin/plugin.json", ".claude-plugin/plugin.json"},
+		{"templates/.opencode/plugins/specflow.js", ".opencode/plugins/specflow.js"},
+	}
+
+	layout, err := specflowlayout.Resolve(repoRoot)
+	if err != nil {
+		return result, err
+	}
+
+	for _, f := range files {
+		source := filepath.Join(repoRoot, specflowlayout.Relative(layout.ContentRoot, f.source))
+		if _, err := os.Stat(source); os.IsNotExist(err) {
+			continue
+		}
+		dest := filepath.Join(repoRoot, filepath.FromSlash(f.dest))
+		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+			return result, fmt.Errorf("mkdir %s: %w", f.dest, err)
+		}
+		srcContent, err := os.ReadFile(source)
+		if err != nil {
+			return result, fmt.Errorf("read %s: %w", f.source, err)
+		}
+		if err := os.WriteFile(dest, srcContent, 0o644); err != nil {
+			return result, fmt.Errorf("write %s: %w", f.dest, err)
 		}
 		result.Copied++
 	}
@@ -86,63 +122,9 @@ func Doctor(repoRoot string) (DoctorResult, error) {
 		}
 	}
 
-	if err := checkManagedEntryConsistency(repoRoot, layout, &result); err != nil {
-		return result, err
-	}
 	checkBinary(repoRoot, layout, &result)
 	checkReaderWeb(repoRoot, layout, &result)
 	return result, nil
-}
-
-func isManagedEntryFile(path string) bool {
-	switch filepath.ToSlash(path) {
-	case "AGENTS.md", "GEMINI.md", "CLAUDE.md":
-		return true
-	default:
-		return false
-	}
-}
-
-func syncManagedEntryFile(source, dest string) error {
-	sourceContent, err := os.ReadFile(source)
-	if err != nil {
-		return err
-	}
-	block, err := managedblock.Extract(string(sourceContent))
-	if err != nil {
-		return err
-	}
-
-	destContent, err := os.ReadFile(dest)
-	if err != nil {
-		return err
-	}
-	destText := string(destContent)
-	hasBegin := strings.Contains(destText, managedblock.BeginMarker)
-	hasEnd := strings.Contains(destText, managedblock.EndMarker)
-
-	switch {
-	case hasBegin && hasEnd:
-		updated, err := managedblock.Replace(destText, block)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(dest, []byte(updated), 0o644)
-	case !hasBegin && !hasEnd:
-		if strings.HasSuffix(destText, "\r\n") {
-			destText = strings.TrimSuffix(destText, "\r\n") + "\n"
-		}
-		if strings.TrimSpace(destText) == "" {
-			destText = block + "\n"
-		} else if strings.HasSuffix(destText, "\n") {
-			destText = block + "\n\n" + strings.TrimRight(destText, "\n") + "\n"
-		} else {
-			destText = block + "\n\n" + destText + "\n"
-		}
-		return os.WriteFile(dest, []byte(destText), 0o644)
-	default:
-		return fmt.Errorf("managed block markers are incomplete in destination file")
-	}
 }
 
 func copyFile(source, dest string) error {
@@ -151,47 +133,6 @@ func copyFile(source, dest string) error {
 		return err
 	}
 	return os.WriteFile(dest, content, 0o644)
-}
-
-func checkManagedEntryConsistency(repoRoot string, layout specflowlayout.Layout, result *DoctorResult) error {
-	entryRoot := repoRoot
-	if layout.Kind == specflowlayout.SourceRepo {
-		entryRoot = filepath.Join(repoRoot, filepath.FromSlash(layout.TemplateRoot))
-	}
-	agentsPath := filepath.Join(entryRoot, "AGENTS.md")
-	if _, err := os.Stat(agentsPath); err != nil {
-		return nil
-	}
-
-	agentsContent, err := os.ReadFile(agentsPath)
-	if err != nil {
-		return err
-	}
-	agentsBlock, err := managedblock.Extract(string(agentsContent))
-	if err != nil {
-		result.Failures = append(result.Failures, "INVALID managed block in AGENTS.md")
-		return nil
-	}
-
-	for _, peer := range []string{"GEMINI.md", "CLAUDE.md"} {
-		peerPath := filepath.Join(entryRoot, peer)
-		if _, err := os.Stat(peerPath); err != nil {
-			continue
-		}
-		peerContent, err := os.ReadFile(peerPath)
-		if err != nil {
-			return err
-		}
-		peerBlock, err := managedblock.Extract(string(peerContent))
-		if err != nil {
-			result.Failures = append(result.Failures, fmt.Sprintf("INVALID managed block in %s", peer))
-			continue
-		}
-		if agentsBlock != peerBlock {
-			result.Failures = append(result.Failures, fmt.Sprintf("DIFF managed blocks in AGENTS.md and %s", peer))
-		}
-	}
-	return nil
 }
 
 func checkBinary(repoRoot string, layout specflowlayout.Layout, result *DoctorResult) {

@@ -5,32 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/filevalidation"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
-
-const constraintsNotesPrefix = "constraints:"
-
-// extractConstraintsSegment finds the ;-separated segment in notes that starts
-// with the constraints: prefix and returns the content after the prefix.
-// Returns empty string if no constraints segment is found.
-func extractConstraintsSegment(notes string) string {
-	if notes == "" {
-		return ""
-	}
-	if strings.HasPrefix(notes, constraintsNotesPrefix) {
-		return strings.TrimPrefix(notes, constraintsNotesPrefix)
-	}
-	for _, part := range strings.Split(notes, ";") {
-		part = strings.TrimSpace(part)
-		if strings.HasPrefix(part, constraintsNotesPrefix) {
-			return strings.TrimPrefix(part, constraintsNotesPrefix)
-		}
-	}
-	return ""
-}
 
 func runValidate(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
@@ -44,17 +23,15 @@ func runValidate(args []string, stdout, stderr io.Writer) error {
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		path := fs.String("path", "", "file path to validate")
-		phase := fs.String("phase", "", "current lifecycle phase (e.g. implementation, unit_verify)")
-		unit := fs.String("unit", "", "unit name (optional, restricts constraint check to one unit)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
-		if strings.TrimSpace(*path) == "" || strings.TrimSpace(*phase) == "" {
+		if strings.TrimSpace(*path) == "" {
 			writeValidateUsage(stderr)
-			return errors.New("path and phase are required")
+			return errors.New("path is required")
 		}
 
-		result := validateWrite(mustAbs(*repoRoot), *path, *phase, *unit)
+		result := validateWrite(mustAbs(*repoRoot), *path)
 		writeValidateWriteResult(stdout, result)
 		if !result.Allowed {
 			return fmt.Errorf("write denied: %s", result.Reason)
@@ -91,92 +68,61 @@ func runValidate(args []string, stdout, stderr io.Writer) error {
 type validateResult struct {
 	Allowed bool
 	Reason  string
-	Phase   string
 	Path    string
 }
 
-func validateWrite(repoRoot, path, phase, unit string) validateResult {
-	// Load constraints from _status.md
-	statuses, err := statusfile.LoadObjectStatuses(repoRoot)
-	if err != nil {
+func validateWrite(repoRoot, path string) validateResult {
+	normalizedPath := filepath.ToSlash(filepath.Clean(path))
+
+	// Deny pattern: framework files are never writable via validate
+	if strings.HasPrefix(normalizedPath, "framework/") {
 		return validateResult{
 			Allowed: false,
-			Reason:  fmt.Sprintf("cannot load status: %v", err),
-			Phase:   phase,
+			Reason:  fmt.Sprintf("path %q is under framework/ and is not writable", path),
 			Path:    path,
 		}
 	}
 
-	var lastReason string
-	constraintsFound := false
-
-	for _, status := range statuses {
-		// If unit is specified, only check that unit
-		if unit != "" && status.Object != unit {
-			continue
+	// Deny pattern: stable spec files are not directly writable (use promote)
+	if strings.HasPrefix(normalizedPath, "docs/specs/units/stable/") {
+		return validateResult{
+			Allowed: false,
+			Reason:  fmt.Sprintf("path %q is under docs/specs/units/stable/; use promote to write stable specs", path),
+			Path:    path,
 		}
-		// Skip rows without constraints in notes (constraints: may appear as
-		// a ;-separated segment within Notes, e.g. "appendix_exc:...; constraints:phase=...")
-		notes := strings.TrimSpace(status.Notes)
-		constraintsSegment := extractConstraintsSegment(notes)
-		if constraintsSegment == "" {
-			continue
-		}
-
-		constraintsStr := strings.TrimSpace(constraintsSegment)
-		constraints, err := filevalidation.ParseConstraints(constraintsStr)
-		if err != nil {
-			return validateResult{
-				Allowed: false,
-				Reason:  fmt.Sprintf("parse constraints for %s: %v", status.Object, err),
-				Phase:   phase,
-				Path:    path,
-			}
-		}
-
-		constraintsFound = true
-		r := filevalidation.ValidateWrite(phase, path, constraints)
-
-		// Deny if any constraint denies
-		if !r.Allowed {
-			return validateResult{
-				Allowed: r.Allowed,
-				Reason:  fmt.Sprintf("unit=%s: %s", status.Object, r.Reason),
-				Phase:   r.Phase,
-				Path:    r.Path,
-			}
-		}
-		lastReason = fmt.Sprintf("unit=%s: %s", status.Object, r.Reason)
 	}
 
-	if constraintsFound {
-		// All constraints allowed the write
+	// Deny pattern: rule files are not directly writable (use rule governance flows)
+	if strings.HasPrefix(normalizedPath, "docs/specs/rules/stable/") {
+		return validateResult{
+			Allowed: false,
+			Reason:  fmt.Sprintf("path %q is under docs/specs/rules/stable/; use rule governance flows", path),
+			Path:    path,
+		}
+	}
+
+	// Candidate spec files are writable
+	if strings.HasPrefix(normalizedPath, "docs/specs/units/candidate/") {
 		return validateResult{
 			Allowed: true,
-			Reason:  lastReason,
-			Phase:   phase,
+			Reason:  fmt.Sprintf("path %q is a candidate spec file and is writable", path),
 			Path:    path,
 		}
 	}
 
-	// No constraints found - apply defaults based on phase
-	if phase == "implementation" {
-		// During implementation phase, deny spec/status/framework writes by default
-		for _, denyPattern := range filevalidation.DefaultImplementationDenyPatterns() {
-			if filevalidation.MatchGlobPattern(denyPattern, path) {
-				return validateResult{
-					Allowed: false,
-					Reason:  fmt.Sprintf("no constraints found; phase=%q matches default implementation-phase deny pattern %q", phase, denyPattern),
-					Phase:   phase,
-					Path:    path,
-				}
-			}
+	// Candidate rule files are writable
+	if strings.HasPrefix(normalizedPath, "docs/specs/rules/candidate/") {
+		return validateResult{
+			Allowed: true,
+			Reason:  fmt.Sprintf("path %q is a candidate rule file and is writable", path),
+			Path:    path,
 		}
 	}
+
+	// Source code files are writable by default
 	return validateResult{
 		Allowed: true,
-		Reason:  "no constraints found for this path; write permitted by default",
-		Phase:   phase,
+		Reason:  fmt.Sprintf("path %q is not governed by specFlow write restrictions", path),
 		Path:    path,
 	}
 }
@@ -184,7 +130,6 @@ func validateWrite(repoRoot, path, phase, unit string) validateResult {
 func writeValidateWriteResult(stdout io.Writer, result validateResult) {
 	fmt.Fprintf(stdout, "allowed: %t\n", result.Allowed)
 	fmt.Fprintf(stdout, "reason: %s\n", result.Reason)
-	fmt.Fprintf(stdout, "phase: %s\n", noneIfEmpty(result.Phase))
 	fmt.Fprintf(stdout, "path: %s\n", noneIfEmpty(result.Path))
 }
 
@@ -196,18 +141,16 @@ func writeCandidateFrontmatterResult(stdout io.Writer, result filevalidation.Can
 
 func writeValidateUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  specflowctl validate write --path PATH --phase PHASE [--unit UNIT] [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl validate write --path PATH [--repo-root PATH]")
 	fmt.Fprintln(w, "  specflowctl validate candidate-frontmatter --unit UNIT [--repo-root PATH]")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Validate whether a file write is allowed in the current lifecycle phase.")
-	fmt.Fprintln(w, "Checks constraints defined in docs/specs/_status.md.")
+	fmt.Fprintln(w, "Validate whether a file write is allowed under current governance.")
+	fmt.Fprintln(w, "Checks path against allowed write zones (candidate specs, source code).")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Validate candidate unit frontmatter consistency.")
-	fmt.Fprintln(w, "Checks candidate_intent, source_basis, evidence_appendix_ref, repair_basis rules.")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Flags:")
 	fmt.Fprintln(w, "  --path PATH     File path to validate (required for 'write')")
-	fmt.Fprintln(w, "  --phase PHASE   Current lifecycle phase (required for 'write')")
-	fmt.Fprintln(w, "  --unit UNIT     Unit name (required for 'candidate-frontmatter'; optional for 'write')")
+	fmt.Fprintln(w, "  --unit UNIT     Unit name (required for 'candidate-frontmatter')")
 	fmt.Fprintln(w, "  --repo-root PATH Repository root directory (default: current directory)")
 }

@@ -9,7 +9,7 @@ description: Use when a discussion-stage design is about to be written into cand
 
 Use this skill before candidate Spec writeback to review the design produced in conversation.
 
-This skill does not review a candidate Spec file. Candidate-file closure is owned by `unit_check`.
+This skill does not review a candidate Spec file.
 
 ## Review Checks
 
@@ -43,6 +43,4 @@ Also report:
 ## Boundaries
 
 1. Do not write `_check_result`.
-2. Do not advance `_status.md`.
-3. Do not claim `unit_check` pass.
-4. Do not treat this review as durable truth.
+2. Do not treat this review as durable truth.

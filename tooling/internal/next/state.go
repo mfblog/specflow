@@ -1,53 +1,142 @@
-// Package next provides the deterministic directive for the current governance step.
+// Package next provides file discovery for specFlow units.
 package next
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 )
 
-// UnitState classifies a unit's current lifecycle state.
-type UnitState string
+// UnitInfo describes a unit's file state.
+type UnitInfo struct {
+	Name           string
+	HasCandidate   bool
+	CandidateSpec  string
+	HasStable      bool
+	StableSpec     string
+	Appendices     []string
+	RuleRefs       []string
+	RelatedUnits   []string
+	MappingPresent bool
+}
 
-const (
-	StateStableIdle       UnitState = "stable_idle"
-	StateStableVerify     UnitState = "stable_verify"
-	StateCandidateCheck   UnitState = "candidate_check"
-	StateCandidatePending UnitState = "candidate_impl"
-	StateCandidateVerify  UnitState = "candidate_verify"
-	StateCandidatePromote UnitState = "candidate_promote"
-	StateUnregistered     UnitState = "unregistered"
-)
+// DiscoverUnit reads the file system to discover a unit's file state.
+func DiscoverUnit(repoRoot, unitName string) (*UnitInfo, error) {
+	info := &UnitInfo{Name: unitName}
 
-// ClassifyUnitState reads a single unit status row and returns the matching UnitState.
-func ClassifyUnitState(s statusfile.ObjectStatus) UnitState {
-	if s.Object == "" {
-		return StateUnregistered
+	candidatePath := filepath.Join(repoRoot, fmt.Sprintf("docs/specs/units/candidate/c_unit_%s.md", unitName))
+	stablePath := filepath.Join(repoRoot, fmt.Sprintf("docs/specs/units/stable/s_unit_%s.md", unitName))
+
+	if _, err := os.Stat(candidatePath); err == nil {
+		info.HasCandidate = true
+		info.CandidateSpec = fmt.Sprintf("docs/specs/units/candidate/c_unit_%s.md", unitName)
 	}
-	stable := strings.TrimSpace(strings.ToLower(s.Stable))
-	candidate := strings.TrimSpace(strings.ToLower(s.Candidate))
-	active := strings.TrimSpace(strings.ToLower(s.ActiveLayer))
-	next := strings.TrimSpace(strings.ToLower(s.NextCommand))
 
-	switch {
-	case stable == "yes" && candidate == "no" && active == "stable" && next == "unit_fork":
-		return StateStableIdle
-	case stable == "yes" && candidate == "no" && active == "stable" && next == "unit_stable_verify":
-		return StateStableVerify
-	case next == "unit_init":
-		return StateUnregistered
-	case next == "unit_new":
-		return StateCandidateCheck
-	case candidate == "yes" && next == "unit_check":
-		return StateCandidateCheck
-	case candidate == "yes" && statusfile.ContainsNextCommand(s.NextCommand, "unit_impl"):
-		return StateCandidatePending
-	case candidate == "yes" && next == "unit_verify":
-		return StateCandidateVerify
-	case candidate == "yes" && next == "unit_promote":
-		return StateCandidatePromote
-	default:
-		return StateUnregistered
+	if _, err := os.Stat(stablePath); err == nil {
+		info.HasStable = true
+		info.StableSpec = fmt.Sprintf("docs/specs/units/stable/s_unit_%s.md", unitName)
 	}
+
+	appendixDir := filepath.Join(repoRoot, "docs/specs/units/candidate/appendix")
+	pattern := fmt.Sprintf("c_unit_%s_*.md", unitName)
+	matches, _ := filepath.Glob(filepath.Join(appendixDir, pattern))
+	for _, m := range matches {
+		rel, _ := filepath.Rel(repoRoot, m)
+		info.Appendices = append(info.Appendices, rel)
+	}
+
+	stableAppendixDir := filepath.Join(repoRoot, "docs/specs/units/stable/appendix")
+	stableMatches, _ := filepath.Glob(filepath.Join(stableAppendixDir, pattern))
+	for _, m := range stableMatches {
+		rel, _ := filepath.Rel(repoRoot, m)
+		info.Appendices = append(info.Appendices, rel)
+	}
+
+	mappingPath := filepath.Join(repoRoot, "docs/specs/repository_mapping.md")
+	if _, err := os.Stat(mappingPath); err == nil {
+		info.MappingPresent = true
+	}
+
+	specPath, err := specpaths.ObjectMainSpecFileRef("unit", "candidate", unitName)
+	if err == nil {
+		info.RelatedUnits = discoverRelatedUnits(repoRoot, unitName, specPath)
+	}
+
+	return info, nil
+}
+
+func discoverRelatedUnits(repoRoot, unitName, specPath string) []string {
+	fullPath := filepath.Join(repoRoot, specPath)
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		return nil
+	}
+
+	content := string(data)
+	var refs []string
+	seen := map[string]bool{}
+
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "unit_refs:") {
+			rest := strings.TrimPrefix(line, "unit_refs:")
+			rest = strings.TrimSpace(rest)
+			for _, ref := range strings.Split(rest, ",") {
+				ref = strings.TrimSpace(ref)
+				ref = strings.TrimPrefix(ref, "s_unit_")
+				ref = strings.TrimPrefix(ref, "c_unit_")
+				ref = strings.Split(ref, "@")[0]
+				if ref != "" && ref != unitName && !seen[ref] {
+					seen[ref] = true
+					refs = append(refs, ref)
+				}
+			}
+		}
+	}
+	return refs
+}
+
+// FormatInfo formats the unit info as a readable output.
+func FormatInfo(info *UnitInfo) string {
+	var buf strings.Builder
+
+	fmt.Fprintf(&buf, "Unit: %s\n", info.Name)
+	fmt.Fprintf(&buf, "Candidate: %v", info.HasCandidate)
+	if info.HasCandidate {
+		fmt.Fprintf(&buf, " (%s)", info.CandidateSpec)
+	}
+	buf.WriteString("\n")
+
+	fmt.Fprintf(&buf, "Stable: %v", info.HasStable)
+	if info.HasStable {
+		fmt.Fprintf(&buf, " (%s)", info.StableSpec)
+	}
+	buf.WriteString("\n")
+
+	if len(info.Appendices) > 0 {
+		buf.WriteString("Appendices:\n")
+		for _, a := range info.Appendices {
+			fmt.Fprintf(&buf, "  - %s\n", a)
+		}
+	}
+
+	if len(info.RelatedUnits) > 0 {
+		buf.WriteString("Related units:\n")
+		for _, u := range info.RelatedUnits {
+			fmt.Fprintf(&buf, "  - %s\n", u)
+		}
+	}
+
+	if !info.MappingPresent {
+		buf.WriteString("\nNote: repository_mapping.md not found\n")
+	}
+
+	buf.WriteString("\nFile existence is state. There are no lifecycle phases.\n")
+	buf.WriteString("To review quality: specflowctl review --unit <name>\n")
+	buf.WriteString("To finalize: specflowctl promote --unit <name>\n")
+
+	return buf.String()
 }

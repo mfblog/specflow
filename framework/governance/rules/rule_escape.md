@@ -22,7 +22,7 @@ This flow is valid only when a rule-governance request cannot proceed safely: it
 `rule_escape` must not:
 
 1. write rule truth as a substitute for the routed rule flow
-2. write unit truth as a substitute for unit lifecycle or `rule_bind`
+2. write unit truth as a substitute for `rule_bind`
 3. keep unresolved truth only in chat
 4. create a durable command chain outside the standard rule flows
 5. resume an old decomposition after the current handling has stopped
@@ -32,20 +32,17 @@ This flow is valid only when a rule-governance request cannot proceed safely: it
 Before routing or checkpointing, read only the smallest durable truth needed for the decision:
 
 1. `framework/spec_writing_guide.md`
-2. `framework/candidate_intent.md`
-3. `framework/lifecycle/overview.md`
-4. `framework/operations/entry_routing.md` (User-Facing Output section)
-5. `framework/lifecycle/recovery.md` when control returned after mutation
-6. `docs/specs/_status.md` when existing units are named or affected
-7. the current-layer unit main Specs needed to judge unit-local truth, binding, or writeback legality
-8. the relevant rule files
-9. `docs/specs/repository_mapping.md` when path ownership or rule object registration matters
-10. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
+2. the current-layer unit main Specs needed to judge unit-local truth, binding, or writeback legality
+3. the relevant rule files
+4. `docs/specs/repository_mapping.md` when path ownership or rule object registration matters
+5. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
+==ATOM_BEGIN:shared_footer==
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
+==ATOM_END:shared_footer==
 
 ==ATOM_BEGIN:rule_layout_note==
-**Layout-aware path note:** Paths in this file are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+**Layout-aware path note:** Paths in this file use `<framework-root>` and `<tooling-root>` as layout-relative roots. In `source_repo` layout, `<framework-root>` is `framework/` and `<tooling-root>` is `tooling/`. In `installed_project` layout, both use a `specflow/` prefix before the root name (e.g., `specflow/framework/`, `specflow/tooling/`). `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
 ==ATOM_END:rule_layout_note==
 
 ## 3. Routing Decisions
@@ -57,7 +54,7 @@ Route to:
 3. `rule_bind` when a unit must consume, remove, or retarget an existing rule binding
 4. `rule_topology` when rule files or rule bindings need structural change or terminal-state resolution
 5. `rule_sync` when rule truth or binding has already changed and only downstream impact must be reconciled
-6. unit lifecycle when the change is unit-local behavior truth
+6. unit-local truth changes
 7. repository mapping governance when the change is path ownership or object registration
 
 If more than one rule flow is required, `rule_escape` may produce an execution-local `remaining_steps_contract` only when the step order cannot change the resulting formal truth.
@@ -65,21 +62,20 @@ If more than one rule flow is required, `rule_escape` may produce an execution-l
 ## 4. Procedure
 
 1. Identify the smallest distinct actions inside the request.
-2. If control returned from another rule flow after file mutation, use `framework/lifecycle/recovery.md` before any new routing decision unless that returning flow already completed recovery.
-3. Test whether the current request can route to exactly one rule flow without ambiguity.
-4. If exactly one flow is legal, route to that flow and stop.
-5. If multiple flows are involved, test whether their order is stable from current repository truth.
-6. If the order is stable, emit an execution-local `remaining_steps_contract` with:
+2. Test whether the current request can route to exactly one rule flow without ambiguity.
+3. If exactly one flow is legal, route to that flow and stop.
+4. If multiple flows are involved, test whether their order is stable from current repository truth.
+5. If the order is stable, emit an execution-local `remaining_steps_contract` with:
    - `step_order`
    - `current_step`
    - `remaining_steps`
    - `closure_rule`: after all remaining steps complete, report completion and return to caller flow
    - `durability=execution_local`
-   - `resume_rule=rerun_entry_routing_from_current_truth_if_interrupted`
+   - `resume_rule=rerun_from_current_truth_if_interrupted`
 7. Route only the first legal step after emitting that contract. After each step in the contract completes, return to `rule_escape` to continue with the next step. When all steps are complete, apply the `closure_rule`.
 8. If the order is not stable, raise a checkpoint instead of guessing.
 9. If the boundary between unit-local truth and rule truth is unclear, raise a checkpoint instead of writing truth.
-10. If the request crosses out of rule governance, return to the owning unit lifecycle or repository mapping route.
+10. If the request crosses out of rule governance, return to the owning flow or repository mapping route.
 
 ## 5. Checkpoints
 
@@ -89,17 +85,15 @@ Use:
 
 1. `clarification` when the requested meaning is unclear
 2. `decision` when the user must choose between two valid formal landing points
-3. `prerequisite_action` when a legal upstream action, such as `unit_fork:{unit}`, must happen before writeback
+3. `prerequisite_action` when a legal upstream action must happen before writeback
 
-The stop report must follow `framework/operations/entry_routing.md` (User-Facing Output section) and name:
+The stop report must name:
 
 1. the rule-governance request that is blocked
 2. the affected units, or `none` when no unit is involved
 3. the single user answer, decision, or prerequisite action needed
 4. why rule-governance writeback cannot safely continue
 5. the resume entry after the answer or action
-
-For a `prerequisite_action` that requires `unit_fork:{unit}` before rule-governance writeback, the stop report must name every stable unit that needs a candidate fork. After every required fork completes, rerun `rule_escape` from current repository truth for the original rule-governance request.
 
 For a `clarification` checkpoint, after the user provides the requested clarification, rerun `rule_escape` from current repository truth for the original rule-governance request.
 
@@ -113,7 +107,7 @@ Stop when one of these is true:
 2. a stable execution-local sequence has been emitted and the first flow is selected
 3. a checkpoint has been raised
 4. recovery completed and routing must restart from current repository truth
-5. the request belongs to unit lifecycle or repository mapping governance instead of rule governance
+5. the request belongs to repository mapping governance instead of rule governance
 
 ## 7. Output Contract
 

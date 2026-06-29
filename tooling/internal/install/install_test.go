@@ -82,36 +82,10 @@ func TestDoctorReportsSourceRepoReaderPath(t *testing.T) {
 	if strings.Contains(joined, "MISSING specflow/tooling/reader/web/app.js") {
 		t.Fatalf("doctor resolved the installed reader path in a source repo: %v", result.Failures)
 	}
-	if strings.Contains(joined, "MISSING docs/") || strings.Contains(joined, "INVALID managed block in AGENTS.md") {
+	if strings.Contains(joined, "MISSING docs/") {
 		t.Fatalf("doctor checked installed-project destinations in a source repo: %v", result.Failures)
 	}
-}
 
-func TestInitAppendsManagedBlockToExistingEntryFile(t *testing.T) {
-	repoRoot := t.TempDir()
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/tooling/manifest.tsv"), "templates/AGENTS.md\tAGENTS.md\tframework\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "specflow/templates/AGENTS.md"), "template host\n==SPECFLOW:BEGIN==\nmanaged body\n==SPECFLOW:END==\n")
-	mustWriteFile(t, filepath.Join(repoRoot, "AGENTS.md"), "host content\n")
-
-	result, err := Init(repoRoot, false)
-	if err != nil {
-		t.Fatalf("Init returned error: %v", err)
-	}
-	if result.Copied != 1 || result.Skipped != 0 {
-		t.Fatalf("unexpected init result: %+v", result)
-	}
-
-	content, err := os.ReadFile(filepath.Join(repoRoot, "AGENTS.md"))
-	if err != nil {
-		t.Fatalf("ReadFile(AGENTS.md) failed: %v", err)
-	}
-	text := string(content)
-	if !strings.Contains(text, "host content") {
-		t.Fatalf("expected host content to be preserved, got %q", text)
-	}
-	if !strings.Contains(text, "==SPECFLOW:BEGIN==\nmanaged body\n==SPECFLOW:END==") {
-		t.Fatalf("expected managed block to be appended, got %q", text)
-	}
 }
 
 func setupDoctorRepo(t *testing.T, repoRoot string) string {

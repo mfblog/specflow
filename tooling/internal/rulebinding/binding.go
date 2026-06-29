@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
 )
 
 type ResolvedRef struct {
@@ -109,8 +108,13 @@ func ValidatePromotionOwnerUnit(repoRoot, fileRef, layer, promotionOwnerUnit str
 	if owner == "" {
 		return fmt.Errorf("%s: missing promotion_owner_unit for candidate-layer rule file with stable sibling %s", fileRef, stableSiblingRef)
 	}
-	if _, err := statusfile.LookupModuleStatus(repoRoot, owner); err != nil {
-		return fmt.Errorf("%s: promotion_owner_unit %q is not a registered formal unit", fileRef, owner)
+	// Check that the unit exists as a formal spec file (file existence is state)
+	stablePath := filepath.Join(repoRoot, fmt.Sprintf("docs/specs/units/stable/s_unit_%s.md", owner))
+	candidatePath := filepath.Join(repoRoot, fmt.Sprintf("docs/specs/units/candidate/c_unit_%s.md", owner))
+	if _, err := os.Stat(stablePath); os.IsNotExist(err) {
+		if _, err := os.Stat(candidatePath); os.IsNotExist(err) {
+			return fmt.Errorf("%s: promotion_owner_unit %q has no spec file in stable or candidate", fileRef, owner)
+		}
 	}
 	return nil
 }

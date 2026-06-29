@@ -6,7 +6,7 @@ It is the rule-specific impact discovery layer. Once the affected unit set is fi
 
 ### Entry Condition
 
-This flow must be run after any rule truth or rule binding mutation. It computes the set of affected units and determines whether downstream process evidence is invalidated. It is not a lifecycle command — it is invoked automatically by rule-governance flows.
+This flow must be run after any rule truth or rule binding mutation. It computes the set of affected units and determines whether downstream truth is invalidated. It is not a governance command — it is invoked automatically by rule-governance flows.
 
 ## 1. Scope
 
@@ -33,17 +33,13 @@ This flow must be run after any rule truth or rule binding mutation. It computes
 Before impact is computed, read:
 
 1. `framework/spec_writing_guide.md`
-2. `framework/candidate_intent.md`
-3. `framework/lifecycle/overview.md`
-4. `framework/governance/impact_sync.md`
-5. `framework/process_snapshot_contract.md`
-6. `docs/specs/repository_mapping.md`
-7. `docs/specs/_status.md`
-8. every in-scope rule file
-9. every current-layer unit main Spec needed to rebuild the bound-rule consumer graph from `rule_refs`
+2. `framework/governance/impact_sync.md`
+3. `docs/specs/repository_mapping.md`
+4. every in-scope rule file
+5. every current-layer unit main Spec needed to rebuild the bound-rule consumer graph from `rule_refs`
 
 ==ATOM_BEGIN:rule_layout_note==
-**Layout-aware path note:** Paths in this file are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+**Layout-aware path note:** Paths in this file use `<framework-root>` and `<tooling-root>` as layout-relative roots. In `source_repo` layout, `<framework-root>` is `framework/` and `<tooling-root>` is `tooling/`. In `installed_project` layout, both use a `specflow/` prefix before the root name (e.g., `specflow/framework/`, `specflow/tooling/`). `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
 ==ATOM_END:rule_layout_note==
 
 If the caller changed rule truth, unit bindings, or the rule object map, that writeback must already be present before `rule_sync` computes impact.
@@ -53,9 +49,11 @@ If the rule object map changed, `docs/specs/repository_mapping.md` must already 
 ## 3. Consumer Source
 
 Stable global rules are default inputs for every current-layer unit.
-When a changed or explicitly in-scope rule ref or rule id resolves to a stable global rule, the affected unit set is every current-layer unit row in `docs/specs/_status.md`.
+When a changed or explicitly in-scope rule ref or rule id resolves to a stable global rule, the affected unit set is every current-layer unit.
 
-For bound shared rules, the only formal consumer source is current-layer unit frontmatter `rule_refs`.
+==ATOM_BEGIN:shared_footer==
+Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
+==ATOM_END:shared_footer==
 
 Rule files must not provide consumer truth. `bound_objects` is ignored as a consumer source and must not be reconciled.
 
@@ -95,7 +93,7 @@ If any deleted ref still exists as a Rule file or still has a current-layer unit
 
 1. Load the in-scope rule files and record their exact refs.
 2. Validate that `docs/specs/repository_mapping.md` is current enough for the in-scope rule object map. If it is missing or conflicting, stop and return control to `rule_escape`.
-3. Read `_status.md` and every needed current-layer unit main Spec.
+3. Read every needed current-layer unit main Spec.
 4. Rebuild the real bound shared rule consumer graph from unit `rule_refs`.
 5. For `deleted_rule_refs`, verify the terminal no-impact condition:
    - the deleted ref is no longer present under `docs/specs/rules/**`
@@ -141,41 +139,7 @@ If repository truth is insufficient, return control to `rule_escape` without per
 
 Affected candidate units fall back according to the reason proven by `framework/governance/impact_sync.md`.
 
-For rule truth or binding drift, the candidate unit falls back to `unit_check`.
-
-Affected stable units route to `unit_stable_verify`.
-
-## 8. Release-Version Auto-Fork
-
-When a rule version is released (via `specflowctl rule release-version`), stable units that bind the old rule ref and have `Next Command=unit_fork` are automatically forked to candidate with `candidate_intent=change`.
-
-### Auto-Fork Procedure
-
-1. Detect stable units that bind the old rule ref and have `Next Command=unit_fork`.
-2. Create a candidate copy with bumped patch version. Rewrite Markdown document references within the candidate main Spec body from stable appendix paths (`s_unit_*`) to candidate appendix paths (`c_unit_*`). Update `docs/specs/repository_mapping.md` spec_files to reference the candidate Spec path.
-3. Copy all stable appendices to candidate with frontmatter rewrites and Markdown document ref rewrites (stable appendix paths `s_unit_*` → candidate appendix paths `c_unit_*` within the copied appendix files).
-4. Remove process artifacts (check_work, check result, verify result, stable_verify result) and agent-internal artifacts (plan) from any previous lifecycle round for the target unit.
-5. Invoke command close with `unit_fork:candidate_created`.
-
-### Governance Rules
-
-1. Auto-fork applies only to stable units with `Next Command=unit_fork`. If any stable consumer of the old rule ref is in a different lifecycle state, the release-version operation fails with an error listing the non-compliant units. Resolve these units' lifecycle state before retrying. (See `tooling/internal/rulesync/release.go` for the tooling constraint.)
-2. Stable appendices are copied — not moved — so stable truth remains intact for non-auto-forked consumers.
-3. The auto-forked candidate inherits the old rule ref's behavior truth; the unit specification content is preserved but Markdown document references are rewritten from stable to candidate paths per the standard fork contract (see `framework/lifecycle/unit_init_new_fork.md`).
-3b. **Intent conflict guard** — `release-version` writes `candidate_intent=change` on the auto-forked candidate. If the stable verify result for the target unit records a decision requiring `candidate_intent=repair` (`controlled_repair_required` or `truth_text_change_required`, mapping per `framework/lifecycle/unit_init_new_fork.md` unit_fork candidate_intent determination), the release-version operation must fail and report the conflict. The unit must be resolved before release-version can proceed. (See `tooling/internal/rulesync/release.go` `StableVerifyCandidateIntentRequirement` for the tooling constraint.)
-3c. **Auto-forked `source_basis`** — `release-version` writes `source_basis=new_design` on the auto-forked candidate. The spec content is inherited from stable-layer truth (originally authored from design intent) with no new implementation observation. The `unit_check` gate will verify that the declared `source_basis` is consistent with the evidence appendix.
-4. After auto-fork, the candidate unit follows the standard `unit_check` → `unit_verify` → `unit_promote` lifecycle.
-5. The `rule_sync` impact handoff runs after writeback, so downstream invalidation and fallback rules apply.
-
-### Tooling Entry
-
-```text
-specflowctl rule release-version --rule-id <id> --from-ref <old-ref> --to-ref <new-ref>
-```
-
-See `tooling/internal/rulesync/release.go` for implementation details.
-
-## 9. Rejection
+## 8. Rejection
 
 `rule_sync` must reject:
 
@@ -185,7 +149,7 @@ See `tooling/internal/rulesync/release.go` for implementation details.
 4. `object-type=scenario`
 5. any attempt to use `bound_objects` as consumer truth
 
-## 10. Output Contract
+## 9. Output Contract
 
 The output must report:
 

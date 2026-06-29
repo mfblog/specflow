@@ -2,7 +2,7 @@
 
 Impact sync reconciles downstream units after unit, rule, global rule, or repository mapping truth changes.
 
-It owns consumer discovery, freshness classification, and fallback routing for affected units.
+It owns consumer discovery and freshness classification for affected units.
 
 ## Triggers
 
@@ -12,7 +12,7 @@ Run impact sync when:
 2. a rule is created, changed, promoted, retired, renamed, merged, split, or rebound.
 3. a stable global rule changes or gains an explicit exception.
 4. repository mapping changes path ownership, object registration, implementation path registration, or support-surface boundaries used by current truth.
-5. a governance flow cannot prove that downstream unit evidence remains current.
+5. a governance flow cannot prove that downstream unit truth remains current.
 
 ## Inputs
 
@@ -22,7 +22,7 @@ Use the smallest durable truth that can prove affected consumers:
 2. changed repository mapping entries.
 3. promoted stable unit reference and release version.
 4. current-layer unit frontmatter and dependency fields.
-5. current process evidence only after the affected unit set is known.
+
 
 Do not infer consumers from implementation directories alone.
 
@@ -42,9 +42,9 @@ Repository mapping consumers are derived from object, implementation path, and s
 
 ## Fallback Reason Classification
 
-Use the canonical fallback reason codes from `framework/lifecycle/recovery.md`.
+Use the canonical fallback reason codes below:
 `no_drift_observed`, `plan_drift`, and `implementation_deviation` are additional codes used for
-agent-internal routing decisions and are not defined in `recovery.md`:
+agent-internal routing decisions:
 
 1. `no_drift_observed` — pre-trigger classification for the caller, not an output code of `impact_sync` itself. If the caller determines no evidence is invalidated, it may skip invoking `impact_sync`. `impact_sync` never assigns this code.
 2. `truth_drift` - candidate behavior, boundary, or acceptance truth must be rewritten or rechecked.
@@ -57,34 +57,14 @@ agent-internal routing decisions and are not defined in `recovery.md`:
 9. `implementation_deviation` - implementation no longer satisfies current truth.
 10. `evidence_incomplete` - candidate verification evidence is missing or invalid.
 11. `stable_verify_invalid` - stable verification evidence is missing or invalid.
-12. `spec_issue` - the candidate Spec requires repair. Routed as `gate_layer` per `framework/lifecycle/recovery.md`.
+12. `spec_issue` - the candidate Spec requires repair.
 
 When classification is uncertain, use the earliest proven invalidated layer and its canonical reason code.
-
-## Fallback Routing
-
-Use `framework/lifecycle/recovery.md` for the actual process-file deletion and next-command update.
-
-1. `truth_drift`, `binding_drift`, `baseline_drift`, `rule_drift`, and `truth_incomplete` return affected candidate units to `unit_check`.
-2. `gate_missing` returns affected candidate units to `unit_check`.
-3. `plan_drift` and `implementation_deviation` are handled agent-internally; no SpecFlow command reroute is needed.
-4. `evidence_incomplete` returns affected candidate units to `unit_verify`.
-5. `stable_verify_invalid` routes affected stable units to `unit_stable_verify`.
-6. Stable units invalidated by `binding_drift` or `rule_drift` route to `unit_stable_verify` without rewriting stable truth.
-7. Stable truth changes that require a new unit version route through `unit_fork:{unit}`.
-
-## Stable Unit Release Handoff
-
-When an already-existing stable unit version is published:
-
-1. Current candidate consumers may be mechanically retargeted from the exact old `unit_refs` entry to the exact new `unit_refs` entry and must fall back to `unit_check`.
-2. Current stable consumers must not have stable truth rewritten by release-version tooling. Remove stale `unit_stable_verify` evidence when present and route the stable consumer to `unit_stable_verify`.
-3. If the stable consumer needs to accept the new dependency ref as stable truth, that later truth change routes through `unit_fork:{unit}` and the owning unit lifecycle.
 
 ## Rule Sync Handoff
 
 Rule-governance flows notify `framework/governance/rules/rule_sync.md` of changed rule refs.
-`rule_sync` computes affected consumers from rule refs and current-layer unit frontmatter, then applies fallback routing through this file and `framework/lifecycle/recovery.md`.
+`rule_sync` computes affected consumers from rule refs and current-layer unit frontmatter, then applies fallback routing through this file.
 
 ## Stop Conditions
 
@@ -101,8 +81,7 @@ After impact_sync completes, it produces:
 
 1. `affected_candidate_units` — list of candidate units and their applied fallback reason codes
 2. `affected_stable_units` — list of stable units and their applied fallback reason codes
-3. `next_command_updates` — per-unit Next Command changes applied through `framework/lifecycle/recovery.md`. During the implementation phase (where `Next Command` may be the multi-value set `unit_check, unit_impl, unit_verify`), the fallback table in `recovery.md` correctly handles this state by resetting `Next Command` to `unit_check` and removing the `constraints:` prefix while preserving `appendix_exc:`. The implementation-phase state is not preserved as a separate checkpoint — the unit exits the implementation phase and must re-enter through a new `unit_check pass` outcome. See `framework/lifecycle/recovery.md` §Candidate Recovery for the handling of implementation-phase units.
-4. `freshness_review_required` — when set to `true`, at least one affected unit has process evidence whose freshness state (text_drift without confirmed fallback layer) requires the caller to run deterministic freshness classification before fallback cleanup. When set to `false` or absent from the output, no freshness review is needed.
+3. `freshness_review_required` — when set to `true`, at least one affected unit requires the caller to run deterministic freshness classification before fallback cleanup. When set to `false` or absent from the output, no freshness review is needed.
 
 ## Removed Scenario Lifecycle
 

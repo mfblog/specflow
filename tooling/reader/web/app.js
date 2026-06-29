@@ -1,5 +1,5 @@
 let snapshot = null;
-let currentView = "todo";
+let currentView = "spec";
 let cy = null;
 let selectedNodeID = null;
 let activeInspectorTab = "info";
@@ -10,7 +10,6 @@ let activeSpecflowNavGroup = "unit";
 let activeReviewNavGroup = "candidate";
 let expandedReviewObjectKeys = new Set();
 let initializedReviewNavGroups = new Set();
-let activeTodoNavGroup = "stableVerify";
 let activeRegistryNavGroup = "problem";
 let snapshotRequestInFlight = false;
 let snapshotDataSignature = "";
@@ -41,9 +40,7 @@ const TRANSLATIONS = {
       zh: "中文"
     },
     tabs: {
-      todo: { title: "待处理", subtitle: "下一步" },
       spec: { title: "Spec 查看", subtitle: "文档入口" },
-      status: { title: "状态", subtitle: "进度对齐" },
       registry: { title: "结构映射", subtitle: "实施路径" },
       project: { title: "项目结构", subtitle: "仓库路径" },
       specflow: { subtitle: "治理层级" }
@@ -75,14 +72,9 @@ const TRANSLATIONS = {
       }
     },
     views: {
-      todo: {
-        title: "待处理",
-        summary: "从状态索引汇总每个对象的下一步动作。这里是统一入口，先看要做什么，再打开对应材料。",
-        nav: "下一步动作"
-      },
       spec: {
         title: "Spec 查看",
-        summary: "查看当前需要确认的 candidate Spec，以及已经成为 stable 的正式 Spec。完整下一步动作请看“待处理”。",
+        summary: "查看当前需要确认的 candidate Spec，以及已经成为 stable 的正式 Spec。",
         nav: "Spec 文档"
       },
       project: {
@@ -98,16 +90,16 @@ const TRANSLATIONS = {
         summary: "从治理层级看规则：全局规则、项目映射、状态索引、规则、单元和 Spec 文档如何分层。",
         nav: "对象"
       },
-      status: {
-        title: "状态",
-        summary: "从状态索引看当前进度：先看每个对象的状态事实，再看生命周期下一步。",
-        nav: "状态对象"
-      },
       registry: {
         title: "结构映射",
         summary: "查看 unit 和 rule 是否已经写入 repository_mapping，以及 unit 有没有可用实施路径。",
         nav: "映射结果"
       }
+    },
+    statusBoard: {
+      lifecycleAria: "{label} 生命周期位置",
+      nextRoundEntry: "下一轮入口",
+      nextRepairEntry: "修复入口"
     },
     counts: {
       unit: "{count} 单元",
@@ -134,90 +126,7 @@ const TRANSLATIONS = {
       noObject: "暂无对象",
       cytoscapeMissing: "Cytoscape 未加载。"
     },
-    statusBoard: {
-      heading: "状态索引",
-      description: "这些内容来自状态文件，但这里按对象卡片和表格展示，不直接显示 Markdown 原文。",
-      sourceLabel: "来源：_status.md",
-      metrics: {
-        total: "登记对象",
-        stable: "已有稳定设计",
-        candidate: "正在确认",
-        withImplementation: "已声明实现路径"
-      },
-      table: {
-        object: "对象",
-        layer: "当前层",
-        next: "下一步",
-        notes: "备注"
-      },
-      lifecycleHeading: "本轮生命周期进度",
-      lifecycleDescription: "进度条表示当前这一轮。若本轮已完成，下一步会作为下一轮入口单独显示。",
-      lifecycleAria: "{label} 生命周期位置",
-      nextRoundEntry: "下一轮入口",
-      nextRepairEntry: "修复入口"
-    },
-    todo: {
-      empty: "暂无待处理动作。",
-      emptyDetailTitle: "暂无待处理动作",
-      emptyDetail: "状态索引里当前没有登记下一步动作。",
-      boardHeading: "下一步动作",
-      boardDescription: "每张卡片都来自 _status.md 的 Next Command。点击卡片查看需要打开的材料。",
-      actionType: "动作类型",
-      command: "命令",
-      nextEntry: "下一步入口",
-      advanceEntry: "推进入口",
-      copyAdvanceEntry: "复制自动推进入口",
-      alternativeEntry: "返工检查",
-      alternativeTitle: "若实现中发现 Spec 有问题，先修正 Spec 再运行 unit_check 重新校验",
-      implEntry: "继续实现",
-      implTitle: "进入实现阶段，按要求实现功能",
-      intent: "模式",
-      materials: "可查看材料",
-      references: "参考材料",
-      implementation: "实现路径",
-      notes: "原因",
-      openMaterial: "打开材料",
-      noMaterials: "暂无可读取材料",
-      relationStatus: "推进关系",
-      relationBlockedBy: "等待对象",
-      relationSources: "关系来源",
-      relationReady: "可先推进",
-      relationBlocked: "等待上游",
-      relationCycle: "推进环",
-      relationOther: "普通动作",
-      relationGroups: {
-        ready: "可先推进",
-        blocked: "等待上游",
-        cycle: "存在推进环",
-        other: "其他动作"
-      },
-      sourceLabels: {
-        activeTruth: "当前 Spec",
-        appendix: "附录",
-        evidence: "证据",
-        rule: "规则",
-        checkResult: "检查结果",
-        verifyResult: "验证结果",
-        activePlan: "当前计划",
-        status: "状态索引"
-      },
-      types: {
-        stableVerify: "稳定复核",
-        designCheck: "设计确认",
-        plan: "开发计划",
-        implementation: "实现执行",
-        verify: "验证确认",
-        promote: "沉淀基线",
-        repairFork: "修复基线",
-        fork: "开启变更轮次",
-        new: "初始化 / 新建",
-        other: "其他动作"
-      },
-      intents: {
-        repair: "修复基线",
-        change: "开启变更轮次"
-      }
-    },
+
     registry: {
       boardHeading: "结构映射面板",
       boardDescription: "查看每个对象是否已经写入 repository_mapping，以及是否已经声明实施路径，避免执行时才发现映射缺口。",
@@ -236,6 +145,7 @@ const TRANSLATIONS = {
       status: "状态登记",
       truth: "Spec 文档",
       implementation: "实施路径",
+      objectLabel: "对象",
       refs: "引用",
       evidence: "发现依据",
       relation: "当前关系",
@@ -452,9 +362,7 @@ const TRANSLATIONS = {
       zh: "Chinese"
     },
     tabs: {
-      todo: { title: "To Do", subtitle: "Next steps" },
       spec: { title: "Spec View", subtitle: "Documents" },
-      status: { title: "Status", subtitle: "Progress" },
       registry: { title: "Mapping", subtitle: "Implementation paths" },
       project: { title: "Project", subtitle: "Repository paths" },
       specflow: { subtitle: "Governance layers" }
@@ -486,14 +394,9 @@ const TRANSLATIONS = {
       }
     },
     views: {
-      todo: {
-        title: "To Do",
-        summary: "Collects each object's next action from the status index. This is the unified entry: see what to do, then open the relevant material.",
-        nav: "Next actions"
-      },
       spec: {
         title: "Spec View",
-        summary: "Shows candidate Specs that still need confirmation and stable Specs that are already accepted. Use To Do for the full next-action queue.",
+        summary: "Shows candidate Specs that still need confirmation and stable Specs that are already accepted.",
         nav: "Spec documents"
       },
       project: {
@@ -509,16 +412,19 @@ const TRANSLATIONS = {
         summary: "Shows governance layers: how global rules, repository mapping, status index, rules, units, and Spec documents are organized.",
         nav: "Objects"
       },
-      status: {
-        title: "Status",
-        summary: "Shows current progress from the status index: object state facts first, then the next lifecycle step.",
-        nav: "Status objects"
-      },
       registry: {
         title: "Structure Mapping",
         summary: "Shows whether units and rules are recorded in repository_mapping and whether units have usable implementation paths.",
         nav: "Mapping results"
       }
+    },
+    statusBoard: {
+      table: {
+        object: "Object"
+      },
+      lifecycleAria: "{label} lifecycle position",
+      nextRoundEntry: "Next-round entry",
+      nextRepairEntry: "Repair entry"
     },
     counts: {
       unit: "{count} units",
@@ -545,90 +451,7 @@ const TRANSLATIONS = {
       noObject: "No object",
       cytoscapeMissing: "Cytoscape is not loaded."
     },
-    statusBoard: {
-      heading: "Status Index",
-      description: "This content comes from the status file, but is shown as object cards and tables instead of raw Markdown.",
-      sourceLabel: "Source: _status.md",
-      metrics: {
-        total: "Registered objects",
-        stable: "Stable designs",
-        candidate: "In confirmation",
-        withImplementation: "Implementation paths declared"
-      },
-      table: {
-        object: "Object",
-        layer: "Current layer",
-        next: "Next",
-        notes: "Notes"
-      },
-      lifecycleHeading: "Current Round Progress",
-      lifecycleDescription: "The progress bar represents the current round. When the round is complete, the next command is shown separately as the next-round entry.",
-      lifecycleAria: "{label} lifecycle position",
-      nextRoundEntry: "Next-round entry",
-      nextRepairEntry: "Repair entry"
-    },
-    todo: {
-      empty: "No pending actions.",
-      emptyDetailTitle: "No pending actions",
-      emptyDetail: "The status index does not currently register a next action.",
-      boardHeading: "Next Actions",
-      boardDescription: "Each card comes from the Next Command field in _status.md. Select a card to see the material to open.",
-      actionType: "Action type",
-      command: "Command",
-      nextEntry: "Next entry",
-      advanceEntry: "Advance entry",
-      copyAdvanceEntry: "Copy auto-advance entry",
-      alternativeEntry: "Re-check spec",
-      alternativeTitle: "If spec issues found during implementation, fix spec then run unit_check for re-validation",
-      implEntry: "Continue implementation",
-      implTitle: "Enter implementation phase and implement according to the spec",
-      intent: "Mode",
-      materials: "Readable material",
-      references: "Reference material",
-      implementation: "Implementation paths",
-      notes: "Reason",
-      openMaterial: "Open material",
-      noMaterials: "No readable material",
-      relationStatus: "Relation status",
-      relationBlockedBy: "Waiting for",
-      relationSources: "Relation sources",
-      relationReady: "Ready first",
-      relationBlocked: "Waiting upstream",
-      relationCycle: "Relation cycle",
-      relationOther: "Ordinary action",
-      relationGroups: {
-        ready: "Ready first",
-        blocked: "Waiting upstream",
-        cycle: "Relation cycles",
-        other: "Other actions"
-      },
-      sourceLabels: {
-        activeTruth: "Current Spec",
-        appendix: "Appendix",
-        evidence: "Evidence",
-        rule: "Rule",
-        checkResult: "Check result",
-        verifyResult: "Verify result",
-        activePlan: "Active plan",
-        status: "Status index"
-      },
-      types: {
-        stableVerify: "Stable verification",
-        designCheck: "Design confirmation",
-        plan: "Implementation plan",
-        implementation: "Implementation",
-        verify: "Verification",
-        promote: "Promote baseline",
-        repairFork: "Repair baseline",
-        fork: "Start change round",
-        new: "Initialize / create",
-        other: "Other action"
-      },
-      intents: {
-        repair: "Repair baseline",
-        change: "Start change round"
-      }
-    },
+
     registry: {
       boardHeading: "Structure Mapping Panel",
       boardDescription: "Shows whether each object is recorded in repository_mapping and whether it already declares implementation paths, so mapping gaps are visible before execution.",
@@ -647,6 +470,7 @@ const TRANSLATIONS = {
       status: "Status registration",
       truth: "Spec files",
       implementation: "Implementation paths",
+      objectLabel: "Object",
       refs: "References",
       evidence: "Evidence",
       relation: "Current relation",
@@ -990,9 +814,7 @@ function snapshotSignature(value) {
 
 function render() {
   if (!snapshot) return;
-  document.body.classList.toggle("todo-view-active", currentView === "todo");
   document.body.classList.toggle("spec-view-active", currentView === "spec");
-  document.body.classList.toggle("status-view-active", currentView === "status");
   document.body.classList.toggle("registry-view-active", currentView === "registry");
   const objects = list(snapshot.objects);
   projectMeta.textContent = `${snapshot.project.repo_root} · version ${snapshot.version} · ${t("counts.objects", { count: objects.length })}`;
@@ -1059,11 +881,6 @@ function renderNav() {
     return;
   }
 
-  if (currentView === "todo") {
-    renderTodoNav();
-    return;
-  }
-
   if (currentView === "registry") {
     renderRegistryNav();
     return;
@@ -1071,18 +888,6 @@ function renderNav() {
 
   if (currentView === "spec") {
     renderReviewNav();
-    return;
-  }
-
-  if (currentView === "status") {
-    objectsForView().forEach((object) => {
-      const button = document.createElement("button");
-      button.className = objectNodeID(object) === selectedNodeID ? "nav-item active" : "nav-item";
-      button.type = "button";
-      button.innerHTML = `${renderNavItemTitle(object.label, object.kind)}<span>${escapeHTML(navSubtitle(object))}</span>`;
-      button.addEventListener("click", () => focusObject(object));
-      navPanel.appendChild(button);
-    });
     return;
   }
 
@@ -1261,16 +1066,10 @@ function objectsForView() {
   if (currentView === "specflow") {
     return objects.filter((item) => item.kind === "rule").concat(objects.filter((item) => item.kind === "unit"));
   }
-  if (currentView === "status") {
-    return objects.filter((item) => item.kind === "unit");
-  }
   return objects;
 }
 
 function navSubtitle(object) {
-  if (currentView === "status") {
-    return `${object.human_state || object.layer || t("fallback.statusUnknown")} · ${t("fallback.nextStep", { value: object.next_label || object.next_command || t("fallback.none") })}`;
-  }
   if (currentView === "specflow") {
     return object.responsibility || t("fallback.responsibilityUnknown");
   }
@@ -1303,28 +1102,12 @@ function focusGraphNode(nodeID, zoom) {
 }
 
 function renderGraph() {
-  if (currentView === "todo") {
-    if (cy) {
-      cy.destroy();
-      cy = null;
-    }
-    renderTodoBoard();
-    return;
-  }
   if (currentView === "spec") {
     if (cy) {
       cy.destroy();
       cy = null;
     }
     renderReviewBoard();
-    return;
-  }
-  if (currentView === "status") {
-    if (cy) {
-      cy.destroy();
-      cy = null;
-    }
-    renderStatusBoard();
     return;
   }
   if (currentView === "registry") {
@@ -1450,42 +1233,14 @@ function renderGraph() {
 }
 
 function graphForCurrentView() {
-  if (currentView === "todo") return graphForTodoView();
   if (currentView === "spec") return graphForReviewView();
   if (currentView === "project") return graphForProjectView();
   if (currentView === "specflow") return graphForSpecflowView();
-  if (currentView === "status") return graphForStatusView();
   if (currentView === "registry") return graphForRegistryView();
 
   const nodes = list(snapshot.nodes);
   const edges = list(snapshot.edges);
   return { nodes, edges };
-}
-
-function graphForTodoView() {
-  return {
-    nodes: todoItems().map((item) => ({
-      id: item.id,
-      kind: item.object.kind,
-      label: item.objectLabel,
-      group: todoRelationStatus(item) === "other" ? item.type : todoRelationStatus(item),
-      source: firstSourceRef(item.sources)
-    })),
-    edges: []
-  };
-}
-
-function graphForStatusView() {
-  return {
-    nodes: objectsForView().map((object) => ({
-      id: objectNodeID(object),
-      kind: object.kind,
-      label: object.label,
-      group: object.kind,
-      source: firstSourceRef(object.sources)
-    })),
-    edges: []
-  };
 }
 
 function graphForRegistryView() {
@@ -1858,9 +1613,6 @@ function nodeExistsForGraph(nodeID, graph) {
 }
 
 function firstNodeIDForView(nodes) {
-  if (currentView === "todo") {
-    return (nodes[0] || {}).id || null;
-  }
   if (currentView === "spec") {
     return (nodes[0] || {}).id || null;
   }
@@ -1872,107 +1624,11 @@ function firstNodeIDForView(nodes) {
     const supportNode = nodes.find((node) => node.id === "rule:baseline");
     return (supportNode || nodes[0] || {}).id || null;
   }
-  if (currentView === "status") {
-    return (nodes[0] || {}).id || null;
-  }
   if (currentView === "registry") {
     return (nodes[0] || {}).id || null;
   }
   const domainNode = nodes.find((node) => node.group === "unit");
   return (domainNode || nodes[0] || {}).id || null;
-}
-
-function renderStatusBoard() {
-  const objects = objectsForView();
-  const overview = statusOverview(objects);
-  graphView.innerHTML = `
-    <div class="status-board">
-      <section class="status-section">
-        <div class="status-section-heading">
-          <div>
-            <h3>${escapeHTML(t("statusBoard.heading"))}</h3>
-            <p>${escapeHTML(t("statusBoard.description"))}</p>
-          </div>
-          ${renderSourceButton(snapshot.project.status_file, t("statusBoard.sourceLabel"))}
-        </div>
-        <div class="metric-grid">
-          <div class="metric"><strong>${overview.total}</strong><span>${escapeHTML(t("statusBoard.metrics.total"))}</span></div>
-          <div class="metric"><strong>${overview.stable}</strong><span>${escapeHTML(t("statusBoard.metrics.stable"))}</span></div>
-          <div class="metric"><strong>${overview.candidate}</strong><span>${escapeHTML(t("statusBoard.metrics.candidate"))}</span></div>
-          <div class="metric"><strong>${overview.withImplementation}</strong><span>${escapeHTML(t("statusBoard.metrics.withImplementation"))}</span></div>
-        </div>
-        <div class="status-table-wrap">
-          <table class="status-table">
-            <thead>
-              <tr>
-                <th>${escapeHTML(t("inspector.fields.type"))}</th>
-                <th>${escapeHTML(t("statusBoard.table.object"))}</th>
-                <th>${escapeHTML(t("statusBoard.table.layer"))}</th>
-                <th>Stable</th>
-                <th>Candidate</th>
-                <th>${escapeHTML(t("statusBoard.table.next"))}</th>
-                <th>${escapeHTML(t("statusBoard.table.notes"))}</th>
-              </tr>
-            </thead>
-            <tbody>${objects.map(renderStatusRow).join("")}</tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="status-section">
-        <div class="status-section-heading">
-          <div>
-            <h3>${escapeHTML(t("statusBoard.lifecycleHeading"))}</h3>
-            <p>${escapeHTML(t("statusBoard.lifecycleDescription"))}</p>
-          </div>
-        </div>
-        <div class="lifecycle-list">${objects.map(renderLifecycleCard).join("")}</div>
-      </section>
-    </div>
-  `;
-  bindStatusBoardLinks();
-}
-
-function statusOverview(objects) {
-  return {
-    total: objects.length,
-    stable: objects.filter((object) => yesish(object.stable)).length,
-    candidate: objects.filter((object) => yesish(object.candidate)).length,
-    withImplementation: objects.filter((object) => list(object.implementation_paths).length > 0).length
-  };
-}
-
-function renderStatusRow(object) {
-  return `
-    <tr>
-      <td>${renderKindBadge(object.kind)}</td>
-      <td><button class="table-object" type="button" data-node="${escapeAttr(objectNodeID(object))}">${escapeHTML(object.label)}</button></td>
-      <td>${escapeHTML(object.human_state || object.layer || t("fallback.undeclared"))}</td>
-      <td>${renderFlag(object.stable)}</td>
-      <td>${renderFlag(object.candidate)}</td>
-      <td>${renderCommandCell(object.next_label, object.next_command)}</td>
-      <td>${escapeHTML(object.notes || t("fallback.none"))}</td>
-    </tr>
-  `;
-}
-
-function renderLifecycleCard(object) {
-  const view = lifecycleView(object);
-  return `
-    <article class="lifecycle-card">
-      <div class="lifecycle-head">
-        <div class="lifecycle-title">
-          ${renderKindBadge(object.kind)}
-          <button class="card-object" type="button" data-node="${escapeAttr(objectNodeID(object))}">${escapeHTML(object.label)}</button>
-        </div>
-        <span>${escapeHTML(object.human_state || object.layer || t("fallback.statusUnknown"))}</span>
-      </div>
-      ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: object.label }))}
-      <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
-      ${renderNextRoundEntry(view, object)}
-      <p>${escapeHTML(t("fallback.nextStep", { value: object.next_command || t("fallback.undeclared") }))}</p>
-    </article>
-  `;
 }
 
 function lifecycleView(object, nextCommandOverride) {
@@ -2117,18 +1773,6 @@ function yesish(value) {
   return String(value || "").toLowerCase() === "yes";
 }
 
-function bindStatusBoardLinks() {
-  graphView.querySelectorAll("[data-source]").forEach((button) => {
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      openSource(button.dataset.source);
-    });
-  });
-  graphView.querySelectorAll("[data-node]").forEach((button) => {
-    button.addEventListener("click", () => focusNode(button.dataset.node));
-  });
-}
-
 function registryItems() {
   return list(snapshot.registry).slice().sort((left, right) => {
     const resultOrder = registryResultOrder(left.result) - registryResultOrder(right.result);
@@ -2216,9 +1860,9 @@ function renderRegistryBoard() {
   const mappedNoPathItems = items.filter((item) => item.result === "planned" || item.result === "missing_file" || item.result === "invalid_registry_row");
   const mappedWithPathItems = items.filter((item) => item.result === "landed");
   graphView.innerHTML = `
-    <section class="registry-board status-board">
-      <section class="status-section">
-        <div class="status-section-heading">
+    <section class="registry-board">
+      <section class="registry-section">
+        <div class="registry-section-heading">
           <div>
             <h3>${escapeHTML(t("registry.boardHeading"))}</h3>
             <p>${escapeHTML(t("registry.boardDescription"))}</p>
@@ -2272,12 +1916,20 @@ function renderRegistrySection(title, description, items, emptyText) {
 
 function renderRegistryTable(items) {
   return `
-    <div class="status-table-wrap">
-      <table class="status-table registry-table">
+    <div class="registry-table-wrap">
+      <table class="registry-table">
+        <colgroup>
+          <col style="width:70px">
+          <col style="width:140px">
+          <col style="width:150px">
+          <col style="width:200px">
+          <col style="width:130px">
+          <col>
+        </colgroup>
         <thead>
           <tr>
             <th>${escapeHTML(t("inspector.fields.type"))}</th>
-            <th>${escapeHTML(t("statusBoard.table.object"))}</th>
+            <th>${escapeHTML(t("registry.objectLabel"))}</th>
             <th>${escapeHTML(t("registry.result"))}</th>
             <th>${escapeHTML(t("registry.implementation"))}</th>
             <th>${escapeHTML(t("registry.relation"))}</th>
@@ -2447,396 +2099,6 @@ function bindRegistryBoardLinks() {
   });
 }
 
-function renderTodoNav() {
-  const items = todoItems();
-  const sections = todoTypeOrder()
-    .map((type) => ({ type, items: items.filter((item) => item.type === type) }))
-    .filter((section) => section.items.length > 0);
-  if (sections.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "nav-empty";
-    empty.textContent = t("todo.empty");
-    navPanel.appendChild(empty);
-    return;
-  }
-  if (!sections.some((section) => section.type === activeTodoNavGroup)) {
-    activeTodoNavGroup = (sections[0] || {}).type || "other";
-  }
-  sections.forEach((section) => renderTodoNavSection(section.type, section.items));
-}
-
-function renderTodoNavSection(type, items) {
-  const expanded = type === activeTodoNavGroup;
-  const section = document.createElement("section");
-  section.className = expanded ? "nav-section expanded" : "nav-section";
-
-  const header = document.createElement("button");
-  header.className = "nav-section-title";
-  header.type = "button";
-  header.setAttribute("aria-expanded", String(expanded));
-  header.innerHTML = `<span>${escapeHTML(todoTypeLabel(type))}</span><em>${items.length}</em>`;
-  header.addEventListener("click", () => {
-    activeTodoNavGroup = type;
-    renderNav();
-  });
-  section.appendChild(header);
-
-  if (expanded) {
-    items.forEach((item) => {
-      const button = document.createElement("button");
-      button.className = `nav-item ${objectKindClass(item.object.kind)}${item.id === selectedNodeID ? " active" : ""}`;
-      button.type = "button";
-      button.innerHTML = `${renderNavItemTitle(item.objectLabel, item.object.kind)}<span>${escapeHTML(item.commandText)}</span>`;
-      button.addEventListener("click", () => focusTodoItem(item.id));
-      section.appendChild(button);
-    });
-  }
-  navPanel.appendChild(section);
-}
-
-function renderTodoBoard() {
-  const items = todoItems();
-  if (items.length === 0) {
-    graphView.innerHTML = `
-      <section class="todo-empty-state">
-        <h3>${escapeHTML(t("todo.emptyDetailTitle"))}</h3>
-        <p>${escapeHTML(t("todo.emptyDetail"))}</p>
-      </section>
-    `;
-    return;
-  }
-  graphView.innerHTML = `
-    <section class="todo-board">
-      <div class="todo-board-heading">
-        <div>
-          <h3>${escapeHTML(t("todo.boardHeading"))}</h3>
-          <p>${escapeHTML(t("todo.boardDescription"))}</p>
-        </div>
-        ${renderSourceButton(snapshot.project.status_file, t("statusBoard.sourceLabel"))}
-      </div>
-      <div class="todo-relation-sections">
-        ${todoRelationGroups(items).map(renderTodoRelationSection).join("")}
-      </div>
-    </section>
-  `;
-  bindTodoBoardLinks();
-}
-
-function renderTodoRelationSection(group) {
-  return `
-    <section class="todo-relation-section relation-${escapeAttr(group.status)}">
-      <h4>${escapeHTML(group.label)}</h4>
-      <div class="todo-card-grid">
-        ${group.items.map(renderTodoCard).join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderTodoCard(item) {
-  const view = lifecycleView(item.object, item.nextCommand);
-  return `
-    <article class="todo-card ${escapeAttr(objectKindClass(item.object.kind))} ${escapeAttr(todoCardTypeClass(item.type))} ${item.id === selectedNodeID ? "active" : ""} ${escapeAttr(nextIntentClass(item.object))} ${escapeAttr(todoRelationClass(item))}" data-todo-card="${escapeAttr(item.id)}">
-      <div class="todo-card-head">
-        <div class="todo-card-title">
-          ${renderKindBadge(item.object.kind)}
-          <button class="card-object" type="button" data-todo="${escapeAttr(item.id)}">${escapeHTML(item.objectLabel)}</button>
-        </div>
-        <span class="todo-type ${escapeAttr(nextIntentClass(item.object))}">${escapeHTML(todoTypeLabel(item.type))}</span>
-      </div>
-      <div class="todo-command-row">
-        <span>${escapeHTML(t("todo.command"))}</span>
-        <div class="todo-command-actions">
-          ${item.commandText ? `<button class="todo-copy-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(`${t("todo.nextEntry")}: ${item.commandText}`)}">
-            <span>${escapeHTML(t("todo.nextEntry"))}</span>
-          </button>` : ""}
-          ${renderAdvanceCommandButton(item, "todo-copy-command advance-entry")}
-          ${renderPendingImplImplButton(item)}
-          ${renderPendingImplAltButton(item)}
-        </div>
-      </div>
-      ${renderTodoIntentPill(item)}
-      ${renderTodoRelationPill(item)}
-      ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
-      <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
-      ${renderNextRoundEntry(view, item.object)}
-      <p>${escapeHTML(item.object.notes || t("fallback.none"))}</p>
-    </article>
-  `;
-}
-
-function renderTodoRelationPill(item) {
-  const relation = item.relation || {};
-  if (!relation.status || relation.status === "other") return "";
-  return `
-    <div class="todo-relation-pill relation-${escapeAttr(relation.status)}">
-      <span>${escapeHTML(t("todo.relationStatus"))}</span>
-      <strong>${escapeHTML(relation.label || todoRelationLabel(relation.status))}</strong>
-    </div>
-  `;
-}
-
-function renderTodoIntentPill(item) {
-  const intent = nextIntent(item.object);
-  if (!intent) return "";
-  return `
-    <div class="todo-intent ${escapeAttr(nextIntentClass(item.object))}">
-      <span>${escapeHTML(t("todo.intent"))}</span>
-      <strong>${escapeHTML(todoIntentLabel(intent))}</strong>
-    </div>
-  `;
-}
-
-function bindTodoBoardLinks() {
-  graphView.querySelectorAll("[data-todo-card]").forEach((card) => {
-    card.addEventListener("click", () => focusTodoItem(card.dataset.todoCard));
-  });
-  graphView.querySelectorAll("[data-todo]").forEach((button) => {
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      focusTodoItem(button.dataset.todo);
-    });
-  });
-  graphView.querySelectorAll("[data-source]").forEach((button) => {
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openSource(button.dataset.source);
-    });
-  });
-  bindCopyCommandButtons(graphView);
-}
-
-function focusTodoItem(itemID) {
-  const item = todoItemByID(itemID);
-  if (item) activeTodoNavGroup = item.type;
-  selectedNodeID = itemID;
-  renderNav();
-  renderGraph();
-  renderDetailForNode(itemID);
-}
-
-function todoItems() {
-  return list(snapshot.objects)
-    .filter((object) => object.kind === "unit" && String(object.next_command || "").trim())
-    .map((object) => {
-      const nextCommand = String(object.next_command || "").trim();
-      const type = todoTypeForObject(object, nextCommand);
-      const sources = todoSourcesForObject(object, nextCommand);
-      const commandText = `${nextCommand}:${object.id}`;
-      return {
-        id: `todo:${object.kind}:${object.id}`,
-        type,
-        object,
-        objectLabel: object.label || object.id || t("fallback.undeclared"),
-        nextCommand,
-        commandText,
-        alternativeCommandText: pendingImplAltCommand(object, nextCommand),
-        implCommandText: pendingImplImplCommand(object, nextCommand),
-        advanceCommandText: advanceEntryCommandForObject(object, nextCommand),
-        relation: candidateRelationForObject(object),
-        sources,
-        primarySources: sources.filter((source) => source.group !== "references"),
-        referenceSources: sources.filter((source) => source.group === "references"),
-        implementationPaths: list(object.implementation_paths).map((ref) => ref.path).filter(Boolean)
-      };
-    })
-    .sort(compareTodoItems);
-}
-
-function todoItemByID(itemID) {
-  return todoItems().find((item) => item.id === itemID) || null;
-}
-
-function todoItemForSource(path) {
-  if (currentView !== "todo") return null;
-  const selected = todoItemByID(selectedNodeID);
-  if (selected && list(selected.sources).some((source) => source.path === path)) return selected;
-  return todoItems().find((item) => list(item.sources).some((source) => source.path === path)) || null;
-}
-
-function todoTypeForCommand(command) {
-  if (command === "unit_stable_verify") return "stableVerify";
-  if (command === "unit_check") return "designCheck";
-  if (command === "unit_impl") return "implementation";
-  if (command === "unit_verify") return "verify";
-  if (command === "unit_promote") return "promote";
-  if (command === "unit_fork") return "fork";
-  if (command === "unit_init" || command === "unit_new") return "new";
-  return "other";
-}
-
-function todoTypeForObject(object, command) {
-  if (command === "unit_fork" && nextIntent(object) === "repair") return "repairFork";
-  if (command.indexOf("unit_impl") >= 0) return "implementation";
-  return todoTypeForCommand(command);
-}
-
-function todoTypeOrder() {
-  return ["stableVerify", "repairFork", "designCheck", "plan", "implementation", "verify", "promote", "fork", "new", "other"];
-}
-
-function compareTodoItems(left, right) {
-  return todoTypeOrder().indexOf(left.type) - todoTypeOrder().indexOf(right.type)
-    || String(left.objectLabel || "").localeCompare(String(right.objectLabel || ""))
-    || String(left.nextCommand || "").localeCompare(String(right.nextCommand || ""));
-}
-
-function todoRelationGroups(items) {
-  const buckets = {
-    ready: [],
-    blocked: [],
-    cycle: [],
-    other: []
-  };
-  list(items).forEach((item) => {
-    const status = todoRelationStatus(item);
-    if (!buckets[status]) buckets.other.push(item);
-    else buckets[status].push(item);
-  });
-  return ["ready", "blocked", "cycle", "other"]
-    .filter((status) => buckets[status].length > 0)
-    .map((status) => ({
-      status,
-      label: t(`todo.relationGroups.${status}`),
-      items: buckets[status]
-    }));
-}
-
-function todoRelationStatus(item) {
-  const status = String(item && item.relation && item.relation.status ? item.relation.status : "other");
-  return ["ready", "blocked", "cycle"].includes(status) ? status : "other";
-}
-
-function todoRelationClass(item) {
-  return `relation-${todoRelationStatus(item)}`;
-}
-
-function todoCardTypeClass(type) {
-  return `todo-type-${String(type || "other").trim() || "other"}`;
-}
-
-function todoRelationLabel(status) {
-  if (status === "ready") return t("todo.relationReady");
-  if (status === "blocked") return t("todo.relationBlocked");
-  if (status === "cycle") return t("todo.relationCycle");
-  return t("todo.relationOther");
-}
-
-function candidateRelationData() {
-  return snapshot && snapshot.candidate_relations ? snapshot.candidate_relations : {};
-}
-
-function candidateRelationForObject(object) {
-  const objectID = String(object && object.id ? object.id : "").trim();
-  if (!objectID || !object || object.kind !== "unit" || object.layer !== "candidate") {
-    return {
-      status: "other",
-      label: todoRelationLabel("other"),
-      blockedBy: [],
-      sources: [],
-      blocksAdvance: false
-    };
-  }
-
-  const relation = candidateRelationData();
-  const cycle = list(relation.candidate_cycles).find((item) => list(item.objects).includes(objectID));
-  if (cycle) {
-    const cycleObjects = list(cycle.objects).filter((value) => value !== objectID);
-    return {
-      status: "cycle",
-      label: todoRelationLabel("cycle"),
-      blockedBy: cycleObjects.length > 0 ? cycleObjects : list(cycle.objects),
-      sources: list(cycle.sources),
-      blocksAdvance: true
-    };
-  }
-
-  const blocked = list(relation.blocked_candidates).find((item) => item.object === objectID);
-  if (blocked) {
-    return {
-      status: "blocked",
-      label: todoRelationLabel("blocked"),
-      blockedBy: list(blocked.blocked_by),
-      sources: list(blocked.sources),
-      blocksAdvance: true
-    };
-  }
-
-  if (list(relation.ready_candidates).includes(objectID)) {
-    return {
-      status: "ready",
-      label: todoRelationLabel("ready"),
-      blockedBy: [],
-      sources: [],
-      blocksAdvance: false
-    };
-  }
-
-  return {
-    status: "other",
-    label: todoRelationLabel("other"),
-    blockedBy: [],
-    sources: [],
-    blocksAdvance: true
-  };
-}
-
-function advanceEntryCommandForObject(_object, _nextCommand) {
-  return "";
-}
-
-function renderAdvanceCommandButton(_item, _className) {
-  return "";
-}
-
-/**
- * When in implementation phase (Next Command=unit_check, unit_impl, unit_verify),
- * implementation may reveal spec issues that require going back to unit_check
- * for re-validation. This returns the alternative command text.
- */
-function pendingImplAltCommand(object, nextCommand) {
-  const notes = String(object && object.notes ? object.notes : "").trim();
-  const command = String(nextCommand || "").trim();
-  if (command.indexOf("unit_impl") >= 0) {
-    return `unit_check:${object.id}`;
-  }
-  return "";
-}
-
-function renderPendingImplAltButton(item) {
-  const command = String(item && item.alternativeCommandText ? item.alternativeCommandText : "").trim();
-  if (!command) return "";
-  return `
-    <button class="todo-copy-command pending-impl-alt" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(t("todo.alternativeTitle"))}">
-      <span>${escapeHTML(t("todo.alternativeEntry"))}</span>
-    </button>
-  `;
-}
-
-function pendingImplImplCommand(object, nextCommand) {
-  const notes = String(object && object.notes ? object.notes : "").trim();
-  const command = String(nextCommand || "").trim();
-  if (command.indexOf("unit_impl") >= 0) {
-    return `unit_impl:${object.id}`;
-  }
-  return "";
-}
-
-function renderPendingImplImplButton(item) {
-  const command = String(item && item.implCommandText ? item.implCommandText : "").trim();
-  if (!command) return "";
-  return `
-    <button class="todo-copy-command pending-impl-entry" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(t("todo.implTitle"))}">
-      <span>${escapeHTML(t("todo.implEntry"))}</span>
-    </button>
-  `;
-}
-
-function todoTypeLabel(type) {
-  return t(`todo.types.${type}`);
-}
-
 function nextIntent(object) {
   return String(object && object.next_intent ? object.next_intent : "").trim();
 }
@@ -2848,59 +2110,6 @@ function nextIntentClass(object) {
 
 function todoIntentLabel(intent) {
   return t(`todo.intents.${intent}`);
-}
-
-function todoSourcesForObject(object, command) {
-  const sources = [];
-  const addSource = (ref, labelKey, group = "materials") => {
-    if (!ref || !ref.path || !sourceExists(ref.path)) return;
-    if (sources.some((source) => source.path === ref.path && source.group === group)) return;
-    sources.push({
-      ...ref,
-      label: t(`todo.sourceLabels.${labelKey}`),
-      group
-    });
-  };
-  const activeTruth = uniqueSources(object.truth_paths).filter((ref) => !isAppendixPath(ref.path));
-  const appendices = uniqueSources(object.truth_paths).filter((ref) => isAppendixReference(ref));
-  const evidence = uniqueSources(object.truth_paths).filter((ref) => isEvidenceReference(ref));
-  const ruleSources = ruleSourcesForObject(object);
-
-  if (command === "unit_check") {
-    activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
-    appendices.forEach((ref) => addSource(ref, "appendix"));
-    evidence.forEach((ref) => addSource(ref, "evidence", "references"));
-    return sources;
-  }
-
-  if (command === "unit_stable_verify") {
-    activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
-    appendices.forEach((ref) => addSource(ref, "appendix"));
-    ruleSources.forEach((ref) => addSource(ref, "rule"));
-    addSource(processSource(object, "verifyResult", "stable"), "verifyResult");
-    return sources;
-  }
-
-  if (command === "unit_fork") {
-    activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
-    appendices.forEach((ref) => addSource(ref, "appendix"));
-    addSource(processSource(object, "verifyResult", "stable"), "verifyResult");
-    return sources;
-  }
-
-  activeTruth.forEach((ref) => addSource(ref, "activeTruth"));
-  addSource(processSource(object, "activePlan"), "activePlan");
-  addSource(processSource(object, "checkResult"), "checkResult");
-  addSource(processSource(object, "verifyResult", object.layer), "verifyResult");
-  return sources;
-}
-
-function processSource(object, kind, layer) {
-  if (!object || !object.id) return null;
-  if (kind === "activePlan") return { path: `docs/specs/_plans/active/${object.id}.md` };
-  if (kind === "checkResult") return { path: `docs/specs/_check_result/${object.kind}/${object.id}.md` };
-  if (kind === "verifyResult") return { path: `docs/specs/_verify_result/${layer || object.layer || "candidate"}/${object.kind}/${object.id}.md` };
-  return null;
 }
 
 function ruleSourcesForObject(object) {
@@ -3230,14 +2439,11 @@ function reviewNextCommandText(item) {
 }
 
 function renderReviewProgressHeader(path) {
-  const item = currentView === "todo" ? todoItemForSource(path) : reviewItemByPath(path);
+  const item = reviewItemByPath(path);
   if (!item || !item.object) return "";
   if (item.object.kind !== "unit") return "";
   const view = lifecycleView(item.object, item.nextCommand);
-  const command = item.commandText || reviewNextCommandText(item);
-  const advanceItem = {
-    advanceCommandText: item.advanceCommandText || advanceEntryCommandForObject(item.object, item.nextCommand)
-  };
+  const command = reviewNextCommandText(item);
   if (command) {
     return `
       <section class="review-progress-panel">
@@ -3247,7 +2453,6 @@ function renderReviewProgressHeader(path) {
             <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(`${t("review.nextCommand")}: ${command}`)}">
               <span>${escapeHTML(t("review.nextCommand"))}</span>
             </button>
-            ${renderAdvanceCommandButton(advanceItem, "review-next-command advance-entry")}
           </div>
         </div>
         ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
@@ -3502,15 +2707,6 @@ function renderDetail(object) {
 }
 
 function renderDetailForNode(nodeID) {
-  if (currentView === "todo") {
-    const item = todoItemByID(nodeID);
-    if (item) {
-      renderTodoDetail(item);
-      return;
-    }
-    renderTodoEmptyDetail();
-    return;
-  }
   if (currentView === "spec") {
     const item = reviewItemByID(nodeID);
     if (item) {
@@ -3673,99 +2869,6 @@ function renderRegistryIssues(item) {
 function renderRegistryEmptyDetail() {
   detailPanel.innerHTML = `<h2>${escapeHTML(t("fallback.noObject"))}</h2>`;
   updateTruthTab([], "registry-empty");
-}
-
-function renderTodoDetail(item) {
-  const view = lifecycleView(item.object, item.nextCommand);
-  detailPanel.innerHTML = `
-    <h2>${escapeHTML(item.objectLabel)}</h2>
-    <dl class="detail-grid">
-      <dt>${escapeHTML(t("todo.actionType"))}</dt><dd>${escapeHTML(todoTypeLabel(item.type))}</dd>
-      <dt>${escapeHTML(t("todo.command"))}</dt><dd><code>${escapeHTML(item.commandText)}</code></dd>
-      ${renderTodoIntentDetailRows(item)}
-      <dt>${escapeHTML(t("inspector.fields.status"))}</dt><dd>${escapeHTML(item.object.human_state || item.object.layer || t("fallback.undeclared"))}</dd>
-      ${renderTodoRelationDetailRows(item)}
-      <dt>${escapeHTML(t("todo.notes"))}</dt><dd>${escapeHTML(item.object.notes || t("fallback.none"))}</dd>
-    </dl>
-    <section class="todo-detail-section">
-      <h2>${escapeHTML(t("review.progressTitle"))}</h2>
-      ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
-      <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
-      ${renderNextRoundEntry(view, item.object)}
-      <div class="review-command-actions">
-        ${item.commandText ? `<button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(item.commandText)}" title="${escapeAttr(`${t("review.nextCommand")}: ${item.commandText}`)}">
-          <span>${escapeHTML(t("review.nextCommand"))}</span>
-        </button>` : ""}
-        ${renderAdvanceCommandButton(item, "review-next-command advance-entry")}
-        ${renderPendingImplImplButton(item)}
-        ${renderPendingImplAltButton(item)}
-      </div>
-    </section>
-    <section class="todo-detail-section">
-      <h2>${escapeHTML(t("todo.materials"))}</h2>
-      ${renderTodoSourceList(item.primarySources)}
-    </section>
-    ${item.referenceSources.length > 0 ? `
-      <section class="todo-detail-section">
-        <h2>${escapeHTML(t("todo.references"))}</h2>
-        ${renderTodoSourceList(item.referenceSources)}
-      </section>
-    ` : ""}
-    ${item.implementationPaths.length > 0 ? `
-      <section class="todo-detail-section">
-        <h2>${escapeHTML(t("todo.implementation"))}</h2>
-        <div class="chips">${item.implementationPaths.map((path) => `<span class="chip">${escapeHTML(path)}</span>`).join("")}</div>
-      </section>
-    ` : ""}
-  `;
-  bindInspectorLinks();
-  bindReviewProgressHeader();
-  updateTruthTab(item.sources, item.id);
-}
-
-function renderTodoIntentDetailRows(item) {
-  const intent = nextIntent(item.object);
-  if (!intent) return "";
-  return `<dt>${escapeHTML(t("todo.intent"))}</dt><dd>${escapeHTML(todoIntentLabel(intent))}</dd>`;
-}
-
-function renderTodoRelationDetailRows(item) {
-  const relation = item.relation || {};
-  if (!relation.status || relation.status === "other") return "";
-  const parts = [
-    `<dt>${escapeHTML(t("todo.relationStatus"))}</dt><dd><span class="todo-relation-pill relation-${escapeAttr(relation.status)}"><strong>${escapeHTML(relation.label || todoRelationLabel(relation.status))}</strong></span></dd>`
-  ];
-  if (list(relation.blockedBy).length > 0) {
-    parts.push(`<dt>${escapeHTML(t("todo.relationBlockedBy"))}</dt><dd><div class="chips">${list(relation.blockedBy).map((value) => `<span class="chip">${escapeHTML(value)}</span>`).join("")}</div></dd>`);
-  }
-  if (list(relation.sources).length > 0) {
-    parts.push(`<dt>${escapeHTML(t("todo.relationSources"))}</dt><dd><div class="chips">${list(relation.sources).map((source) => `<button class="chip" type="button" data-source="${escapeAttr(source.path)}">${escapeHTML(source.path)}</button>`).join("")}</div></dd>`);
-  }
-  return parts.join("");
-}
-
-function renderTodoEmptyDetail() {
-  detailPanel.innerHTML = `
-    <section class="review-empty-state">
-      <h2>${escapeHTML(t("todo.emptyDetailTitle"))}</h2>
-      <p>${escapeHTML(t("todo.emptyDetail"))}</p>
-    </section>
-  `;
-  updateTruthTab([], "todo-empty");
-}
-
-function renderTodoSourceList(sources) {
-  if (!sources || sources.length === 0) return `<p class="empty-copy">${escapeHTML(t("todo.noMaterials"))}</p>`;
-  return `
-    <div class="todo-source-list">
-      ${sources.map((source) => `
-        <button class="todo-source" type="button" data-source="${escapeAttr(source.path)}">
-          <span>${escapeHTML(source.label || t("todo.openMaterial"))}</span>
-          <code>${escapeHTML(source.path)}</code>
-        </button>
-      `).join("")}
-    </div>
-  `;
 }
 
 function bindInspectorLinks() {

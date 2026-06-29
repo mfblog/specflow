@@ -11,14 +11,11 @@
 
 [English](./README.md) · **简体中文**
 
-[接入仓库](#接入仓库) · [快速开始](#快速开始) · [增量采用模式](#增量采用模式) · [核心概念](#核心概念) · [标准命令](#标准命令) · [开发流程](#开发流程) · [Reader](#reader-看进度) · [进阶用法](#进阶用法)
+[接入仓库](#接入仓库) · [快速开始](#快速开始) · [核心概念](#核心概念) · [命令](#命令) · [工作流程](#工作流程) · [Reader](#reader-看进度)
 
 ---
 
-`specFlow` 想做的，是让 AI 辅助开发重新像工程——而不是一连串聪明但会蒸发的对话：每个治理单元都有它的当前真相、下一版真相，以及从想法到验证落地的清晰路径。人和 agent 可以一起高速推进，仓库本身仍然清楚什么是真的、什么在变、什么已经可以交付。
-
-它不是固定的业务模板，也不是让所有团队写同一种文档。
-它是一套工程协作骨架：需求先进入仓库真相，再进入计划、实现、验证和沉淀。
+`specFlow` 想做的，是让 AI 辅助开发重新像工程——而不是一连串聪明但会蒸发的对话：每个治理单元都有它的当前真相，以及从想法到验证落地的清晰路径。人和 agent 可以一起高速推进，仓库本身仍然清楚什么是真的、什么在变、什么已经可以交付。
 
 ## 它解决什么问题
 
@@ -35,38 +32,25 @@
 
 - 把行为真相落到仓库文件里
 - 让 agent 每次推进前先读当前真相
-- 让设计、计划、实现、验证和升级围绕同一份真相前进
+- 让设计、实现、验证和升级围绕同一份真相前进
 
 这样做不是为了增加文档负担，而是为了避免项目只靠聊天记忆和从代码反推需求。
 
 ## specFlow 怎么用
 
-> Runtime 驱动，Spec 优先，人负责目标判断。
+`specFlow` 是一层治理规则，需要和 agentic runtime 一起工作，例如 Claude Code 或 OpenCode。
 
-`specFlow` 不是一个单独运行的 runtime。
-
-它是一层治理规则，需要和 agentic runtime 一起工作，例如：
-
-- `Claude Code`
-- `Codex`
-- `Gemini CLI`
-
-可以把它理解成：
-
-- `specFlow` 负责定义这件事在仓库里应该怎么推进
-- runtime 负责按照这些规则真正去读文件、改文件、改代码、做验证
+- `specFlow` 负责定义工作在仓库里应该怎么推进
+- runtime 通过自动 hook 注入读取这些规则，执行文件读写、代码修改和验证
 - 人负责说清目标、确认关键边界，以及接受或调整结果
 
-当前核心模型是渐进式披露加独立评估：每一步只读自己的 Context Card，关键推进 gate 必须在 process evidence 中留下独立 reviewer receipt。
+你的项目 `specflow/framework/concepts.md` 在每次 agent session 启动时通过平台 hooks（Claude Code、OpenCode）自动注入到 agent 上下文中。agent 不需要主动读入口文件。
 
-你需要先理解几个核心概念和基本的开发流程。
-把这些搞清楚之后，大部分日常工作可以用标准命令驱动。
-自然语言是兜底机制：当你不确定下一步该走哪个命令时，用普通语言描述你的目标，agent 会帮你路由。
+你需要理解几个核心概念和基本工作流程。掌握后，大部分工作可以通过 `spec_validate`、`spec_verify`、`spec_promote` 三个触发词驱动。自然语言作为兜底机制。
 
 ## 接入仓库
 
-对大多数团队来说，最简单的首次接入方式是在项目根目录直接运行安装脚本。
-它采用默认的本地 framework 方式，也就是把 `specflow/` 加进你的项目 `.gitignore`：
+对大多数团队来说，最简单的首次接入方式是在项目根目录直接运行安装脚本：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Bingordinary/SpecFlow/main/tooling/scripts/install.sh | bash
@@ -83,26 +67,17 @@ irm https://raw.githubusercontent.com/Bingordinary/SpecFlow/main/tooling/scripts
 1. 把这个仓库 clone 到 `./specflow`
 2. 把 `specflow/` 写入 `.gitignore`
 3. 安装当前平台需要的 `specflowctl`、`specflow-reader` 和 `SHA256SUMS`
-4. 执行 `specflowctl init`
+4. 执行 `specflowctl init`（安装框架文件和平台 hooks）
 
-安装脚本只用于首次接入。
-如果 `./specflow` 已经存在，它会停下来，并提示你继续使用已有的 pull helper。
+之后平台 hooks 会在每次 agent session 启动时自动注入 specFlow 规则。不再需要手动维护入口文件。让 agent 对口令可验证 hooks 是否生效。
 
-从 GitHub 链接直接运行脚本是可行的，因为 `raw.githubusercontent.com` 返回的是脚本文本。
-但这本质上是在执行远程代码：运行前应该先检查脚本内容；如果你的环境需要固定来源，就不要用 `main`，而是把 URL 固定到可信的 tag 或 commit。
+手动接入：
 
-如果你想自己控制每一步，或者想把 `specflow/` 提交进项目仓库，而不是忽略它，可以继续使用手动接入方式：
-
-1. 在你的项目根目录里，把这个仓库 clone 到名为 `specflow` 的目录
-2. 确认最终路径是 `./specflow`
-3. 如果你的项目不想提交 framework 文件，把 `specflow/` 加到 `.gitignore`
-4. 回到你的项目里执行 `init`（见[快速开始](#快速开始)）
-
-小写目录名是必要的。
-公开仓库名是 `SpecFlow`，所以直接执行 `git clone https://github.com/Bingordinary/SpecFlow.git` 会得到 `./SpecFlow`。
-但接入到项目里的 framework 目录必须是 `./specflow`，因为文档和工具都按 `specflow/tooling/bin/`、`specflow/framework/` 这类路径工作。
-
-你可以直接 clone 到正确目录名，也可以先 clone，再把 `SpecFlow` 改名成 `specflow`。
+```bash
+git clone https://github.com/Bingordinary/SpecFlow.git specflow
+printf "\nspecflow/\n" >> .gitignore
+specflowctl init
+```
 
 接入完成后，你的项目里应该能看到这些路径：
 
@@ -110,45 +85,11 @@ irm https://raw.githubusercontent.com/Bingordinary/SpecFlow/main/tooling/scripts
 - `specflow/templates/`
 - `specflow/tooling/`
 
-Shell 示例：
-
-```bash
-git clone https://github.com/Bingordinary/SpecFlow.git specflow
-printf "\nspecflow/\n" >> .gitignore
-```
-
-如果你已经用默认目录名 clone 过：
-
-```bash
-mv SpecFlow specflow
-printf "\nspecflow/\n" >> .gitignore
-```
-
-Windows PowerShell 示例：
-
-```powershell
-git clone https://github.com/Bingordinary/SpecFlow.git specflow
-Add-Content .gitignore "specflow/"
-```
-
-如果你已经用默认目录名 clone 过：
-
-```powershell
-Rename-Item .\SpecFlow specflow
-Add-Content .gitignore "specflow/"
-```
-
-如果你忽略 `specflow/`，每个工作区在使用 `specFlow` 前都要自己准备这份目录。
-如果你希望别人 clone 你的项目后天然带着同一套 `specFlow` framework 文件，就不要忽略它，而是把 `specflow/` 提交进项目仓库。
-
-如果你需要长期跟上游同步，把它当成单独的维护问题处理即可。
-具体工具细节见 [tooling/README.md](./tooling/README.md)。
-
 ## 准备本地二进制文件
 
 `specflow/tooling/bin/` 不提交到 git。
-如果你使用了上面的安装脚本，这一步已经完成。
-如果你使用手动接入，或者要刷新已有的本地 `specflow/` 目录，在项目根目录运行 pull 脚本：
+如果你使用了安装脚本，这一步已经完成。
+如果使用手动接入，或要刷新已有的本地 `specflow/` 目录：
 
 ```bash
 specflow/tooling/scripts/pull_with_release.sh
@@ -160,161 +101,102 @@ Windows PowerShell：
 .\specflow\tooling\scripts\pull_with_release.ps1
 ```
 
-这个脚本会对 `specflow/` 执行 fast-forward pull，计算当前 tooling fingerprint，并且只在本地 binary 缺失、过期或缺少校验文件时，安装当前平台需要的 `specflowctl`、`specflow-reader` 和 `SHA256SUMS`。
-Release 绑定的是 tooling 输入 fingerprint，不是每一次 `specflow` 源码提交。
-
 ## 快速开始
 
-如果你使用了安装脚本，`init` 已经执行过。
-如果你使用手动接入，当 `specflow/` 已经进入你的仓库、本地二进制文件也已就位后，在仓库根目录执行：
+`init` 完成后框架已就绪。在项目根目录启动 agent——平台 hooks 会自动加载 specFlow 规则。
 
-```bash
-<specflow-binary> init
+工作流程：
+
+```
+specflowctl next --unit <name>      →  发现 unit 文件
+编辑 candidate spec + 代码           →  没有门控
+spec_validate {unit}                →  只读 subagent 检查 spec 质量
+spec_verify {unit}                  →  只读 subagent 检查实现
+spec_promote {unit}                 →  先 validate 再 verify，通过后 promote 到 stable
 ```
 
-`<specflow-binary>` 表示 `specflow/tooling/bin/` 下与你当前平台匹配的 `specflowctl` 可执行文件。
-具体文件名见 [tooling/README.md](./tooling/README.md)。
+示例对话：
 
-`init` 会安装最基本的骨架，包括：
-
-- `AGENTS.md`、`GEMINI.md`、`CLAUDE.md`
-- `docs/specs/`
-- 其他 workflow 支撑文件
-
-完成这一步后，先选择一个[增量采用模式](#增量采用模式)。
-`init` 只是准备共享骨架，不要求你立刻使用完整生命周期。
-
-日常用标准命令推进，把 `{module_name}` 替换为你要工作的模块名：
-
-```text
-unit_new:{module_name}
-unit_check:{module_name}
-unit_fork:{module_name}
-unit_verify:{module_name}
 ```
-
-不确定下一步时，退回自然语言兜底：
-
-```text
-给 auth 加 rate limit，但我不确定应该先动哪块。请先读当前项目真相，然后告诉我下一步。
-```
-
-agent 会读取安装后的入口文件和当前仓库真相，再决定下一步该走哪个命令、写 Spec、检查边界，还是停下来问你一个必须确认的问题。
-
-## 增量采用模式
-
-你可以从很小的一块开始。安装 specFlow 不等于必须立刻承诺 promotion、stable verification、governance review 或完整生命周期。
-
-| 模式 | 适合场景 | 允许做什么 |
-|---|---|---|
-| `reader-only` | 先看清状态，不想改流程 | 启动 `specflow-reader`，只读查看状态和真相，不写 lifecycle 文件 |
-| `implementation-only` | 请求符合已经写好的正式真相 | 用自然语言发起代码或测试修改；如果需要改行为、边界、验收、规则或 ownership truth，就停下来 |
-| `single-unit-trial` | 只想在一个 unit 上试用 specFlow | 只治理一个指定 unit，其它仓库内容暂时不纳入 specFlow |
-| `unit-check-only` | 只想判断一个 Spec 是不是好需求 | 执行 `unit_check:{unit}`，在 pass、blocked 或 fix-required 后停止 |
-
-正式契约见 `specflow/framework/core/adoption_modes.md`。
-这些模式是入口选择，不是新的生命周期状态、process schema 或 CLI 模式开关。
-promotion、stable verification 和 governance review 仍然是之后显式选择的路径，不是这些轻量入口的默认要求。
-
-reader-only 示例：
-
-```bash
-<specflow-reader-binary> --repo-root . --addr 127.0.0.1:17863
-```
-
-implementation-only 示例：
-
-```text
-在不改变已记录行为的前提下，让现有 retry 测试更稳定。如果这需要改 truth，请停止并告诉我最小 specFlow 步骤。
-```
-
-single-unit-trial 示例：
-
-```text
-现在只对 payment_retry 这个 unit 使用 specFlow。除非我明确要求，不要 promote，也不要进入 governance review。
-```
-
-unit-check-only 示例：
-
-```text
-执行 unit_check:payment_retry，并在 check result 后停止。暂时不要 plan 或 implement。
+你：给 auth 加一个 rate limiter。
+Agent：没有找到 candidate spec，先了解一下设计...
+  [创建 docs/specs/units/candidate/c_unit_auth_rate_limit.md]
+  [实现代码]
+  要 promote 到 stable 吗？
+你：先跑一下 validate。
+Agent：[运行只读 subagent，按 validate checklist 检查]
+  Validate 通过。
+  要跑 verify 吗？
+你：好。
+Agent：[运行只读 subagent，按 verify checklist 检查]
+  Verify 通过。
+  要 promote 吗？
+你：发吧。
+Agent：[运行 specflowctl promote...]
+  已 promote 到 stable。
 ```
 
 ## 核心概念
 
-specFlow 只有两个正式概念。其它一切都是从这两个组合出来的。
+**文件存在即状态。** 没有状态机、没有状态表、没有生命周期阶段。candidate spec 存在 = 在编辑。不存在 = 没在改。
 
-### 两个概念
+| 目录 | 含义 |
+|------|------|
+| `docs/specs/units/stable/` | 已经通过的稳定设计真相 |
+| `docs/specs/units/candidate/` | 当前正在编辑的设计 |
+| `docs/specs/rules/stable/` | 已经稳定的共享规则 |
+| `docs/specs/rules/candidate/` | 正在编辑的规则 |
 
-**unit** —— 一块独立可治理的工程责任。一个 unit 拥有自己的行为真相（Spec）、实现计划、实现工作和验证。它是唯一有正式生命周期的对象。unit 可以描述一个局部能力，也可以描述一条完整的用户结果链。它不一定等于一个目录、package 或 service。
+`promote` 是唯一的门控，负责把 candidate 文件复制到 stable。其他所有操作由 agent 直接完成。
 
-**rule** —— 跨对象复用的正式真相。全局规则（`g_`）作用于整个仓库；绑定规则（`b_`）只作用于通过 `rule_refs` 显式引用它的 unit。rule 工作通过自然语言进入，agent 负责路由到正确的内部治理流。
+**unit** —— 一块独立可治理的工程责任。一个 unit 拥有自己的行为真相（Spec）、实现和验证。
 
-### 生命周期
+**rule** —— 跨对象复用的正式共享约束。全局规则（`g_`）作用于整个仓库。绑定规则（`b_`）只作用于通过 `rule_refs` 引用它的 unit。
 
-每个治理对象都沿着同一个模式推进：
+## 命令
 
-```
-stable ⟶ candidate ⟶ verify ⟶ promote ⟶ 新的 stable
-```
+### 工具命令（specflowctl）
 
-对应到 unit 的命令链：
+| 命令 | 作用 |
+|------|------|
+| `specflowctl next --unit <name>` | 发现 unit 文件、spec、规则和依赖 |
+| `specflowctl promote --unit <name>` | 格式校验 + candidate→stable（唯一门控） |
+| `specflowctl init` | 安装框架文件和平台 hooks |
+| `specflowctl doctor` | 诊断项目配置 |
+| `specflowctl migrate` | 更新 hook 文件 + 检查工具版本 |
+| `specflowctl rule *` | 规则治理 |
+| `specflowctl validate` | 校验文件写入权限 |
 
-```
-unit_new / unit_fork → unit_check → unit_impl → unit_verify → unit_promote
-```
+### Agent 触发词（对 agent 说）
 
-- **stable** 是当前正式接受的行为真相
-- **candidate** 是正在准备的下一版真相（新需求、行为调整）
-- **check** 验证 candidate 真相的清晰度和 acceptance item 格式合规性
-- **verify** 对照 candidate 验证实现
-- **promote** 把通过验收的 candidate 升级为新的 stable
+| 触发词 | agent 做什么 |
+|--------|-------------|
+| `spec_validate {unit}` | 开只读 subagent 按 validate 清单检查 spec 质量 |
+| `spec_verify {unit}` | 开只读 subagent 按 verify 清单检查实现 |
+| `spec_promote {unit}` | 先 validate 再 verify，都通过后调 `specflowctl promote` |
+| `spec_flow_migrate` | 跑迁移工具 + 检查项目文档格式 |
 
-`unit_plan` 不再是 SpecFlow 治理的命令——agent 框架在内部自行处理规划。`unit_impl:{unit}` 是一个触发命令（trigger）——它提供实现上下文，不改变生命周期状态。实现过程由 agent 独立完成。
+Agent 也会在合适时机主动建议："需要跑 validate 吗？"、"需要跑 verify 吗？"、"要 promote 吗？"
 
-全新 unit 从 `unit_new` 开始。已有 stable 真相的 unit 从 `unit_fork` 开始。
-
-### 自由组合
-
-Unit 和 rule 可以自由组合：
-
-- 一个 unit 通过 frontmatter 里的 `rule_refs` 引用任意数量的 rule
-- 生命周期对每个对象独立作用
-- `repository_mapping.md` 记录当前有哪些对象、哪些路径归属于谁、边界怎么判——它描述组合的结果，不是第三个概念
-
-这意味着，不管是一个功能、一个服务、还是整个仓库，都只需要两个概念加一个生命周期模式就能治理。
-
-## 标准命令
-
-| 场景 | 命令 |
-|---|---|
-| 历史能力第一次纳入治理 | `unit_init:{unit}` |
-| 全新能力第一次进入治理 | `unit_new:{unit}` |
-| 已有正式真相的能力开启新一轮演进 | `unit_fork:{unit}` |
-| 验证 candidate 真相清晰度和 acceptance item 格式合规性（必选） | `unit_check:{unit}` |
-| 对照真相验证实现 | `unit_verify:{unit}` |
-| 将 candidate 升级为新的 stable | `unit_promote:{unit}` |
-| 检查当前实现是否仍符合 stable 真相 | `unit_stable_verify:{unit}` |
-
-命令格式为 `{命令}:{unit}`，例如 `unit_check:payment`。
-
-`unit_check` 是必选的质量门，验证 candidate 真相清晰度和 acceptance item 格式合规性。`unit_plan` 由 agent 内部处理，不再是 SpecFlow 治理的命令。`unit_impl:{unit}` 是一个触发命令（trigger）——它提供实现上下文，不改变生命周期状态。SpecFlow 的核心门是 `unit_verify`，它直接对照 candidate truth 验证实现。
-
-## 开发流程
+## 工作流程
 
 ### 你的职责
 
-1. **维护 spec 文档** —— 编写和更新 `docs/specs/units/` 中的行为真相文件。这些是命令消费的真相源头。
-2. **驱动生命周期** —— 在正确的阶段发出正确的命令。通过 `docs/specs/_status.md` 和 Reader 了解当前阶段和下一步合法命令。
-3. **判断验收** —— 确认 candidate 真相在升级前是正确的，确认验证结果符合你的预期。
+1. **维护 spec 文档** —— 编写和更新 `docs/specs/units/` 中的行为真相文件
+2. **确认操作** —— agent 问 "需要跑 validate/verify/promote" 时回答好或不用
+3. **判断验收** —— 确认 candidate 真相在 promote 前是正确的
 
-agent 负责每个命令的机械执行：读取真相、校验 gate、生成计划、编写代码、运行验证。
+### Agent 的职责
+
+1. **发现** —— `specflowctl next --unit <name>` 发现 unit 文件
+2. **编辑和实现** —— 更新 candidate spec 和代码，没有门控
+3. **Validate** —— 开只读 subagent，按清单检查 frontmatter、acceptance items、引用完整性、跨 unit 一致性
+4. **Verify** —— 开只读 subagent，逐项检查 acceptance item 的实现、scope 和代码质量
+5. **Promote** —— 先 validate 再 verify，通过后调 `specflowctl promote`
 
 ### 什么时候退回自然语言
 
-自然语言是兜底机制。当你：不确定下一步该走哪个命令、工作跨越多个对象且顺序关键、涉及跨单元规则、或想让 agent 先读当前真相再告诉你怎么走，就用自然语言。
-
-用普通语言描述目标。agent 会读取仓库真相，判断当前最小的合法动作，然后执行——如果边界不清就先问你。
+自然语言是兜底。当你不确定该用哪个触发词、工作跨越多个 unit、或想让 agent 先探索再做决定时使用。
 
 ## Reader 看进度
 
@@ -324,38 +206,29 @@ agent 负责每个命令的机械执行：读取真相、校验 gate、生成计
 <specflow-reader-binary> --repo-root . --addr 127.0.0.1:17863
 ```
 
-Reader 能回答：当前有哪些 unit 和 rule 对象、哪些已有正式真相、每个对象下一步是什么、Spec 文档和规则及实现路径之间怎么连接。四个常用视图是 Spec 查看、状态、项目结构和 SpecFlow。
-
-Reader 不负责改文件，也不负责推进流程。详见 [tooling/README.md](./tooling/README.md)。
+Reader 能回答当前有哪些 unit 和 rule 对象、哪些已有正式真相、Spec 怎么连接。详见 [tooling/README.md](./tooling/README.md)。
 
 ## 什么情况下不适合
 
-specFlow 可能偏重如果：项目非常小、团队不想把行为真相正式写进文件、不需要 stable/candidate 分层、或不需要人和 AI 长期遵守同一套协作模型。
+specFlow 可能偏重如果：项目非常小、团队不想把行为真相正式写进文件、或不需要人和 AI 长期遵守同一套协作模型。
 
-如果只是让 agent 临时改几行代码，specFlow 不是最短路径。如果希望项目被多人和多 agent 长期维护，它才会开始体现价值。
+## 维护
 
-## 进阶用法
+更新 `specflow/` 后，需要更新 hooks 并检查项目文档格式：
+
+- 如果 hooks 正常：告诉 agent `spec_flow_migrate`
+- 如果 hooks 尚未安装：告诉 agent "Read `framework/operations/migration.md` and follow the procedure"
+
+迁移过程会更新 hook 文件、检查工具版本、校验项目文档格式。
+
+框架治理方面：`spec_flow_review`（默认 scoped）、`spec_flow_review:full`（深度审计）、`spec_flow_design_review`（设计质量审查）。通过自然语言进入。
 
 ### 项目结构
-
-specFlow 接入后的仓库有四类内容：
 
 ```mermaid
 flowchart TD
     A["specflow/tooling"] --> B["初始化、检查和只读视图"]
-    C["specflow/framework"] --> D["specFlow 自己的治理规则"]
+    C["specflow/framework"] --> D["specFlow 治理规则"]
     E["specflow/templates"] --> F["安装进宿主项目的模板"]
-    G["docs 和入口文件"] --> H["项目自己的真相和标准"]
+    G["docs/specs"] --> H["项目真相"]
 ```
-
-### 维护工具
-
-tooling 命令：`init`、`doctor`、`build-release`。Reader 也在 tooling 层，但它是只读视图。
-
-更新 `specflow/` 后，先检查 tooling fingerprint 确认是否需要刷新本地二进制文件，然后让 agent 执行 `spec_flow_migrate`，使项目侧文件适配当前 framework 契约。
-
-普通框架修改和 plain `spec_flow_review` 默认使用 scoped review：只审查变更文件、直接 owner、边界引用和最小收敛引用。
-`spec_flow_review:full` 是唯一的 full-scope mechanism review 入口；需要治理 slice/run-state 路径时，使用这个精确入口。
-`spec_flow_design_review` 始终运行默认的 full-scope design-baseline review。
-
-进阶治理 flow（`spec_flow_review`、`spec_flow_design_review`、rule 治理）通过自然语言进入。

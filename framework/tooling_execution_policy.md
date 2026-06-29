@@ -79,28 +79,22 @@ The allowed action families are:
 6. cleanup
    - delete or reset process artifacts when a command-defined cleanup rule already says that cleanup must happen
 7. preflight
-   - verify command entry facts that are already mechanically determined by `_status.md` and process snapshot contracts
+    - verify command entry facts that are already mechanically determined
 8. transition
    - close a standard command by applying a fixed transition table to an explicit caller-provided command outcome
-   - validate only mechanical prerequisites such as current `Next Command`, supported flag combinations, and required process snapshot files
-   - write `_status.md` or execute process cleanup only when the transition table already defines that action
+    - validate only mechanical prerequisites such as supported flag combinations and required process snapshot files
+    - execute process cleanup only when the transition table already defines that action
 9. sync
    - align managed content or metadata when the source, target, and writeback contract are already explicit
 10. render
     - expose a read-only local view derived from already-written truth files without creating, editing, or promoting truth
 11. work-state maintenance
-   - create, validate, refresh, or touch review slice work-state carriers when the adopting owner defines the exact path, fields, statuses, and stale rules under `framework/slice_work_state_protocol.md`
-   - create, validate, refresh, or touch the optional `unit_check` checklist when `process_snapshot_contract.md` defines the exact path, fields, statuses, and stale rules
-   - maintain only mechanical data such as timestamps, skeleton rows, input fingerprints, and stale marks
+   - create, validate, refresh, or touch review slice work-state carriers when the adopting owner defines the exact path, fields, statuses, and stale rules
+    - maintain only mechanical data such as timestamps, skeleton rows, input fingerprints, and stale marks
 12. relation calculation
    - compute candidate readiness, candidate blockers, candidate cycles, and reference-only edges from explicit already-written references
    - read only declared truth and support-surface files
    - write no project files and create no durable process artifact
-13. independent evaluation handoff
-   - generate request files only under the path defined by `framework/core/independent_evaluation.md`
-   - validate the target process artifact mechanically before request writeback
-   - write no receipt fields, reviewer result, lifecycle status, or semantic review conclusion
-
 Writeback rule:
 
 1. tooling may write only to locations whose writeback contract is already defined by governance rules
@@ -111,7 +105,7 @@ Read-only reader rule:
 
 1. a local reader may read `docs/specs/**` and other declared support-surface truth inputs to build an in-memory view
 2. a local reader may expose that in-memory view through a local HTTP server
-3. a local reader must not write project files, advance lifecycle state, create process files, or store semantic conclusions outside process memory
+3. a local reader must not write project files, create process files, or store semantic conclusions outside process memory
 4. every displayed project-state conclusion must remain traceable to the source file path that produced it
 5. missing or unparseable input must be reported as a diagnostic instead of being repaired or semantically guessed by tooling
 
@@ -135,11 +129,10 @@ Additional rule:
 1. ordinary branching, parsing guards, and shape checks inside code do not become forbidden merely because they use `if`
 2. the forbidden case is semantic decision-making that substitutes for governance judgment
 3. command preflight tooling may report whether the current status row and required process snapshots mechanically allow a command to continue, but it must not decide whether candidate truth is complete, whether evidence is sufficient, whether downgrade is allowed, or whether a promotion should happen
-4. command close tooling may accept explicit standardized flags such as `--outcome`, `--reason`, `--failure-layer`, and `--candidate-intent`, but it must not choose those values, repair contradictory values, or infer a semantic outcome from repository content
-5. command close tooling may reject an unsupported state combination and may apply the one legal transition for a supported combination, but it must not create a second lifecycle rule outside the command-owned transition table
+4. promote tooling must not choose semantic outcome values, repair contradictory values, or infer a judgment from repository content
+5. promote tooling may reject an unsupported state combination and must apply the defined transition rules
 6. slice work-state tooling may mark stale slices from fingerprint changes only when the adopting owner defines that mechanical action, but it must not mark semantic slices as passed, write finding content, choose severity, decide review scores, decide verification sufficiency, or decide a final command or review result
-7. unit-check checklist tooling may mark stale checklist items from fingerprint changes only when `process_snapshot_contract.md` defines that mechanical action, but it must not mark semantic items as clear, incomplete, or blocked
-8. relation calculation tooling may report explicit candidate references, ready candidates, blocked candidates, and cycles, but it must not infer dependencies from prose, judge candidate content quality, choose a lifecycle outcome, or repair references
+7. relation calculation tooling may report explicit candidate references, ready candidates, blocked candidates, and cycles, but it must not infer dependencies from prose, judge candidate content quality, or repair references
 
 ## 6. Relationship To `spec_flow_review`
 
@@ -155,8 +148,7 @@ That review must cover at least:
 The required tooling-contract document set is:
 
 1. this policy file for framework-level boundary rules
-2. `framework/slice_work_state_protocol.md` for slice work-state carrier and mechanical maintenance boundaries
-3. `<tooling-root>/README.md` for the concrete command surface, build flow, recovery flow, and usage examples
+2. `<tooling-root>/README.md` for the concrete command surface, build flow, recovery flow, and usage examples
 4. the current tooling source input files:
    - `<tooling-root>/cmd/**/*.go`
    - `<tooling-root>/internal/**/*.go`
@@ -193,7 +185,7 @@ Required rules:
 3. `build-release` must embed one build-time fingerprint derived from that source input set into the produced binaries
 4. a compiled tooling binary must compare its embedded fingerprint against the current live source fingerprint before executing ordinary governance actions
 5. when the fingerprints differ, the binary must stop and require a rebuild instead of continuing
-6. the bypass surface for that freshness gate must stay minimal and cover only recovery or inspection entry points needed to rebuild or diagnose the binary state, plus read-only render actions (`next` — the deterministic directive for the current governance step, which is a read-only render action that does not modify project files or advance lifecycle state)
+6. the bypass surface for that freshness gate must stay minimal and cover only recovery or inspection entry points needed to rebuild or diagnose the binary state, plus read-only render actions (`next` — the deterministic directive for the current governance step, which is a read-only render action that does not modify project files or advance state)
 7. `doctor` must report stale current-platform binaries as failures rather than treating binary presence alone as sufficient
 8. compiled binaries must not be committed to git
 

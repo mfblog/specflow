@@ -34,21 +34,19 @@ When the request also requires unit binding, `rule_escape` must either decompose
 Before any write, read:
 
 1. `framework/spec_writing_guide.md`
-2. `framework/candidate_intent.md`
-3. `framework/lifecycle/overview.md`
-4. `framework/lifecycle/recovery.md`
-5. `framework/governance/rules/rule_sync.md`
-6. `framework/governance/impact_sync.md`
-7. `docs/specs/_status.md`
-8. every current-layer unit main Spec needed to check whether the target truth already exists as unit-local truth or is already bound through `rule_refs`
-9. every existing rule file that names or overlaps the requested rule truth
-10. `docs/specs/repository_mapping.md` when a new rule id is created or the rule object map may change
-11. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
+2. `framework/governance/rules/rule_sync.md`
+3. `framework/governance/impact_sync.md`
+4. every current-layer unit main Spec needed to check whether the target truth already exists as unit-local truth or is already bound through `rule_refs`
+5. every existing rule file that names or overlaps the requested rule truth
+6. `docs/specs/repository_mapping.md` when a new rule id is created or the rule object map may change
+7. `docs/specs/rules/stable/s_g_rule_repository_baseline.md` when the request may become a repository-wide default rule
 
+==ATOM_BEGIN:shared_footer==
 Bound shared rule consumer discovery must use only current-layer unit frontmatter `rule_refs`.
+==ATOM_END:shared_footer==
 
 ==ATOM_BEGIN:rule_layout_note==
-**Layout-aware path note:** Paths in this file are `<framework-root>`-relative. In `source_repo` layout, `<framework-root>` is `framework/`. In `installed_project` layout, `<framework-root>` uses a `specflow/` prefix before `framework/`. `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
+**Layout-aware path note:** Paths in this file use `<framework-root>` and `<tooling-root>` as layout-relative roots. In `source_repo` layout, `<framework-root>` is `framework/` and `<tooling-root>` is `tooling/`. In `installed_project` layout, both use a `specflow/` prefix before the root name (e.g., `specflow/framework/`, `specflow/tooling/`). `docs/specs/` paths are project-instance paths and are present only in `installed_project` layout.
 ==ATOM_END:rule_layout_note==
 
 ## 3. Rule Identity
@@ -67,20 +65,19 @@ When a stable sibling already exists, the candidate file must carry the exact in
 ## 4. Procedure
 
 1. Confirm that the requested truth is independent rule truth, not unit-local behavior, a pure binding change, extraction, topology cleanup, or implementation work.
-2. Build the repository-wide duplicate-truth review set from current `_status.md` rows and current-layer unit Specs.
+2. Build the repository-wide duplicate-truth review set from current-layer unit Specs.
 3. Check that the same formal rule truth is not already present in another rule file or duplicated as unit-local formal truth.
 4. Choose the smallest stable rule boundary. One rule file must carry one coherent shared constraint.
 5. If the target bound shared rule already has a stable sibling, derive the current consumer set from current-layer unit `rule_refs` and choose exactly one valid `promotion_owner_unit`.
-6. Before the first file mutation, capture the recovery baseline required by `framework/lifecycle/recovery.md`.
-7. Create or update the candidate rule file at `docs/specs/rules/candidate/c_{rule_id}.md` (using the `rule_id` from section 3, e.g., `c_g_rule_example.md` for global rules, `c_b_rule_example.md` for bound rules).
-8. If the bound shared rule has no formal current consumers after this write, keep it only when the file explicitly records intentional unbound retention with:
+6. Create or update the candidate rule file at `docs/specs/rules/candidate/c_{rule_id}.md` (using the `rule_id` from section 3, e.g., `c_g_rule_example.md` for global rules, `c_b_rule_example.md` for bound rules).
+7. If the bound shared rule has no formal current consumers after this write, keep it only when the file explicitly records intentional unbound retention with:
    - `unbound_retention: intentional`
    - `unbound_retention_reason: <why this rule is intentionally independent now>`
    - `unbound_retention_owner: rule_new`
-9. If the bound shared rule has formal current consumers, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields.
-10. Do not write consumer lists or `bound_objects` into the rule file.
-11. Update `docs/specs/repository_mapping.md` in the same round when the rule object map changed.
-12. Run `rule_sync` after any rule-file write or rule object-map write.
+8. If the bound shared rule has formal current consumers, remove or stop carrying any `unbound_retention`, `unbound_retention_reason`, and `unbound_retention_owner` fields.
+9. Do not write consumer lists or `bound_objects` into the rule file.
+10. Update `docs/specs/repository_mapping.md` in the same round when the rule object map changed.
+11. Run `rule_sync` after any rule-file write or rule object-map write.
     Execution-local inputs for `rule_sync`:
     - `rule_refs`: the exact candidate ref that was written
     - `rule_ids`: the target rule id of the newly created or updated rule.
@@ -91,14 +88,14 @@ When a stable sibling already exists, the candidate file must carry the exact in
       did not change.
     - `units`: none by default (no binding changes in this flow); pass explicitly only when a writeback-required unit was touched
 
-If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`. If mutation already happened and closure is no longer safe, apply `framework/lifecycle/recovery.md` before returning to `framework/operations/entry_routing.md`.
+If repository truth becomes insufficient before any mutation, stop and return to `rule_escape`.
 
 ## 5. Stop Conditions
 
 Stop when one of these is true:
 
-1. the candidate rule file is written, any required repository mapping update is complete, and `rule_sync` has closed reconciliation. If `rule_sync` returned `freshness_review_required=true`, run the 'Freshness Review Required' procedure from `framework/lifecycle/recovery.md:27-37` before claiming closure.
-2. the request belongs to `rule_extract`, `rule_bind`, `rule_topology`, or unit lifecycle work instead
+1. the candidate rule file is written, any required repository mapping update is complete, and `rule_sync` has closed reconciliation.
+2. the request belongs to `rule_extract`, `rule_bind`, `rule_topology`, or unit governance work instead
 3. duplicate formal truth remains and cannot be removed by this flow
 4. current repository truth is insufficient to justify the rule boundary, rule version, mapping update, or promotion owner
 5. a candidate rule with a stable sibling would exist without exactly one valid `promotion_owner_unit`
@@ -116,4 +113,4 @@ The output must report:
 7. whether the bound shared rule is formally consumed through current-layer unit `rule_refs`
 8. any repository mapping writeback
 9. confirmation that the rule file does not carry `bound_objects`
-10. the `rule_sync` result or the recovery and rerouting result
+10. the `rule_sync` result

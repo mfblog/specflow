@@ -2,123 +2,69 @@ package filevalidation
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
 
-// Constraints defines file write permissions for a unit at a given lifecycle phase.
-type Constraints struct {
-	AllowedWrites   []WriteRule
-	ForbiddenWrites []WriteRule
+// CandidateFrontmatterResult is returned by ValidateCandidateFrontmatter.
+type CandidateFrontmatterResult struct {
+	Valid      bool
+	Unit       string
+	Diagnostic string
 }
 
-// WriteRule defines a glob pattern permission for specific lifecycle phases.
-type WriteRule struct {
-	Pattern string
-	Phases  []string // empty = applies to all phases
-}
+// ValidateCandidateFrontmatter validates candidate unit frontmatter consistency.
+// Checks required fields: id, layer (must be candidate), version, rule_refs.
+func ValidateCandidateFrontmatter(repoRoot, unitName string) CandidateFrontmatterResult {
+	candidatePath := filepath.Join(repoRoot, fmt.Sprintf("docs/specs/units/candidate/c_unit_%s.md", unitName))
 
-// Result is returned by ValidateWrite.
-type Result struct {
-	Allowed bool
-	Reason  string
-	Phase   string
-	Path    string
-}
+	data, err := os.ReadFile(candidatePath)
+	if err != nil {
+		return CandidateFrontmatterResult{
+			Valid:      false,
+			Unit:       unitName,
+			Diagnostic: fmt.Sprintf("cannot read candidate spec at %s: %v", candidatePath, err),
+		}
+	}
 
-// defaultImplementationDenyPatterns are the default deny write patterns applied
-// when no constraints are defined for the implementation phase.
-// These prevent implementation-phase agents from modifying spec, status, or framework files.
-var defaultImplementationDenyPatterns = []string{
-	"docs/specs/units/stable/**",
-	"docs/specs/_check_result/**",
-	"docs/specs/_check_work/**",
-	"docs/specs/_verify_result/**",
-	"docs/specs/_stable_verify_result/**",
-	"docs/specs/_independent_evaluation/**",
-	"docs/specs/_plans/**",
-	"docs/specs/_status.md",
-	"framework/**",
-}
+	fm := readFrontmatterStringMap(string(data))
 
-// DefaultImplementationDenyPatterns returns the default deny patterns for the implementation phase.
-func DefaultImplementationDenyPatterns() []string {
-	result := make([]string, len(defaultImplementationDenyPatterns))
-	copy(result, defaultImplementationDenyPatterns)
-	return result
+	id := strings.TrimSpace(fm["id"])
+	layer := strings.TrimSpace(fm["layer"])
+
+	if id != unitName {
+		return CandidateFrontmatterResult{
+			Valid:      false,
+			Unit:       unitName,
+			Diagnostic: fmt.Sprintf("frontmatter id %q does not match unit name %q", id, unitName),
+		}
+	}
+	if layer != "candidate" {
+		return CandidateFrontmatterResult{
+			Valid:      false,
+			Unit:       unitName,
+			Diagnostic: fmt.Sprintf("frontmatter layer must be 'candidate', got %q", layer),
+		}
+	}
+	if strings.TrimSpace(fm["version"]) == "" {
+		return CandidateFrontmatterResult{
+			Valid:      false,
+			Unit:       unitName,
+			Diagnostic: "frontmatter version is required",
+		}
+	}
+
+	return CandidateFrontmatterResult{
+		Valid:      true,
+		Unit:       unitName,
+		Diagnostic: "candidate frontmatter is valid",
+	}
 }
 
 // MatchGlobPattern checks if a path matches a glob-like pattern.
-// Exported for use by the CLI layer.
 func MatchGlobPattern(pattern, path string) bool {
 	return patternMatch(pattern, path)
-}
-
-// ValidateWrite checks whether a file write at a given lifecycle phase is allowed.
-func ValidateWrite(phase string, path string, constraints Constraints) Result {
-	// Normalize path: clean and use forward slashes
-	normalizedPath := filepath.ToSlash(filepath.Clean(path))
-
-	// Check forbidden rules first (forbidden takes precedence)
-	for _, rule := range constraints.ForbiddenWrites {
-		if !phaseMatches(phase, rule.Phases) {
-			continue
-		}
-		if patternMatch(rule.Pattern, normalizedPath) {
-			return Result{
-				Allowed: false,
-				Reason:  fmt.Sprintf("path %q matches forbidden pattern %q", path, rule.Pattern),
-				Phase:   phase,
-				Path:    path,
-			}
-		}
-	}
-
-	// Check allowed rules: if no allowed rules are defined, apply defaults
-	if len(constraints.AllowedWrites) == 0 {
-		// During implementation phase, apply default deny
-		// patterns for docs/specs/** and framework/** to prevent accidental spec/truth writes.
-		if phase == "implementation" {
-			for _, denyPattern := range defaultImplementationDenyPatterns {
-				if patternMatch(denyPattern, normalizedPath) {
-					return Result{
-						Allowed: false,
-						Reason:  fmt.Sprintf("no allowed_writes constraints defined for phase %q; path %q matches default implementation-phase deny pattern %q", phase, path, denyPattern),
-						Phase:   phase,
-						Path:    path,
-					}
-				}
-			}
-		}
-		return Result{
-			Allowed: true,
-			Reason:  "no allowed_writes constraints defined; write permitted by default",
-			Phase:   phase,
-			Path:    path,
-		}
-	}
-
-	// If there are allowed rules, at least one must match
-	for _, rule := range constraints.AllowedWrites {
-		if !phaseMatches(phase, rule.Phases) {
-			continue
-		}
-		if patternMatch(rule.Pattern, normalizedPath) {
-			return Result{
-				Allowed: true,
-				Reason:  fmt.Sprintf("path %q matches allowed pattern %q in phase %s", path, rule.Pattern, phase),
-				Phase:   phase,
-				Path:    path,
-			}
-		}
-	}
-
-	return Result{
-		Allowed: false,
-		Reason:  fmt.Sprintf("path %q does not match any allowed_writes pattern for phase %q", path, phase),
-		Phase:   phase,
-		Path:    path,
-	}
 }
 
 // patternMatch checks if a path matches a glob-like pattern.
@@ -127,49 +73,38 @@ func patternMatch(pattern, path string) bool {
 	pattern = filepath.ToSlash(pattern)
 	path = filepath.ToSlash(path)
 
-	// Patterns without ** use filepath.Match
 	if !strings.Contains(pattern, "**") {
 		matched, err := filepath.Match(pattern, path)
 		return err == nil && matched
 	}
 
-	// With **, use segment-based recursive matching
 	patParts := strings.Split(pattern, "/")
 	pathParts := strings.Split(path, "/")
 	return matchSegments(patParts, pathParts)
 }
 
-// matchSegments recursively matches pattern segments against path segments.
-// ** matches zero or more segments; * matches one segment.
 func matchSegments(pattern, path []string) bool {
-	// Both exhausted → match
 	if len(pattern) == 0 && len(path) == 0 {
 		return true
 	}
-	// Pattern exhausted but path remains → no match
 	if len(pattern) == 0 {
 		return false
 	}
 
-	// Handle **
 	if pattern[0] == "**" {
-		// Try matching ** as zero segments (skip **)
 		if matchSegments(pattern[1:], path) {
 			return true
 		}
-		// Try matching ** as one or more segments
 		if len(path) > 0 && matchSegments(pattern, path[1:]) {
 			return true
 		}
 		return false
 	}
 
-	// Path exhausted but pattern still has non-** segments → no match
 	if len(path) == 0 {
 		return false
 	}
 
-	// Match current segment
 	matched, err := filepath.Match(pattern[0], path[0])
 	if err != nil || !matched {
 		return false
@@ -177,198 +112,34 @@ func matchSegments(pattern, path []string) bool {
 	return matchSegments(pattern[1:], path[1:])
 }
 
-// phaseMatches checks if a phase is in the allowed phases list.
-// An empty phases list means "all phases".
-func phaseMatches(phase string, phases []string) bool {
-	if len(phases) == 0 {
-		return true
-	}
-	for _, p := range phases {
-		if strings.EqualFold(p, phase) {
-			return true
-		}
-	}
-	return false
-}
-
-// ParseConstraints parses a constraints string from _status.md.
-// Supports two formats:
-//
-// Compact inline format (documented in status.md):
-//
-//	phase=<phase> [deny=<glob>] [allow=<glob>];phase=<phase> [deny=<glob>] [allow=<glob>]
-//
-// YAML-like block format:
-//
-//	allowed_writes:
-//	  - pattern: "src/**"
-//	    phases: [unit_impl, unit_verify]
-//	forbidden_writes:
-//	  - pattern: "docs/specs/**"
-func ParseConstraints(constraintsStr string) (Constraints, error) {
-	trimmed := strings.TrimSpace(constraintsStr)
-	if trimmed == "" {
-		return Constraints{}, nil
+func readFrontmatterStringMap(text string) map[string]string {
+	result := map[string]string{}
+	normalized := strings.ReplaceAll(text, "\r\n", "\n")
+	lines := strings.Split(normalized, "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return result
 	}
 
-	// Detect format: YAML-like block format starts with "allowed_writes:" or "forbidden_writes:"
-	if strings.HasPrefix(trimmed, "allowed_writes:") || strings.HasPrefix(trimmed, "forbidden_writes:") {
-		return parseYamlBlockFormat(trimmed)
-	}
-
-	// Otherwise, treat as compact inline format
-	return parseCompactFormat(trimmed)
-}
-
-// parseCompactFormat parses the compact inline constraints format:
-//
-//	phase=<phase> [deny=<glob>] [allow=<glob>];phase=<phase> [deny=<glob>] [allow=<glob>]
-//
-// Returns an error when the input is non-empty but no valid constraint groups
-// could be parsed, because an empty result would silently allow all writes.
-func parseCompactFormat(input string) (Constraints, error) {
-	var c Constraints
-	anyValidSegment := false
-
-	// Split by ";" for multiple constraint groups
-	segments := strings.Split(input, ";")
-	for _, segment := range segments {
-		segment = strings.TrimSpace(segment)
-		if segment == "" {
-			continue
-		}
-
-		var phase string
-		var allowPatterns []string
-		var denyPatterns []string
-
-		// Parse key=value pairs separated by spaces
-		fields := strings.Fields(segment)
-		for _, field := range fields {
-			if !strings.Contains(field, "=") {
-				continue
-			}
-			key, value, _ := strings.Cut(field, "=")
-			key = strings.TrimSpace(key)
-			value = strings.TrimSpace(value)
-			value = strings.Trim(value, "\"'")
-
-			switch key {
-			case "phase":
-				phase = value
-			case "allow":
-				allowPatterns = append(allowPatterns, value)
-			case "deny":
-				denyPatterns = append(denyPatterns, value)
-			}
-		}
-
-		if phase == "" {
-			// segment has content but no phase — malformed, fail closed
-			return Constraints{}, fmt.Errorf("malformed constraint segment %q: missing phase", segment)
-		}
-
-		if len(denyPatterns) == 0 && len(allowPatterns) == 0 {
-			// segment has phase but no deny or allow — malformed, fail closed
-			return Constraints{}, fmt.Errorf("malformed constraint segment %q: has phase=%s but no deny or allow pattern", segment, phase)
-		}
-
-		anyValidSegment = true
-
-		for _, p := range denyPatterns {
-			rule := WriteRule{Pattern: p}
-			if phase != "" {
-				rule.Phases = []string{phase}
-			}
-			c.ForbiddenWrites = append(c.ForbiddenWrites, rule)
-		}
-
-		for _, p := range allowPatterns {
-			rule := WriteRule{Pattern: p}
-			if phase != "" {
-				rule.Phases = []string{phase}
-			}
-			c.AllowedWrites = append(c.AllowedWrites, rule)
-		}
-	}
-
-	if !anyValidSegment {
-		return Constraints{}, fmt.Errorf("constraints string %q produced zero valid rules; use empty string for no constraints", input)
-	}
-
-	return c, nil
-}
-
-// parseYamlBlockFormat parses the YAML-like block constraints format.
-func parseYamlBlockFormat(input string) (Constraints, error) {
-	var c Constraints
-
-	lines := strings.Split(input, "\n")
-	var currentSection string
-
-	for _, line := range lines {
+	for idx := 1; idx < len(lines); idx++ {
+		line := lines[idx]
 		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
+		if trimmed == "---" {
+			break
+		}
+		if trimmed == "" || strings.HasPrefix(trimmed, "- ") {
 			continue
 		}
-
-		switch {
-		case trimmed == "allowed_writes:":
-			currentSection = "allowed"
-			continue
-		case trimmed == "forbidden_writes:":
-			currentSection = "forbidden"
+		key, value, ok := strings.Cut(trimmed, ":")
+		if !ok {
 			continue
 		}
-
-		if currentSection == "" {
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if value == "" {
 			continue
 		}
-
-		// Parse list items: "- pattern: src/**"
-		if strings.HasPrefix(trimmed, "- pattern:") {
-			pattern := strings.TrimSpace(strings.TrimPrefix(trimmed, "- pattern:"))
-			pattern = strings.Trim(pattern, "\"'")
-			rule := WriteRule{Pattern: pattern}
-
-			switch currentSection {
-			case "allowed":
-				c.AllowedWrites = append(c.AllowedWrites, rule)
-			case "forbidden":
-				c.ForbiddenWrites = append(c.ForbiddenWrites, rule)
-			}
-			continue
-		}
-
-		// Parse phases sub-field: "  phases: [unit_impl, unit_verify]"
-		if strings.HasPrefix(trimmed, "phases:") {
-			phasesStr := strings.TrimSpace(strings.TrimPrefix(trimmed, "phases:"))
-			phasesStr = strings.Trim(phasesStr, "[]")
-			rawPhases := strings.Split(phasesStr, ",")
-			var cleanPhases []string
-			for _, p := range rawPhases {
-				p = strings.TrimSpace(p)
-				p = strings.Trim(p, "\"' ")
-				if p != "" {
-					cleanPhases = append(cleanPhases, p)
-				}
-			}
-
-			// Add phases to the last added rule
-			switch currentSection {
-			case "allowed":
-				if len(c.AllowedWrites) > 0 {
-					c.AllowedWrites[len(c.AllowedWrites)-1].Phases = cleanPhases
-				}
-			case "forbidden":
-				if len(c.ForbiddenWrites) > 0 {
-					c.ForbiddenWrites[len(c.ForbiddenWrites)-1].Phases = cleanPhases
-				}
-			}
-		}
+		value = strings.Trim(value, "`\"' ")
+		result[key] = value
 	}
-	if len(c.AllowedWrites) == 0 && len(c.ForbiddenWrites) == 0 {
-		return Constraints{}, fmt.Errorf("yaml-like constraints block produced zero rules; must define at least one - pattern: entry under allowed_writes: or forbidden_writes:")
-	}
-	return c, nil
+	return result
 }

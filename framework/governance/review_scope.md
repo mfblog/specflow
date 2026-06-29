@@ -83,12 +83,12 @@ For design quality, plain `spec_flow_design_review` is already full-scope and is
 Deep audit may use `docs/specs/_governance_review/` run-state and existing `specflowctl review run-*` tooling.
 `spec_flow_design_review` uses that run-state tooling by default.
 
-Deep-audit tooling for exact `spec_flow_review:full` must resolve a review layout before collecting full-scope inputs:
+Deep-audit tooling for exact `spec_flow_review:full` uses the `source_repo` layout:
 
-1. `installed_project` uses `specflow/framework/`, `specflow/templates/`, `specflow/tooling/`, and real project `docs/specs/` compatibility inputs.
-2. `source_repo` uses local `framework/`, `templates/`, and `tooling/`; its compatibility input is template bootstrap compatibility under `templates/docs/specs/`, not real project `docs/specs/`.
-
-The default CLI layout is `--layout auto`; explicit `--layout installed` or `--layout source` overrides detection. Ambiguous auto detection must stop instead of choosing silently.
+- framework root: `framework/`
+- template root: `templates/`
+- tooling root: `tooling/`
+- compatibility input: template bootstrap compatibility under `templates/docs/specs/`, not real project `docs/specs/`
 
 ## Escalation
 

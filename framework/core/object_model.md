@@ -23,7 +23,7 @@ Unit truth lives in:
 | stable | `docs/specs/units/stable/s_unit_{unit}.md` | `docs/specs/units/stable/appendix/s_unit_{unit}_{name}.md` |
 | candidate | `docs/specs/units/candidate/c_unit_{unit}.md` | `docs/specs/units/candidate/appendix/c_unit_{unit}_{name}.md` |
 
-Unit frontmatter records identity, layer, version, `unit_refs`, and `rule_refs`. Candidate units also record `candidate_intent`, `source_basis`, and any required evidence or repair fields. Appendix files may carry an optional `status` field (`active` or `exempt`) — see `framework/spec_writing_guide.md` §Appendix Files.
+Unit frontmatter records identity, layer, version, `unit_refs`, and `rule_refs`. Appendix files may carry an optional `status` field (`active` or `exempt`) — see `framework/spec_writing_guide.md` §Appendix Files.
 
 ## Rule
 
@@ -38,12 +38,4 @@ Bound rule consumers are derived from current-layer unit `rule_refs`; rule files
 
 `docs/specs/repository_mapping.md` maps formal objects to implementation paths and ownership responsibilities. Path ownership must be read from this file when it matters; agents must not infer ownership from directory shape alone.
 
-## Process Evidence
 
-Process files record what a command checked in one round. They are evidence, not behavior truth.
-
-Downstream lifecycle gates consume only tool-valid process evidence:
-
-1. `_check_result` for `unit_check` pass evidence (when run).
-2. `_verify_result` for `unit_verify` evidence.
-3. `_stable_verify_result` for `unit_stable_verify` advancing evidence.

@@ -10,7 +10,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/impactsync"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulebinding"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulerefs"
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/statusfile"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/unitdiscovery"
 )
 
 type Options struct {
@@ -49,7 +49,8 @@ type BoundObjectDrift struct {
 }
 
 type moduleBinding struct {
-	Status        statusfile.ModuleStatus
+	ID            string
+	ActiveLayer   string
 	RuleRefs      []string
 	BindingIssues []string
 }
@@ -150,7 +151,7 @@ func SyncImpact(repoRoot string, options Options) (Result, error) {
 		if len(normalized.StableLandingRuleRefs) == 0 {
 			return Result{}, fmt.Errorf("stable landing rule refs are required when stable landing unit %q is set", normalized.StableLandingModule)
 		}
-		if binding.Status.ActiveLayer != "stable" {
+		if binding.ActiveLayer != "stable" {
 			return Result{}, fmt.Errorf("stable landing unit %q must currently be at active layer stable", normalized.StableLandingModule)
 		}
 		landingSelectedRefs, err := selectedRuleRefsForObject(binding.RuleRefs, normalized.RuleRefs, normalized.RuleIDs, sharedFilesByRef, sharedFilesByID)
@@ -339,38 +340,40 @@ func buildSharedFilesByFileRef(sharedFilesByRef map[string]sharedFile) map[strin
 }
 
 func loadModuleBindings(repoRoot string) (map[string]moduleBinding, map[string][]string, map[string][]string, []string, error) {
-	statuses, err := statusfile.LoadModuleStatuses(repoRoot)
+	units, err := unitdiscovery.DiscoverUnits(repoRoot)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
-	bindings := make(map[string]moduleBinding, len(statuses))
+	bindings := make(map[string]moduleBinding, len(units))
 	actualByRef := map[string][]string{}
 	actualByID := map[string][]string{}
 	unresolvedRefs := []string{}
-	for _, status := range statuses {
-		refs, err := readModuleRuleRefs(repoRoot, status)
+	for _, unit := range units {
+		refs, err := readUnitRuleRefs(repoRoot, unit)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
 		bindingIssues := []string{}
-		bindings[status.Module] = moduleBinding{
-			Status:   status,
-			RuleRefs: refs,
+		bindings[unit.ID] = moduleBinding{
+			ID:          unit.ID,
+			ActiveLayer: unit.Layer(),
+			RuleRefs:    refs,
 		}
 		for _, ref := range refs {
-			resolved, err := rulebinding.ResolveRef(repoRoot, status.ActiveLayer, ref)
+			resolved, err := rulebinding.ResolveRef(repoRoot, unit.Layer(), ref)
 			if err != nil {
 				bindingIssues = append(bindingIssues, err.Error())
 				unresolvedRefs = append(unresolvedRefs, ref)
 				continue
 			}
-			actualByRef[resolved.VersionRef] = append(actualByRef[resolved.VersionRef], status.Module)
-			actualByID[resolved.RuleID] = append(actualByID[resolved.RuleID], status.Module)
+			actualByRef[resolved.VersionRef] = append(actualByRef[resolved.VersionRef], unit.ID)
+			actualByID[resolved.RuleID] = append(actualByID[resolved.RuleID], unit.ID)
 		}
-		bindings[status.Module] = moduleBinding{
-			Status:        status,
-			RuleRefs:      refs,
+		bindings[unit.ID] = moduleBinding{
+			ID:          unit.ID,
+			ActiveLayer: unit.Layer(),
+			RuleRefs:    refs,
 			BindingIssues: normalizeStrings(bindingIssues),
 		}
 	}
@@ -428,19 +431,18 @@ func scopedModulesForImpact(scopeModules []string, moduleBindings map[string]mod
 			filterInvalidatingRuleRefs(selectedRuleRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
 			stableGlobalRuleRefs,
 		)
-		if binding.Status.ActiveLayer == "stable" && options.StableLandingModule == module {
+		if binding.ActiveLayer == "stable" && options.StableLandingModule == module {
 			invalidatingRuleRefs = subtractStringSet(invalidatingRuleRefs, stableLandingSharedRefSet)
 		}
 		result = append(result, impactsync.ScopedModule{
 			Binding: impactsync.ModuleBinding{
-				Module:        binding.Status.Module,
-				ActiveLayer:   binding.Status.ActiveLayer,
-				NextCommand:   binding.Status.NextCommand,
-				BindingIssues: append([]string{}, binding.BindingIssues...),
+				Module:        binding.ID,
+				ActiveLayer:   binding.ActiveLayer,
+				
+				
 			},
 			InvalidatingRuleRefs:                  invalidatingRuleRefs,
-			ExplicitFallbackScope:                 removedBindingScope[module] || retargetedUnitSet[module],
-			AllowedSharedSnapshotMismatchFileRefs: allowedSharedSnapshotMismatchFileRefs(selectedRuleRefs, sharedFilesByRef, boundModulesOnlyFileRefs),
+			ExplicitFallbackScope: removedBindingScope[module] || retargetedUnitSet[module],
 		})
 	}
 	return result, nil
@@ -503,7 +505,7 @@ func validateRetargetedUnits(moduleBindings map[string]moduleBinding, sharedFile
 		if !ok {
 			return nil, fmt.Errorf("retargeted unit %q is not registered in docs/specs/_status.md", unit)
 		}
-		if binding.Status.ActiveLayer != "candidate" {
+		if binding.ActiveLayer != "candidate" {
 			return nil, fmt.Errorf("retargeted unit %q must currently be at active layer candidate", unit)
 		}
 		selectedStableLandingRefs := intersectStrings(binding.RuleRefs, stableLandingRuleRefSet)
@@ -528,36 +530,9 @@ func hasSameVersionCandidateRuleRef(stable sharedFile, ruleRefs []string, shared
 }
 
 func candidateModulesWithRemovedSelectedBinding(repoRoot string, moduleBindings map[string]moduleBinding, scopedRefs, scopedIDs []string, sharedFilesByRef map[string]sharedFile, sharedFilesByID map[string][]sharedFile) (map[string]bool, error) {
-	result := map[string]bool{}
-	for module, binding := range moduleBindings {
-		if binding.Status.ActiveLayer != "candidate" {
-			continue
-		}
-		selectedRefs, err := selectedRuleRefsForObject(binding.RuleRefs, scopedRefs, scopedIDs, sharedFilesByRef, sharedFilesByID)
-		if err != nil {
-			return nil, err
-		}
-		if len(selectedRefs) > 0 {
-			continue
-		}
-		matched, err := processSnapshotContainsSelectedShared(
-			repoRoot,
-			"unit",
-			binding.Status.Module,
-			binding.Status.ActiveLayer,
-			[]string{"check", "plan", "verify"},
-			scopedRefs,
-			scopedIDs,
-			sharedFilesByID,
-		)
-		if err != nil {
-			return nil, err
-		}
-		if matched {
-			result[module] = true
-		}
-	}
-	return result, nil
+	// Process snapshots no longer exist in the simplified model (file existence is state).
+	// Return empty — removed bindings are tracked through the standard binding scope.
+	return map[string]bool{}, nil
 }
 
 func allReferencedRuleRefs(moduleBindings map[string]moduleBinding) map[string]bool {
@@ -825,12 +800,20 @@ func typedBoundObjectRef(objectType, object string) string {
 	return fmt.Sprintf("%s:%s", strings.TrimSpace(objectType), strings.TrimSpace(object))
 }
 
-func readModuleRuleRefs(repoRoot string, status statusfile.ModuleStatus) ([]string, error) {
-	return readObjectRuleRefs(repoRoot, statusfile.ObjectStatus{
-		ObjectType:  "unit",
-		Object:      status.Module,
-		ActiveLayer: status.ActiveLayer,
-	})
+func readUnitRuleRefs(repoRoot string, unit unitdiscovery.UnitInfo) ([]string, error) {
+	fileRef := fmt.Sprintf("docs/specs/units/%s/c_unit_%s.md", "candidate", unit.ID)
+	if !unit.HasCandidate {
+		fileRef = fmt.Sprintf("docs/specs/units/%s/s_unit_%s.md", "stable", unit.ID)
+	}
+	content, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(fileRef)))
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", fileRef, err)
+	}
+	refs, err := rulerefs.ParseObjectRuleRefs(fileRef, string(content))
+	if err != nil {
+		return nil, err
+	}
+	return normalizeStrings(refs), nil
 }
 
 func parseFrontmatter(content string) (map[string]string, string, error) {

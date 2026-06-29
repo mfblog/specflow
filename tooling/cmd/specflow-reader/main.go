@@ -27,9 +27,25 @@ func run(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	freshnessArgs := argsForFreshness(args)
-	if err := toolingfreshness.CheckProcess(freshnessArgs, cwd); err != nil {
-		return err
+
+	// Check for --skip-freshness to allow running against arbitrary directories
+	skipFreshness := false
+	remainingArgs := []string{}
+	for _, arg := range args {
+		if arg == "--skip-freshness" {
+			skipFreshness = true
+		} else {
+			remainingArgs = append(remainingArgs, arg)
+		}
+	}
+	args = remainingArgs
+
+	if !skipFreshness {
+		freshnessArgs := argsForFreshness(args)
+		if err := toolingfreshness.CheckProcess(freshnessArgs, cwd); err != nil {
+			fmt.Fprintf(stderr, "Warning: %v (use --skip-freshness to bypass)\n", err)
+			return err
+		}
 	}
 	if len(args) > 0 {
 		switch args[0] {

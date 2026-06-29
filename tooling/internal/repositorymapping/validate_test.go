@@ -10,9 +10,6 @@ import (
 
 func TestValidateAcceptsObjectRegistry(t *testing.T) {
 	repoRoot := t.TempDir()
-	writeStatus(t, repoRoot, []statusRow{
-		{objectType: "unit", object: "demo", stable: "no", candidate: "yes", activeLayer: "candidate", nextCommand: "unit_check"},
-	})
 	writeMapping(t, repoRoot, []string{
 		"| unit | demo | landed | `AgentCore/internal/demo/**` | `docs/specs/units/candidate/c_unit_demo.md` | demo unit |",
 		"| rule | b_rule_future | planned | none | none | future rule |",
@@ -50,7 +47,6 @@ func TestValidateAcceptsSourceTemplateBootstrap(t *testing.T) {
 
 func TestValidateRejectsMissingLandedImplementationPath(t *testing.T) {
 	repoRoot := t.TempDir()
-	writeStatus(t, repoRoot, nil)
 	writeMapping(t, repoRoot, []string{
 		"| rule | b_rule_missing | landed | `AgentCore/internal/missing/**` | none | missing rule |",
 	})
@@ -66,7 +62,6 @@ func TestValidateRejectsMissingLandedImplementationPath(t *testing.T) {
 
 func TestValidateRejectsPlannedImplementationPath(t *testing.T) {
 	repoRoot := t.TempDir()
-	writeStatus(t, repoRoot, nil)
 	writeMapping(t, repoRoot, []string{
 		"| rule | b_rule_future | planned | `AgentCore/internal/future/**` | none | future rule |",
 	})
@@ -82,7 +77,6 @@ func TestValidateRejectsPlannedImplementationPath(t *testing.T) {
 
 func TestValidateRejectsInvalidRegistryRow(t *testing.T) {
 	repoRoot := t.TempDir()
-	writeStatus(t, repoRoot, nil)
 	writeMapping(t, repoRoot, []string{
 		"| feature | demo | landed | `AgentCore/internal/demo/**` | none | invalid kind |",
 		"| unit | planned_demo | waiting | none | none | invalid state |",
@@ -97,46 +91,21 @@ func TestValidateRejectsInvalidRegistryRow(t *testing.T) {
 	}
 }
 
-func TestValidateRejectsStatusWithoutRegistry(t *testing.T) {
+func TestValidateAcceptsLandedUnitWithSpecFile(t *testing.T) {
 	repoRoot := t.TempDir()
-	writeStatus(t, repoRoot, []statusRow{
-		{objectType: "unit", object: "demo", stable: "no", candidate: "yes", activeLayer: "candidate", nextCommand: "unit_check"},
+	writeMapping(t, repoRoot, []string{
+		"| unit | demo | landed | `AgentCore/internal/demo/**` | `docs/specs/units/candidate/c_unit_demo.md` | demo unit |",
 	})
-	writeMapping(t, repoRoot, nil)
+	writeFile(t, repoRoot, "AgentCore/internal/demo/service.go", "package demo\n")
 	writeFile(t, repoRoot, "docs/specs/units/candidate/c_unit_demo.md", "# Demo\n")
 
 	result, err := Validate(repoRoot)
 	if err != nil {
 		t.Fatalf("Validate returned error: %v", err)
 	}
-	if result.Valid() || !containsDiagnostic(result.Diagnostics, "missing from Object Registry") {
-		t.Fatalf("expected missing registry diagnostic, got %v", result.Diagnostics)
+	if !result.Valid() {
+		t.Fatalf("expected valid mapping for landed unit with spec file, got diagnostics: %v", result.Diagnostics)
 	}
-}
-
-type statusRow struct {
-	objectType  string
-	object      string
-	stable      string
-	candidate   string
-	activeLayer string
-	nextCommand string
-}
-
-func writeStatus(t *testing.T, repoRoot string, rows []statusRow) {
-	t.Helper()
-	lines := []string{
-		"# Spec Status",
-		"",
-		"## Formal Objects",
-		"",
-		"| Object Type | Object | Stable | Candidate | Active Layer | Next Command | Notes |",
-		"|---|---|---|---|---|---|---|",
-	}
-	for _, row := range rows {
-		lines = append(lines, "| `"+row.objectType+"` | `"+row.object+"` | `"+row.stable+"` | `"+row.candidate+"` | `"+row.activeLayer+"` | `"+row.nextCommand+"` | note |")
-	}
-	writeFile(t, repoRoot, "docs/specs/_status.md", strings.Join(lines, "\n")+"\n")
 }
 
 func writeMapping(t *testing.T, repoRoot string, rows []string) {

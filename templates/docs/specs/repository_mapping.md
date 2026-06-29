@@ -7,7 +7,7 @@ version: 0.1.0
 
 This document records repository path ownership and formal object registration.
 
-It is not a lifecycle object and does not enter `_status.md`.
+It is not a lifecycle object.
 
 ## 1. Project Overview
 
@@ -39,11 +39,4 @@ List implementation paths and support paths that are not fully captured by the O
 
 Process support paths include:
 
-1. `docs/specs/_status.md`
-2. `docs/specs/_check_work/**`
-3. `docs/specs/_check_result/**`
-4. `docs/specs/_plans/**`
-5. `docs/specs/_verify_result/**`
-6. `docs/specs/_stable_verify_result/**`
-7. `docs/specs/_governance_review/**`
-8. `docs/specs/_independent_evaluation/**`
+1. `docs/specs/_governance_review/**`

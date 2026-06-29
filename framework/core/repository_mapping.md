@@ -1,7 +1,6 @@
 # Repository Mapping
 
 `docs/specs/repository_mapping.md` is the durable registry for object ownership and implementation paths.
-It does not define lifecycle state. Lifecycle state lives in `docs/specs/_status.md`.
 
 ## Registry Contract
 
@@ -65,12 +64,10 @@ Which formal owner is allowed to speak for this path?
 
 It does not answer:
 
-1. which unit is currently active
-2. which unit can be promoted
-3. which rule consumers exist
-4. which dependencies are current
+1. which rule consumers exist
+2. which dependencies are current
 
-Those answers come from `_status.md`, unit frontmatter `rule_refs`, and unit frontmatter `unit_refs`.
+Those answers come from unit frontmatter `rule_refs` and `unit_refs`.
 
 ## Validation
 
@@ -83,7 +80,6 @@ Validation must check:
 5. planned objects do not claim implementation paths
 6. landed implementation paths exist
 7. declared Spec files exist unless explicitly `none`
-8. every formal unit row in `_status.md` has an Object Registry row
 
 Validation must reject old `scenario` registry rows rather than migrating them.
 
