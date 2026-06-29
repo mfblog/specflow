@@ -61,7 +61,7 @@ Each platform needs the SpecFlow hooks registered so it knows to trigger `sessio
 
 1. Reads `framework/concepts.md` from the repository root
 2. JSON-escapes the contents (backslash, double-quote, newline, carriage-return, tab)
-3. Wraps in a preamble: `"<EXTREMELY_IMPORTANT>\nThis project uses SpecFlow to manage design documents.\n\n**Below is the full SpecFlow framework guide — read it carefully before starting work:**\n\n{concepts_escaped}\n</EXTREMELY_IMPORTANT>"`
+3. Wraps in a preamble: `"<SPECFLOW_CONCEPTS>\nThis project uses SpecFlow to manage design documents.\n\n**Below is the full SpecFlow framework guide — read it carefully before starting work:**\n\n{concepts_escaped}\n</SPECFLOW_CONCEPTS>"`
 4. Detects platform from environment variables and outputs the correct JSON shape
 5. Returns exit code 0 on success
 

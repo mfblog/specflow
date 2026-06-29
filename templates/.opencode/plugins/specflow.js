@@ -21,13 +21,13 @@ export const SpecFlowPlugin = async ({ client, directory }) => {
 
     const conceptsContent = fs.readFileSync(conceptsPath, 'utf8');
 
-    _bootstrapCache = `<EXTREMELY_IMPORTANT>
+    _bootstrapCache = `<SPECFLOW_CONCEPTS>
 This project uses SpecFlow to manage design documents.
 
 **Below is the full SpecFlow framework guide — read it carefully before starting work:**
 
 ${conceptsContent}
-</EXTREMELY_IMPORTANT>`;
+</SPECFLOW_CONCEPTS>`;
 
     return _bootstrapCache;
   };
@@ -40,7 +40,7 @@ ${conceptsContent}
       const firstUser = output.messages.find(m => m.info.role === 'user');
       if (!firstUser || !firstUser.parts.length) return;
 
-      if (firstUser.parts.some(p => p.type === 'text' && p.text.includes('EXTREMELY_IMPORTANT'))) return;
+      if (firstUser.parts.some(p => p.type === 'text' && p.text.includes('SPECFLOW_CONCEPTS'))) return;
 
       const ref = firstUser.parts[0];
       firstUser.parts.unshift({ ...ref, type: 'text', text: bootstrap });
