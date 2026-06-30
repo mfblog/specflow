@@ -102,13 +102,7 @@ func Promote(repoRoot, unitName string) *Result {
 	}
 
 	// Step 6: Copy candidate files to stable
-	if err := copyFile(candidateSpec, stableSpec); err != nil {
-		r.Issues = append(r.Issues, fmt.Sprintf("Failed to copy spec: %v", err))
-		r.Passed = false
-		return r
-	}
-	r.Actions = append(r.Actions, fmt.Sprintf("Promoted: docs/specs/units/candidate/c_unit_%s.md -> docs/specs/units/stable/s_unit_%s.md", unitName, unitName))
-
+	// Copy appendices first so that a failure leaves the main spec untouched.
 	stableAppendixDir := filepath.Join(repoRoot, "docs/specs/units/stable/appendix")
 	_ = os.MkdirAll(stableAppendixDir, 0755)
 
@@ -123,6 +117,14 @@ func Promote(repoRoot, unitName string) *Result {
 		rel, _ := filepath.Rel(repoRoot, dest)
 		r.Actions = append(r.Actions, fmt.Sprintf("Promoted appendix: %s", rel))
 	}
+
+	// Copy main spec last so it acts as the commit point.
+	if err := copyFile(candidateSpec, stableSpec); err != nil {
+		r.Issues = append(r.Issues, fmt.Sprintf("Failed to copy spec: %v", err))
+		r.Passed = false
+		return r
+	}
+	r.Actions = append(r.Actions, fmt.Sprintf("Promoted: docs/specs/units/candidate/c_unit_%s.md -> docs/specs/units/stable/s_unit_%s.md", unitName, unitName))
 
 	r.Passed = true
 	return r

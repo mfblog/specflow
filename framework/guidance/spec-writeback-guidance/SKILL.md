@@ -35,7 +35,7 @@ Report:
 
 ## Boundaries
 
-1. Candidate writeback is not the final review step—run `specflow/tooling/bin/specflowctl-<os>-<arch> promote` for final validation (substitute `<os>` and `<arch>` with your platform).
+1. Candidate writeback is not the final review step—run `tooling/bin/specflowctl-<os>-<arch> promote` for final validation (substitute `<os>` and `<arch>` with your platform).
 2. Do not implement from chat-only design.
 3. Do not create `_plans/active`, `_verify_result`, or `_stable_verify_result`.
 4. Do not ask the user to choose internal rule-governance flow names.

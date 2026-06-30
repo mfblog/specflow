@@ -2,6 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +16,6 @@ func TestNextCLI(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	// Test next without unit (usage output)
 	if err := runNext([]string{"--repo-root", repoRoot}, &stdout, &stderr); err != nil {
 		t.Fatalf("next failed: %v\nstderr=%s", err, stderr.String())
 	}
@@ -38,21 +40,18 @@ func TestPromoteFailsOnMissingUnit(t *testing.T) {
 	}
 }
 
-func TestPromoteFailsOnMissingSpec(t *testing.T) {
+func TestPromoteFailsOnMissingCache(t *testing.T) {
 	repoRoot := createCLITestRepo(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
 	err := runPromote([]string{"--unit", "nonexistent", "--repo-root", repoRoot}, &stdout, &stderr)
 	if err == nil {
-		t.Fatal("expected error for missing spec")
+		t.Fatal("expected error for missing cache")
 	}
 	output := stdout.String()
-	if !strings.Contains(output, "FAILED") {
-		t.Fatalf("expected FAILED result, got %s", output)
-	}
-	if !strings.Contains(output, "not found") {
-		t.Fatalf("expected 'not found' message, got %s", output)
+	if !strings.Contains(output, "cache not found") {
+		t.Fatalf("expected 'cache not found' message, got %s", output)
 	}
 }
 
@@ -61,8 +60,7 @@ func TestPromoteWithValidSpec(t *testing.T) {
 
 	// Create a valid candidate spec
 	candidateDir := filepath.Join(repoRoot, "docs/specs/units/candidate")
-	err := os.MkdirAll(candidateDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(candidateDir, 0755); err != nil {
 		t.Fatal(err)
 	}
 	specContent := `---
@@ -106,11 +104,52 @@ acceptance_item_set:
 		t.Fatal(err)
 	}
 
+	// Create validate cache with correct hashes
+	specHash := computeHash(specPath)
+	mappingHash := computeHash(mappingPath)
+	cacheDir := filepath.Join(repoRoot, "docs/specs/_validation/unit/test_unit")
+	os.MkdirAll(cacheDir, 0755)
+
+	validateCache := fmt.Sprintf(`---
+command: validate
+unit: test_unit
+result: pass
+timestamp: "2026-06-30T10:00:00Z"
+files:
+  - path: docs/specs/units/candidate/c_unit_test_unit.md
+    hash: sha256:%s
+  - path: docs/specs/repository_mapping.md
+    hash: sha256:%s
+---
+Validate passed.
+`, specHash, mappingHash)
+	if err := os.WriteFile(filepath.Join(cacheDir, "validate_result.md"), []byte(validateCache), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create verify cache
+	verifyCache := fmt.Sprintf(`---
+command: verify
+unit: test_unit
+result: aligned
+target: candidate
+timestamp: "2026-06-30T11:00:00Z"
+files:
+  - path: docs/specs/units/candidate/c_unit_test_unit.md
+    hash: sha256:%s
+  - path: docs/specs/repository_mapping.md
+    hash: sha256:%s
+---
+Verify passed.
+`, specHash, mappingHash)
+	if err := os.WriteFile(filepath.Join(cacheDir, "verify_result.md"), []byte(verifyCache), 0644); err != nil {
+		t.Fatal(err)
+	}
+
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	err = runPromote([]string{"--unit", "test_unit", "--repo-root", repoRoot}, &stdout, &stderr)
-	if err != nil {
+	if err := runPromote([]string{"--unit", "test_unit", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
 		t.Fatalf("promote failed: %v\nstderr=%s\nstdout=%s", err, stderr.String(), stdout.String())
 	}
 	output := stdout.String()
@@ -126,6 +165,68 @@ acceptance_item_set:
 	if _, err := os.Stat(stablePath); os.IsNotExist(err) {
 		t.Fatal("stable spec was not created after promote")
 	}
+
+	// Verify caches were cleared after successful promote
+	cacheFiles, _ := filepath.Glob(filepath.Join(cacheDir, "*"))
+	if len(cacheFiles) > 0 {
+		t.Fatalf("expected cache cleared after promote, found: %v", cacheFiles)
+	}
+}
+
+func TestValidateCandidateFrontmatterDeprecated(t *testing.T) {
+	repoRoot := createCLITestRepo(t)
+
+	// Create a valid candidate spec
+	candidateDir := filepath.Join(repoRoot, "docs/specs/units/candidate")
+	os.MkdirAll(candidateDir, 0755)
+	specContent := `---
+id: test_unit
+layer: candidate
+version: 1.0.0
+unit_refs: none
+rule_refs: none
+---
+
+acceptance_item_set:
+  - id: test.check
+    description: Test check.
+    verification_type: testable
+    verification_surface: internal
+    implementation_surface: internal
+    verification_method: test
+    pass_condition: passes
+    not_runnable_yet: no
+`
+	specPath := filepath.Join(candidateDir, "c_unit_test_unit.md")
+	if err := os.WriteFile(specPath, []byte(specContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create repository_mapping.md
+	mappingDir := filepath.Join(repoRoot, "docs/specs")
+	os.MkdirAll(mappingDir, 0755)
+	mappingContent := "test_unit: src/\n"
+	if err := os.WriteFile(filepath.Join(mappingDir, "repository_mapping.md"), []byte(mappingContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	// Test deprecated command still works
+	if err := runValidate([]string{"candidate-frontmatter", "--unit", "test_unit", "--repo-root", repoRoot}, &stdout, &stderr); err != nil {
+		t.Fatalf("deprecated candidate-frontmatter failed: %v\nstderr=%s", err, stderr.String())
+	}
+
+	stderrOutput := stderr.String()
+	if !strings.Contains(stderrOutput, "DEPRECATED") {
+		t.Fatal("expected DEPRECATED warning on stderr")
+	}
+
+	stdoutOutput := stdout.String()
+	if !strings.Contains(stdoutOutput, "PASS") {
+		t.Fatalf("expected PASS result, got %s", stdoutOutput)
+	}
 }
 
 func createCLITestRepo(t *testing.T) string {
@@ -135,9 +236,21 @@ func createCLITestRepo(t *testing.T) string {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(dir) })
-
-	// Create minimal framework structure
-	frameworkDir := filepath.Join(dir, "framework")
-	os.MkdirAll(frameworkDir, 0755)
 	return dir
+}
+
+// computeHash computes the SHA-256 hash using the same normalization as validationcache.
+func computeHash(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	text := string(data)
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
+	if !strings.HasSuffix(text, "\n") {
+		text += "\n"
+	}
+	sum := sha256.Sum256([]byte(text))
+	return hex.EncodeToString(sum[:])
 }

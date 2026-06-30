@@ -133,8 +133,8 @@ It must not edit files, advance governance state, or store semantic conclusions 
 15. `validate write`
    - check whether a file path may be written under current governance constraints
    - `validate write --path <path>` checks the executor's write permission for the given path
-16. `validate candidate-frontmatter --unit UNIT`
-   - validate candidate unit frontmatter consistency (version, unit_refs, rule_refs, acceptance_item_set)
+16. `validate candidate --unit UNIT`
+   - validate candidate spec structure (7 checks: frontmatter, acceptance items, anchor integrity, references, appendices, repository mapping, version consistency)
 
 ## Reader Command Surface
 

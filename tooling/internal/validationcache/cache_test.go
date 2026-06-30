@@ -1,0 +1,185 @@
+package validationcache
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestCheckValidate(t *testing.T) {
+	repoRoot := t.TempDir()
+
+	// Create minimal candidate spec
+	candidateDir := filepath.Join(repoRoot, "docs/specs/units/candidate")
+	mappingDir := filepath.Join(repoRoot, "docs/specs")
+	os.MkdirAll(candidateDir, 0755)
+	os.MkdirAll(mappingDir, 0755)
+
+	specPath := filepath.Join(candidateDir, "c_unit_test.md")
+	specContent := "---\nid: test\nlayer: candidate\nversion: 0.1.0\nunit_refs: none\nrule_refs: none\n---\n"
+	if err := os.WriteFile(specPath, []byte(specContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	mappingPath := filepath.Join(mappingDir, "repository_mapping.md")
+	mappingContent := "test: src/\n"
+	if err := os.WriteFile(mappingPath, []byte(mappingContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	specHash, err := fileHash(specPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mappingHash, err := fileHash(mappingPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create cache dir
+	cacheDir := filepath.Join(repoRoot, "docs/specs/_validation/unit/test")
+	os.MkdirAll(cacheDir, 0755)
+
+	cacheContent := "---\ncommand: validate\nunit: test\nresult: pass\ntimestamp: \"2026-06-30T10:00:00Z\"\nfiles:\n  - path: docs/specs/units/candidate/c_unit_test.md\n    hash: sha256:" + specHash + "\n  - path: docs/specs/repository_mapping.md\n    hash: sha256:" + mappingHash + "\n---\nAll checks passed.\n"
+	if err := os.WriteFile(filepath.Join(cacheDir, "validate_result.md"), []byte(cacheContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := CheckValidate(repoRoot, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Fresh {
+		t.Fatalf("expected fresh, got: %s", result.Reason)
+	}
+}
+
+func TestCheckValidateStale(t *testing.T) {
+	repoRoot := t.TempDir()
+
+	candidateDir := filepath.Join(repoRoot, "docs/specs/units/candidate")
+	mappingDir := filepath.Join(repoRoot, "docs/specs")
+	os.MkdirAll(candidateDir, 0755)
+	os.MkdirAll(mappingDir, 0755)
+
+	specPath := filepath.Join(candidateDir, "c_unit_test.md")
+	specContent := "---\nid: test\nlayer: candidate\nversion: 0.1.0\nunit_refs: none\nrule_refs: none\n---\n"
+	if err := os.WriteFile(specPath, []byte(specContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	mappingPath := filepath.Join(mappingDir, "repository_mapping.md")
+	mappingContent := "test: src/\n"
+	if err := os.WriteFile(mappingPath, []byte(mappingContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cacheDir := filepath.Join(repoRoot, "docs/specs/_validation/unit/test")
+	os.MkdirAll(cacheDir, 0755)
+
+	// Write cache with WRONG hash (deliberately stale)
+	staleCache := "---\ncommand: validate\nunit: test\nresult: pass\ntimestamp: \"2026-06-30T10:00:00Z\"\nfiles:\n  - path: docs/specs/units/candidate/c_unit_test.md\n    hash: sha256:0000000000000000000000000000000000000000000000000000000000000000\n  - path: docs/specs/repository_mapping.md\n    hash: sha256:1111111111111111111111111111111111111111111111111111111111111111\n---\n"
+	if err := os.WriteFile(filepath.Join(cacheDir, "validate_result.md"), []byte(staleCache), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := CheckValidate(repoRoot, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Fresh {
+		t.Fatal("expected stale cache, got fresh")
+	}
+}
+
+func TestCheckVerify(t *testing.T) {
+	repoRoot := t.TempDir()
+
+	candidateDir := filepath.Join(repoRoot, "docs/specs/units/candidate")
+	srcDir := filepath.Join(repoRoot, "src")
+	os.MkdirAll(candidateDir, 0755)
+	os.MkdirAll(srcDir, 0755)
+
+	specPath := filepath.Join(candidateDir, "c_unit_test.md")
+	specContent := "---\nid: test\nlayer: candidate\nversion: 0.1.0\nunit_refs: none\nrule_refs: none\n---\n"
+	if err := os.WriteFile(specPath, []byte(specContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	srcPath := filepath.Join(srcDir, "handler.go")
+	srcContent := "package main\nfunc main() {}\n"
+	if err := os.WriteFile(srcPath, []byte(srcContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	specHash, _ := fileHash(specPath)
+	srcHash, _ := fileHash(srcPath)
+
+	cacheDir := filepath.Join(repoRoot, "docs/specs/_validation/unit/test")
+	os.MkdirAll(cacheDir, 0755)
+
+	cacheContent := "---\ncommand: verify\nunit: test\nresult: aligned\ntarget: candidate\ntimestamp: \"2026-06-30T11:00:00Z\"\nfiles:\n  - path: docs/specs/units/candidate/c_unit_test.md\n    hash: sha256:" + specHash + "\n  - path: src/handler.go\n    hash: sha256:" + srcHash + "\n---\nAll items aligned.\n"
+	if err := os.WriteFile(filepath.Join(cacheDir, "verify_result.md"), []byte(cacheContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := CheckVerify(repoRoot, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Fresh {
+		t.Fatalf("expected fresh, got: %s", result.Reason)
+	}
+}
+
+func TestDeleteCache(t *testing.T) {
+	repoRoot := t.TempDir()
+	cacheDir := filepath.Join(repoRoot, "docs/specs/_validation/unit/test")
+	os.MkdirAll(cacheDir, 0755)
+
+	vPath := filepath.Join(cacheDir, "validate_result.md")
+	os.WriteFile(vPath, []byte("---\ncommand: validate\nresult: pass\n---\n"), 0644)
+
+	// Delete and verify
+	if err := DeleteCache(repoRoot, "test", "validate"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(vPath); !os.IsNotExist(err) {
+		t.Fatal("cache file should be deleted")
+	}
+}
+
+// TestNormalizeConsistency verifies that the hash computed by fileHash
+// is deterministic and matches the expected normalization.
+func TestNormalizeConsistency(t *testing.T) {
+	repoRoot := t.TempDir()
+	testFile := filepath.Join(repoRoot, "test.txt")
+
+	// Content CRLF -> should normalize same as LF
+	crlfContent := "line1\r\nline2\r\nline3\r\n"
+	lFContent := "line1\nline2\nline3\n"
+
+	os.WriteFile(testFile, []byte(crlfContent), 0644)
+	hashCRLF, _ := fileHash(testFile)
+
+	os.WriteFile(testFile, []byte(lFContent), 0644)
+	hashLF, _ := fileHash(testFile)
+
+	if hashCRLF != hashLF {
+		t.Fatalf("CRLF and LF versions produced different hashes: %s vs %s", hashCRLF, hashLF)
+	}
+
+	// Content without trailing newline -> should normalize to same
+	noNewline := "line1\nline2"
+	withNewline := "line1\nline2\n"
+
+	os.WriteFile(testFile, []byte(noNewline), 0644)
+	hashNoNewline, _ := fileHash(testFile)
+
+	os.WriteFile(testFile, []byte(withNewline), 0644)
+	hashWithNewline, _ := fileHash(testFile)
+
+	if hashNoNewline != hashWithNewline {
+		t.Fatalf("missing trailing newline produced different hash: %s vs %s", hashNoNewline, hashWithNewline)
+	}
+}

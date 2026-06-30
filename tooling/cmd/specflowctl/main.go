@@ -18,6 +18,7 @@ import (
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewscope"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/rulesync"
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/toolingfreshness"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/validationcache"
 )
 
 func main() {
@@ -110,6 +111,34 @@ func runPromote(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("resolve repo root: %w", err)
 	}
 
+	// Check validate cache freshness
+	validateResult, err := validationcache.CheckValidate(absRoot, unitName)
+	if err != nil {
+		return fmt.Errorf("validate cache error: %w", err)
+	}
+	if !validateResult.Fresh {
+		fmt.Fprintf(stdout, "Validate cache check: FAIL — %s\n", validateResult.Reason)
+		fmt.Fprintln(stdout, "")
+		fmt.Fprintln(stdout, "Run spec_validate for this unit first, then retry promote.")
+		return errors.New("validate cache check failed")
+	}
+	fmt.Fprintf(stdout, "Validate cache: %s\n", validateResult.Reason)
+	fmt.Fprintln(stdout, "")
+
+	// Check verify cache freshness
+	verifyResult, err := validationcache.CheckVerify(absRoot, unitName)
+	if err != nil {
+		return fmt.Errorf("verify cache error: %w", err)
+	}
+	if !verifyResult.Fresh {
+		fmt.Fprintf(stdout, "Verify cache check: FAIL — %s\n", verifyResult.Reason)
+		fmt.Fprintln(stdout, "")
+		fmt.Fprintln(stdout, "Run spec_verify for this unit first, then retry promote.")
+		return errors.New("verify cache check failed")
+	}
+	fmt.Fprintf(stdout, "Verify cache: %s\n", verifyResult.Reason)
+	fmt.Fprintln(stdout, "")
+
 	result := promote.Promote(absRoot, unitName)
 	_, err = fmt.Fprint(stdout, promote.FormatResult(result))
 	if err != nil {
@@ -118,6 +147,14 @@ func runPromote(args []string, stdout, stderr io.Writer) error {
 	if !result.Passed {
 		return errors.New("promote failed")
 	}
+
+	// Clean up cache on successful promote
+	if delErr := validationcache.DeleteAll(absRoot, unitName); delErr != nil {
+		fmt.Fprintf(stderr, "Warning: failed to delete validation cache: %v\n", delErr)
+	} else {
+		fmt.Fprintln(stdout, "Validation cache cleared.")
+	}
+
 	return nil
 }
 
@@ -581,7 +618,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  promote    Validate candidate spec and archive to stable")
 	fmt.Fprintln(w, "  review     Collect governance review scope or maintain run-state files")
 	fmt.Fprintln(w, "  rule       Execute rule-impact reconciliation helpers")
-	fmt.Fprintln(w, "  validate   Validate file write permissions")
+	fmt.Fprintln(w, "  validate   Validate candidate spec structure or file write permissions")
 	fmt.Fprintln(w, "  repository-mapping (deprecated) Validate docs/specs/repository_mapping.md")
 }
 

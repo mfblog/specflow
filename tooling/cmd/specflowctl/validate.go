@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/filevalidation"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specvalidation"
 )
 
 func runValidate(args []string, stdout, stderr io.Writer) error {
@@ -38,7 +38,11 @@ func runValidate(args []string, stdout, stderr io.Writer) error {
 		}
 		return nil
 	case "candidate-frontmatter":
-		fs := flag.NewFlagSet("validate candidate-frontmatter", flag.ContinueOnError)
+		fmt.Fprintln(stderr, "DEPRECATED: 'validate candidate-frontmatter' has been replaced by 'validate candidate', which is a superset.")
+		// Delegate to candidate logic after deprecation notice.
+		fallthrough
+	case "candidate":
+		fs := flag.NewFlagSet("validate candidate", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		repoRoot := fs.String("repo-root", ".", "repository root")
 		unitName := fs.String("unit", "", "unit name")
@@ -50,10 +54,13 @@ func runValidate(args []string, stdout, stderr io.Writer) error {
 			return errors.New("unit is required")
 		}
 
-		result := filevalidation.ValidateCandidateFrontmatter(mustAbs(*repoRoot), *unitName)
-		writeCandidateFrontmatterResult(stdout, result)
-		if !result.Valid {
-			return fmt.Errorf("candidate frontmatter validation failed: %s", result.Diagnostic)
+		result := specvalidation.ValidateCandidate(mustAbs(*repoRoot), *unitName)
+		_, err := fmt.Fprint(stdout, specvalidation.FormatResult(result))
+		if err != nil {
+			return err
+		}
+		if !result.Passed {
+			return fmt.Errorf("validate candidate failed")
 		}
 		return nil
 	case "-h", "--help", "help":
@@ -71,7 +78,7 @@ type validateResult struct {
 	Path    string
 }
 
-func validateWrite(repoRoot, path string) validateResult {
+func validateWrite(_ string, path string) validateResult {
 	normalizedPath := filepath.ToSlash(filepath.Clean(path))
 
 	// Deny pattern: framework files are never writable via validate
@@ -133,24 +140,24 @@ func writeValidateWriteResult(stdout io.Writer, result validateResult) {
 	fmt.Fprintf(stdout, "path: %s\n", noneIfEmpty(result.Path))
 }
 
-func writeCandidateFrontmatterResult(stdout io.Writer, result filevalidation.CandidateFrontmatterResult) {
-	fmt.Fprintf(stdout, "valid: %t\n", result.Valid)
-	fmt.Fprintf(stdout, "unit: %s\n", result.Unit)
-	fmt.Fprintf(stdout, "diagnostic: %s\n", result.Diagnostic)
-}
-
 func writeValidateUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  specflowctl validate write --path PATH [--repo-root PATH]")
-	fmt.Fprintln(w, "  specflowctl validate candidate-frontmatter --unit UNIT [--repo-root PATH]")
+	fmt.Fprintln(w, "  specflowctl validate candidate --unit UNIT [--repo-root PATH]")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Validate whether a file write is allowed under current governance.")
-	fmt.Fprintln(w, "Checks path against allowed write zones (candidate specs, source code).")
+	fmt.Fprintln(w, "Validate write checks if a file path is in an allowed write zone.")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Validate candidate unit frontmatter consistency.")
+	fmt.Fprintln(w, "Validate candidate runs the full 7-check validation on a candidate spec:")
+	fmt.Fprintln(w, "  1. Frontmatter completeness")
+	fmt.Fprintln(w, "  2. Acceptance items format")
+	fmt.Fprintln(w, "  3. Anchor integrity (affects.files paths)")
+	fmt.Fprintln(w, "  4. Reference integrity (unit_refs/rule_refs)")
+	fmt.Fprintln(w, "  5. Appendix files")
+	fmt.Fprintln(w, "  6. Repository mapping entry")
+	fmt.Fprintln(w, "  7. Version/ref consistency")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Flags:")
 	fmt.Fprintln(w, "  --path PATH     File path to validate (required for 'write')")
-	fmt.Fprintln(w, "  --unit UNIT     Unit name (required for 'candidate-frontmatter')")
+	fmt.Fprintln(w, "  --unit UNIT     Unit name (required for 'candidate')")
 	fmt.Fprintln(w, "  --repo-root PATH Repository root directory (default: current directory)")
 }

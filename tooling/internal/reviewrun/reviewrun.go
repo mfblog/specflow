@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/reviewscope"
+	"github.com/Bingordinary/SpecFlow/specflow/tooling/internal/specpaths"
 )
 
 const (
@@ -1295,7 +1296,7 @@ func computeFingerprint(repoRoot string, inputFiles []string) (string, []string,
 			missing = append(missing, relPath)
 			continue
 		}
-		sum := sha256.Sum256([]byte(normalizeText(string(content))))
+		sum := sha256.Sum256([]byte(specpaths.NormalizeText(string(content))))
 		payload.WriteString("file_ref: ")
 		payload.WriteString(relPath)
 		payload.WriteString("\nfile_sha256: ")
@@ -1307,15 +1308,6 @@ func computeFingerprint(repoRoot string, inputFiles []string) (string, []string,
 	}
 	sum := sha256.Sum256([]byte(payload.String()))
 	return hex.EncodeToString(sum[:]), missing, nil
-}
-
-func normalizeText(text string) string {
-	text = strings.ReplaceAll(text, "\r\n", "\n")
-	text = strings.ReplaceAll(text, "\r", "\n")
-	if !strings.HasSuffix(text, "\n") {
-		text += "\n"
-	}
-	return text
 }
 
 func baselineIDSet(definitions []sliceDefinition) map[string]bool {
