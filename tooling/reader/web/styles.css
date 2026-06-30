@@ -650,25 +650,6 @@ button:hover {
   border-radius: 8px;
 }
 
-.command-cell {
-  display: grid;
-  gap: 3px;
-}
-
-.command-cell code,
-.lifecycle-step code {
-  font: 11px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-}
-
-.command-cell code {
-  width: fit-content;
-  border: 1px solid #dbe3ef;
-  border-radius: 999px;
-  padding: 1px 6px;
-  background: #f8fafc;
-  color: var(--muted);
-}
-
 .table-object,
 .card-object {
   border: 0;
@@ -710,7 +691,6 @@ button:hover {
 }
 
 .registry-table {
-  table-layout: fixed;
   width: 100%;
 }
 
@@ -844,6 +824,8 @@ button.registry-path:hover {
   padding: 10px 12px;
   border-bottom: 1px solid #eef2f7;
   font-size: 13px;
+  overflow: hidden;
+  max-width: inherit;
 }
 
 .registry-table-wrap tr:last-child td {
@@ -925,125 +907,6 @@ button.registry-path:hover {
   color: #c2410c;
 }
 
-.lifecycle-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding: 12px;
-}
-
-.lifecycle-card {
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 10px;
-  background: #ffffff;
-}
-
-.lifecycle-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.lifecycle-title {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-}
-
-.lifecycle-title .card-object {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lifecycle-title .object-kind-badge {
-  flex: 0 0 auto;
-  font-size: 11px;
-}
-
-.lifecycle-head span,
-.lifecycle-card p {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.lifecycle-track {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.lifecycle-step {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 4px 8px;
-  background: #f8fafc;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.lifecycle-step.done {
-  border-color: #bbf7d0;
-  background: #dcfce7;
-  color: #166534;
-}
-
-.lifecycle-step.current {
-  border-color: var(--accent);
-  background: #eff6ff;
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.lifecycle-step.current code {
-  color: var(--accent);
-}
-
-.progress-line {
-  height: 6px;
-  margin: 10px 0 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #e2e8f0;
-}
-
-.progress-line span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-}
-
-.progress-line.complete span {
-  background: #22c55e;
-}
-
-.next-round-entry {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0 6px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.next-round-entry.intent-repair .lifecycle-step.current {
-  border-color: #d97706;
-  background: #fffbeb;
-  color: #92400e;
-}
-
-.next-round-entry.intent-repair .lifecycle-step.current code {
-  color: #92400e;
-}
-
 .object-kind-badge {
   display: inline-flex;
   align-items: center;
@@ -1070,90 +933,6 @@ button.registry-path:hover {
 }
 
 
-
-.review-next-command.advance-entry {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-  color: #15803d;
-}
-
-.review-next-command.advance-entry code {
-  color: #15803d;
-}
-
-/* implementation-phase alternative command (unit_check re-validation) */
-.review-next-command.pending-impl-alt {
-  border-color: #fde68a;
-  background: #fffbeb;
-  color: #92400e;
-}
-
-.review-next-command.pending-impl-alt code {
-  color: #92400e;
-}
-
-
-
-.review-progress-panel {
-  margin: 0 0 18px;
-  border-bottom: 1px solid var(--line);
-  padding: 0 0 12px;
-}
-
-.review-progress-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.review-progress-head h2 {
-  margin: 0;
-  border-top: 0;
-  padding-top: 0;
-  color: var(--accent);
-  font-size: 15px;
-}
-
-.review-next-command {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  flex: 0 0 auto;
-  max-width: 100%;
-  border-color: #bfdbfe;
-  padding: 5px 9px;
-  background: #eff6ff;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.review-command-actions {
-  display: inline-flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 7px;
-}
-
-.review-next-command code {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--accent);
-}
-
-.review-progress-panel .lifecycle-step code {
-  border: 0;
-  padding: 0;
-  background: transparent;
-}
-
-.review-next-empty {
-  color: var(--muted);
-  font-size: 12px;
-}
 
 .detail-panel {
   overflow: auto;

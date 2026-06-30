@@ -96,11 +96,7 @@ const TRANSLATIONS = {
         nav: "映射结果"
       }
     },
-    statusBoard: {
-      lifecycleAria: "{label} 生命周期位置",
-      nextRoundEntry: "下一轮入口",
-      nextRepairEntry: "修复入口"
-    },
+
     counts: {
       unit: "{count} 单元",
       rule: "{count} 规则",
@@ -118,7 +114,7 @@ const TRANSLATIONS = {
     },
     fallback: {
       statusUnknown: "状态未声明",
-      nextStep: "下一步：{value}",
+
       none: "无",
       responsibilityUnknown: "职责未声明",
       undeclared: "未声明",
@@ -207,12 +203,7 @@ const TRANSLATIONS = {
       readingFocus: "查看重点",
       relationships: "相关关系",
       relationEmpty: "暂无相关关系快照。",
-      progressTitle: "本轮进度",
-      nextCommand: "下一步入口",
-      noNextCommand: "当前没有登记下一步",
-      copyNextCommand: "复制下一步命令",
-      copied: "已复制",
-      copyFailed: "复制失败",
+
       relation: {
         implementation: "实现路径",
         rule: "规则",
@@ -263,37 +254,16 @@ const TRANSLATIONS = {
         system: "技术基线、默认选择、复用机制、禁止项、例外"
       }
     },
-    lifecycle: {
-      unit_init: "初始化能力真相",
-      unit_stable_verify: "检查实现是否仍符合已确认设计",
-      unit_new: "创建新的能力设计",
-      unit_check: "检查设计是否足够支撑开发",
-      unit_impl: "按 Spec 实现",
-      unit_verify: "验证实现是否符合设计",
-      unit_promote: "把确认结果沉淀为正式基线",
-      unit_fork: "从已确认基线开启新一轮设计"
-    },
-    lifecycleShort: {
-      unit_init: "初始化",
-      unit_stable_verify: "稳定复核",
-      unit_new: "新建",
-      unit_check: "检查",
-      unit_impl: "实现",
-      unit_verify: "验证",
-      unit_promote: "沉淀",
-      unit_fork: "开新轮"
-    },
+
     inspector: {
       infoTab: "节点信息",
       truthTab: "Spec 文档",
       truthTitle: "Spec 文档",
-      fields: {
+       fields: {
         type: "类型",
         status: "状态",
         version: "版本",
-        next: "下一步",
         responsibility: "职责",
-        notes: "备注",
         file: "文件",
         connections: "连接",
         paths: "路径"
@@ -418,14 +388,7 @@ const TRANSLATIONS = {
         nav: "Mapping results"
       }
     },
-    statusBoard: {
-      table: {
-        object: "Object"
-      },
-      lifecycleAria: "{label} lifecycle position",
-      nextRoundEntry: "Next-round entry",
-      nextRepairEntry: "Repair entry"
-    },
+
     counts: {
       unit: "{count} units",
       rule: "{count} rules",
@@ -443,7 +406,7 @@ const TRANSLATIONS = {
     },
     fallback: {
       statusUnknown: "Status not declared",
-      nextStep: "Next: {value}",
+
       none: "None",
       responsibilityUnknown: "Responsibility not declared",
       undeclared: "Not declared",
@@ -532,12 +495,7 @@ const TRANSLATIONS = {
       readingFocus: "View focus",
       relationships: "Relationships",
       relationEmpty: "No relationship snapshot.",
-      progressTitle: "Current round progress",
-      nextCommand: "Next entry",
-      noNextCommand: "No next command is registered",
-      copyNextCommand: "Copy next command",
-      copied: "Copied",
-      copyFailed: "Copy failed",
+
       relation: {
         implementation: "Implementation paths",
         rule: "Rules",
@@ -588,37 +546,16 @@ const TRANSLATIONS = {
         system: "Technical baseline, defaults, reusable mechanisms, prohibitions, exceptions"
       }
     },
-    lifecycle: {
-      unit_init: "Initialize capability truth",
-      unit_stable_verify: "Check whether implementation still matches the confirmed design",
-      unit_new: "Create a new capability design",
-      unit_check: "Check whether the design is enough to support development",
-      unit_impl: "Implement according to the Spec",
-      unit_verify: "Verify that implementation matches the design",
-      unit_promote: "Promote the confirmed result into the formal baseline",
-      unit_fork: "Start a new design round from a confirmed baseline"
-    },
-    lifecycleShort: {
-      unit_init: "Init",
-      unit_stable_verify: "Stable check",
-      unit_new: "New",
-      unit_check: "Check",
-      unit_impl: "Implement",
-      unit_verify: "Verify",
-      unit_promote: "Promote",
-      unit_fork: "Fork"
-    },
+
     inspector: {
       infoTab: "Node Info",
       truthTab: "Spec Document",
       truthTitle: "Spec Document",
-      fields: {
+       fields: {
         type: "Type",
         status: "Status",
         version: "Version",
-        next: "Next",
         responsibility: "Responsibility",
-        notes: "Notes",
         file: "File",
         connections: "Connections",
         paths: "Paths"
@@ -1074,7 +1011,7 @@ function navSubtitle(object) {
     return object.responsibility || t("fallback.responsibilityUnknown");
   }
   if (object.kind === "rule") return object.responsibility || t("fallback.rule");
-  return `${object.human_state || object.kind} · ${t("fallback.nextStep", { value: object.next_label || t("fallback.none") })}`;
+  return object.kind;
 }
 
 function focusObject(object) {
@@ -1631,134 +1568,6 @@ function firstNodeIDForView(nodes) {
   return (domainNode || nodes[0] || {}).id || null;
 }
 
-function lifecycleView(object, nextCommandOverride) {
-  const command = String(nextCommandOverride || object.next_command || "").trim();
-  const notes = String(object.notes || "").trim();
-  let effectiveCommand = command;
-  if (command.indexOf("unit_impl") >= 0) {
-    effectiveCommand = "unit_impl";
-  }
-  const complete = isNextRoundEntry(object, command);
-  const steps = lifecycleRoundSteps(object, effectiveCommand);
-  let currentIndex = steps.findIndex((step) => step.command === effectiveCommand);
-  if (complete) {
-    currentIndex = steps.length;
-  } else if (currentIndex < 0 && effectiveCommand) {
-    steps.push(lifecycleStep(effectiveCommand));
-    currentIndex = steps.length - 1;
-  } else if (currentIndex < 0) {
-    currentIndex = 0;
-  }
-  const progress = complete ? 100 : steps.length > 1 ? Math.round((currentIndex / (steps.length - 1)) * 100) : 0;
-  return {
-    steps,
-    currentCommand: complete ? "" : effectiveCommand,
-    currentIndex,
-    progress,
-    complete,
-    nextRoundEntry: complete ? lifecycleStep(command) : null
-  };
-}
-
-function lifecycleRoundSteps(object, command) {
-  return unitRoundSteps(object, command);
-}
-
-function unitRoundSteps(object, command) {
-  if (command === "unit_stable_verify") {
-    return [lifecycleStep("unit_stable_verify"), lifecycleStep("unit_fork")];
-  }
-  if (isNextRoundEntry(object, command)) {
-    return [
-      lifecycleStep("unit_check"),
-      lifecycleStep("unit_impl"),
-      lifecycleStep("unit_verify"),
-      lifecycleStep("unit_promote")
-    ];
-  }
-  if (command === "unit_init") {
-    return [
-      lifecycleStep("unit_init"),
-      lifecycleStep("unit_new"),
-      lifecycleStep("unit_check"),
-      lifecycleStep("unit_impl"),
-      lifecycleStep("unit_verify"),
-      lifecycleStep("unit_promote")
-    ];
-  }
-  const startCommand = command === "unit_new" || !yesish(object.stable) ? "unit_new" : "unit_fork";
-  return [
-    lifecycleStep(startCommand),
-    lifecycleStep("unit_check"),
-    lifecycleStep("unit_impl"),
-    lifecycleStep("unit_verify"),
-    lifecycleStep("unit_promote")
-  ];
-}
-
-function isNextRoundEntry(object, command) {
-  if (!yesish(object.stable) || yesish(object.candidate) || object.layer !== "stable") return false;
-  return object.kind === "unit" && command === "unit_fork";
-}
-
-function renderLifecycleTrack(view, ariaLabel) {
-  return `
-    <div class="lifecycle-track" aria-label="${escapeAttr(ariaLabel)}">
-      ${view.steps.map((step, index) => {
-        const stateClass = view.complete || index < view.currentIndex ? "done" : index === view.currentIndex ? "current" : "future";
-        return `
-          <span class="lifecycle-step ${stateClass}" title="${escapeAttr(step.command + " · " + step.label)}">
-            <code>${escapeHTML(step.command)}</code>
-          </span>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
-function renderNextRoundEntry(view, object) {
-  if (!view.nextRoundEntry) return "";
-  const intentClass = nextIntentClass(object);
-  const label = nextRoundEntryLabel(object);
-  const title = nextRoundEntryTitle(view.nextRoundEntry, object);
-  return `
-    <div class="next-round-entry ${escapeAttr(intentClass)}">
-      <span>${escapeHTML(label)}</span>
-      <span class="lifecycle-step current" title="${escapeAttr(title)}">
-        <code>${escapeHTML(view.nextRoundEntry.command)}</code>
-      </span>
-    </div>
-  `;
-}
-
-function nextRoundEntryLabel(object) {
-  return nextIntent(object) === "repair" ? t("statusBoard.nextRepairEntry") : t("statusBoard.nextRoundEntry");
-}
-
-function nextRoundEntryTitle(step, object) {
-  const intent = nextIntent(object);
-  const label = intent ? todoIntentLabel(intent) : step.label;
-  return `${step.command} · ${label}`;
-}
-
-function lifecycleStep(command) {
-  return {
-    command,
-    short: t(`lifecycleShort.${command}`),
-    label: t(`lifecycle.${command}`)
-  };
-}
-
-function renderCommandCell(label, command) {
-  if (!label && !command) return t("fallback.none");
-  return `
-    <div class="command-cell">
-      <span>${escapeHTML(label || command)}</span>
-      ${command ? `<code>${escapeHTML(command)}</code>` : ""}
-    </div>
-  `;
-}
-
 function renderFlag(value) {
   const active = yesish(value);
   return `<span class="flag ${active ? "flag-yes" : "flag-no"}">${escapeHTML(value || "no")}</span>`;
@@ -1921,8 +1730,8 @@ function renderRegistryTable(items) {
         <colgroup>
           <col style="width:70px">
           <col style="width:140px">
-          <col style="width:150px">
-          <col style="width:200px">
+          <col style="width:120px">
+          <col style="min-width:280px;width:auto">
           <col style="width:130px">
           <col>
         </colgroup>
@@ -2099,19 +1908,6 @@ function bindRegistryBoardLinks() {
   });
 }
 
-function nextIntent(object) {
-  return String(object && object.next_intent ? object.next_intent : "").trim();
-}
-
-function nextIntentClass(object) {
-  const intent = nextIntent(object);
-  return intent ? `intent-${intent}` : "";
-}
-
-function todoIntentLabel(intent) {
-  return t(`todo.intents.${intent}`);
-}
-
 function ruleSourcesForObject(object) {
   return list(object.rule_refs).flatMap((ruleID) => {
     const rule = list(snapshot.objects).find((item) => item.kind === "rule" && item.id === ruleID);
@@ -2123,7 +1919,7 @@ function sourceExists(path) {
   if (!isReadableOriginalPath(path)) return false;
   return list(snapshot.sources).some((source) => source.path === path)
     || list(snapshot.nodes).some((node) => node.source && node.source.path === path)
-    || list(snapshot.objects).some((object) => list(object.truth_paths).concat(list(object.baseline_truth_paths)).some((ref) => ref.path === path));
+    || list(snapshot.objects).some((object) => list(object.truth_paths).some((ref) => ref.path === path));
 }
 
 function isAppendixPath(path) {
@@ -2165,7 +1961,6 @@ function reviewObjectGroupKey(item) {
 
 function compareReviewGroups(left, right) {
   return reviewTypeOrder().indexOf(left.reviewType) - reviewTypeOrder().indexOf(right.reviewType)
-    || Number(Boolean(right.items.some((item) => item.nextCommand))) - Number(Boolean(left.items.some((item) => item.nextCommand)))
     || String(left.objectLabel || "").localeCompare(String(right.objectLabel || ""))
     || String(left.key || "").localeCompare(String(right.key || ""));
 }
@@ -2205,7 +2000,6 @@ function reviewItems() {
       id: `spec:${item.reviewType}:${item.path}:${item.object ? item.object.id : item.objectLabel}`,
       fileLabel: reviewFileLabel(source, item.object),
       source,
-      nextCommand: item.nextCommand !== undefined ? item.nextCommand : (item.object ? item.object.next_command : ""),
       stateLabel: item.stateLabel || t(`review.states.${item.reviewType}`),
       targetType: item.targetType || reviewTargetTypeForObject(item.object)
     });
@@ -2223,18 +2017,6 @@ function reviewItems() {
           source,
           object,
           objectLabel: object.label || object.id || t("fallback.undeclared")
-        });
-      });
-      uniqueSources(object.baseline_truth_paths).filter((source) => isReviewSourceForLayer(source, object, "stable")).forEach((source) => {
-        addItem({
-          reviewType: "stable",
-          targetType,
-          path: source.path,
-          source,
-          object,
-          objectLabel: object.label || object.id || t("fallback.undeclared"),
-          nextCommand: "",
-          stateLabel: t("review.relation.stable")
         });
       });
       return;
@@ -2290,7 +2072,6 @@ function reviewTypeOrder() {
 
 function compareReviewItems(left, right) {
   return reviewTypeOrder().indexOf(left.reviewType) - reviewTypeOrder().indexOf(right.reviewType)
-    || Number(Boolean(right.nextCommand)) - Number(Boolean(left.nextCommand))
     || String(left.objectLabel || "").localeCompare(String(right.objectLabel || ""))
     || reviewDocKindRank(left) - reviewDocKindRank(right)
     || String(left.path || "").localeCompare(String(right.path || ""));
@@ -2431,76 +2212,6 @@ function normalizedObjectID(object) {
   return String(object && object.id ? object.id : "").replace(/-/g, "_");
 }
 
-function reviewNextCommandText(item) {
-  const command = String(item && item.nextCommand ? item.nextCommand : "").trim();
-  const objectID = String(item && item.object && item.object.id ? item.object.id : "").trim();
-  if (!command || !objectID) return "";
-  return `${command}:${objectID}`;
-}
-
-function renderReviewProgressHeader(path) {
-  const item = reviewItemByPath(path);
-  if (!item || !item.object) return "";
-  if (item.object.kind !== "unit") return "";
-  const view = lifecycleView(item.object, item.nextCommand);
-  const command = reviewNextCommandText(item);
-  if (command) {
-    return `
-      <section class="review-progress-panel">
-        <div class="review-progress-head">
-          <h2>${escapeHTML(t("review.progressTitle"))}</h2>
-          <div class="review-command-actions">
-            <button class="review-next-command" type="button" data-copy-next-command="${escapeAttr(command)}" title="${escapeAttr(`${t("review.nextCommand")}: ${command}`)}">
-              <span>${escapeHTML(t("review.nextCommand"))}</span>
-            </button>
-          </div>
-        </div>
-        ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
-        <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
-        ${renderNextRoundEntry(view, item.object)}
-      </section>
-    `;
-  }
-  return `
-    <section class="review-progress-panel">
-      <div class="review-progress-head">
-        <h2>${escapeHTML(t("review.progressTitle"))}</h2>
-        <span class="review-next-empty">${escapeHTML(t("review.noNextCommand"))}</span>
-      </div>
-      ${renderLifecycleTrack(view, t("statusBoard.lifecycleAria", { label: item.objectLabel }))}
-      <div class="progress-line ${view.complete ? "complete" : ""}"><span style="width: ${view.progress}%"></span></div>
-      ${renderNextRoundEntry(view, item.object)}
-    </section>
-  `;
-}
-
-function bindReviewProgressHeader() {
-  bindCopyCommandButtons(sourceRendered);
-  bindCopyCommandButtons(detailPanel);
-}
-
-function bindCopyCommandButtons(root) {
-  root.querySelectorAll("[data-copy-next-command]").forEach((button) => {
-    if (button.dataset.copyBound === "true") return;
-    button.dataset.copyBound = "true";
-    button.addEventListener("click", async (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const command = button.dataset.copyNextCommand || "";
-      const originalHTML = button.innerHTML;
-      try {
-        await navigator.clipboard.writeText(command);
-        button.textContent = t("review.copied");
-      } catch {
-        button.textContent = t("review.copyFailed");
-      }
-      window.setTimeout(() => {
-        button.innerHTML = originalHTML;
-      }, 1200);
-    });
-  });
-}
-
 function reviewRelationSummary(item) {
   const parts = reviewRelationGroups(item)
     .map((group) => `${group.label} ${group.items.length}`);
@@ -2533,9 +2244,6 @@ function reviewRelationGroups(item) {
   const stable = uniqueSources(object.truth_paths)
     .filter((ref) => isStableReference(ref))
     .map((ref) => ref.path);
-  uniqueSources(object.baseline_truth_paths)
-    .filter((ref) => isStableReference(ref))
-    .forEach((ref) => stable.push(ref.path));
   if (stable.length > 0) groups.push({ label: t("review.relation.stable"), items: stable, linkable: true });
   if (snapshot.project.mapping_file) {
     groups.push({ label: t("review.relation.mapping"), items: [snapshot.project.mapping_file], linkable: true });
@@ -2690,14 +2398,11 @@ function renderDetail(object) {
     <h2>${escapeHTML(object.label)}</h2>
     <dl class="detail-grid">
       <dt>${escapeHTML(t("inspector.fields.type"))}</dt><dd class="detail-kind">${renderKindBadge(object.kind)}<span>${escapeHTML(object.kind)}</span></dd>
-      <dt>${escapeHTML(t("inspector.fields.status"))}</dt><dd>${escapeHTML(object.human_state || t("fallback.undeclared"))}</dd>
+      <dt>${escapeHTML(t("inspector.fields.status"))}</dt><dd>${escapeHTML(object.layer || t("fallback.undeclared"))}</dd>
       <dt>${escapeHTML(t("inspector.fields.version"))}</dt><dd>${escapeHTML(object.version || t("fallback.undeclared"))}</dd>
-      <dt>${escapeHTML(t("inspector.fields.next"))}</dt><dd>${escapeHTML(object.next_label || object.next_command || t("fallback.none"))}</dd>
       <dt>${escapeHTML(t("inspector.fields.responsibility"))}</dt><dd>${escapeHTML(object.responsibility || t("fallback.undeclared"))}</dd>
-      <dt>${escapeHTML(t("inspector.fields.notes"))}</dt><dd>${escapeHTML(object.notes || t("fallback.none"))}</dd>
     </dl>
     ${renderChipGroup(t("inspector.groups.truth"), object.truth_paths, true)}
-    ${renderChipGroup(t("review.relation.stable"), object.baseline_truth_paths, true)}
     ${renderImplementationPathGroup(t("inspector.groups.implementation"), object.implementation_paths)}
     ${renderTextChips(t("inspector.groups.rule"), object.rule_refs)}
     ${renderTextChips(t("inspector.groups.bound"), object.bound_objects)}
@@ -3102,12 +2807,11 @@ async function openSource(path, options = {}) {
   expandedDiffMarkers = new Set();
   sourcePath.textContent = source.path;
   sourceContent.textContent = source.content;
-  sourceRendered.innerHTML = renderReviewProgressHeader(source.path) + renderedDoc.html;
+  sourceRendered.innerHTML = renderedDoc.html;
   activeSourceHeadings = renderedDoc.headings;
   applyDiffAnnotations();
   renderDocGuide(activeSourceHeadings);
   updateDiffToggle();
-  bindReviewProgressHeader();
   bindRenderedDocLinks(source.path);
   bindDocGuideLinks();
   bindDiffMarkers();
@@ -3175,7 +2879,7 @@ function applyDiffAnnotations() {
 
 function sourceBlocks() {
   return [...sourceRendered.querySelectorAll("[data-source-start]")]
-    .filter((node) => !node.closest(".diff-marker-row") && !node.classList.contains("review-progress-panel"))
+    .filter((node) => !node.closest(".diff-marker-row"))
     .map((node) => ({
       node,
       start: Number(node.dataset.sourceStart || 0),
@@ -3846,7 +3550,7 @@ function navigateToSpecDocument(path) {
       focusGraphNode(targetNode.id, 1.05);
     }
   } else {
-    const sourceObject = list(snapshot.objects).find((object) => list(object.truth_paths).concat(list(object.baseline_truth_paths)).some((ref) => ref.path === path));
+    const sourceObject = list(snapshot.objects).find((object) => list(object.truth_paths).some((ref) => ref.path === path));
     if (sourceObject) {
       selectedNodeID = objectNodeID(sourceObject);
       renderNav();
