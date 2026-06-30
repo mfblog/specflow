@@ -18,6 +18,7 @@ type markdownDoc struct {
 
 var sharedRefPattern = regexp.MustCompile("`?([cs]_[gb]_rule_[A-Za-z0-9_]+@[0-9]+\\.[0-9]+\\.[0-9]+)`?")
 var unitRefPattern = regexp.MustCompile("`?s_unit_([A-Za-z0-9_]+)@[0-9]+\\.[0-9]+\\.[0-9]+`?")
+var appendixUnitPattern = regexp.MustCompile(`^[cs]_unit_([A-Za-z0-9_-]+)_.*\.md$`)
 
 func BuildSnapshot(repoRoot string) Snapshot {
 	repoRoot, _ = filepath.Abs(repoRoot)
@@ -203,6 +204,58 @@ func BuildSnapshot(repoRoot string) Snapshot {
 		}
 	}
 
+	// Phase 3b: Associate appendix files with their parent objects
+	for _, doc := range docs {
+		if !isAppendixPath(doc.RelPath) {
+			continue
+		}
+		kind := ""
+		id := ""
+		switch {
+		case strings.Contains(doc.RelPath, "/units/"):
+			kind = "unit"
+			matches := appendixUnitPattern.FindStringSubmatch(filepath.Base(doc.RelPath))
+			if len(matches) > 1 {
+				id = matches[1]
+			}
+		}
+		if kind == "" || id == "" {
+			continue
+		}
+		key := kind + ":" + id
+		if !seenIDs[key] {
+			seenIDs[key] = true
+			object := ObjectView{
+				ID:    id,
+				Kind:  kind,
+				Label: id,
+				HasCandidate: strings.Contains(doc.RelPath, "/candidate/"),
+				HasStable:    strings.Contains(doc.RelPath, "/stable/"),
+				Version:      doc.Frontmatter.Scalars["version"],
+				RuleRefs:     extractRuleIDsFromFrontmatter(doc.Frontmatter),
+				UnitRefs:     extractUnitIDsFromFrontmatter(doc.Frontmatter),
+			}
+			sort.Strings(object.RuleRefs)
+			sort.Strings(object.UnitRefs)
+			snapshot.Objects = append(snapshot.Objects, object)
+		}
+		for i := range snapshot.Objects {
+			if snapshot.Objects[i].Kind == kind && snapshot.Objects[i].ID == id {
+				snapshot.Objects[i].TruthPaths = appendSourceUnique(snapshot.Objects[i].TruthPaths, SourceRef{Path: doc.RelPath, Label: doc.Title})
+				snapshot.Objects[i].Sources = appendSourceUnique(snapshot.Objects[i].Sources, SourceRef{Path: doc.RelPath, Label: doc.Title})
+				if snapshot.Objects[i].Version == "" {
+					snapshot.Objects[i].Version = doc.Frontmatter.Scalars["version"]
+				}
+				snapshot.Objects[i].RuleRefs = appendUnique(snapshot.Objects[i].RuleRefs, extractRuleIDsFromFrontmatter(doc.Frontmatter)...)
+				snapshot.Objects[i].UnitRefs = appendUnique(snapshot.Objects[i].UnitRefs, extractUnitIDsFromFrontmatter(doc.Frontmatter)...)
+				sort.Strings(snapshot.Objects[i].RuleRefs)
+				sort.Strings(snapshot.Objects[i].UnitRefs)
+				break
+			}
+		}
+		addSource(SourceRef{Path: doc.RelPath, Label: doc.Title})
+	}
+
 	// Phase 4: Build graph nodes and edges
 	boundMap := boundObjectsByRuleID(snapshot.Objects)
 	for _, object := range snapshot.Objects {
@@ -243,6 +296,7 @@ func BuildSnapshot(repoRoot string) Snapshot {
 	snapshot.Nodes = builder.nodes()
 	snapshot.Edges = builder.edges()
 	snapshot.Sources = sortedSources(sourceSet)
+
 	sortObjects(snapshot.Objects)
 	normalizeSnapshotSlices(&snapshot)
 	return snapshot
